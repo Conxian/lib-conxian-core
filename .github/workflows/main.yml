@@ -1,0 +1,39 @@
+name: Conxian Gateway CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # Added submodule initialization
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build Gateway
+        run: |
+          # Now targeting the gateway directory
+          cd gateway
+          go build ./...
+
+      - name: Deploy to GCP
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Updated deployment paths to reference the new gateway infrastructure
+          gcloud auth activate-service-account --key-file=${{ secrets.GCP_SA_KEY }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+          # Use migrated GCP configs in gateway/
+          cd gateway/infrastructure/gcp
+          # Example deployment command
+          # gcloud app deploy app.yaml
