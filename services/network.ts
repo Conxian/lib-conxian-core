@@ -28,8 +28,3 @@ export const BISQ_API_URL = getGatewayUrl('bisq', currentEnv);
 export const RGB_API_URL = getGatewayUrl('rgb', currentEnv);
 export const BITVM_API_URL = getGatewayUrl('bitvm', currentEnv);
 export const CHANGELLY_API_URL = getGatewayUrl('changelly', currentEnv);
-
-/**
- * Legacy routing (Deprecated)
- * Anya-core and OPSource endpoints are replaced by the Conxian Gateway.
- */
