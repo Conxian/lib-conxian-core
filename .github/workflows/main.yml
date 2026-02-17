@@ -1,0 +1,44 @@
+name: Conxian Gateway CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build Gateway
+        run: |
+          cd gateway
+          if [ -f Cargo.toml ]; then
+            cargo build --release
+          fi
+
+      - name: Test Gateway
+        run: |
+          cd gateway
+          if [ -f Cargo.toml ]; then
+            cargo test
+          fi
+
+      - name: Deploy to GCP
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploying Conxian Gateway to GCP..."
+          # Target the new modularized infrastructure path
+          cd gateway/infrastructure/gcp
+          ls -la deployment.yaml
+          # Deployment execution would go here
