@@ -28,3 +28,9 @@ export const BISQ_API_URL = getGatewayUrl('bisq', currentEnv);
 export const RGB_API_URL = getGatewayUrl('rgb', currentEnv);
 export const BITVM_API_URL = getGatewayUrl('bitvm', currentEnv);
 export const CHANGELLY_API_URL = getGatewayUrl('changelly', currentEnv);
+
+// System & Monitoring Endpoints
+export const HEALTH_API_URL = getGatewayUrl('health', currentEnv);
+export const STATUS_API_URL = getGatewayUrl('status', currentEnv);
+export const COMPLIANCE_API_URL = getGatewayUrl('compliance', currentEnv);
+export const METRICS_API_URL = getGatewayUrl('metrics', currentEnv);
