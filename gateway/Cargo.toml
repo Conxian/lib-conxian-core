@@ -2,6 +2,9 @@
 name = "conxian-gateway"
 version = "0.1.0"
 edition = "2021"
+authors = ["Conxian Team"]
+description = "Unified Gateway for Conxian Network Sovereign Services and Bitcoin Layers"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 actix-web = "4.4"
