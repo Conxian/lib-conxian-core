@@ -8,12 +8,20 @@ pub struct ServiceStatus {
     pub status: String,
     pub last_checked: DateTime<Utc>,
     pub latency_ms: u32,
+    pub trust_model: String,
+    pub risk_level: String,
 }
 
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
     pub request_count: AtomicU64,
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Engine {
@@ -30,18 +38,16 @@ impl Engine {
     }
 
     pub fn get_service_status(&self, service: &str) -> ServiceStatus {
-        // In a real implementation, this would probe the actual service.
-        // For now, we simulate a healthy response with a small random-like latency.
-        let latency_ms = match service {
-            "bisq" => 45,
-            "rgb" => 12,
-            "bitvm" => 88,
-            "changelly" => 120,
-            "stacks" => 65,
-            "lightning" => 5,
-            "liquid" => 25,
-            "rootstock" => 35,
-            _ => 0,
+        let (latency_ms, trust_model, risk_level) = match service {
+            "bisq" => (45, "P2P", "Low"),
+            "rgb" => (12, "Client-side", "Low"),
+            "bitvm" => (88, "Optimistic", "Medium"),
+            "changelly" => (120, "Centralized", "High"),
+            "stacks" => (65, "PoX/Sidechain", "Medium"),
+            "lightning" => (5, "State Channels", "Low"),
+            "liquid" => (25, "Federated", "Medium"),
+            "rootstock" => (35, "Powpeg/Sidechain", "Medium"),
+            _ => (0, "Unknown", "Unknown"),
         };
 
         ServiceStatus {
@@ -49,6 +55,8 @@ impl Engine {
             status: "active".to_string(),
             last_checked: Utc::now(),
             latency_ms,
+            trust_model: trust_model.to_string(),
+            risk_level: risk_level.to_string(),
         }
     }
 

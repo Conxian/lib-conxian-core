@@ -38,5 +38,5 @@ To align with the standards and research presented by [bitcoinlayers.org](https:
 
 ## 4. Alignment with BitcoinLayers.org
 The Conxian Gateway aims to provide users with clear information regarding the risk profiles of the layers they interact with.
-- **Trust Model Transparency:** API responses will eventually include metadata about the layer's trust model (e.g., "Federated", "Optimistic", "ZK-verified").
+- **Trust Model Transparency:** API responses now include metadata about the layer's trust model (e.g., "Federated", "Optimistic", "Client-side") and risk levels.
 - **Security Metrics:** Integration of liveness and security monitoring for supported layers.
