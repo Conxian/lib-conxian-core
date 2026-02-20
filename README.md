@@ -8,9 +8,17 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 
 ### Features
 
-- **Unified API**: All services (Bisq, RGB, BitVM, Changelly) are accessible via `/api/v1/\*`.
+- **Unified API**: All services are accessible via `/api/v1/*`.
+- **Sovereign Services**: Bisq, RGB, BitVM, Changelly.
+- **Bitcoin Layer Support**: Stacks, Lightning Network, Liquid, Rootstock (Aligned with [bitcoinlayers.org](https://bitcoinlayers.org/)).
 - **Monitoring & Compliance**: Integrated health, status, compliance, and metrics endpoints.
 - **High Performance**: Built with Rust and Actix-web for maximum reliability and throughput.
+
+### Documentation
+
+- [PRD (Product Requirements Document)](docs/PRD.md)
+- [Enhancement Roadmap](docs/ENHANCEMENTS.md)
+- [Architecture & Infrastructure](docs/architecture/GCP_INFRASTRUCTURE.md)
 
 ### Getting Started
 

@@ -3,11 +3,11 @@
 ## Conxian Gateway Architecture
 The Conxian Gateway consolidates core Bitcoin/Stacks state logic (internal/engine) and API/Auth layers (internal/api) into a singular, audit-ready Rust binary.
 
-### Deprecation Notice
-- **Anya-core**: Deprecated.
-- **OPSource**: Deprecated.
+### Key Documents
+- **PRD:** `docs/PRD.md` contains the full system overview.
+- **Enhancements:** `docs/ENHANCEMENTS.md` details planned layer support and alignment with `bitcoinlayers.org`.
 
 ### Workflow Instructions
-- **State Monitoring**: Point to the Conxian Gateway API at `/api/v1` for state monitoring and compliance pipes.
-- **Service Access**: All sovereign services (Bisq, RGB, BitVM, Changelly) are now unified under the Gateway.
-- **Infrastructure**: GCP infrastructure configurations are now located in `gateway/infrastructure/gcp/`.
+- **State Monitoring:** Point to the Conxian Gateway API at `/api/v1` for state monitoring and compliance pipes.
+- **Service Access:** All sovereign services and Bitcoin layers (Bisq, RGB, BitVM, Changelly, Stacks, Lightning, Liquid, Rootstock) are unified under the Gateway.
+- **Infrastructure:** GCP infrastructure configurations are located in `gateway/infrastructure/gcp/`.

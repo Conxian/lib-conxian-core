@@ -9,6 +9,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(rgb_handler)
             .service(bitvm_handler)
             .service(changelly_handler)
+            .service(stacks_handler)
+            .service(lightning_handler)
+            .service(liquid_handler)
+            .service(rootstock_handler)
             .service(status_handler)
             .service(health_handler)
             .service(compliance_handler)
@@ -83,3 +87,31 @@ async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
 
 #[cfg(test)]
 mod tests;
+
+#[get("/stacks")]
+async fn stacks_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("stacks");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/lightning")]
+async fn lightning_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("lightning");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/liquid")]
+async fn liquid_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("liquid");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/rootstock")]
+async fn rootstock_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("rootstock");
+    HttpResponse::Ok().json(status)
+}

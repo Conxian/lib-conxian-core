@@ -29,6 +29,12 @@ export const RGB_API_URL = getGatewayUrl('rgb', currentEnv);
 export const BITVM_API_URL = getGatewayUrl('bitvm', currentEnv);
 export const CHANGELLY_API_URL = getGatewayUrl('changelly', currentEnv);
 
+// Bitcoin Layer 2 & Sidechain URLs
+export const STACKS_API_URL = getGatewayUrl('stacks', currentEnv);
+export const LIGHTNING_API_URL = getGatewayUrl('lightning', currentEnv);
+export const LIQUID_API_URL = getGatewayUrl('liquid', currentEnv);
+export const ROOTSTOCK_API_URL = getGatewayUrl('rootstock', currentEnv);
+
 // System & Monitoring Endpoints
 export const HEALTH_API_URL = getGatewayUrl('health', currentEnv);
 export const STATUS_API_URL = getGatewayUrl('status', currentEnv);
