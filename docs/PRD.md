@@ -13,15 +13,23 @@ The Gateway exposes a RESTful API under the `/api/v1` prefix. All external servi
 - **Infrastructure:** Managed via GCP using modular configurations in `gateway/infrastructure/gcp/`.
 
 ## 3. Supported Services
-Currently, the Gateway supports the following sovereign services:
+The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integrations:
+
+### 3.1. Sovereign Services
 - **Bisq:** Decentralized Bitcoin exchange.
 - **RGB:** Scalable and confidential smart contracts for Bitcoin and Lightning.
 - **BitVM:** A computing paradigm to express any program as a Bitcoin script.
 - **Changelly:** Integration for instant cryptocurrency exchange services.
 
+### 3.2. Bitcoin Layers (Aligned with BitcoinLayers.org)
+- **Stacks:** Layer for smart contracts and Bitcoin-backed assets.
+- **Lightning Network:** Instant, low-cost Bitcoin payments via state channels.
+- **Liquid Network:** Federated sidechain for confidential transactions and issued assets.
+- **Rootstock:** EVM-compatible smart contracts secured by merge-mining.
+
 ## 4. Monitoring & Compliance
 - **Health Check:** `/api/v1/health` for service availability.
-- **System Status:** `/api/v1/status` for real-time system metrics and uptime.
+- **System Status:** `/api/v1/status` for real-time system metrics, uptime, and layer-specific trust metadata.
 - **Compliance:** `/api/v1/compliance` for KYC/AML and network integrity monitoring.
 - **Metrics:** `/api/v1/metrics` providing Prometheus-compatible metrics (uptime, request counts).
 
@@ -31,4 +39,4 @@ The `services/network.ts` library provides a standard way for client application
 ## 6. Security & Auditing
 - Unified binary approach simplifies the attack surface.
 - Rust-based implementation ensures memory safety and high performance.
-- Centralized logging and metrics for comprehensive auditing.
+- Metadata for trust models and risk levels provided via API for transparency.
