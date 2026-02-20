@@ -37,6 +37,10 @@ impl Engine {
             "rgb" => 12,
             "bitvm" => 88,
             "changelly" => 120,
+            "stacks" => 65,
+            "lightning" => 5,
+            "liquid" => 25,
+            "rootstock" => 35,
             _ => 0,
         };
 
