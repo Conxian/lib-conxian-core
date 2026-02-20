@@ -10,6 +10,9 @@ pub struct ServiceStatus {
     pub latency_ms: u32,
     pub trust_model: String,
     pub risk_level: String,
+    pub data_availability: String,
+    pub settlement: String,
+    pub bridge_security: String,
 }
 
 pub struct Engine {
@@ -38,16 +41,16 @@ impl Engine {
     }
 
     pub fn get_service_status(&self, service: &str) -> ServiceStatus {
-        let (latency_ms, trust_model, risk_level) = match service {
-            "bisq" => (45, "P2P", "Low"),
-            "rgb" => (12, "Client-side", "Low"),
-            "bitvm" => (88, "Optimistic", "Medium"),
-            "changelly" => (120, "Centralized", "High"),
-            "stacks" => (65, "PoX/Sidechain", "Medium"),
-            "lightning" => (5, "State Channels", "Low"),
-            "liquid" => (25, "Federated", "Medium"),
-            "rootstock" => (35, "Powpeg/Sidechain", "Medium"),
-            _ => (0, "Unknown", "Unknown"),
+        let (latency_ms, trust_model, risk_level, da, settlement, bridge) = match service {
+            "bisq" => (45, "P2P", "Low", "On-chain", "Bitcoin", "N/A"),
+            "rgb" => (12, "Client-side", "Low", "Off-chain", "Bitcoin", "Client-side"),
+            "bitvm" => (88, "Optimistic", "Medium", "On-chain", "Bitcoin", "Fraud Proofs"),
+            "changelly" => (120, "Centralized", "High", "N/A", "Centralized", "Centralized"),
+            "stacks" => (65, "PoX", "Medium", "On-chain", "Bitcoin", "sBTC Bridge"),
+            "lightning" => (5, "State Channels", "Low", "Off-chain", "Bitcoin", "N/A"),
+            "liquid" => (25, "Federated", "Medium", "On-chain (Federated)", "Bitcoin", "Strong Federation"),
+            "rootstock" => (35, "Powpeg", "Medium", "On-chain", "Bitcoin", "Powpeg"),
+            _ => (0, "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"),
         };
 
         ServiceStatus {
@@ -57,6 +60,9 @@ impl Engine {
             latency_ms,
             trust_model: trust_model.to_string(),
             risk_level: risk_level.to_string(),
+            data_availability: da.to_string(),
+            settlement: settlement.to_string(),
+            bridge_security: bridge.to_string(),
         }
     }
 

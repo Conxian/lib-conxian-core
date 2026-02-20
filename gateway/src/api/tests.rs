@@ -51,6 +51,7 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "bisq");
+        assert_eq!(body["data_availability"], "On-chain");
     }
 
     #[actix_web::test]
@@ -67,6 +68,8 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "stacks");
+        assert_eq!(body["trust_model"], "PoX");
+        assert_eq!(body["bridge_security"], "sBTC Bridge");
     }
 
     #[actix_web::test]
@@ -83,6 +86,7 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "lightning");
+        assert_eq!(body["trust_model"], "State Channels");
     }
 
     #[actix_web::test]
@@ -99,6 +103,7 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "liquid");
+        assert_eq!(body["bridge_security"], "Strong Federation");
     }
 
     #[actix_web::test]
@@ -115,6 +120,7 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "rootstock");
+        assert_eq!(body["trust_model"], "Powpeg");
     }
 
     #[actix_web::test]
