@@ -19,6 +19,8 @@ pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
     pub request_count: AtomicU64,
+    pub total_tvl_usd: AtomicU64,
+    pub active_sovereign_nodes: AtomicU64,
 }
 
 impl Default for Engine {
@@ -33,6 +35,8 @@ impl Engine {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
             request_count: AtomicU64::new(0),
+            total_tvl_usd: AtomicU64::new(1_320_000_000), // Mock $1.32B TVL
+            active_sovereign_nodes: AtomicU64::new(3), // Mock 3 active nodes
         }
     }
 

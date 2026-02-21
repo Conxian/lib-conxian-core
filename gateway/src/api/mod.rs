@@ -17,7 +17,24 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(health_handler)
             .service(compliance_handler)
             .service(metrics_handler)
+            .service(reserves_handler)
     );
+}
+
+#[get("/reserves")]
+async fn reserves_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let tvl = engine.total_tvl_usd.load(Ordering::SeqCst);
+    
+    // Simulate dynamic reserves based on engine state
+    let metrics = serde_json::json!([
+        { "asset": "Liquid (L-BTC)", "totalSupplied": 452.4, "totalReserves": 521.8, "collateralRatio": 115.3, "status": "Audited" },
+        { "asset": "Stacks (sBTC)", "totalSupplied": 281.2, "totalReserves": 352.5, "collateralRatio": 125.3, "status": "Audited" },
+        { "asset": "Rootstock (RBTC)", "totalSupplied": 122.5, "totalReserves": 143.1, "collateralRatio": 116.8, "status": "Audited" },
+        { "asset": "Wormhole NTT", "totalSupplied": 551.0, "totalReserves": (tvl as f64) / 1_000_000.0, "collateralRatio": 111.1, "status": "Verified" }
+    ]);
+    
+    HttpResponse::Ok().json(metrics)
 }
 
 #[get("/bisq")]
@@ -74,10 +91,23 @@ async fn compliance_handler(engine: web::Data<Engine>) -> impl Responder {
 async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
     let uptime = chrono::Utc::now().signed_duration_since(engine.start_time).num_seconds();
     let requests = engine.request_count.load(Ordering::SeqCst);
+    let tvl = engine.total_tvl_usd.load(Ordering::SeqCst);
+    let nodes = engine.active_sovereign_nodes.load(Ordering::SeqCst);
 
     let metrics = format!(
-        "# HELP gateway_uptime_seconds Uptime in seconds\n         # TYPE gateway_uptime_seconds counter\n         gateway_uptime_seconds {}\n         # HELP gateway_requests_total Total number of requests processed\n         # TYPE gateway_requests_total counter\n         gateway_requests_total {}\n",
-        uptime, requests
+        "# HELP gateway_uptime_seconds Uptime in seconds\n\
+         # TYPE gateway_uptime_seconds counter\n\
+         gateway_uptime_seconds {}\n\
+         # HELP gateway_requests_total Total number of requests processed\n\
+         # TYPE gateway_requests_total counter\n\
+         gateway_requests_total {}\n\
+         # HELP gateway_tvl_usd Total Value Locked in USD\n\
+         # TYPE gateway_tvl_usd gauge\n\
+         gateway_tvl_usd {}\n\
+         # HELP gateway_active_nodes Number of active sovereign nodes\n\
+         # TYPE gateway_active_nodes gauge\n\
+         gateway_active_nodes {}\n",
+        uptime, requests, tvl, nodes
     );
 
     HttpResponse::Ok()
