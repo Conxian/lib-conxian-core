@@ -22,6 +22,15 @@ pub struct ServiceStatus {
     pub metadata: HashMap<String, String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ReserveAsset {
+    pub asset: String,
+    pub total_supplied: f64,
+    pub total_reserves: f64,
+    pub collateral_ratio: f64,
+    pub status: String,
+}
+
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
@@ -29,6 +38,7 @@ pub struct Engine {
     pub total_tvl_usd: AtomicU64,
     pub active_sovereign_nodes: AtomicU64,
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
+    pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
 }
 
 impl Default for Engine {
@@ -55,6 +65,16 @@ impl Engine {
         for (name, latency, trust, risk, da, settlement, bridge) in services {
             let mut metadata = HashMap::new();
             match name {
+                "bisq" => {
+                    metadata.insert("active_offers".to_string(), "124".to_string());
+                    metadata.insert("volume_24h_btc".to_string(), "12.5".to_string());
+                },
+                "rgb" => {
+                    metadata.insert("contract_count".to_string(), "85".to_string());
+                },
+                "bitvm" => {
+                    metadata.insert("proof_window_blocks".to_string(), "144".to_string());
+                },
                 "stacks" => {
                     metadata.insert("block_height".to_string(), "840000".to_string());
                     metadata.insert("sbtc_bridge_status".to_string(), "active".to_string());
@@ -62,6 +82,12 @@ impl Engine {
                 "lightning" => {
                     metadata.insert("channel_count".to_string(), "1542".to_string());
                     metadata.insert("capacity_btc".to_string(), "42.5".to_string());
+                },
+                "liquid" => {
+                    metadata.insert("pegged_btc".to_string(), "3541.2".to_string());
+                },
+                "rootstock" => {
+                    metadata.insert("mining_hashrate_ph".to_string(), "245.8".to_string());
                 },
                 _ => {}
             }
@@ -81,6 +107,13 @@ impl Engine {
             });
         }
 
+        let reserves = vec![
+            ReserveAsset { asset: "Liquid (L-BTC)".to_string(), total_supplied: 452.4, total_reserves: 521.8, collateral_ratio: 115.3, status: "Audited".to_string() },
+            ReserveAsset { asset: "Stacks (sBTC)".to_string(), total_supplied: 281.2, total_reserves: 352.5, collateral_ratio: 125.3, status: "Audited".to_string() },
+            ReserveAsset { asset: "Rootstock (RBTC)".to_string(), total_supplied: 122.5, total_reserves: 143.1, collateral_ratio: 116.8, status: "Audited".to_string() },
+            ReserveAsset { asset: "Wormhole NTT".to_string(), total_supplied: 551.0, total_reserves: 1320.0, collateral_ratio: 111.1, status: "Verified".to_string() },
+        ];
+
         Self {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
@@ -88,6 +121,7 @@ impl Engine {
             total_tvl_usd: AtomicU64::new(1_320_000_000),
             active_sovereign_nodes: AtomicU64::new(8),
             service_statuses: Arc::new(RwLock::new(statuses)),
+            reserves: Arc::new(RwLock::new(reserves)),
         }
     }
 
@@ -112,6 +146,10 @@ impl Engine {
         })
     }
 
+    pub fn get_reserves(&self) -> Vec<ReserveAsset> {
+        self.reserves.read().unwrap().clone()
+    }
+
     pub fn get_system_info(&self) -> serde_json::Value {
         serde_json::json!({
             "version": self.version,
@@ -124,42 +162,72 @@ impl Engine {
 
     pub async fn start_monitoring(engine_data: web::Data<Engine>) {
         log::info!("Starting background service monitoring...");
-        let statuses_clone = Arc::clone(&engine_data.service_statuses);
+        let engine_clone = engine_data.clone();
 
         tokio::spawn(async move {
             loop {
                 sleep(Duration::from_secs(30)).await;
-                log::debug!("Updating service statuses...");
+                log::debug!("Updating service statuses and reserves...");
 
-                let mut statuses = statuses_clone.write().unwrap();
-                for status in statuses.values_mut() {
-                    // Simulate minor latency fluctuations
-                    let fluctuation = (Utc::now().timestamp() % 11) as i32 - 5;
-                    status.latency_ms = (status.latency_ms as i32 + fluctuation).max(1) as u32;
-                    status.last_checked = Utc::now();
+                {
+                    let mut statuses = engine_clone.service_statuses.write().unwrap();
+                    for status in statuses.values_mut() {
+                        let fluctuation = (Utc::now().timestamp() % 11) as i32 - 5;
+                        status.latency_ms = (status.latency_ms as i32 + fluctuation).max(1) as u32;
+                        status.last_checked = Utc::now();
 
-                    // Protocol-specific simulated updates
-                    match status.name.as_str() {
-                        "stacks" => {
-                            if let Some(height_str) = status.metadata.get_mut("block_height") {
-                                let height: u64 = height_str.parse().unwrap_or(840000);
-                                *height_str = (height + 1).to_string();
-                            }
-                        },
-                        "lightning" => {
-                            if let Some(capacity_str) = status.metadata.get_mut("capacity_btc") {
-                                let capacity: f64 = capacity_str.parse().unwrap_or(42.5);
-                                *capacity_str = format!("{:.1}", capacity + 0.1);
-                            }
-                        },
-                        _ => {}
+                        match status.name.as_str() {
+                            "bisq" => {
+                                if let Some(v) = status.metadata.get_mut("active_offers") {
+                                    let offers: u32 = v.parse().unwrap_or(124);
+                                    *v = (offers + (Utc::now().timestamp() % 3) as u32).to_string();
+                                }
+                            },
+                            "rgb" => {
+                                if let Some(v) = status.metadata.get_mut("contract_count") {
+                                    let count: u32 = v.parse().unwrap_or(85);
+                                    if Utc::now().timestamp() % 5 == 0 {
+                                        *v = (count + 1).to_string();
+                                    }
+                                }
+                            },
+                            "stacks" => {
+                                if let Some(height_str) = status.metadata.get_mut("block_height") {
+                                    let height: u64 = height_str.parse().unwrap_or(840000);
+                                    *height_str = (height + 1).to_string();
+                                }
+                            },
+                            "lightning" => {
+                                if let Some(capacity_str) = status.metadata.get_mut("capacity_btc") {
+                                    let capacity: f64 = capacity_str.parse().unwrap_or(42.5);
+                                    *capacity_str = format!("{:.1}", capacity + 0.1);
+                                }
+                            },
+                            "liquid" => {
+                                if let Some(v) = status.metadata.get_mut("pegged_btc") {
+                                    let pegged: f64 = v.parse().unwrap_or(3541.2);
+                                    *v = format!("{:.1}", pegged + (Utc::now().timestamp() % 10) as f64 / 10.0);
+                                }
+                            },
+                            "rootstock" => {
+                                if let Some(v) = status.metadata.get_mut("mining_hashrate_ph") {
+                                    let hashrate: f64 = v.parse().unwrap_or(245.8);
+                                    *v = format!("{:.1}", hashrate + (Utc::now().timestamp() % 5) as f64 - 2.0);
+                                }
+                            },
+                            _ => {}
+                        }
                     }
+                }
 
-                    // Simulate random health change (very rare)
-                    if Utc::now().timestamp() % 1000 == 0 {
-                        status.status = "degraded".to_string();
-                    } else {
-                        status.status = "active".to_string();
+                {
+                    let mut reserves = engine_clone.reserves.write().unwrap();
+                    let current_tvl = engine_clone.total_tvl_usd.load(Ordering::SeqCst);
+                    for reserve in reserves.iter_mut() {
+                        if reserve.asset == "Wormhole NTT" {
+                            reserve.total_reserves = (current_tvl as f64) / 1_000_000.0;
+                        }
+                        reserve.total_supplied += (Utc::now().timestamp() % 5) as f64 / 10.0;
                     }
                 }
             }

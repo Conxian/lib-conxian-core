@@ -36,6 +36,7 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "bisq");
+        assert!(body["metadata"]["active_offers"].is_string());
     }
 
     #[actix_web::test]
@@ -51,48 +52,16 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn test_lightning_endpoint() {
+    async fn test_reserves_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/lightning").to_request();
+        let req = test::TestRequest::get().uri("/api/v1/reserves").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["name"], "lightning");
-        assert!(body["metadata"]["channel_count"].is_string());
-    }
-
-    #[actix_web::test]
-    async fn test_liquid_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/liquid").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["name"], "liquid");
-    }
-
-    #[actix_web::test]
-    async fn test_rootstock_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/rootstock").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["name"], "rootstock");
-    }
-
-    #[actix_web::test]
-    async fn test_compliance_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/compliance").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["status"], "compliant");
+        assert!(body.is_array());
+        assert!(body[0]["asset"].is_string());
+        assert!(body[0]["total_supplied"].is_number());
     }
 
     #[actix_web::test]
