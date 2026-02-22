@@ -9,7 +9,7 @@ The Gateway exposes a RESTful API under the `/api/v1` prefix. All external servi
 
 ### 2.2. Core Components
 - **API Layer (`gateway/src/api`):** Actix-web based handlers for service routing, health checks, and metrics.
-- **Engine Layer (`gateway/src/engine`):** Core logic for managing service states, request tracking, and Bitcoin/Stacks integration.
+- **Engine Layer (`gateway/src/engine`):** Core logic for managing service states, request tracking, and Bitcoin/Stacks integration. Supports dynamic status updates and background monitoring.
 - **Infrastructure:** Managed via GCP using modular configurations in `gateway/infrastructure/gcp/`.
 
 ## 3. Supported Services
@@ -22,8 +22,8 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **Changelly:** Integration for instant cryptocurrency exchange services (Centralized).
 
 ### 3.2. Bitcoin Layers (Aligned with BitcoinLayers.org)
-- **Stacks:** Layer for smart contracts and Bitcoin-backed assets (PoX).
-- **Lightning Network:** Instant, low-cost Bitcoin payments via state channels.
+- **Stacks:** Layer for smart contracts and Bitcoin-backed assets (PoX). Features sBTC bridge monitoring.
+- **Lightning Network:** Instant, low-cost Bitcoin payments via state channels. Features channel capacity and node connectivity monitoring.
 - **Liquid Network:** Federated sidechain for confidential transactions and issued assets.
 - **Rootstock:** EVM-compatible smart contracts secured by merge-mining (Powpeg).
 
@@ -31,14 +31,16 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 The Gateway provides detailed status information for each service, including:
 - **Health Check:** `/api/v1/health` for service availability.
 - **System Status:** `/api/v1/status` for real-time system metrics and uptime.
+- **Dynamic Monitoring:** Background workers periodically poll supported services to update latency, status, and protocol-specific metadata (e.g., block height, channel capacity).
 - **Service Status:** Detailed metadata per service (e.g., `/api/v1/stacks`), including:
     - **Trust Model:** Categorization based on bitcoinlayers.org (e.g., Federated, State Channels, PoX).
     - **Risk Level:** Qualitative risk assessment.
     - **Data Availability:** On-chain, Off-chain, or Federated.
-    - **Settlement:** The layer where finality is achieved (typically Bitcoin).
-    - **Bridge Security:** Mechanism for moving assets (e.g., sBTC, Powpeg, Strong Federation).
+    - **Settlement:** The layer where finality is achieved.
+    - **Bridge Security:** Mechanism for moving assets.
+    - **Metadata:** Protocol-specific fields (e.g., `block_height`, `channel_count`).
 - **Compliance:** `/api/v1/compliance` for KYC/AML and network integrity monitoring.
-- **Metrics:** `/api/v1/metrics` providing Prometheus-compatible metrics (uptime, request counts).
+- **Metrics:** `/api/v1/metrics` providing Prometheus-compatible metrics.
 
 ## 5. Client Integration
 The `services/network.ts` library provides a standard way for client applications to route requests through the Gateway, supporting both local and production environments.
@@ -46,4 +48,4 @@ The `services/network.ts` library provides a standard way for client application
 ## 6. Security & Auditing
 - Unified binary approach simplifies the attack surface.
 - Rust-based implementation ensures memory safety and high performance.
-- Metadata for trust models and risk levels provided via API for transparency, enabling users to make informed decisions based on the risk profiles documented by the Bitcoin community.
+- Metadata for trust models and risk levels provided via API for transparency.

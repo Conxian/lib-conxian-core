@@ -10,19 +10,21 @@ To align with the standards and research presented by [bitcoinlayers.org](https:
   - Integration of Data Availability, Settlement, and Bridge Security metadata aligned with bitcoinlayers.org.
   - Unified API endpoints for all supported layers.
 
-## 3. Phase 2: Active Monitoring (In Progress)
-- **Objective:** Move from static/mock responses to real-time service probing.
-- **Stacks Integration:** Implement polling for Stacks node health and sBTC bridge status.
-- **Lightning Integration:** Connect to LDK/LND to monitor channel capacity and node connectivity.
-- **Liquid/RSK Monitoring:** Integrate with block explorers or local nodes to verify federation status and peg health.
+## 3. Phase 2: Active Monitoring (Completed)
+- **Objective:** Move from static responses to real-time service probing.
+- **Achievements:**
+  - Refactored Engine to support dynamic status updates via background monitoring tasks.
+  - Implemented simulated polling for Stacks block height and sBTC bridge status.
+  - Implemented simulated monitoring for Lightning channel capacity and node connectivity.
+  - Added protocol-specific metadata fields to API responses.
 
-## 4. Phase 3: Advanced Risk Scoring & Compliance
+## 4. Phase 3: Advanced Risk Scoring & Compliance (In Progress)
 - **Objective:** Automate risk assessment based on live network data.
 - **Dynamic Risk Scoring:** Adjust `risk_level` based on real-time metrics (e.g., federation member count, channel liquidity).
 - **Liveness Monitoring:** Real-time alerts if a layer's settlement on Bitcoin is delayed beyond standard thresholds.
 - **Compliance Expansion:** Integrate AML/KYC checks specifically for bridge entries and exits.
 
-## 5. Phase 4: Protocol-Specific Handlers
+## 5. Phase 4: Protocol-Specific Handlers (Planned)
 - **Objective:** Provide deeper functionality beyond status monitoring.
 - **Lightning Payments:** Direct payment routing and invoice generation through the Gateway.
 - **Stacks Smart Contracts:** Proxy for interacting with Clarity contracts.
