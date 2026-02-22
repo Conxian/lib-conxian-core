@@ -75,4 +75,17 @@ mod tests {
         let body_str = std::str::from_utf8(&body).unwrap();
         assert!(body_str.contains("gateway_uptime_seconds"));
     }
+
+    #[actix_web::test]
+    async fn test_layers_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/layers").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_object());
+        assert!(body["stacks"].is_object());
+        assert_eq!(body["stacks"]["name"], "stacks");
+    }
 }

@@ -18,7 +18,7 @@ To align with the standards and research presented by [bitcoinlayers.org](https:
   - Implemented simulated monitoring for Lightning channel capacity and node connectivity.
   - Added protocol-specific metadata fields to API responses.
 
-## 4. Phase 3: Advanced Risk Scoring & Compliance (In Progress)
+## 4. Phase 3: Advanced Risk Scoring & Compliance (Completed)
 - **Objective:** Automate risk assessment based on live network data.
 - **Dynamic Risk Scoring:** Adjust `risk_level` based on real-time metrics (e.g., federation member count, channel liquidity).
 - **Liveness Monitoring:** Real-time alerts if a layer's settlement on Bitcoin is delayed beyond standard thresholds.
