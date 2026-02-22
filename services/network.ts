@@ -34,9 +34,11 @@ export const STACKS_API_URL = getGatewayUrl('stacks', currentEnv);
 export const LIGHTNING_API_URL = getGatewayUrl('lightning', currentEnv);
 export const LIQUID_API_URL = getGatewayUrl('liquid', currentEnv);
 export const ROOTSTOCK_API_URL = getGatewayUrl('rootstock', currentEnv);
+export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
 export const HEALTH_API_URL = getGatewayUrl('health', currentEnv);
 export const STATUS_API_URL = getGatewayUrl('status', currentEnv);
 export const COMPLIANCE_API_URL = getGatewayUrl('compliance', currentEnv);
 export const METRICS_API_URL = getGatewayUrl('metrics', currentEnv);
+export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);

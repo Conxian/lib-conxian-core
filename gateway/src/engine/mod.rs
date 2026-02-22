@@ -41,6 +41,18 @@ pub struct Engine {
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
 }
 
+impl Engine {
+    fn calculate_risk_level(latency: u32, trust_model: &str) -> String {
+        if latency > 200 || trust_model == "Centralized" {
+            "High".to_string()
+        } else if latency > 100 || trust_model == "Federated" || trust_model == "Optimistic" {
+            "Medium".to_string()
+        } else {
+            "Low".to_string()
+        }
+    }
+}
+
 impl Default for Engine {
     fn default() -> Self {
         Self::new()
@@ -150,6 +162,10 @@ impl Engine {
         self.reserves.read().unwrap().clone()
     }
 
+    pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
+        self.service_statuses.read().unwrap().clone()
+    }
+
     pub fn get_system_info(&self) -> serde_json::Value {
         serde_json::json!({
             "version": self.version,
@@ -175,6 +191,7 @@ impl Engine {
                         let fluctuation = (Utc::now().timestamp() % 11) as i32 - 5;
                         status.latency_ms = (status.latency_ms as i32 + fluctuation).max(1) as u32;
                         status.last_checked = Utc::now();
+                        status.risk_level = Self::calculate_risk_level(status.latency_ms, &status.trust_model);
 
                         match status.name.as_str() {
                             "bisq" => {

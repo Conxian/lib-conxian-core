@@ -13,6 +13,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(lightning_handler)
             .service(liquid_handler)
             .service(rootstock_handler)
+            .service(layers_handler)
             .service(status_handler)
             .service(health_handler)
             .service(compliance_handler)
@@ -123,4 +124,11 @@ async fn rootstock_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("rootstock");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/layers")]
+async fn layers_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let statuses = engine.get_all_service_statuses();
+    HttpResponse::Ok().json(statuses)
 }
