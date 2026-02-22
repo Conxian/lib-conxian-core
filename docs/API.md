@@ -49,6 +49,8 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/lightning**
 - **GET /api/v1/liquid**
 - **GET /api/v1/rootstock**
+- **GET /api/v1/babylon**
+- **GET /api/v1/bob**
 
 ## 3. Data Models
 
@@ -82,3 +84,19 @@ Each service has its own endpoint providing detailed status and metadata.
   "status": "Audited"
 }
 ```
+
+## 4. Protocol-Specific Endpoints (Phase 4)
+
+### POST /api/v1/lightning/invoice
+Generates a Lightning invoice.
+- **Request Body:** `{ "amount_msat": 10000, "description": "Coffee" }`
+- **Response:** `{ "invoice": "lnbc...", "payment_hash": "..." }`
+
+### POST /api/v1/lightning/pay
+Sends a Lightning payment.
+- **Request Body:** `{ "invoice": "lnbc..." }`
+- **Response:** `{ "status": "success", "preimage": "..." }`
+
+### GET /api/v1/stacks/contract/{id}
+Retrieves Clarity contract details.
+- **Response:** `{ "contract_id": "...", "source_code": "...", "abi": "..." }`

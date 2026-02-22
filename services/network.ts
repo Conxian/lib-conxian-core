@@ -42,3 +42,32 @@ export const STATUS_API_URL = getGatewayUrl('status', currentEnv);
 export const COMPLIANCE_API_URL = getGatewayUrl('compliance', currentEnv);
 export const METRICS_API_URL = getGatewayUrl('metrics', currentEnv);
 export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);
+
+/**
+ * Phase 4: Protocol-Specific Helpers
+ */
+export const createLightningInvoice = async (amountMsat: number, description: string) => {
+  const url = `${getGatewayUrl("lightning", currentEnv)}/invoice`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount_msat: amountMsat, description }),
+  });
+  return response.json();
+};
+
+export const payLightningInvoice = async (invoice: string) => {
+  const url = `${getGatewayUrl("lightning", currentEnv)}/pay`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ invoice }),
+  });
+  return response.json();
+};
+
+export const getStacksContract = async (contractId: string) => {
+  const url = `${getGatewayUrl("stacks", currentEnv)}/contract/${contractId}`;
+  const response = await fetch(url);
+  return response.json();
+};

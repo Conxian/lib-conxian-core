@@ -88,4 +88,40 @@ mod tests {
         assert!(body["stacks"].is_object());
         assert_eq!(body["stacks"]["name"], "stacks");
     }
+
+    #[actix_web::test]
+    async fn test_babylon_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/babylon").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "babylon");
+    }
+
+    #[actix_web::test]
+    async fn test_lightning_invoice_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/v1/lightning/invoice")
+            .set_json(serde_json::json!({"amount_msat": 50000, "description": "Test"}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body["invoice"].is_string());
+    }
+
+    #[actix_web::test]
+    async fn test_stacks_contract_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/stacks/contract/ST123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["contract_id"], "ST123");
+    }
 }
