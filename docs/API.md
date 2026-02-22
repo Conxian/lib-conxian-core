@@ -51,6 +51,9 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/rootstock**
 - **GET /api/v1/babylon**
 - **GET /api/v1/bob**
+- **GET /api/v1/merlin**
+- **GET /api/v1/botanix**
+- **GET /api/v1/b2network**
 
 ## 3. Data Models
 
@@ -100,3 +103,11 @@ Sends a Lightning payment.
 ### GET /api/v1/stacks/contract/{id}
 Retrieves Clarity contract details.
 - **Response:** `{ "contract_id": "...", "source_code": "...", "abi": "..." }`
+
+### GET /api/v1/rgb/contract/{id}
+Retrieves RGB contract details and state.
+- **Response:** `{ "contract_id": "...", "schema": "...", "state": "..." }`
+
+### GET /api/v1/bitvm/proof/{id}
+Retrieves BitVM fraud proof details and status.
+- **Response:** `{ "proof_id": "...", "status": "...", "verifier_count": 5 }`

@@ -24,12 +24,12 @@ To align with the standards and research presented by [bitcoinlayers.org](https:
 - **Liveness Monitoring:** Real-time alerts if a layer's settlement on Bitcoin is delayed beyond standard thresholds.
 - **Compliance Expansion:** Integrate AML/KYC checks specifically for bridge entries and exits.
 
-## 5. Phase 4: Protocol-Specific Handlers (In Progress)
+## 5. Phase 4: Protocol-Specific Handlers (Completed)
 - **Objective:** Provide deeper functionality beyond status monitoring.
 - **Lightning Payments:** Direct payment routing and invoice generation through the Gateway.
 - **Stacks Smart Contracts:** Proxy for interacting with Clarity contracts.
-- **RGB/BitVM Support:** Infrastructure for hosting and verifying client-side state or fraud proofs.
-- **New Layer Integration:** Adding support for Babylon and BOB (Build on Bitcoin).
+- **RGB/BitVM Support:** Infrastructure for hosting and verifying client-side state or fraud proofs (Implemented basic state/proof handlers).
+- **New Layer Integration:** Added support for Babylon, BOB, Merlin, Botanix, and B² Network.
 
 ## 6. Alignment with BitcoinLayers.org
 The Conxian Gateway remains committed to providing users with the most accurate risk profiles.

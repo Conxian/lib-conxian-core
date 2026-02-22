@@ -28,6 +28,9 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **Rootstock:** EVM-compatible smart contracts secured by merge-mining (Powpeg). Features mining hashrate monitoring.
 - **Babylon:** Bitcoin staking protocol (Staking/Security Shared). Features staked BTC tracking.
 - **BOB (Build on Bitcoin):** Hybrid L2 combining Bitcoin security with Ethereum EVM (Optimistic/Rollup). Features TVL and sequencer monitoring.
+- **Merlin Chain:** A leading Bitcoin ZK-Rollup focused on the Bitcoin ecosystem (ZK). Features large TVL and asset bridge monitoring.
+- **Botanix:** An EVM-equivalent Layer 2 on Bitcoin using the Spiderchain decentralized primitive (Spiderchain). Features decentralized multisig security monitoring.
+- **B² Network:** A ZK-Rollup on Bitcoin that leverages ZK-proofs for secure and scalable transactions (ZK). Features block height and proof verification tracking.
 
 ### 3.3. Advanced Protocol Interactions (Phase 4)
 - **Lightning:** Direct support for creating invoices (`/api/v1/lightning/invoice`) and sending payments (`/api/v1/lightning/pay`).

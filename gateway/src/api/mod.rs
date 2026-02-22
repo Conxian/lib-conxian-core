@@ -22,9 +22,14 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(reserves_handler)
             .service(babylon_handler)
             .service(bob_handler)
+            .service(merlin_handler)
+            .service(botanix_handler)
+            .service(b2network_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
             .service(stacks_contract_handler)
+            .service(rgb_contract_handler)
+            .service(bitvm_proof_handler)
     );
 }
 
@@ -179,5 +184,37 @@ async fn lightning_pay_handler(engine: web::Data<Engine>, req: web::Json<PayRequ
 #[get("/stacks/contract/{id}")]
 async fn stacks_contract_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
     let res = engine.get_stacks_contract(&path.into_inner());
+    HttpResponse::Ok().json(res)
+}
+#[get("/merlin")]
+async fn merlin_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("merlin");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/botanix")]
+async fn botanix_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("botanix");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/b2network")]
+async fn b2network_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("b2network");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/rgb/contract/{id}")]
+async fn rgb_contract_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_rgb_contract(&path.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/bitvm/proof/{id}")]
+async fn bitvm_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_bitvm_proof(&path.into_inner());
     HttpResponse::Ok().json(res)
 }
