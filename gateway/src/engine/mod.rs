@@ -74,8 +74,9 @@ impl Engine {
             ("rootstock", 35, "Powpeg", "Medium", "On-chain", "Bitcoin", "Powpeg"),
             ("babylon", 40, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
             ("bob", 55, "Optimistic Rollup", "Medium", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge"),
-            ("babylon", 40, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
-            ("bob", 55, "Optimistic Rollup", "Medium", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge"),
+            ("merlin", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("botanix", 38, "Spiderchain", "Medium", "On-chain (EVM)", "Bitcoin", "Multisig"),
+            ("b2network", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -110,6 +111,15 @@ impl Engine {
                 },
                 "bob" => {
                     metadata.insert("tvl_usd".to_string(), "45000000".to_string());
+                },
+                "merlin" => {
+                    metadata.insert("tvl_usd".to_string(), "1500000000".to_string());
+                },
+                "botanix" => {
+                    metadata.insert("nodes_active".to_string(), "21".to_string());
+                },
+                "b2network" => {
+                    metadata.insert("block_height".to_string(), "12543".to_string());
                 },
                 _ => {}
             }
@@ -254,6 +264,26 @@ impl Engine {
                                     *v = format!("{:.0}", tvl + 1000.0);
                                 }
                             },
+                            "merlin" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(1500000000.0);
+                                    *v = format!("{:.0}", tvl + 5000.0);
+                                }
+                            },
+                            "botanix" => {
+                                if let Some(v) = status.metadata.get_mut("nodes_active") {
+                                    let nodes: u32 = v.parse().unwrap_or(21);
+                                    if Utc::now().timestamp() % 60 == 0 {
+                                        *v = (nodes + 1).to_string();
+                                    }
+                                }
+                            },
+                            "b2network" => {
+                                if let Some(v) = status.metadata.get_mut("block_height") {
+                                    let height: u64 = v.parse().unwrap_or(12543);
+                                    *v = (height + 1).to_string();
+                                }
+                            },
                             _ => {}
                         }
                     }
@@ -304,6 +334,26 @@ impl Engine {
                 "functions": [{"name": "hello", "access": "public", "outputs": {"type": "string"}}]
             },
             "status": "active"
+        })
+    }
+
+    pub fn get_rgb_contract(&self, contract_id: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "contract_id": contract_id,
+            "schema": "FungibleAsset",
+            "state": "Verified",
+            "last_transition": Utc::now()
+        })
+    }
+
+    pub fn get_bitvm_proof(&self, proof_id: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "proof_id": proof_id,
+            "status": "Verified",
+            "verifier_count": 5,
+            "challenge_period_blocks": 144
         })
     }
 }

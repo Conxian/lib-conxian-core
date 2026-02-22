@@ -34,6 +34,11 @@ export const STACKS_API_URL = getGatewayUrl('stacks', currentEnv);
 export const LIGHTNING_API_URL = getGatewayUrl('lightning', currentEnv);
 export const LIQUID_API_URL = getGatewayUrl('liquid', currentEnv);
 export const ROOTSTOCK_API_URL = getGatewayUrl('rootstock', currentEnv);
+export const BABYLON_API_URL = getGatewayUrl('babylon', currentEnv);
+export const BOB_API_URL = getGatewayUrl('bob', currentEnv);
+export const MERLIN_API_URL = getGatewayUrl('merlin', currentEnv);
+export const BOTANIX_API_URL = getGatewayUrl('botanix', currentEnv);
+export const B2NETWORK_API_URL = getGatewayUrl('b2network', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -68,6 +73,17 @@ export const payLightningInvoice = async (invoice: string) => {
 
 export const getStacksContract = async (contractId: string) => {
   const url = `${getGatewayUrl("stacks", currentEnv)}/contract/${contractId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+export const getRgbContract = async (contractId: string) => {
+  const url = `${getGatewayUrl("rgb", currentEnv)}/contract/${contractId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBitvmProof = async (proofId: string) => {
+  const url = `${getGatewayUrl("bitvm", currentEnv)}/proof/${proofId}`;
   const response = await fetch(url);
   return response.json();
 };

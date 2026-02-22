@@ -124,4 +124,26 @@ mod tests {
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["contract_id"], "ST123");
     }
+
+    #[actix_web::test]
+    async fn test_merlin_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/merlin").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "merlin");
+    }
+
+    #[actix_web::test]
+    async fn test_rgb_contract_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/rgb/contract/RGB123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["contract_id"], "RGB123");
+    }
 }
