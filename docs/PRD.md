@@ -26,6 +26,12 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **Lightning Network:** Instant, low-cost Bitcoin payments via state channels. Features channel capacity and node connectivity monitoring.
 - **Liquid Network:** Federated sidechain for confidential transactions and issued assets. Features pegged-BTC tracking.
 - **Rootstock:** EVM-compatible smart contracts secured by merge-mining (Powpeg). Features mining hashrate monitoring.
+- **Babylon:** Bitcoin staking protocol (Staking/Security Shared). Features staked BTC tracking.
+- **BOB (Build on Bitcoin):** Hybrid L2 combining Bitcoin security with Ethereum EVM (Optimistic/Rollup). Features TVL and sequencer monitoring.
+
+### 3.3. Advanced Protocol Interactions (Phase 4)
+- **Lightning:** Direct support for creating invoices (`/api/v1/lightning/invoice`) and sending payments (`/api/v1/lightning/pay`).
+- **Stacks:** Enhanced interaction with smart contracts via `/api/v1/stacks/contract/{id}`.
 
 ## 4. Monitoring & Compliance
 The Gateway provides detailed status information for each service, including:

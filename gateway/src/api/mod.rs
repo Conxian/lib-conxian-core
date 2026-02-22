@@ -1,5 +1,6 @@
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use crate::engine::Engine;
+use serde::Deserialize;
 use std::sync::atomic::Ordering;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -19,6 +20,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(compliance_handler)
             .service(metrics_handler)
             .service(reserves_handler)
+            .service(babylon_handler)
+            .service(bob_handler)
+            .service(lightning_invoice_handler)
+            .service(lightning_pay_handler)
+            .service(stacks_contract_handler)
     );
 }
 
@@ -131,4 +137,47 @@ async fn layers_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let statuses = engine.get_all_service_statuses();
     HttpResponse::Ok().json(statuses)
+}
+
+#[get("/babylon")]
+async fn babylon_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("babylon");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bob")]
+async fn bob_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bob");
+    HttpResponse::Ok().json(status)
+}
+
+#[derive(Deserialize)]
+struct InvoiceRequest {
+    amount_msat: u64,
+    description: String,
+}
+
+#[post("/lightning/invoice")]
+async fn lightning_invoice_handler(engine: web::Data<Engine>, req: web::Json<InvoiceRequest>) -> impl Responder {
+    let res = engine.create_lightning_invoice(req.amount_msat, &req.description);
+    HttpResponse::Ok().json(res)
+}
+
+#[derive(Deserialize)]
+struct PayRequest {
+    invoice: String,
+}
+
+#[post("/lightning/pay")]
+async fn lightning_pay_handler(engine: web::Data<Engine>, req: web::Json<PayRequest>) -> impl Responder {
+    let res = engine.pay_lightning_invoice(&req.invoice);
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/stacks/contract/{id}")]
+async fn stacks_contract_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_stacks_contract(&path.into_inner());
+    HttpResponse::Ok().json(res)
 }

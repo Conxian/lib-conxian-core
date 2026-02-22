@@ -72,6 +72,10 @@ impl Engine {
             ("lightning", 5, "State Channels", "Low", "Off-chain", "Bitcoin", "N/A"),
             ("liquid", 25, "Federated", "Medium", "On-chain (Federated)", "Bitcoin", "Strong Federation"),
             ("rootstock", 35, "Powpeg", "Medium", "On-chain", "Bitcoin", "Powpeg"),
+            ("babylon", 40, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
+            ("bob", 55, "Optimistic Rollup", "Medium", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge"),
+            ("babylon", 40, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
+            ("bob", 55, "Optimistic Rollup", "Medium", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -100,6 +104,12 @@ impl Engine {
                 },
                 "rootstock" => {
                     metadata.insert("mining_hashrate_ph".to_string(), "245.8".to_string());
+                },
+                "babylon" => {
+                    metadata.insert("staked_btc".to_string(), "1250.0".to_string());
+                },
+                "bob" => {
+                    metadata.insert("tvl_usd".to_string(), "45000000".to_string());
                 },
                 _ => {}
             }
@@ -232,6 +242,18 @@ impl Engine {
                                     *v = format!("{:.1}", hashrate + (Utc::now().timestamp() % 5) as f64 - 2.0);
                                 }
                             },
+                            "babylon" => {
+                                if let Some(v) = status.metadata.get_mut("staked_btc") {
+                                    let staked: f64 = v.parse().unwrap_or(1250.0);
+                                    *v = format!("{:.1}", staked + 0.5);
+                                }
+                            },
+                            "bob" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(45000000.0);
+                                    *v = format!("{:.0}", tvl + 1000.0);
+                                }
+                            },
                             _ => {}
                         }
                     }
@@ -249,5 +271,39 @@ impl Engine {
                 }
             }
         });
+    }
+}
+
+impl Engine {
+    pub fn create_lightning_invoice(&self, amount_msat: u64, description: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "invoice": format!("lnbc{}1p...", amount_msat / 1000),
+            "payment_hash": "d7a8fbb307d7809469ca9abcb0082e4f",
+            "description": description,
+            "expiry": 3600
+        })
+    }
+
+    pub fn pay_lightning_invoice(&self, _invoice: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "status": "success",
+            "preimage": "6f2e4b3c...",
+            "destination": "03abcd...",
+            "amount_msat": 10000
+        })
+    }
+
+    pub fn get_stacks_contract(&self, contract_id: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "contract_id": contract_id,
+            "source_code": "(define-public (hello) (ok \"world\"))",
+            "abi": {
+                "functions": [{"name": "hello", "access": "public", "outputs": {"type": "string"}}]
+            },
+            "status": "active"
+        })
     }
 }
