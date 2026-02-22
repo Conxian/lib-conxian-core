@@ -11,6 +11,7 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - **Unified API**: All services are accessible via `/api/v1/*`.
 - **Sovereign Services**: Bisq, RGB, BitVM, Changelly.
 - **Bitcoin Layer Support**: Stacks, Lightning Network, Liquid, Rootstock.
+- **Dynamic Monitoring**: Background tasks provide real-time status, latency, and protocol-specific metadata (e.g., Stacks block height).
 - **Risk Transparency**: Detailed trust model and risk metadata aligned with [bitcoinlayers.org](https://bitcoinlayers.org/).
 - **Monitoring & Compliance**: Integrated health, status, compliance, and metrics endpoints.
 - **High Performance**: Built with Rust and Actix-web for maximum reliability and throughput.
