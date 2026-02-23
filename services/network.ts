@@ -125,3 +125,14 @@ export const checkCompliance = async (address: string) => {
   });
   return response.json();
 };
+export const getB2Status = async () => {
+  const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getCitreaProof = async (batchId: string) => {
+  const url = `${getGatewayUrl("citrea", currentEnv)}/proof/${batchId}`;
+  const response = await fetch(url);
+  return response.json();
+};

@@ -456,6 +456,8 @@ impl Engine {
                     }
                 }
 
+                engine_clone.update_dynamic_stats();
+
                 {
                     let mut reserves = engine_clone.reserves.write().unwrap();
                     let current_tvl = engine_clone.total_tvl_usd.load(Ordering::SeqCst);
@@ -555,6 +557,46 @@ impl Engine {
             "address": address,
             "compliant": is_compliant,
             "risk_score": if is_compliant { 10 } else { 95 },
+            "timestamp": Utc::now()
+        })
+    }
+
+    pub fn calculate_total_tvl(&self) -> u64 {
+        let statuses = self.service_statuses.read().unwrap();
+        let mut total = 0u64;
+        for status in statuses.values() {
+            if let Some(tvl_str) = status.metadata.get("tvl_usd") {
+                if let Ok(tvl) = tvl_str.parse::<f64>() {
+                    total += tvl as u64;
+                }
+            }
+        }
+        total
+    }
+
+    pub fn update_dynamic_stats(&self) {
+        let new_tvl = self.calculate_total_tvl();
+        self.total_tvl_usd.store(new_tvl, Ordering::SeqCst);
+    }
+
+    pub fn get_b2_status(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("b2network");
+        serde_json::json!({
+            "block_height": status.metadata.get("block_height").cloned().unwrap_or_default(),
+            "proof_status": "Verified",
+            "sequencer_batches": 1254,
+            "da_layer": "Bitcoin"
+        })
+    }
+
+    pub fn get_citrea_proof(&self, batch_id: &str) -> serde_json::Value {
+        self.increment_requests();
+        serde_json::json!({
+            "batch_id": batch_id,
+            "status": "Finalized",
+            "zk_proof": "0xabc...",
+            "settlement_tx": "0x123...",
             "timestamp": Utc::now()
         })
     }

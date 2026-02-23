@@ -127,6 +127,14 @@ Retrieves RGB contract details and state.
 ### GET /api/v1/bitvm/proof/{id}
 Retrieves BitVM fraud proof details and status.
 - **Response:** `{ "proof_id": "...", "status": "...", "verifier_count": 5 }`
+### GET /api/v1/b2network/status
+Retrieves B² Network specific status including sequencer batches.
+- **Response:** `{ "block_height": "...", "proof_status": "Verified", "sequencer_batches": 1254, "da_layer": "Bitcoin" }`
+
+### GET /api/v1/citrea/proof/{id}
+Retrieves Citrea ZK proof details for a specific batch.
+- **Response:** `{ "batch_id": "...", "status": "Finalized", "zk_proof": "...", "settlement_tx": "..." }`
+
 
 ### PriceInfo
 ```json

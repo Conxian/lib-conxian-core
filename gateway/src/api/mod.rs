@@ -43,6 +43,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(stacks_contract_handler)
             .service(rgb_contract_handler)
             .service(bitvm_proof_handler)
+            .service(b2network_status_handler)
+            .service(citrea_proof_handler)
     );
 }
 
@@ -349,4 +351,16 @@ async fn lorenzo_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("lorenzo");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/b2network/status")]
+async fn b2network_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_b2_status();
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/citrea/proof/{id}")]
+async fn citrea_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_citrea_proof(&path.into_inner());
+    HttpResponse::Ok().json(res)
 }

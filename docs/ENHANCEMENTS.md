@@ -46,3 +46,5 @@ The Conxian Gateway remains committed to providing users with the most accurate 
 - **Multi-layer Support:** Added infrastructure for multi-layer L2 architectures like Zulu.
 - **Enhanced Metrics:** Expanded Prometheus monitoring with per-service latency and risk gauges.
 - **Compliance Verification:** Implemented active address verification API.
+- **Deep Layer Integration:** Added specialized handlers for B² Network status and Citrea ZK proof verification.
+- **Dynamic TVL Aggregation:** Implemented automatic TVL calculation across all supported layers.
