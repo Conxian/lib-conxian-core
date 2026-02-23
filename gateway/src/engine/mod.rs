@@ -65,7 +65,7 @@ impl Engine {
     fn calculate_risk_level(latency: u32, trust_model: &str) -> String {
         if latency > 250 || trust_model == "Centralized" {
             "High".to_string()
-        } else if latency > 150 || trust_model == "Federated" || trust_model == "Optimistic" || trust_model == "Optimistic Rollup" || trust_model == "Powpeg" || trust_model == "Spiderchain" {
+        } else if latency > 150 || trust_model == "Federated" || trust_model == "Optimistic" || trust_model == "Optimistic Rollup" || trust_model == "Powpeg" || trust_model == "Spiderchain" || trust_model == "Economic Layer" || trust_model == "Multi-layer" {
             "Medium".to_string()
         } else {
             "Low".to_string()
@@ -99,6 +99,12 @@ impl Engine {
             ("b2network", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("citrea", 52, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("bitlayer", 60, "Optimistic", "Medium", "On-chain", "Bitcoin", "BitVM Bridge"),
+            ("alpen", 48, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("mezo", 58, "Economic Layer", "Medium", "On-chain", "Bitcoin", "tBTC Bridge"),
+            ("zulu", 50, "Multi-layer", "Medium", "On-chain", "Bitcoin", "Decentralized Bridge"),
+            ("bison", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("hemi", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("taproot-assets", 15, "Client-side", "Low", "On-chain", "Bitcoin", "N/A"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -148,6 +154,25 @@ impl Engine {
                 },
                 "bitlayer" => {
                     metadata.insert("tvl_usd".to_string(), "8500000".to_string());
+                },
+                "alpen" => {
+                    metadata.insert("tvl_usd".to_string(), "5000000".to_string());
+                },
+                "mezo" => {
+                    metadata.insert("tvl_usd".to_string(), "120000000".to_string());
+                    metadata.insert("staked_tbtc".to_string(), "1850.5".to_string());
+                },
+                "zulu" => {
+                    metadata.insert("block_height".to_string(), "5421".to_string());
+                },
+                "bison" => {
+                    metadata.insert("tvl_usd".to_string(), "3200000".to_string());
+                },
+                "hemi" => {
+                    metadata.insert("tvl_usd".to_string(), "2100000".to_string());
+                },
+                "taproot-assets" => {
+                    metadata.insert("asset_count".to_string(), "142".to_string());
                 },
                 _ => {}
             }
@@ -344,6 +369,44 @@ impl Engine {
                                 if let Some(v) = status.metadata.get_mut("tvl_usd") {
                                     let tvl: f64 = v.parse().unwrap_or(8500000.0);
                                     *v = format!("{:.0}", tvl + 1800.0);
+                                }
+                            },
+                            "alpen" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(5000000.0);
+                                    *v = format!("{:.0}", tvl + 1200.0);
+                                }
+                            },
+                            "mezo" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(120000000.0);
+                                    *v = format!("{:.0}", tvl + 25000.0);
+                                }
+                            },
+                            "zulu" => {
+                                if let Some(v) = status.metadata.get_mut("block_height") {
+                                    let height: u64 = v.parse().unwrap_or(5421);
+                                    *v = (height + 1).to_string();
+                                }
+                            },
+                            "bison" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(3200000.0);
+                                    *v = format!("{:.0}", tvl + 800.0);
+                                }
+                            },
+                            "hemi" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(2100000.0);
+                                    *v = format!("{:.0}", tvl + 500.0);
+                                }
+                            },
+                            "taproot-assets" => {
+                                if let Some(v) = status.metadata.get_mut("asset_count") {
+                                    let count: u32 = v.parse().unwrap_or(142);
+                                    if Utc::now().timestamp() % 10 == 0 {
+                                        *v = (count + 1).to_string();
+                                    }
                                 }
                             },
                             _ => {}

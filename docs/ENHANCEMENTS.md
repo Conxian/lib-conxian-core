@@ -37,3 +37,10 @@ The Conxian Gateway remains committed to providing users with the most accurate 
 - **Data Availability Tracking:** Verified tracking of whether a layer uses Bitcoin for DA or an external committee.
 - **Settlement Verification:** Monitoring of withdrawal windows and fraud proof submission periods.
 - **Censorship Resistance:** Assessment of sequencer/operator decentralization.
+
+## 7. Phase 5: Ecosystem Expansion & Asset Protocols (In Progress)
+- **Objective:** Broaden support for new Bitcoin L2s and emerging asset protocols.
+- **New Layer Integration:** Added support for Alpen, Mezo, Zulu Network, Bison, and Hemi Network.
+- **Asset Protocols:** Integrated monitoring for Taproot Assets (formerly Taro).
+- **Economic Layer Tracking:** Implemented specialized tracking for "Economic Layers" like Mezo.
+- **Multi-layer Support:** Added infrastructure for multi-layer L2 architectures like Zulu.

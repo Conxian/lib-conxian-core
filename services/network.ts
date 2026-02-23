@@ -41,6 +41,12 @@ export const BOTANIX_API_URL = getGatewayUrl('botanix', currentEnv);
 export const B2NETWORK_API_URL = getGatewayUrl('b2network', currentEnv);
 export const CITREA_API_URL = getGatewayUrl('citrea', currentEnv);
 export const BITLAYER_API_URL = getGatewayUrl('bitlayer', currentEnv);
+export const ALPEN_API_URL = getGatewayUrl('alpen', currentEnv);
+export const MEZO_API_URL = getGatewayUrl('mezo', currentEnv);
+export const ZULU_API_URL = getGatewayUrl('zulu', currentEnv);
+export const BISON_API_URL = getGatewayUrl('bison', currentEnv);
+export const HEMI_API_URL = getGatewayUrl('hemi', currentEnv);
+export const TAPROOT_ASSETS_API_URL = getGatewayUrl('taproot-assets', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -99,6 +105,12 @@ export const getPrices = async () => {
 
 export const getExchangeRate = async (from: string, to: string) => {
   const url = `${getGatewayUrl("changelly", currentEnv)}/rate?from=${from}&to=${to}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getTaprootAssets = async () => {
+  const url = getGatewayUrl("taproot-assets", currentEnv);
   const response = await fetch(url);
   return response.json();
 };

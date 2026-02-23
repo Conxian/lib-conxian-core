@@ -28,6 +28,12 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(b2network_handler)
             .service(citrea_handler)
             .service(bitlayer_handler)
+            .service(alpen_handler)
+            .service(mezo_handler)
+            .service(zulu_handler)
+            .service(bison_handler)
+            .service(hemi_handler)
+            .service(taproot_assets_handler)
             .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
@@ -255,4 +261,46 @@ struct RateRequest {
 async fn changelly_rate_handler(engine: web::Data<Engine>, query: web::Query<RateRequest>) -> impl Responder {
     let res = engine.get_exchange_rate(&query.from, &query.to);
     HttpResponse::Ok().json(res)
+}
+
+#[get("/alpen")]
+async fn alpen_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("alpen");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/mezo")]
+async fn mezo_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("mezo");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/zulu")]
+async fn zulu_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("zulu");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bison")]
+async fn bison_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bison");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/hemi")]
+async fn hemi_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("hemi");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/taproot-assets")]
+async fn taproot_assets_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("taproot-assets");
+    HttpResponse::Ok().json(status)
 }

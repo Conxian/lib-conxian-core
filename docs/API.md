@@ -56,6 +56,12 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/b2network**
 - **GET /api/v1/citrea**
 - **GET /api/v1/bitlayer**
+- **GET /api/v1/alpen**
+- **GET /api/v1/mezo**
+- **GET /api/v1/zulu**
+- **GET /api/v1/bison**
+- **GET /api/v1/hemi**
+- **GET /api/v1/taproot-assets**
 - **GET /api/v1/prices**
 
 ## 3. Data Models
