@@ -19,6 +19,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(status_handler)
             .service(health_handler)
             .service(compliance_handler)
+            .service(compliance_check_handler)
             .service(metrics_handler)
             .service(reserves_handler)
             .service(babylon_handler)
@@ -28,12 +29,22 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(b2network_handler)
             .service(citrea_handler)
             .service(bitlayer_handler)
+            .service(alpen_handler)
+            .service(mezo_handler)
+            .service(zulu_handler)
+            .service(bison_handler)
+            .service(hemi_handler)
+            .service(taproot_assets_handler)
+            .service(nubit_handler)
+            .service(lorenzo_handler)
             .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
             .service(stacks_contract_handler)
             .service(rgb_contract_handler)
             .service(bitvm_proof_handler)
+            .service(b2network_status_handler)
+            .service(citrea_proof_handler)
     );
 }
 
@@ -94,6 +105,17 @@ async fn compliance_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(compliance)
 }
 
+#[derive(Deserialize)]
+pub struct ComplianceCheckRequest {
+    pub address: String,
+}
+
+#[post("/compliance/check")]
+async fn compliance_check_handler(engine: web::Data<Engine>, req: web::Json<ComplianceCheckRequest>) -> impl Responder {
+    let res = engine.check_compliance(&req.address);
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/metrics")]
 async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
     let uptime = chrono::Utc::now().signed_duration_since(engine.start_time).num_seconds();
@@ -101,10 +123,28 @@ async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
     let tvl = engine.total_tvl_usd.load(Ordering::SeqCst);
     let nodes = engine.active_sovereign_nodes.load(Ordering::SeqCst);
 
-    let metrics = format!(
-        "# HELP gateway_uptime_seconds Uptime in seconds\n         # TYPE gateway_uptime_seconds counter\n         gateway_uptime_seconds {}\n         # HELP gateway_requests_total Total number of requests processed\n         # TYPE gateway_requests_total counter\n         gateway_requests_total {}\n         # HELP gateway_tvl_usd Total Value Locked in USD\n         # TYPE gateway_tvl_usd gauge\n         gateway_tvl_usd {}\n         # HELP gateway_active_nodes Number of active sovereign nodes\n         # TYPE gateway_active_nodes gauge\n         gateway_active_nodes {}\n",
+    let mut metrics = format!(
+        "# HELP gateway_uptime_seconds Uptime in seconds\n# TYPE gateway_uptime_seconds counter\ngateway_uptime_seconds {}\n# HELP gateway_requests_total Total number of requests processed\n# TYPE gateway_requests_total counter\ngateway_requests_total {}\n# HELP gateway_tvl_usd Total Value Locked in USD\n# TYPE gateway_tvl_usd gauge\ngateway_tvl_usd {}\n# HELP gateway_active_nodes Number of active sovereign nodes\n# TYPE gateway_active_nodes gauge\ngateway_active_nodes {}\n",
         uptime, requests, tvl, nodes
     );
+
+    let statuses = engine.get_all_service_statuses();
+    for status in statuses.values() {
+        metrics.push_str(&format!(
+            "# HELP gateway_service_latency_ms Latency of {} in ms\ngateway_service_latency_ms{{service=\"{}\"}} {}\n",
+            status.name, status.name, status.latency_ms
+        ));
+        let risk_score = match status.risk_level.as_str() {
+            "Low" => 10,
+            "Medium" => 50,
+            "High" => 90,
+            _ => 0,
+        };
+        metrics.push_str(&format!(
+            "# HELP gateway_service_risk_score Risk score of {}\ngateway_service_risk_score{{service=\"{}\"}} {}\n",
+            status.name, status.name, risk_score
+        ));
+    }
 
     HttpResponse::Ok()
         .content_type("text/plain; version=0.0.4")
@@ -254,5 +294,73 @@ struct RateRequest {
 #[get("/changelly/rate")]
 async fn changelly_rate_handler(engine: web::Data<Engine>, query: web::Query<RateRequest>) -> impl Responder {
     let res = engine.get_exchange_rate(&query.from, &query.to);
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/alpen")]
+async fn alpen_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("alpen");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/mezo")]
+async fn mezo_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("mezo");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/zulu")]
+async fn zulu_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("zulu");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bison")]
+async fn bison_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bison");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/hemi")]
+async fn hemi_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("hemi");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/taproot-assets")]
+async fn taproot_assets_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("taproot-assets");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/nubit")]
+async fn nubit_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("nubit");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/lorenzo")]
+async fn lorenzo_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("lorenzo");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/b2network/status")]
+async fn b2network_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_b2_status();
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/citrea/proof/{id}")]
+async fn citrea_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_citrea_proof(&path.into_inner());
     HttpResponse::Ok().json(res)
 }

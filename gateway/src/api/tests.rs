@@ -218,4 +218,129 @@ mod tests {
         assert_eq!(body["status"], "healthy");
         assert_eq!(body["engine"], "active");
     }
+
+    #[actix_web::test]
+    async fn test_alpen_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/alpen").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "alpen");
+    }
+
+    #[actix_web::test]
+    async fn test_mezo_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/mezo").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "mezo");
+    }
+
+    #[actix_web::test]
+    async fn test_zulu_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/zulu").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "zulu");
+    }
+
+    #[actix_web::test]
+    async fn test_bison_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/bison").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "bison");
+    }
+
+    #[actix_web::test]
+    async fn test_hemi_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/hemi").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "hemi");
+    }
+
+    #[actix_web::test]
+    async fn test_taproot_assets_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/taproot-assets").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "taproot-assets");
+    }
+
+    #[actix_web::test]
+    async fn test_nubit_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/nubit").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "nubit");
+    }
+
+    #[actix_web::test]
+    async fn test_lorenzo_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/lorenzo").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "lorenzo");
+    }
+
+    #[actix_web::test]
+    async fn test_compliance_check_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/v1/compliance/check")
+            .set_json(serde_json::json!({"address": "bc1qsafe"}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["compliant"], true);
+    }
+
+    #[actix_web::test]
+    async fn test_b2network_status_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/b2network/status").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["proof_status"], "Verified");
+    }
+
+    #[actix_web::test]
+    async fn test_citrea_proof_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/citrea/proof/BATCH123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["batch_id"], "BATCH123");
+        assert_eq!(body["status"], "Finalized");
+    }
 }

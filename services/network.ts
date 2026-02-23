@@ -41,6 +41,14 @@ export const BOTANIX_API_URL = getGatewayUrl('botanix', currentEnv);
 export const B2NETWORK_API_URL = getGatewayUrl('b2network', currentEnv);
 export const CITREA_API_URL = getGatewayUrl('citrea', currentEnv);
 export const BITLAYER_API_URL = getGatewayUrl('bitlayer', currentEnv);
+export const ALPEN_API_URL = getGatewayUrl('alpen', currentEnv);
+export const MEZO_API_URL = getGatewayUrl('mezo', currentEnv);
+export const ZULU_API_URL = getGatewayUrl('zulu', currentEnv);
+export const BISON_API_URL = getGatewayUrl('bison', currentEnv);
+export const HEMI_API_URL = getGatewayUrl('hemi', currentEnv);
+export const TAPROOT_ASSETS_API_URL = getGatewayUrl('taproot-assets', currentEnv);
+export const NUBIT_API_URL = getGatewayUrl('nubit', currentEnv);
+export const LORENZO_API_URL = getGatewayUrl('lorenzo', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -99,6 +107,32 @@ export const getPrices = async () => {
 
 export const getExchangeRate = async (from: string, to: string) => {
   const url = `${getGatewayUrl("changelly", currentEnv)}/rate?from=${from}&to=${to}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getTaprootAssets = async () => {
+  const url = getGatewayUrl("taproot-assets", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+export const checkCompliance = async (address: string) => {
+  const url = `${getGatewayUrl("compliance", currentEnv)}/check`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address }),
+  });
+  return response.json();
+};
+export const getB2Status = async () => {
+  const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getCitreaProof = async (batchId: string) => {
+  const url = `${getGatewayUrl("citrea", currentEnv)}/proof/${batchId}`;
   const response = await fetch(url);
   return response.json();
 };

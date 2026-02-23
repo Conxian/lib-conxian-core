@@ -29,6 +29,11 @@ Returns Prometheus-compatible metrics.
 Returns the current network compliance status and active rules.
 - **Response:** `{ "status": "compliant", "last_audit": "...", "rules_active": ["KYC", "AML", "NetworkIntegrity"] }`
 
+### POST /api/v1/compliance/check
+Performs a simulated AML/KYC check on a Bitcoin address.
+- **Request Body:** `{ "address": "bc1q..." }`
+- **Response:** `{ "address": "bc1q...", "compliant": true, "risk_score": 10 }`
+
 ## 2. Service Endpoints
 
 ### GET /api/v1/layers
@@ -56,6 +61,14 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/b2network**
 - **GET /api/v1/citrea**
 - **GET /api/v1/bitlayer**
+- **GET /api/v1/alpen**
+- **GET /api/v1/mezo**
+- **GET /api/v1/zulu**
+- **GET /api/v1/bison**
+- **GET /api/v1/hemi**
+- **GET /api/v1/taproot-assets**
+- **GET /api/v1/nubit**
+- **GET /api/v1/lorenzo**
 - **GET /api/v1/prices**
 
 ## 3. Data Models
@@ -114,6 +127,14 @@ Retrieves RGB contract details and state.
 ### GET /api/v1/bitvm/proof/{id}
 Retrieves BitVM fraud proof details and status.
 - **Response:** `{ "proof_id": "...", "status": "...", "verifier_count": 5 }`
+### GET /api/v1/b2network/status
+Retrieves B² Network specific status including sequencer batches.
+- **Response:** `{ "block_height": "...", "proof_status": "Verified", "sequencer_batches": 1254, "da_layer": "Bitcoin" }`
+
+### GET /api/v1/citrea/proof/{id}
+Retrieves Citrea ZK proof details for a specific batch.
+- **Response:** `{ "batch_id": "...", "status": "Finalized", "zk_proof": "...", "settlement_tx": "..." }`
+
 
 ### PriceInfo
 ```json

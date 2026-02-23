@@ -33,6 +33,14 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **B² Network:** A ZK-Rollup on Bitcoin that leverages ZK-proofs for secure and scalable transactions (ZK). Features block height and proof verification tracking.
 - **Citrea:** The first ZK-Rollup on Bitcoin (ZK). Features TVL and ZK-proof verification monitoring.
 - **Bitlayer:** The first Bitcoin Layer 2 based on BitVM (Optimistic). Features TVL and BitVM bridge security monitoring.
+- **Alpen:** A ZK Rollup focusing on Bitcoin scalability (ZK). Features ZK-proof verification tracking.
+- **Mezo:** A Bitcoin Economic Layer using tBTC for yield (Economic Layer). Features staked tBTC and TVL monitoring.
+- **Zulu Network:** A multi-layer Bitcoin L2 supporting both EVM and native Bitcoin programmability (Multi-layer). Features block height and bridge security tracking.
+- **Bison:** A ZK Rollup on Bitcoin (ZK). Features TVL and ZK-proof verification monitoring.
+- **Hemi Network:** A modular L2 combining Bitcoin security with Ethereum's flexibility (ZK). Features TVL and proof tracking.
+- **Taproot Assets:** Protocol for issuing assets on Bitcoin and Lightning (Client-side). Features asset count and issuance monitoring.
+- **Nubit:** A Bitcoin-native Data Availability (DA) layer (DA). Features DA status and network latency monitoring.
+- **Lorenzo:** A Bitcoin staking and restaking protocol (Staking). Features staked BTC tracking.
 
 ### 3.3. Advanced Protocol Interactions (Phase 4)
 - **Lightning:** Direct support for creating invoices (`/api/v1/lightning/invoice`) and sending payments (`/api/v1/lightning/pay`).
