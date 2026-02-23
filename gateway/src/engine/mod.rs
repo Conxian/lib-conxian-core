@@ -53,9 +53,9 @@ pub struct Engine {
 
 impl Engine {
     fn calculate_risk_level(latency: u32, trust_model: &str) -> String {
-        if latency > 200 || trust_model == "Centralized" {
+        if latency > 250 || trust_model == "Centralized" {
             "High".to_string()
-        } else if latency > 100 || trust_model == "Federated" || trust_model == "Optimistic" {
+        } else if latency > 150 || trust_model == "Federated" || trust_model == "Optimistic" || trust_model == "Optimistic Rollup" || trust_model == "Powpeg" || trust_model == "Spiderchain" {
             "Medium".to_string()
         } else {
             "Low".to_string()
