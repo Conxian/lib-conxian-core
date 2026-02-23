@@ -25,6 +25,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(merlin_handler)
             .service(botanix_handler)
             .service(b2network_handler)
+            .service(citrea_handler)
+            .service(bitlayer_handler)
+            .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
             .service(stacks_contract_handler)
@@ -217,4 +220,25 @@ async fn rgb_contract_handler(engine: web::Data<Engine>, path: web::Path<String>
 async fn bitvm_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
     let res = engine.get_bitvm_proof(&path.into_inner());
     HttpResponse::Ok().json(res)
+}
+
+#[get("/citrea")]
+async fn citrea_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("citrea");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bitlayer")]
+async fn bitlayer_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bitlayer");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/prices")]
+async fn prices_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let prices = engine.get_prices();
+    HttpResponse::Ok().json(prices)
 }

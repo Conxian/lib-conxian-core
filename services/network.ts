@@ -39,6 +39,8 @@ export const BOB_API_URL = getGatewayUrl('bob', currentEnv);
 export const MERLIN_API_URL = getGatewayUrl('merlin', currentEnv);
 export const BOTANIX_API_URL = getGatewayUrl('botanix', currentEnv);
 export const B2NETWORK_API_URL = getGatewayUrl('b2network', currentEnv);
+export const CITREA_API_URL = getGatewayUrl('citrea', currentEnv);
+export const BITLAYER_API_URL = getGatewayUrl('bitlayer', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -47,6 +49,7 @@ export const STATUS_API_URL = getGatewayUrl('status', currentEnv);
 export const COMPLIANCE_API_URL = getGatewayUrl('compliance', currentEnv);
 export const METRICS_API_URL = getGatewayUrl('metrics', currentEnv);
 export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);
+export const PRICES_API_URL = getGatewayUrl('prices', currentEnv);
 
 /**
  * Phase 4: Protocol-Specific Helpers
@@ -84,6 +87,12 @@ export const getRgbContract = async (contractId: string) => {
 
 export const getBitvmProof = async (proofId: string) => {
   const url = `${getGatewayUrl("bitvm", currentEnv)}/proof/${proofId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getPrices = async () => {
+  const url = getGatewayUrl("prices", currentEnv);
   const response = await fetch(url);
   return response.json();
 };

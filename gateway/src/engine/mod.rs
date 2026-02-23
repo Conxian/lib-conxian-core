@@ -31,6 +31,15 @@ pub struct ReserveAsset {
     pub status: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PriceInfo {
+    pub asset: String,
+    pub price_usd: f64,
+    pub last_updated: DateTime<Utc>,
+    pub source: String,
+}
+
+
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
@@ -39,6 +48,7 @@ pub struct Engine {
     pub active_sovereign_nodes: AtomicU64,
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
+    pub prices: Arc<RwLock<HashMap<String, PriceInfo>>>,
 }
 
 impl Engine {
@@ -77,6 +87,8 @@ impl Engine {
             ("merlin", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("botanix", 38, "Spiderchain", "Medium", "On-chain (EVM)", "Bitcoin", "Multisig"),
             ("b2network", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("citrea", 52, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("bitlayer", 60, "Optimistic", "Medium", "On-chain", "Bitcoin", "BitVM Bridge"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -121,6 +133,12 @@ impl Engine {
                 "b2network" => {
                     metadata.insert("block_height".to_string(), "12543".to_string());
                 },
+                "citrea" => {
+                    metadata.insert("tvl_usd".to_string(), "12500000".to_string());
+                },
+                "bitlayer" => {
+                    metadata.insert("tvl_usd".to_string(), "8500000".to_string());
+                },
                 _ => {}
             }
 
@@ -146,6 +164,11 @@ impl Engine {
             ReserveAsset { asset: "Wormhole NTT".to_string(), total_supplied: 551.0, total_reserves: 1320.0, collateral_ratio: 111.1, status: "Verified".to_string() },
         ];
 
+
+        let mut prices = HashMap::new();
+        prices.insert("BTC".to_string(), PriceInfo { asset: "BTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
+        prices.insert("STX".to_string(), PriceInfo { asset: "STX".to_string(), price_usd: 2.5, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
+
         Self {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
@@ -154,6 +177,7 @@ impl Engine {
             active_sovereign_nodes: AtomicU64::new(8),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
+            prices: Arc::new(RwLock::new(prices)),
         }
     }
 
@@ -180,6 +204,10 @@ impl Engine {
 
     pub fn get_reserves(&self) -> Vec<ReserveAsset> {
         self.reserves.read().unwrap().clone()
+    }
+
+    pub fn get_prices(&self) -> HashMap<String, PriceInfo> {
+        self.prices.read().unwrap().clone()
     }
 
     pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
@@ -284,8 +312,30 @@ impl Engine {
                                     *v = (height + 1).to_string();
                                 }
                             },
+                            "citrea" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(12500000.0);
+                                    *v = format!("{:.0}", tvl + 2500.0);
+                                }
+                            },
+                            "bitlayer" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(8500000.0);
+                                    *v = format!("{:.0}", tvl + 1800.0);
+                                }
+                            },
                             _ => {}
                         }
+                    }
+                }
+
+
+                {
+                    let mut prices = engine_clone.prices.write().unwrap();
+                    for price in prices.values_mut() {
+                        let fluctuation = (Utc::now().timestamp() % 101) as f64 / 10000.0 - 0.005;
+                        price.price_usd *= 1.0 + fluctuation;
+                        price.last_updated = Utc::now();
                     }
                 }
 

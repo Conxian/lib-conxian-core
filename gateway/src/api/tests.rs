@@ -146,4 +146,39 @@ mod tests {
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["contract_id"], "RGB123");
     }
+
+    #[actix_web::test]
+    async fn test_citrea_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/citrea").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "citrea");
+    }
+
+    #[actix_web::test]
+    async fn test_bitlayer_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/bitlayer").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "bitlayer");
+    }
+
+    #[actix_web::test]
+    async fn test_prices_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/prices").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_object());
+        assert!(body["BTC"].is_object());
+        assert_eq!(body["BTC"]["asset"], "BTC");
+    }
 }

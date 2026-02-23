@@ -29,7 +29,8 @@ To align with the standards and research presented by [bitcoinlayers.org](https:
 - **Lightning Payments:** Direct payment routing and invoice generation through the Gateway.
 - **Stacks Smart Contracts:** Proxy for interacting with Clarity contracts.
 - **RGB/BitVM Support:** Infrastructure for hosting and verifying client-side state or fraud proofs (Implemented basic state/proof handlers).
-- **New Layer Integration:** Added support for Babylon, BOB, Merlin, Botanix, and B² Network.
+- **New Layer Integration:** Added support for Babylon, BOB, Merlin, Botanix, B² Network, Citrea, and Bitlayer.
+- **Unified Price Feed:** Integrated a simulated real-time price feed for core assets (BTC, STX).
 
 ## 6. Alignment with BitcoinLayers.org
 The Conxian Gateway remains committed to providing users with the most accurate risk profiles.
