@@ -16,7 +16,7 @@ The Gateway exposes a RESTful API under the `/api/v1` prefix. All external servi
 The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integrations, with metadata aligned with research from **bitcoinlayers.org**:
 
 ### 3.1. Sovereign Services
-- **Bisq:** Decentralized Bitcoin exchange (P2P). Features active offer and volume monitoring.
+- **Bisq:** Decentralized Bitcoin exchange (P2P). Features active offer and volume monitoring, as well as simulated exchange rate discovery.
 - **RGB:** Scalable and confidential smart contracts for Bitcoin and Lightning (Client-side).
 - **BitVM:** A computing paradigm to express any program as a Bitcoin script (Optimistic).
 - **Changelly:** Integration for instant cryptocurrency exchange services (Centralized).

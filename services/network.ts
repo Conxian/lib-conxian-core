@@ -96,3 +96,9 @@ export const getPrices = async () => {
   const response = await fetch(url);
   return response.json();
 };
+
+export const getExchangeRate = async (from: string, to: string) => {
+  const url = `${getGatewayUrl("changelly", currentEnv)}/rate?from=${from}&to=${to}`;
+  const response = await fetch(url);
+  return response.json();
+};

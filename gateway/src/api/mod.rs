@@ -10,6 +10,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(rgb_handler)
             .service(bitvm_handler)
             .service(changelly_handler)
+            .service(changelly_rate_handler)
             .service(stacks_handler)
             .service(lightning_handler)
             .service(liquid_handler)
@@ -78,8 +79,12 @@ async fn status_handler(engine: web::Data<Engine>) -> impl Responder {
 }
 
 #[get("/health")]
-async fn health_handler() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::json!({ "status": "healthy" }))
+async fn health_handler(engine: web::Data<Engine>) -> impl Responder {
+    if engine.is_healthy() {
+        HttpResponse::Ok().json(serde_json::json!({ "status": "healthy", "engine": "active" }))
+    } else {
+        HttpResponse::ServiceUnavailable().json(serde_json::json!({ "status": "degraded", "engine": "stale" }))
+    }
 }
 
 #[get("/compliance")]
@@ -238,4 +243,16 @@ async fn prices_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let prices = engine.get_prices();
     HttpResponse::Ok().json(prices)
+}
+
+#[derive(Deserialize)]
+struct RateRequest {
+    from: String,
+    to: String,
+}
+
+#[get("/changelly/rate")]
+async fn changelly_rate_handler(engine: web::Data<Engine>, query: web::Query<RateRequest>) -> impl Responder {
+    let res = engine.get_exchange_rate(&query.from, &query.to);
+    HttpResponse::Ok().json(res)
 }

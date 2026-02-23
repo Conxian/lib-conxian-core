@@ -135,3 +135,8 @@ Retrieves BitVM fraud proof details and status.
   "risk_score": 15
 }
 ```
+
+### GET /api/v1/changelly/rate
+Returns a simulated exchange rate between two assets.
+- **Query Parameters:** `from`, `to`
+- **Response:** `{ "from": "BTC", "to": "USD", "rate": 65000.0, "timestamp": "..." }`

@@ -441,4 +441,28 @@ impl Engine {
             "challenge_period_blocks": 144
         })
     }
+
+    pub fn get_exchange_rate(&self, from: &str, to: &str) -> serde_json::Value {
+        self.increment_requests();
+        let rate = match (from, to) {
+            ("BTC", "USD") => 65000.0,
+            ("USD", "BTC") => 1.0 / 65000.0,
+            ("STX", "BTC") => 0.000038,
+            _ => 1.0,
+        };
+        serde_json::json!({
+            "from": from,
+            "to": to,
+            "rate": rate,
+            "timestamp": Utc::now()
+        })
+    }
+
+    pub fn is_healthy(&self) -> bool {
+        let statuses = self.service_statuses.read().unwrap();
+        // Check if at least some services are active and checked recently
+        if statuses.is_empty() { return false; }
+        let now = Utc::now();
+        statuses.values().any(|s| (now - s.last_checked).num_seconds() < 60)
+    }
 }
