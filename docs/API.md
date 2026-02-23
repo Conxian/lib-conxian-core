@@ -124,3 +124,14 @@ Retrieves BitVM fraud proof details and status.
   "source": "Conxian Oracle"
 }
 ```
+
+
+### ComplianceStatus
+```json
+{
+  "status": "compliant",
+  "last_audit": "2024-05-20T10:00:00Z",
+  "rules_active": ["KYC", "AML", "NetworkIntegrity"],
+  "risk_score": 15
+}
+```

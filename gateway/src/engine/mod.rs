@@ -39,6 +39,15 @@ pub struct PriceInfo {
     pub source: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ComplianceStatus {
+    pub status: String,
+    pub last_audit: DateTime<Utc>,
+    pub rules_active: Vec<String>,
+    pub risk_score: u32,
+}
+
+
 
 pub struct Engine {
     pub version: String,
@@ -49,6 +58,7 @@ pub struct Engine {
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
     pub prices: Arc<RwLock<HashMap<String, PriceInfo>>>,
+    pub compliance: Arc<RwLock<ComplianceStatus>>,
 }
 
 impl Engine {
@@ -169,6 +179,13 @@ impl Engine {
         prices.insert("BTC".to_string(), PriceInfo { asset: "BTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
         prices.insert("STX".to_string(), PriceInfo { asset: "STX".to_string(), price_usd: 2.5, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
 
+        let compliance = ComplianceStatus {
+            status: "compliant".to_string(),
+            last_audit: Utc::now(),
+            rules_active: vec!["KYC".to_string(), "AML".to_string(), "NetworkIntegrity".to_string()],
+            risk_score: 15,
+        };
+
         Self {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
@@ -178,6 +195,7 @@ impl Engine {
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
             prices: Arc::new(RwLock::new(prices)),
+            compliance: Arc::new(RwLock::new(compliance)),
         }
     }
 
@@ -208,6 +226,10 @@ impl Engine {
 
     pub fn get_prices(&self) -> HashMap<String, PriceInfo> {
         self.prices.read().unwrap().clone()
+    }
+
+    pub fn get_compliance_status(&self) -> ComplianceStatus {
+        self.compliance.read().unwrap().clone()
     }
 
     pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
@@ -329,6 +351,19 @@ impl Engine {
                     }
                 }
 
+
+
+                {
+                    let mut compliance = engine_clone.compliance.write().unwrap();
+                    let current_requests = engine_clone.request_count.load(Ordering::SeqCst);
+                    // Simulate dynamic risk score based on activity
+                    compliance.risk_score = (10 + (current_requests % 20) as u32).min(100);
+                    if compliance.risk_score > 80 {
+                        compliance.status = "warning".to_string();
+                    } else {
+                        compliance.status = "compliant".to_string();
+                    }
+                }
 
                 {
                     let mut prices = engine_clone.prices.write().unwrap();

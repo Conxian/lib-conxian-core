@@ -181,4 +181,16 @@ mod tests {
         assert!(body["BTC"].is_object());
         assert_eq!(body["BTC"]["asset"], "BTC");
     }
+
+    #[actix_web::test]
+    async fn test_compliance_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/compliance").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["status"], "compliant");
+        assert!(body["risk_score"].is_number());
+    }
 }

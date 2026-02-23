@@ -85,11 +85,8 @@ async fn health_handler() -> impl Responder {
 #[get("/compliance")]
 async fn compliance_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "compliant",
-        "last_audit": chrono::Utc::now(),
-        "rules_active": ["KYC", "AML", "NetworkIntegrity"]
-    }))
+    let compliance = engine.get_compliance_status();
+    HttpResponse::Ok().json(compliance)
 }
 
 #[get("/metrics")]
