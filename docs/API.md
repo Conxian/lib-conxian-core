@@ -29,6 +29,11 @@ Returns Prometheus-compatible metrics.
 Returns the current network compliance status and active rules.
 - **Response:** `{ "status": "compliant", "last_audit": "...", "rules_active": ["KYC", "AML", "NetworkIntegrity"] }`
 
+### POST /api/v1/compliance/check
+Performs a simulated AML/KYC check on a Bitcoin address.
+- **Request Body:** `{ "address": "bc1q..." }`
+- **Response:** `{ "address": "bc1q...", "compliant": true, "risk_score": 10 }`
+
 ## 2. Service Endpoints
 
 ### GET /api/v1/layers
@@ -62,6 +67,8 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/bison**
 - **GET /api/v1/hemi**
 - **GET /api/v1/taproot-assets**
+- **GET /api/v1/nubit**
+- **GET /api/v1/lorenzo**
 - **GET /api/v1/prices**
 
 ## 3. Data Models

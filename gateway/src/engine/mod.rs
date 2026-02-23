@@ -105,6 +105,8 @@ impl Engine {
             ("bison", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("hemi", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("taproot-assets", 15, "Client-side", "Low", "On-chain", "Bitcoin", "N/A"),
+            ("nubit", 28, "Data Availability", "Low", "Off-chain (DA)", "Bitcoin", "N/A"),
+            ("lorenzo", 46, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -173,6 +175,12 @@ impl Engine {
                 },
                 "taproot-assets" => {
                     metadata.insert("asset_count".to_string(), "142".to_string());
+                },
+                "nubit" => {
+                    metadata.insert("da_status".to_string(), "active".to_string());
+                },
+                "lorenzo" => {
+                    metadata.insert("staked_btc".to_string(), "850.2".to_string());
                 },
                 _ => {}
             }
@@ -409,6 +417,17 @@ impl Engine {
                                     }
                                 }
                             },
+                            "nubit" => {
+                                if Utc::now().timestamp() % 60 == 0 {
+                                     status.latency_ms = 25;
+                                }
+                            },
+                            "lorenzo" => {
+                                if let Some(v) = status.metadata.get_mut("staked_btc") {
+                                    let staked: f64 = v.parse().unwrap_or(850.2);
+                                    *v = format!("{:.1}", staked + 0.2);
+                                }
+                            },
                             _ => {}
                         }
                     }
@@ -527,5 +546,16 @@ impl Engine {
         if statuses.is_empty() { return false; }
         let now = Utc::now();
         statuses.values().any(|s| (now - s.last_checked).num_seconds() < 60)
+    }
+
+    pub fn check_compliance(&self, address: &str) -> serde_json::Value {
+        self.increment_requests();
+        let is_compliant = !address.contains("bad");
+        serde_json::json!({
+            "address": address,
+            "compliant": is_compliant,
+            "risk_score": if is_compliant { 10 } else { 95 },
+            "timestamp": Utc::now()
+        })
     }
 }

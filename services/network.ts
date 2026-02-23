@@ -47,6 +47,8 @@ export const ZULU_API_URL = getGatewayUrl('zulu', currentEnv);
 export const BISON_API_URL = getGatewayUrl('bison', currentEnv);
 export const HEMI_API_URL = getGatewayUrl('hemi', currentEnv);
 export const TAPROOT_ASSETS_API_URL = getGatewayUrl('taproot-assets', currentEnv);
+export const NUBIT_API_URL = getGatewayUrl('nubit', currentEnv);
+export const LORENZO_API_URL = getGatewayUrl('lorenzo', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -112,5 +114,14 @@ export const getExchangeRate = async (from: string, to: string) => {
 export const getTaprootAssets = async () => {
   const url = getGatewayUrl("taproot-assets", currentEnv);
   const response = await fetch(url);
+  return response.json();
+};
+export const checkCompliance = async (address: string) => {
+  const url = `${getGatewayUrl("compliance", currentEnv)}/check`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address }),
+  });
   return response.json();
 };

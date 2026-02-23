@@ -40,7 +40,9 @@ The Conxian Gateway remains committed to providing users with the most accurate 
 
 ## 7. Phase 5: Ecosystem Expansion & Asset Protocols (In Progress)
 - **Objective:** Broaden support for new Bitcoin L2s and emerging asset protocols.
-- **New Layer Integration:** Added support for Alpen, Mezo, Zulu Network, Bison, and Hemi Network.
+- **New Layer Integration:** Added support for Alpen, Mezo, Zulu Network, Bison, Hemi Network, Nubit, and Lorenzo.
 - **Asset Protocols:** Integrated monitoring for Taproot Assets (formerly Taro).
 - **Economic Layer Tracking:** Implemented specialized tracking for "Economic Layers" like Mezo.
 - **Multi-layer Support:** Added infrastructure for multi-layer L2 architectures like Zulu.
+- **Enhanced Metrics:** Expanded Prometheus monitoring with per-service latency and risk gauges.
+- **Compliance Verification:** Implemented active address verification API.

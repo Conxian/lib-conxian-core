@@ -39,6 +39,8 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **Bison:** A ZK Rollup on Bitcoin (ZK). Features TVL and ZK-proof verification monitoring.
 - **Hemi Network:** A modular L2 combining Bitcoin security with Ethereum's flexibility (ZK). Features TVL and proof tracking.
 - **Taproot Assets:** Protocol for issuing assets on Bitcoin and Lightning (Client-side). Features asset count and issuance monitoring.
+- **Nubit:** A Bitcoin-native Data Availability (DA) layer (DA). Features DA status and network latency monitoring.
+- **Lorenzo:** A Bitcoin staking and restaking protocol (Staking). Features staked BTC tracking.
 
 ### 3.3. Advanced Protocol Interactions (Phase 4)
 - **Lightning:** Direct support for creating invoices (`/api/v1/lightning/invoice`) and sending payments (`/api/v1/lightning/pay`).
