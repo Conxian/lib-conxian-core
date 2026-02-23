@@ -10,6 +10,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(rgb_handler)
             .service(bitvm_handler)
             .service(changelly_handler)
+            .service(changelly_rate_handler)
             .service(stacks_handler)
             .service(lightning_handler)
             .service(liquid_handler)
@@ -25,6 +26,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(merlin_handler)
             .service(botanix_handler)
             .service(b2network_handler)
+            .service(citrea_handler)
+            .service(bitlayer_handler)
+            .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
             .service(stacks_contract_handler)
@@ -75,18 +79,19 @@ async fn status_handler(engine: web::Data<Engine>) -> impl Responder {
 }
 
 #[get("/health")]
-async fn health_handler() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::json!({ "status": "healthy" }))
+async fn health_handler(engine: web::Data<Engine>) -> impl Responder {
+    if engine.is_healthy() {
+        HttpResponse::Ok().json(serde_json::json!({ "status": "healthy", "engine": "active" }))
+    } else {
+        HttpResponse::ServiceUnavailable().json(serde_json::json!({ "status": "degraded", "engine": "stale" }))
+    }
 }
 
 #[get("/compliance")]
 async fn compliance_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "compliant",
-        "last_audit": chrono::Utc::now(),
-        "rules_active": ["KYC", "AML", "NetworkIntegrity"]
-    }))
+    let compliance = engine.get_compliance_status();
+    HttpResponse::Ok().json(compliance)
 }
 
 #[get("/metrics")]
@@ -216,5 +221,38 @@ async fn rgb_contract_handler(engine: web::Data<Engine>, path: web::Path<String>
 #[get("/bitvm/proof/{id}")]
 async fn bitvm_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
     let res = engine.get_bitvm_proof(&path.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/citrea")]
+async fn citrea_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("citrea");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bitlayer")]
+async fn bitlayer_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bitlayer");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/prices")]
+async fn prices_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let prices = engine.get_prices();
+    HttpResponse::Ok().json(prices)
+}
+
+#[derive(Deserialize)]
+struct RateRequest {
+    from: String,
+    to: String,
+}
+
+#[get("/changelly/rate")]
+async fn changelly_rate_handler(engine: web::Data<Engine>, query: web::Query<RateRequest>) -> impl Responder {
+    let res = engine.get_exchange_rate(&query.from, &query.to);
     HttpResponse::Ok().json(res)
 }

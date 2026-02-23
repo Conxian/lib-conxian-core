@@ -31,6 +31,24 @@ pub struct ReserveAsset {
     pub status: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PriceInfo {
+    pub asset: String,
+    pub price_usd: f64,
+    pub last_updated: DateTime<Utc>,
+    pub source: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ComplianceStatus {
+    pub status: String,
+    pub last_audit: DateTime<Utc>,
+    pub rules_active: Vec<String>,
+    pub risk_score: u32,
+}
+
+
+
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
@@ -39,13 +57,15 @@ pub struct Engine {
     pub active_sovereign_nodes: AtomicU64,
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
+    pub prices: Arc<RwLock<HashMap<String, PriceInfo>>>,
+    pub compliance: Arc<RwLock<ComplianceStatus>>,
 }
 
 impl Engine {
     fn calculate_risk_level(latency: u32, trust_model: &str) -> String {
-        if latency > 200 || trust_model == "Centralized" {
+        if latency > 250 || trust_model == "Centralized" {
             "High".to_string()
-        } else if latency > 100 || trust_model == "Federated" || trust_model == "Optimistic" {
+        } else if latency > 150 || trust_model == "Federated" || trust_model == "Optimistic" || trust_model == "Optimistic Rollup" || trust_model == "Powpeg" || trust_model == "Spiderchain" {
             "Medium".to_string()
         } else {
             "Low".to_string()
@@ -77,6 +97,8 @@ impl Engine {
             ("merlin", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
             ("botanix", 38, "Spiderchain", "Medium", "On-chain (EVM)", "Bitcoin", "Multisig"),
             ("b2network", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("citrea", 52, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
+            ("bitlayer", 60, "Optimistic", "Medium", "On-chain", "Bitcoin", "BitVM Bridge"),
         ];
 
         for (name, latency, trust, risk, da, settlement, bridge) in services {
@@ -121,6 +143,12 @@ impl Engine {
                 "b2network" => {
                     metadata.insert("block_height".to_string(), "12543".to_string());
                 },
+                "citrea" => {
+                    metadata.insert("tvl_usd".to_string(), "12500000".to_string());
+                },
+                "bitlayer" => {
+                    metadata.insert("tvl_usd".to_string(), "8500000".to_string());
+                },
                 _ => {}
             }
 
@@ -146,6 +174,18 @@ impl Engine {
             ReserveAsset { asset: "Wormhole NTT".to_string(), total_supplied: 551.0, total_reserves: 1320.0, collateral_ratio: 111.1, status: "Verified".to_string() },
         ];
 
+
+        let mut prices = HashMap::new();
+        prices.insert("BTC".to_string(), PriceInfo { asset: "BTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
+        prices.insert("STX".to_string(), PriceInfo { asset: "STX".to_string(), price_usd: 2.5, last_updated: Utc::now(), source: "Conxian Oracle".to_string() });
+
+        let compliance = ComplianceStatus {
+            status: "compliant".to_string(),
+            last_audit: Utc::now(),
+            rules_active: vec!["KYC".to_string(), "AML".to_string(), "NetworkIntegrity".to_string()],
+            risk_score: 15,
+        };
+
         Self {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
@@ -154,6 +194,8 @@ impl Engine {
             active_sovereign_nodes: AtomicU64::new(8),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
+            prices: Arc::new(RwLock::new(prices)),
+            compliance: Arc::new(RwLock::new(compliance)),
         }
     }
 
@@ -180,6 +222,14 @@ impl Engine {
 
     pub fn get_reserves(&self) -> Vec<ReserveAsset> {
         self.reserves.read().unwrap().clone()
+    }
+
+    pub fn get_prices(&self) -> HashMap<String, PriceInfo> {
+        self.prices.read().unwrap().clone()
+    }
+
+    pub fn get_compliance_status(&self) -> ComplianceStatus {
+        self.compliance.read().unwrap().clone()
     }
 
     pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
@@ -284,8 +334,43 @@ impl Engine {
                                     *v = (height + 1).to_string();
                                 }
                             },
+                            "citrea" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(12500000.0);
+                                    *v = format!("{:.0}", tvl + 2500.0);
+                                }
+                            },
+                            "bitlayer" => {
+                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
+                                    let tvl: f64 = v.parse().unwrap_or(8500000.0);
+                                    *v = format!("{:.0}", tvl + 1800.0);
+                                }
+                            },
                             _ => {}
                         }
+                    }
+                }
+
+
+
+                {
+                    let mut compliance = engine_clone.compliance.write().unwrap();
+                    let current_requests = engine_clone.request_count.load(Ordering::SeqCst);
+                    // Simulate dynamic risk score based on activity
+                    compliance.risk_score = (10 + (current_requests % 20) as u32).min(100);
+                    if compliance.risk_score > 80 {
+                        compliance.status = "warning".to_string();
+                    } else {
+                        compliance.status = "compliant".to_string();
+                    }
+                }
+
+                {
+                    let mut prices = engine_clone.prices.write().unwrap();
+                    for price in prices.values_mut() {
+                        let fluctuation = (Utc::now().timestamp() % 101) as f64 / 10000.0 - 0.005;
+                        price.price_usd *= 1.0 + fluctuation;
+                        price.last_updated = Utc::now();
                     }
                 }
 
@@ -355,5 +440,29 @@ impl Engine {
             "verifier_count": 5,
             "challenge_period_blocks": 144
         })
+    }
+
+    pub fn get_exchange_rate(&self, from: &str, to: &str) -> serde_json::Value {
+        self.increment_requests();
+        let rate = match (from, to) {
+            ("BTC", "USD") => 65000.0,
+            ("USD", "BTC") => 1.0 / 65000.0,
+            ("STX", "BTC") => 0.000038,
+            _ => 1.0,
+        };
+        serde_json::json!({
+            "from": from,
+            "to": to,
+            "rate": rate,
+            "timestamp": Utc::now()
+        })
+    }
+
+    pub fn is_healthy(&self) -> bool {
+        let statuses = self.service_statuses.read().unwrap();
+        // Check if at least some services are active and checked recently
+        if statuses.is_empty() { return false; }
+        let now = Utc::now();
+        statuses.values().any(|s| (now - s.last_checked).num_seconds() < 60)
     }
 }

@@ -54,6 +54,9 @@ Each service has its own endpoint providing detailed status and metadata.
 - **GET /api/v1/merlin**
 - **GET /api/v1/botanix**
 - **GET /api/v1/b2network**
+- **GET /api/v1/citrea**
+- **GET /api/v1/bitlayer**
+- **GET /api/v1/prices**
 
 ## 3. Data Models
 
@@ -111,3 +114,29 @@ Retrieves RGB contract details and state.
 ### GET /api/v1/bitvm/proof/{id}
 Retrieves BitVM fraud proof details and status.
 - **Response:** `{ "proof_id": "...", "status": "...", "verifier_count": 5 }`
+
+### PriceInfo
+```json
+{
+  "asset": "BTC",
+  "price_usd": 65000.0,
+  "last_updated": "2024-05-20T10:00:00Z",
+  "source": "Conxian Oracle"
+}
+```
+
+
+### ComplianceStatus
+```json
+{
+  "status": "compliant",
+  "last_audit": "2024-05-20T10:00:00Z",
+  "rules_active": ["KYC", "AML", "NetworkIntegrity"],
+  "risk_score": 15
+}
+```
+
+### GET /api/v1/changelly/rate
+Returns a simulated exchange rate between two assets.
+- **Query Parameters:** `from`, `to`
+- **Response:** `{ "from": "BTC", "to": "USD", "rate": 65000.0, "timestamp": "..." }`

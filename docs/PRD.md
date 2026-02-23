@@ -16,7 +16,7 @@ The Gateway exposes a RESTful API under the `/api/v1` prefix. All external servi
 The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integrations, with metadata aligned with research from **bitcoinlayers.org**:
 
 ### 3.1. Sovereign Services
-- **Bisq:** Decentralized Bitcoin exchange (P2P). Features active offer and volume monitoring.
+- **Bisq:** Decentralized Bitcoin exchange (P2P). Features active offer and volume monitoring, as well as simulated exchange rate discovery.
 - **RGB:** Scalable and confidential smart contracts for Bitcoin and Lightning (Client-side).
 - **BitVM:** A computing paradigm to express any program as a Bitcoin script (Optimistic).
 - **Changelly:** Integration for instant cryptocurrency exchange services (Centralized).
@@ -31,6 +31,8 @@ The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integ
 - **Merlin Chain:** A leading Bitcoin ZK-Rollup focused on the Bitcoin ecosystem (ZK). Features large TVL and asset bridge monitoring.
 - **Botanix:** An EVM-equivalent Layer 2 on Bitcoin using the Spiderchain decentralized primitive (Spiderchain). Features decentralized multisig security monitoring.
 - **B² Network:** A ZK-Rollup on Bitcoin that leverages ZK-proofs for secure and scalable transactions (ZK). Features block height and proof verification tracking.
+- **Citrea:** The first ZK-Rollup on Bitcoin (ZK). Features TVL and ZK-proof verification monitoring.
+- **Bitlayer:** The first Bitcoin Layer 2 based on BitVM (Optimistic). Features TVL and BitVM bridge security monitoring.
 
 ### 3.3. Advanced Protocol Interactions (Phase 4)
 - **Lightning:** Direct support for creating invoices (`/api/v1/lightning/invoice`) and sending payments (`/api/v1/lightning/pay`).
