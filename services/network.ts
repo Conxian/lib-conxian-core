@@ -60,7 +60,7 @@ export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);
 export const PRICES_API_URL = getGatewayUrl('prices', currentEnv);
 
 /**
- * Phase 4: Protocol-Specific Helpers
+ * Protocol-Specific Helpers
  */
 export const createLightningInvoice = async (amountMsat: number, description: string) => {
   const url = `${getGatewayUrl("lightning", currentEnv)}/invoice`;
@@ -133,6 +133,45 @@ export const getB2Status = async () => {
 
 export const getCitreaProof = async (batchId: string) => {
   const url = `${getGatewayUrl("citrea", currentEnv)}/proof/${batchId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+/**
+ * Monitoring & Aggregated Stats Helpers
+ */
+export const getServiceStatus = async (service: string) => {
+  const url = getGatewayUrl(service, currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getLayers = async () => {
+  const url = getGatewayUrl("layers", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getReserves = async () => {
+  const url = getGatewayUrl("reserves", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getComplianceStatus = async () => {
+  const url = getGatewayUrl("compliance", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getSystemStatus = async () => {
+  const url = getGatewayUrl("status", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getHealth = async () => {
+  const url = getGatewayUrl("health", currentEnv);
   const response = await fetch(url);
   return response.json();
 };
