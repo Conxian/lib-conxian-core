@@ -14,7 +14,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(stacks_handler)
             .service(lightning_handler)
             .service(liquid_handler)
+            .service(liquid_peg_handler)
             .service(rootstock_handler)
+            .service(rootstock_powpeg_handler)
             .service(layers_handler)
             .service(status_handler)
             .service(health_handler)
@@ -23,6 +25,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(metrics_handler)
             .service(reserves_handler)
             .service(babylon_handler)
+            .service(babylon_staking_handler)
             .service(bob_handler)
             .service(merlin_handler)
             .service(botanix_handler)
@@ -45,6 +48,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bitvm_proof_handler)
             .service(b2network_status_handler)
             .service(citrea_proof_handler)
+            .service(affiliates_handler)
+            .service(marketing_handler)
     );
 }
 
@@ -175,11 +180,23 @@ async fn liquid_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/liquid/peg")]
+async fn liquid_peg_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_liquid_peg();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/rootstock")]
 async fn rootstock_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("rootstock");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/rootstock/powpeg")]
+async fn rootstock_powpeg_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_rootstock_powpeg();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/layers")]
@@ -194,6 +211,12 @@ async fn babylon_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("babylon");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/babylon/staking")]
+async fn babylon_staking_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_babylon_staking();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/bob")]
@@ -363,4 +386,18 @@ async fn b2network_status_handler(engine: web::Data<Engine>) -> impl Responder {
 async fn citrea_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
     let res = engine.get_citrea_proof(&path.into_inner());
     HttpResponse::Ok().json(res)
+}
+
+#[get("/affiliates")]
+async fn affiliates_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let affiliates = engine.get_affiliates();
+    HttpResponse::Ok().json(affiliates)
+}
+
+#[get("/marketing")]
+async fn marketing_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let marketing = engine.get_marketing();
+    HttpResponse::Ok().json(marketing)
 }

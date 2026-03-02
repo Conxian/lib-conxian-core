@@ -58,6 +58,8 @@ export const COMPLIANCE_API_URL = getGatewayUrl('compliance', currentEnv);
 export const METRICS_API_URL = getGatewayUrl('metrics', currentEnv);
 export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);
 export const PRICES_API_URL = getGatewayUrl('prices', currentEnv);
+export const AFFILIATES_API_URL = getGatewayUrl('affiliates', currentEnv);
+export const MARKETING_API_URL = getGatewayUrl('marketing', currentEnv);
 
 /**
  * Protocol-Specific Helpers
@@ -95,6 +97,24 @@ export const getRgbContract = async (contractId: string) => {
 
 export const getBitvmProof = async (proofId: string) => {
   const url = `${getGatewayUrl("bitvm", currentEnv)}/proof/${proofId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getLiquidPeg = async () => {
+  const url = `${getGatewayUrl("liquid", currentEnv)}/peg`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getRootstockPowpeg = async () => {
+  const url = `${getGatewayUrl("rootstock", currentEnv)}/powpeg`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBabylonStaking = async () => {
+  const url = `${getGatewayUrl("babylon", currentEnv)}/staking`;
   const response = await fetch(url);
   return response.json();
 };
@@ -172,6 +192,18 @@ export const getSystemStatus = async () => {
 
 export const getHealth = async () => {
   const url = getGatewayUrl("health", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getAffiliates = async () => {
+  const url = getGatewayUrl("affiliates", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getMarketing = async () => {
+  const url = getGatewayUrl("marketing", currentEnv);
   const response = await fetch(url);
   return response.json();
 };

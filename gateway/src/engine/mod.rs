@@ -47,7 +47,22 @@ pub struct ComplianceStatus {
     pub risk_score: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AffiliateInfo {
+    pub partner_id: String,
+    pub status: String,
+    pub commission_rate: f64,
+    pub active_campaigns: u32,
+    pub total_referrals: u64,
+}
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MarketingInfo {
+    pub channel: String,
+    pub status: String,
+    pub active_offers: Vec<String>,
+    pub reach: u64,
+}
 
 pub struct Engine {
     pub version: String,
@@ -59,6 +74,8 @@ pub struct Engine {
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
     pub prices: Arc<RwLock<HashMap<String, PriceInfo>>>,
     pub compliance: Arc<RwLock<ComplianceStatus>>,
+    pub affiliates: Arc<RwLock<HashMap<String, AffiliateInfo>>>,
+    pub marketing: Arc<RwLock<Vec<MarketingInfo>>>,
 }
 
 impl Engine {
@@ -219,6 +236,30 @@ impl Engine {
             risk_score: 15,
         };
 
+        let mut affiliates = HashMap::new();
+        affiliates.insert("CONXIAN_GLOBAL".to_string(), AffiliateInfo {
+            partner_id: "CONXIAN_GLOBAL".to_string(),
+            status: "active".to_string(),
+            commission_rate: 0.15,
+            active_campaigns: 5,
+            total_referrals: 12450,
+        });
+
+        let marketing = vec![
+            MarketingInfo {
+                channel: "X/Twitter".to_string(),
+                status: "active".to_string(),
+                active_offers: vec!["L2_SUMMER".to_string(), "STX_STAKING".to_string()],
+                reach: 500000,
+            },
+            MarketingInfo {
+                channel: "Discord".to_string(),
+                status: "active".to_string(),
+                active_offers: vec!["ALPHA_ACCESS".to_string()],
+                reach: 25000,
+            },
+        ];
+
         Self {
             version: "0.1.0".to_string(),
             start_time: Utc::now(),
@@ -229,6 +270,8 @@ impl Engine {
             reserves: Arc::new(RwLock::new(reserves)),
             prices: Arc::new(RwLock::new(prices)),
             compliance: Arc::new(RwLock::new(compliance)),
+            affiliates: Arc::new(RwLock::new(affiliates)),
+            marketing: Arc::new(RwLock::new(marketing)),
         }
     }
 
@@ -267,6 +310,14 @@ impl Engine {
 
     pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
         self.service_statuses.read().unwrap().clone()
+    }
+
+    pub fn get_affiliates(&self) -> HashMap<String, AffiliateInfo> {
+        self.affiliates.read().unwrap().clone()
+    }
+
+    pub fn get_marketing(&self) -> Vec<MarketingInfo> {
+        self.marketing.read().unwrap().clone()
     }
 
     pub fn get_system_info(&self) -> serde_json::Value {
@@ -523,6 +574,38 @@ impl Engine {
             "status": "Verified",
             "verifier_count": 5,
             "challenge_period_blocks": 144
+        })
+    }
+
+    pub fn get_liquid_peg(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("liquid");
+        serde_json::json!({
+            "asset": "L-BTC",
+            "pegged_amount": status.metadata.get("pegged_btc").cloned().unwrap_or_default(),
+            "federation_status": "Operational",
+            "last_audit": Utc::now()
+        })
+    }
+
+    pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("rootstock");
+        serde_json::json!({
+            "asset": "RBTC",
+            "mining_hashrate": status.metadata.get("mining_hashrate_ph").cloned().unwrap_or_default(),
+            "peg_status": "active",
+            "bridge_contract": "0x123..."
+        })
+    }
+
+    pub fn get_babylon_staking(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("babylon");
+        serde_json::json!({
+            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_default(),
+            "active_validators": 125,
+            "security_score": 98.5
         })
     }
 
