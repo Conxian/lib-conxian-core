@@ -34,6 +34,14 @@ Performs a simulated AML/KYC check on a Bitcoin address.
 - **Request Body:** `{ "address": "bc1q..." }`
 - **Response:** `{ "address": "bc1q...", "compliant": true, "risk_score": 10, "timestamp": "..." }`
 
+### GET /api/v1/affiliates
+Returns information about active affiliate partners.
+- **Response:** A JSON object where keys are partner IDs and values are `AffiliateInfo` objects.
+
+### GET /api/v1/marketing
+Returns information about active marketing channels and campaigns.
+- **Response:** An array of `MarketingInfo` objects.
+
 ## 2. Service Endpoints
 
 ### GET /api/v1/layers
@@ -104,23 +112,24 @@ Each service has its own endpoint providing detailed status and metadata.
 }
 ```
 
-### PriceInfo
+### AffiliateInfo
 ```json
 {
-  "asset": "BTC",
-  "price_usd": 65000.0,
-  "last_updated": "2024-05-20T10:00:00Z",
-  "source": "Conxian Oracle"
+  "partner_id": "CONXIAN_GLOBAL",
+  "status": "active",
+  "commission_rate": 0.15,
+  "active_campaigns": 5,
+  "total_referrals": 12450
 }
 ```
 
-### ComplianceStatus
+### MarketingInfo
 ```json
 {
-  "status": "compliant",
-  "last_audit": "2024-05-20T10:00:00Z",
-  "rules_active": ["KYC", "AML", "NetworkIntegrity"],
-  "risk_score": 15
+  "channel": "X/Twitter",
+  "status": "active",
+  "active_offers": ["L2_SUMMER"],
+  "reach": 500000
 }
 ```
 
@@ -138,25 +147,18 @@ Sends a Lightning payment.
 
 ### GET /api/v1/stacks/contract/{id}
 Retrieves Clarity contract details.
-- **Response:** `{ "contract_id": "...", "source_code": "...", "abi": {...}, "status": "active" }`
 
-### GET /api/v1/rgb/contract/{id}
-Retrieves RGB contract details and state.
-- **Response:** `{ "contract_id": "...", "schema": "...", "state": "...", "last_transition": "..." }`
+### GET /api/v1/liquid/peg
+Retrieves Liquid L-BTC peg and federation status.
 
-### GET /api/v1/bitvm/proof/{id}
-Retrieves BitVM fraud proof details and status.
-- **Response:** `{ "proof_id": "...", "status": "Verified", "verifier_count": 5, "challenge_period_blocks": 144 }`
+### GET /api/v1/rootstock/powpeg
+Retrieves Rootstock RBTC Powpeg and hashrate status.
+
+### GET /api/v1/babylon/staking
+Retrieves Babylon BTC staking and security metrics.
 
 ### GET /api/v1/b2network/status
 Retrieves B² Network specific status including sequencer batches.
-- **Response:** `{ "block_height": "...", "proof_status": "Verified", "sequencer_batches": 1254, "da_layer": "Bitcoin" }`
 
 ### GET /api/v1/citrea/proof/{id}
 Retrieves Citrea ZK proof details for a specific batch.
-- **Response:** `{ "batch_id": "...", "status": "Finalized", "zk_proof": "...", "settlement_tx": "...", "timestamp": "..." }`
-
-### GET /api/v1/changelly/rate
-Returns a simulated exchange rate between two assets.
-- **Query Parameters:** `from`, `to`
-- **Response:** `{ "from": "BTC", "to": "USD", "rate": 65000.0, "timestamp": "..." }`

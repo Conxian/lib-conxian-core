@@ -456,4 +456,61 @@ mod tests {
         assert_eq!(body["batch_id"], "BATCH123");
         assert_eq!(body["status"], "Finalized");
     }
+
+    #[actix_web::test]
+    async fn test_liquid_peg_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/liquid/peg").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["asset"], "L-BTC");
+    }
+
+    #[actix_web::test]
+    async fn test_rootstock_powpeg_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/rootstock/powpeg").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["asset"], "RBTC");
+    }
+
+    #[actix_web::test]
+    async fn test_babylon_staking_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/babylon/staking").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body["staked_btc"].is_string());
+    }
+
+    #[actix_web::test]
+    async fn test_affiliates_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/affiliates").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_object());
+        assert!(body["CONXIAN_GLOBAL"].is_object());
+    }
+
+    #[actix_web::test]
+    async fn test_marketing_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/marketing").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_array());
+        assert_eq!(body[0]["channel"], "X/Twitter");
+    }
 }
