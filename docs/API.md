@@ -5,8 +5,8 @@ The Conxian Gateway API is accessible under the `/api/v1` prefix.
 ## 1. System Endpoints
 
 ### GET /api/v1/health
-Returns the health status of the gateway.
-- **Response:** `{ "status": "healthy" }`
+Returns the health status of the gateway and its engine.
+- **Response:** `{ "status": "healthy", "engine": "active" }`
 
 ### GET /api/v1/status
 Returns general system information, uptime, and request counts.
@@ -27,12 +27,12 @@ Returns Prometheus-compatible metrics.
 
 ### GET /api/v1/compliance
 Returns the current network compliance status and active rules.
-- **Response:** `{ "status": "compliant", "last_audit": "...", "rules_active": ["KYC", "AML", "NetworkIntegrity"] }`
+- **Response:** `{ "status": "compliant", "last_audit": "...", "rules_active": ["KYC", "AML", "NetworkIntegrity"], "risk_score": 15 }`
 
 ### POST /api/v1/compliance/check
 Performs a simulated AML/KYC check on a Bitcoin address.
 - **Request Body:** `{ "address": "bc1q..." }`
-- **Response:** `{ "address": "bc1q...", "compliant": true, "risk_score": 10 }`
+- **Response:** `{ "address": "bc1q...", "compliant": true, "risk_score": 10, "timestamp": "..." }`
 
 ## 2. Service Endpoints
 
@@ -104,38 +104,6 @@ Each service has its own endpoint providing detailed status and metadata.
 }
 ```
 
-## 4. Protocol-Specific Endpoints (Phase 4)
-
-### POST /api/v1/lightning/invoice
-Generates a Lightning invoice.
-- **Request Body:** `{ "amount_msat": 10000, "description": "Coffee" }`
-- **Response:** `{ "invoice": "lnbc...", "payment_hash": "..." }`
-
-### POST /api/v1/lightning/pay
-Sends a Lightning payment.
-- **Request Body:** `{ "invoice": "lnbc..." }`
-- **Response:** `{ "status": "success", "preimage": "..." }`
-
-### GET /api/v1/stacks/contract/{id}
-Retrieves Clarity contract details.
-- **Response:** `{ "contract_id": "...", "source_code": "...", "abi": "..." }`
-
-### GET /api/v1/rgb/contract/{id}
-Retrieves RGB contract details and state.
-- **Response:** `{ "contract_id": "...", "schema": "...", "state": "..." }`
-
-### GET /api/v1/bitvm/proof/{id}
-Retrieves BitVM fraud proof details and status.
-- **Response:** `{ "proof_id": "...", "status": "...", "verifier_count": 5 }`
-### GET /api/v1/b2network/status
-Retrieves B² Network specific status including sequencer batches.
-- **Response:** `{ "block_height": "...", "proof_status": "Verified", "sequencer_batches": 1254, "da_layer": "Bitcoin" }`
-
-### GET /api/v1/citrea/proof/{id}
-Retrieves Citrea ZK proof details for a specific batch.
-- **Response:** `{ "batch_id": "...", "status": "Finalized", "zk_proof": "...", "settlement_tx": "..." }`
-
-
 ### PriceInfo
 ```json
 {
@@ -146,7 +114,6 @@ Retrieves Citrea ZK proof details for a specific batch.
 }
 ```
 
-
 ### ComplianceStatus
 ```json
 {
@@ -156,6 +123,38 @@ Retrieves Citrea ZK proof details for a specific batch.
   "risk_score": 15
 }
 ```
+
+## 4. Protocol-Specific Endpoints
+
+### POST /api/v1/lightning/invoice
+Generates a Lightning invoice.
+- **Request Body:** `{ "amount_msat": 10000, "description": "Coffee" }`
+- **Response:** `{ "invoice": "lnbc...", "payment_hash": "...", "description": "Coffee", "expiry": 3600 }`
+
+### POST /api/v1/lightning/pay
+Sends a Lightning payment.
+- **Request Body:** `{ "invoice": "lnbc..." }`
+- **Response:** `{ "status": "success", "preimage": "...", "destination": "...", "amount_msat": 10000 }`
+
+### GET /api/v1/stacks/contract/{id}
+Retrieves Clarity contract details.
+- **Response:** `{ "contract_id": "...", "source_code": "...", "abi": {...}, "status": "active" }`
+
+### GET /api/v1/rgb/contract/{id}
+Retrieves RGB contract details and state.
+- **Response:** `{ "contract_id": "...", "schema": "...", "state": "...", "last_transition": "..." }`
+
+### GET /api/v1/bitvm/proof/{id}
+Retrieves BitVM fraud proof details and status.
+- **Response:** `{ "proof_id": "...", "status": "Verified", "verifier_count": 5, "challenge_period_blocks": 144 }`
+
+### GET /api/v1/b2network/status
+Retrieves B² Network specific status including sequencer batches.
+- **Response:** `{ "block_height": "...", "proof_status": "Verified", "sequencer_batches": 1254, "da_layer": "Bitcoin" }`
+
+### GET /api/v1/citrea/proof/{id}
+Retrieves Citrea ZK proof details for a specific batch.
+- **Response:** `{ "batch_id": "...", "status": "Finalized", "zk_proof": "...", "settlement_tx": "...", "timestamp": "..." }`
 
 ### GET /api/v1/changelly/rate
 Returns a simulated exchange rate between two assets.

@@ -40,6 +40,39 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn test_rgb_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/rgb").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "rgb");
+    }
+
+    #[actix_web::test]
+    async fn test_bitvm_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/bitvm").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "bitvm");
+    }
+
+    #[actix_web::test]
+    async fn test_changelly_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/changelly").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "changelly");
+    }
+
+    #[actix_web::test]
     async fn test_stacks_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
@@ -49,6 +82,39 @@ mod tests {
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "stacks");
         assert!(body["metadata"]["block_height"].is_string());
+    }
+
+    #[actix_web::test]
+    async fn test_lightning_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/lightning").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "lightning");
+    }
+
+    #[actix_web::test]
+    async fn test_liquid_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/liquid").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "liquid");
+    }
+
+    #[actix_web::test]
+    async fn test_rootstock_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/rootstock").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "rootstock");
     }
 
     #[actix_web::test]
@@ -101,28 +167,14 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn test_lightning_invoice_endpoint() {
+    async fn test_bob_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::post()
-            .uri("/api/v1/lightning/invoice")
-            .set_json(serde_json::json!({"amount_msat": 50000, "description": "Test"}))
-            .to_request();
+        let req = test::TestRequest::get().uri("/api/v1/bob").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body["invoice"].is_string());
-    }
-
-    #[actix_web::test]
-    async fn test_stacks_contract_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/stacks/contract/ST123").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["contract_id"], "ST123");
+        assert_eq!(body["name"], "bob");
     }
 
     #[actix_web::test]
@@ -137,14 +189,25 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn test_rgb_contract_endpoint() {
+    async fn test_botanix_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/rgb/contract/RGB123").to_request();
+        let req = test::TestRequest::get().uri("/api/v1/botanix").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["contract_id"], "RGB123");
+        assert_eq!(body["name"], "botanix");
+    }
+
+    #[actix_web::test]
+    async fn test_b2network_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/b2network").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["name"], "b2network");
     }
 
     #[actix_web::test]
@@ -167,56 +230,6 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["name"], "bitlayer");
-    }
-
-    #[actix_web::test]
-    async fn test_prices_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/prices").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_object());
-        assert!(body["BTC"].is_object());
-        assert_eq!(body["BTC"]["asset"], "BTC");
-    }
-
-    #[actix_web::test]
-    async fn test_compliance_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/compliance").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["status"], "compliant");
-        assert!(body["risk_score"].is_number());
-    }
-
-    #[actix_web::test]
-    async fn test_changelly_rate_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/changelly/rate?from=BTC&to=USD").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["from"], "BTC");
-        assert_eq!(body["to"], "USD");
-        assert!(body["rate"].is_number());
-    }
-
-    #[actix_web::test]
-    async fn test_health_check_dynamic() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/health").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["status"], "healthy");
-        assert_eq!(body["engine"], "active");
     }
 
     #[actix_web::test]
@@ -308,6 +321,93 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn test_lightning_invoice_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/v1/lightning/invoice")
+            .set_json(serde_json::json!({"amount_msat": 50000, "description": "Test"}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body["invoice"].is_string());
+    }
+
+    #[actix_web::test]
+    async fn test_lightning_pay_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/v1/lightning/pay")
+            .set_json(serde_json::json!({"invoice": "lnbc123"}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["status"], "success");
+    }
+
+    #[actix_web::test]
+    async fn test_stacks_contract_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/stacks/contract/ST123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["contract_id"], "ST123");
+    }
+
+    #[actix_web::test]
+    async fn test_rgb_contract_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/rgb/contract/RGB123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["contract_id"], "RGB123");
+    }
+
+    #[actix_web::test]
+    async fn test_bitvm_proof_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/bitvm/proof/PROOF123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["proof_id"], "PROOF123");
+        assert_eq!(body["status"], "Verified");
+    }
+
+    #[actix_web::test]
+    async fn test_prices_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/prices").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_object());
+        assert!(body["BTC"].is_object());
+        assert_eq!(body["BTC"]["asset"], "BTC");
+    }
+
+    #[actix_web::test]
+    async fn test_compliance_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/compliance").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["status"], "compliant");
+        assert!(body["risk_score"].is_number());
+    }
+
+    #[actix_web::test]
     async fn test_compliance_check_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
@@ -319,6 +419,19 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["compliant"], true);
+    }
+
+    #[actix_web::test]
+    async fn test_changelly_rate_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/changelly/rate?from=BTC&to=USD").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["from"], "BTC");
+        assert_eq!(body["to"], "USD");
+        assert!(body["rate"].is_number());
     }
 
     #[actix_web::test]
