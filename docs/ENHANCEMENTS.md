@@ -38,7 +38,7 @@ The Conxian Gateway remains committed to providing users with the most accurate 
 - **Settlement Verification:** Monitoring of withdrawal windows and fraud proof submission periods.
 - **Censorship Resistance:** Assessment of sequencer/operator decentralization.
 
-## 7. Phase 5: Ecosystem Expansion & Asset Protocols (In Progress)
+## 7. Phase 5: Ecosystem Expansion & Asset Protocols (Completed)
 - **Objective:** Broaden support for new Bitcoin L2s and emerging asset protocols.
 - **New Layer Integration:** Added support for Alpen, Mezo, Zulu Network, Bison, Hemi Network, Nubit, and Lorenzo.
 - **Asset Protocols:** Integrated monitoring for Taproot Assets (formerly Taro).
