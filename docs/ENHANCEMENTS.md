@@ -7,7 +7,8 @@ The Conxian Gateway is evolving to provide deep protocol integration and transpa
 - **Achievements:**
   - Implemented multi-factor risk assessment engine.
   - Added support for **BitVM2** (ZK-Fraud Proofs).
-  - Added support for **Core DAO** (Satoshi Plus).
+  - Added support for **Core DAO** (Satoshi Plus) and dedicated /stats endpoint.
+  - Expanded risk model with exit mechanism and operator scores.
   - Refactored Engine to use structured TVL metrics.
   - Synchronized TypeScript client with new endpoints.
 
