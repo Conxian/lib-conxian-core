@@ -8,6 +8,15 @@ use tokio::time::sleep;
 use actix_web::web;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RiskAssessment {
+    pub overall_level: String,
+    pub da_score: u32,
+    pub settlement_score: u32,
+    pub bridge_score: u32,
+    pub decentralization_score: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServiceStatus {
     pub name: String,
     pub status: String,
@@ -15,9 +24,11 @@ pub struct ServiceStatus {
     pub latency_ms: u32,
     pub trust_model: String,
     pub risk_level: String,
+    pub risk_assessment: Option<RiskAssessment>,
     pub data_availability: String,
     pub settlement: String,
     pub bridge_security: String,
+    pub tvl_usd: f64,
     pub version: Option<String>,
     pub metadata: HashMap<String, String>,
 }
@@ -79,13 +90,33 @@ pub struct Engine {
 }
 
 impl Engine {
-    fn calculate_risk_level(latency: u32, trust_model: &str) -> String {
-        if latency > 250 || trust_model == "Centralized" {
+    fn evaluate_risk(latency: u32, trust_model: &str, da: &str, bridge: &str) -> RiskAssessment {
+        let mut da_score = 90;
+        let mut settlement_score = 85;
+        let mut bridge_score = 80;
+        let mut dec_score = 75;
+
+        if da.contains("Off-chain") { da_score -= 30; }
+        if bridge.contains("Federated") || bridge.contains("Multisig") { bridge_score -= 25; }
+        if trust_model == "Centralized" {
+            da_score = 10; settlement_score = 10; bridge_score = 10; dec_score = 10;
+        }
+
+        let avg = (da_score + settlement_score + bridge_score + dec_score) / 4;
+        let level = if avg < 40 || latency > 250 {
             "High".to_string()
-        } else if latency > 150 || trust_model == "Federated" || trust_model == "Optimistic" || trust_model == "Optimistic Rollup" || trust_model == "Powpeg" || trust_model == "Spiderchain" || trust_model == "Economic Layer" || trust_model == "Multi-layer" {
+        } else if avg < 70 || latency > 150 {
             "Medium".to_string()
         } else {
             "Low".to_string()
+        };
+
+        RiskAssessment {
+            overall_level: level,
+            da_score,
+            settlement_score,
+            bridge_score,
+            decentralization_score: dec_score,
         }
     }
 }
@@ -101,43 +132,39 @@ impl Engine {
         let mut statuses = HashMap::new();
 
         let services = vec![
-            ("bisq", 45, "P2P", "Low", "On-chain", "Bitcoin", "N/A"),
-            ("rgb", 12, "Client-side", "Low", "Off-chain", "Bitcoin", "Client-side"),
-            ("bitvm", 88, "Optimistic", "Medium", "On-chain", "Bitcoin", "Fraud Proofs"),
-            ("changelly", 120, "Centralized", "High", "N/A", "Centralized", "Centralized"),
-            ("stacks", 65, "PoX", "Medium", "On-chain", "Bitcoin", "sBTC Bridge"),
-            ("lightning", 5, "State Channels", "Low", "Off-chain", "Bitcoin", "N/A"),
-            ("liquid", 25, "Federated", "Medium", "On-chain (Federated)", "Bitcoin", "Strong Federation"),
-            ("rootstock", 35, "Powpeg", "Medium", "On-chain", "Bitcoin", "Powpeg"),
-            ("babylon", 40, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
-            ("bob", 55, "Optimistic Rollup", "Medium", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge"),
-            ("merlin", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("botanix", 38, "Spiderchain", "Medium", "On-chain (EVM)", "Bitcoin", "Multisig"),
-            ("b2network", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("citrea", 52, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("bitlayer", 60, "Optimistic", "Medium", "On-chain", "Bitcoin", "BitVM Bridge"),
-            ("alpen", 48, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("mezo", 58, "Economic Layer", "Medium", "On-chain", "Bitcoin", "tBTC Bridge"),
-            ("zulu", 50, "Multi-layer", "Medium", "On-chain", "Bitcoin", "Decentralized Bridge"),
-            ("bison", 42, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("hemi", 45, "ZK Rollup", "Medium", "On-chain (ZK)", "Bitcoin", "ZK Bridge"),
-            ("taproot-assets", 15, "Client-side", "Low", "On-chain", "Bitcoin", "N/A"),
-            ("nubit", 28, "Data Availability", "Low", "Off-chain (DA)", "Bitcoin", "N/A"),
-            ("lorenzo", 46, "Staking", "Low", "On-chain", "Bitcoin", "N/A"),
+            ("bisq", 45, "P2P", "On-chain", "Bitcoin", "N/A", 0.0),
+            ("rgb", 12, "Client-side", "Off-chain", "Bitcoin", "Client-side", 0.0),
+            ("bitvm", 88, "Optimistic", "On-chain", "Bitcoin", "Fraud Proofs", 0.0),
+            ("bitvm2", 75, "Optimistic (SNARK)", "On-chain", "Bitcoin", "ZK-Fraud Proofs", 0.0),
+            ("changelly", 120, "Centralized", "N/A", "Centralized", "Centralized", 0.0),
+            ("stacks", 65, "PoX", "On-chain", "Bitcoin", "sBTC Bridge", 0.0),
+            ("lightning", 5, "State Channels", "Off-chain", "Bitcoin", "N/A", 0.0),
+            ("liquid", 25, "Federated", "On-chain (Federated)", "Bitcoin", "Strong Federation", 0.0),
+            ("rootstock", 35, "Powpeg", "On-chain", "Bitcoin", "Powpeg", 0.0),
+            ("babylon", 40, "Staking", "On-chain", "Bitcoin", "N/A", 0.0),
+            ("bob", 55, "Optimistic Rollup", "On-chain (EVM)", "Bitcoin", "Optimistic Bridge", 45000000.0),
+            ("merlin", 42, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 1500000000.0),
+            ("botanix", 38, "Spiderchain", "On-chain (EVM)", "Bitcoin", "Multisig", 0.0),
+            ("b2network", 45, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
+            ("citrea", 52, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 12500000.0),
+            ("bitlayer", 60, "Optimistic", "On-chain", "Bitcoin", "BitVM Bridge", 8500000.0),
+            ("alpen", 48, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 5000000.0),
+            ("mezo", 58, "Economic Layer", "On-chain", "Bitcoin", "tBTC Bridge", 120000000.0),
+            ("zulu", 50, "Multi-layer", "On-chain", "Bitcoin", "Decentralized Bridge", 0.0),
+            ("bison", 42, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 3200000.0),
+            ("hemi", 45, "ZK Rollup", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 2100000.0),
+            ("taproot-assets", 15, "Client-side", "On-chain", "Bitcoin", "N/A", 0.0),
+            ("nubit", 28, "Data Availability", "Off-chain (DA)", "Bitcoin", "N/A", 0.0),
+            ("lorenzo", 46, "Staking", "On-chain", "Bitcoin", "N/A", 0.0),
+            ("core-dao", 32, "Satoshi Plus", "On-chain", "Bitcoin", "Non-custodial", 250000000.0),
         ];
 
-        for (name, latency, trust, risk, da, settlement, bridge) in services {
+        for (name, latency, trust, da, settlement, bridge, tvl) in services {
             let mut metadata = HashMap::new();
             match name {
                 "bisq" => {
                     metadata.insert("active_offers".to_string(), "124".to_string());
                     metadata.insert("volume_24h_btc".to_string(), "12.5".to_string());
-                },
-                "rgb" => {
-                    metadata.insert("contract_count".to_string(), "85".to_string());
-                },
-                "bitvm" => {
-                    metadata.insert("proof_window_blocks".to_string(), "144".to_string());
                 },
                 "stacks" => {
                     metadata.insert("block_height".to_string(), "840000".to_string());
@@ -147,60 +174,16 @@ impl Engine {
                     metadata.insert("channel_count".to_string(), "1542".to_string());
                     metadata.insert("capacity_btc".to_string(), "42.5".to_string());
                 },
-                "liquid" => {
-                    metadata.insert("pegged_btc".to_string(), "3541.2".to_string());
-                },
-                "rootstock" => {
-                    metadata.insert("mining_hashrate_ph".to_string(), "245.8".to_string());
-                },
-                "babylon" => {
-                    metadata.insert("staked_btc".to_string(), "1250.0".to_string());
-                },
-                "bob" => {
-                    metadata.insert("tvl_usd".to_string(), "45000000".to_string());
-                },
-                "merlin" => {
-                    metadata.insert("tvl_usd".to_string(), "1500000000".to_string());
-                },
-                "botanix" => {
-                    metadata.insert("nodes_active".to_string(), "21".to_string());
-                },
-                "b2network" => {
-                    metadata.insert("block_height".to_string(), "12543".to_string());
-                },
-                "citrea" => {
-                    metadata.insert("tvl_usd".to_string(), "12500000".to_string());
-                },
-                "bitlayer" => {
-                    metadata.insert("tvl_usd".to_string(), "8500000".to_string());
-                },
-                "alpen" => {
-                    metadata.insert("tvl_usd".to_string(), "5000000".to_string());
-                },
                 "mezo" => {
-                    metadata.insert("tvl_usd".to_string(), "120000000".to_string());
                     metadata.insert("staked_tbtc".to_string(), "1850.5".to_string());
                 },
-                "zulu" => {
-                    metadata.insert("block_height".to_string(), "5421".to_string());
-                },
-                "bison" => {
-                    metadata.insert("tvl_usd".to_string(), "3200000".to_string());
-                },
-                "hemi" => {
-                    metadata.insert("tvl_usd".to_string(), "2100000".to_string());
-                },
-                "taproot-assets" => {
-                    metadata.insert("asset_count".to_string(), "142".to_string());
-                },
-                "nubit" => {
-                    metadata.insert("da_status".to_string(), "active".to_string());
-                },
-                "lorenzo" => {
-                    metadata.insert("staked_btc".to_string(), "850.2".to_string());
+                "core-dao" => {
+                    metadata.insert("dual_token_staking".to_string(), "enabled".to_string());
                 },
                 _ => {}
             }
+
+            let ra = Self::evaluate_risk(latency, trust, da, bridge);
 
             statuses.insert(name.to_string(), ServiceStatus {
                 name: name.to_string(),
@@ -208,11 +191,13 @@ impl Engine {
                 last_checked: Utc::now(),
                 latency_ms: latency,
                 trust_model: trust.to_string(),
-                risk_level: risk.to_string(),
+                risk_level: ra.overall_level.clone(),
+                risk_assessment: Some(ra),
                 data_availability: da.to_string(),
                 settlement: settlement.to_string(),
                 bridge_security: bridge.to_string(),
-                version: Some("1.0.0".to_string()),
+                tvl_usd: tvl,
+                version: Some("1.1.0".to_string()),
                 metadata,
             });
         }
@@ -221,7 +206,6 @@ impl Engine {
             ReserveAsset { asset: "Liquid (L-BTC)".to_string(), total_supplied: 452.4, total_reserves: 521.8, collateral_ratio: 115.3, status: "Audited".to_string() },
             ReserveAsset { asset: "Stacks (sBTC)".to_string(), total_supplied: 281.2, total_reserves: 352.5, collateral_ratio: 125.3, status: "Audited".to_string() },
             ReserveAsset { asset: "Rootstock (RBTC)".to_string(), total_supplied: 122.5, total_reserves: 143.1, collateral_ratio: 116.8, status: "Audited".to_string() },
-            ReserveAsset { asset: "Wormhole NTT".to_string(), total_supplied: 551.0, total_reserves: 1320.0, collateral_ratio: 111.1, status: "Verified".to_string() },
         ];
 
 
@@ -252,20 +236,14 @@ impl Engine {
                 active_offers: vec!["L2_SUMMER".to_string(), "STX_STAKING".to_string()],
                 reach: 500000,
             },
-            MarketingInfo {
-                channel: "Discord".to_string(),
-                status: "active".to_string(),
-                active_offers: vec!["ALPHA_ACCESS".to_string()],
-                reach: 25000,
-            },
         ];
 
         Self {
-            version: "0.1.0".to_string(),
+            version: "0.2.0".to_string(),
             start_time: Utc::now(),
             request_count: AtomicU64::new(0),
-            total_tvl_usd: AtomicU64::new(1_320_000_000),
-            active_sovereign_nodes: AtomicU64::new(8),
+            total_tvl_usd: AtomicU64::new(0),
+            active_sovereign_nodes: AtomicU64::new(10),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
             prices: Arc::new(RwLock::new(prices)),
@@ -288,9 +266,11 @@ impl Engine {
             latency_ms: 0,
             trust_model: "Unknown".to_string(),
             risk_level: "Unknown".to_string(),
+            risk_assessment: None,
             data_availability: "Unknown".to_string(),
             settlement: "Unknown".to_string(),
             bridge_security: "Unknown".to_string(),
+            tvl_usd: 0.0,
             version: None,
             metadata: HashMap::new(),
         })
@@ -327,6 +307,7 @@ impl Engine {
             "status": "operational",
             "total_requests": self.request_count.load(Ordering::SeqCst),
             "active_nodes": self.active_sovereign_nodes.load(Ordering::SeqCst),
+            "total_tvl_usd": self.total_tvl_usd.load(Ordering::SeqCst),
         })
     }
 
@@ -345,157 +326,23 @@ impl Engine {
                         let fluctuation = (Utc::now().timestamp() % 11) as i32 - 5;
                         status.latency_ms = (status.latency_ms as i32 + fluctuation).max(1) as u32;
                         status.last_checked = Utc::now();
-                        status.risk_level = Self::calculate_risk_level(status.latency_ms, &status.trust_model);
 
-                        match status.name.as_str() {
-                            "bisq" => {
-                                if let Some(v) = status.metadata.get_mut("active_offers") {
-                                    let offers: u32 = v.parse().unwrap_or(124);
-                                    *v = (offers + (Utc::now().timestamp() % 3) as u32).to_string();
-                                }
-                            },
-                            "rgb" => {
-                                if let Some(v) = status.metadata.get_mut("contract_count") {
-                                    let count: u32 = v.parse().unwrap_or(85);
-                                    if Utc::now().timestamp() % 5 == 0 {
-                                        *v = (count + 1).to_string();
-                                    }
-                                }
-                            },
-                            "stacks" => {
-                                if let Some(height_str) = status.metadata.get_mut("block_height") {
-                                    let height: u64 = height_str.parse().unwrap_or(840000);
-                                    *height_str = (height + 1).to_string();
-                                }
-                            },
-                            "lightning" => {
-                                if let Some(capacity_str) = status.metadata.get_mut("capacity_btc") {
-                                    let capacity: f64 = capacity_str.parse().unwrap_or(42.5);
-                                    *capacity_str = format!("{:.1}", capacity + 0.1);
-                                }
-                            },
-                            "liquid" => {
-                                if let Some(v) = status.metadata.get_mut("pegged_btc") {
-                                    let pegged: f64 = v.parse().unwrap_or(3541.2);
-                                    *v = format!("{:.1}", pegged + (Utc::now().timestamp() % 10) as f64 / 10.0);
-                                }
-                            },
-                            "rootstock" => {
-                                if let Some(v) = status.metadata.get_mut("mining_hashrate_ph") {
-                                    let hashrate: f64 = v.parse().unwrap_or(245.8);
-                                    *v = format!("{:.1}", hashrate + (Utc::now().timestamp() % 5) as f64 - 2.0);
-                                }
-                            },
-                            "babylon" => {
-                                if let Some(v) = status.metadata.get_mut("staked_btc") {
-                                    let staked: f64 = v.parse().unwrap_or(1250.0);
-                                    *v = format!("{:.1}", staked + 0.5);
-                                }
-                            },
-                            "bob" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(45000000.0);
-                                    *v = format!("{:.0}", tvl + 1000.0);
-                                }
-                            },
-                            "merlin" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(1500000000.0);
-                                    *v = format!("{:.0}", tvl + 5000.0);
-                                }
-                            },
-                            "botanix" => {
-                                if let Some(v) = status.metadata.get_mut("nodes_active") {
-                                    let nodes: u32 = v.parse().unwrap_or(21);
-                                    if Utc::now().timestamp() % 60 == 0 {
-                                        *v = (nodes + 1).to_string();
-                                    }
-                                }
-                            },
-                            "b2network" => {
-                                if let Some(v) = status.metadata.get_mut("block_height") {
-                                    let height: u64 = v.parse().unwrap_or(12543);
-                                    *v = (height + 1).to_string();
-                                }
-                            },
-                            "citrea" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(12500000.0);
-                                    *v = format!("{:.0}", tvl + 2500.0);
-                                }
-                            },
-                            "bitlayer" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(8500000.0);
-                                    *v = format!("{:.0}", tvl + 1800.0);
-                                }
-                            },
-                            "alpen" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(5000000.0);
-                                    *v = format!("{:.0}", tvl + 1200.0);
-                                }
-                            },
-                            "mezo" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(120000000.0);
-                                    *v = format!("{:.0}", tvl + 25000.0);
-                                }
-                            },
-                            "zulu" => {
-                                if let Some(v) = status.metadata.get_mut("block_height") {
-                                    let height: u64 = v.parse().unwrap_or(5421);
-                                    *v = (height + 1).to_string();
-                                }
-                            },
-                            "bison" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(3200000.0);
-                                    *v = format!("{:.0}", tvl + 800.0);
-                                }
-                            },
-                            "hemi" => {
-                                if let Some(v) = status.metadata.get_mut("tvl_usd") {
-                                    let tvl: f64 = v.parse().unwrap_or(2100000.0);
-                                    *v = format!("{:.0}", tvl + 500.0);
-                                }
-                            },
-                            "taproot-assets" => {
-                                if let Some(v) = status.metadata.get_mut("asset_count") {
-                                    let count: u32 = v.parse().unwrap_or(142);
-                                    if Utc::now().timestamp() % 10 == 0 {
-                                        *v = (count + 1).to_string();
-                                    }
-                                }
-                            },
-                            "nubit" => {
-                                if Utc::now().timestamp() % 60 == 0 {
-                                     status.latency_ms = 25;
-                                }
-                            },
-                            "lorenzo" => {
-                                if let Some(v) = status.metadata.get_mut("staked_btc") {
-                                    let staked: f64 = v.parse().unwrap_or(850.2);
-                                    *v = format!("{:.1}", staked + 0.2);
-                                }
-                            },
-                            _ => {}
+                        let ra = Self::evaluate_risk(status.latency_ms, &status.trust_model, &status.data_availability, &status.bridge_security);
+                        status.risk_level = ra.overall_level.clone();
+                        status.risk_assessment = Some(ra);
+
+                        // Simulated TVL growth
+                        if status.tvl_usd > 0.0 {
+                            status.tvl_usd += status.tvl_usd * 0.0001;
                         }
                     }
                 }
 
-
-
                 {
                     let mut compliance = engine_clone.compliance.write().unwrap();
                     let current_requests = engine_clone.request_count.load(Ordering::SeqCst);
-                    // Simulate dynamic risk score based on activity
                     compliance.risk_score = (10 + (current_requests % 20) as u32).min(100);
-                    if compliance.risk_score > 80 {
-                        compliance.status = "warning".to_string();
-                    } else {
-                        compliance.status = "compliant".to_string();
-                    }
+                    compliance.status = if compliance.risk_score > 80 { "warning".to_string() } else { "compliant".to_string() };
                 }
 
                 {
@@ -508,17 +355,6 @@ impl Engine {
                 }
 
                 engine_clone.update_dynamic_stats();
-
-                {
-                    let mut reserves = engine_clone.reserves.write().unwrap();
-                    let current_tvl = engine_clone.total_tvl_usd.load(Ordering::SeqCst);
-                    for reserve in reserves.iter_mut() {
-                        if reserve.asset == "Wormhole NTT" {
-                            reserve.total_reserves = (current_tvl as f64) / 1_000_000.0;
-                        }
-                        reserve.total_supplied += (Utc::now().timestamp() % 5) as f64 / 10.0;
-                    }
-                }
             }
         });
     }
@@ -627,7 +463,6 @@ impl Engine {
 
     pub fn is_healthy(&self) -> bool {
         let statuses = self.service_statuses.read().unwrap();
-        // Check if at least some services are active and checked recently
         if statuses.is_empty() { return false; }
         let now = Utc::now();
         statuses.values().any(|s| (now - s.last_checked).num_seconds() < 60)
@@ -646,15 +481,11 @@ impl Engine {
 
     pub fn calculate_total_tvl(&self) -> u64 {
         let statuses = self.service_statuses.read().unwrap();
-        let mut total = 0u64;
+        let mut total = 0.0;
         for status in statuses.values() {
-            if let Some(tvl_str) = status.metadata.get("tvl_usd") {
-                if let Ok(tvl) = tvl_str.parse::<f64>() {
-                    total += tvl as u64;
-                }
-            }
+            total += status.tvl_usd;
         }
-        total
+        total as u64
     }
 
     pub fn update_dynamic_stats(&self) {
@@ -682,5 +513,14 @@ impl Engine {
             "settlement_tx": "0x123...",
             "timestamp": Utc::now()
         })
+    }
+
+    pub fn get_risk_assessments(&self) -> HashMap<String, Option<RiskAssessment>> {
+        let statuses = self.service_statuses.read().unwrap();
+        let mut assessments = HashMap::new();
+        for (name, status) in statuses.iter() {
+            assessments.insert(name.clone(), status.risk_assessment.clone());
+        }
+        assessments
     }
 }

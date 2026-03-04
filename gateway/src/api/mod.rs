@@ -9,6 +9,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bisq_handler)
             .service(rgb_handler)
             .service(bitvm_handler)
+            .service(bitvm2_handler)
             .service(changelly_handler)
             .service(changelly_rate_handler)
             .service(stacks_handler)
@@ -40,6 +41,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(taproot_assets_handler)
             .service(nubit_handler)
             .service(lorenzo_handler)
+            .service(core_dao_handler)
             .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
@@ -50,6 +52,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(citrea_proof_handler)
             .service(affiliates_handler)
             .service(marketing_handler)
+            .service(risk_assessment_handler)
     );
 }
 
@@ -78,6 +81,13 @@ async fn rgb_handler(engine: web::Data<Engine>) -> impl Responder {
 async fn bitvm_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("bitvm");
+    HttpResponse::Ok().json(status)
+}
+
+#[get("/bitvm2")]
+async fn bitvm2_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("bitvm2");
     HttpResponse::Ok().json(status)
 }
 
@@ -376,6 +386,13 @@ async fn lorenzo_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/core-dao")]
+async fn core_dao_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let status = engine.get_service_status("core-dao");
+    HttpResponse::Ok().json(status)
+}
+
 #[get("/b2network/status")]
 async fn b2network_status_handler(engine: web::Data<Engine>) -> impl Responder {
     let res = engine.get_b2_status();
@@ -400,4 +417,11 @@ async fn marketing_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let marketing = engine.get_marketing();
     HttpResponse::Ok().json(marketing)
+}
+
+#[get("/risk-assessment")]
+async fn risk_assessment_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let assessments = engine.get_risk_assessments();
+    HttpResponse::Ok().json(assessments)
 }

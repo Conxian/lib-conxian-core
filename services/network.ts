@@ -10,23 +10,21 @@
  * @param environment - The execution environment ('local', 'production', etc.)
  */
 export const getGatewayUrl = (service: string, environment: string): string => {
-  // Support seamless switching between local execution and production execution
   const isProduction = environment === 'production';
   const baseUrl = isProduction
     ? 'https://gateway.conxian.com'
     : 'http://localhost:8080';
 
-  // Returns the correct Gateway API route (/api/v1/...)
   return `${baseUrl}/api/v1/${service}`;
 };
 
-// Current environment selection logic
 const currentEnv = process.env.NODE_ENV === 'production' ? 'production' : 'local';
 
-// Sovereign Service Base URLs refactored to resolve through getGatewayUrl
+// Sovereign Service Base URLs
 export const BISQ_API_URL = getGatewayUrl('bisq', currentEnv);
 export const RGB_API_URL = getGatewayUrl('rgb', currentEnv);
 export const BITVM_API_URL = getGatewayUrl('bitvm', currentEnv);
+export const BITVM2_API_URL = getGatewayUrl('bitvm2', currentEnv);
 export const CHANGELLY_API_URL = getGatewayUrl('changelly', currentEnv);
 
 // Bitcoin Layer 2 & Sidechain URLs
@@ -49,6 +47,7 @@ export const HEMI_API_URL = getGatewayUrl('hemi', currentEnv);
 export const TAPROOT_ASSETS_API_URL = getGatewayUrl('taproot-assets', currentEnv);
 export const NUBIT_API_URL = getGatewayUrl('nubit', currentEnv);
 export const LORENZO_API_URL = getGatewayUrl('lorenzo', currentEnv);
+export const CORE_DAO_API_URL = getGatewayUrl('core-dao', currentEnv);
 export const LAYERS_API_URL = getGatewayUrl('layers', currentEnv);
 
 // System & Monitoring Endpoints
@@ -60,6 +59,7 @@ export const RESERVES_API_URL = getGatewayUrl('reserves', currentEnv);
 export const PRICES_API_URL = getGatewayUrl('prices', currentEnv);
 export const AFFILIATES_API_URL = getGatewayUrl('affiliates', currentEnv);
 export const MARKETING_API_URL = getGatewayUrl('marketing', currentEnv);
+export const RISK_ASSESSMENT_API_URL = getGatewayUrl('risk-assessment', currentEnv);
 
 /**
  * Protocol-Specific Helpers
@@ -89,6 +89,7 @@ export const getStacksContract = async (contractId: string) => {
   const response = await fetch(url);
   return response.json();
 };
+
 export const getRgbContract = async (contractId: string) => {
   const url = `${getGatewayUrl("rgb", currentEnv)}/contract/${contractId}`;
   const response = await fetch(url);
@@ -131,11 +132,6 @@ export const getExchangeRate = async (from: string, to: string) => {
   return response.json();
 };
 
-export const getTaprootAssets = async () => {
-  const url = getGatewayUrl("taproot-assets", currentEnv);
-  const response = await fetch(url);
-  return response.json();
-};
 export const checkCompliance = async (address: string) => {
   const url = `${getGatewayUrl("compliance", currentEnv)}/check`;
   const response = await fetch(url, {
@@ -145,6 +141,7 @@ export const checkCompliance = async (address: string) => {
   });
   return response.json();
 };
+
 export const getB2Status = async () => {
   const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
   const response = await fetch(url);
@@ -153,6 +150,12 @@ export const getB2Status = async () => {
 
 export const getCitreaProof = async (batchId: string) => {
   const url = `${getGatewayUrl("citrea", currentEnv)}/proof/${batchId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getRiskAssessment = async () => {
+  const url = getGatewayUrl("risk-assessment", currentEnv);
   const response = await fetch(url);
   return response.json();
 };
@@ -178,12 +181,6 @@ export const getReserves = async () => {
   return response.json();
 };
 
-export const getComplianceStatus = async () => {
-  const url = getGatewayUrl("compliance", currentEnv);
-  const response = await fetch(url);
-  return response.json();
-};
-
 export const getSystemStatus = async () => {
   const url = getGatewayUrl("status", currentEnv);
   const response = await fetch(url);
@@ -192,18 +189,6 @@ export const getSystemStatus = async () => {
 
 export const getHealth = async () => {
   const url = getGatewayUrl("health", currentEnv);
-  const response = await fetch(url);
-  return response.json();
-};
-
-export const getAffiliates = async () => {
-  const url = getGatewayUrl("affiliates", currentEnv);
-  const response = await fetch(url);
-  return response.json();
-};
-
-export const getMarketing = async () => {
-  const url = getGatewayUrl("marketing", currentEnv);
   const response = await fetch(url);
   return response.json();
 };
