@@ -20,8 +20,24 @@ Returns a detailed risk assessment for all layers.
       "da_score": 90,
       "settlement_score": 85,
       "bridge_score": 55,
+      "exit_mechanism_score": 85,
+      "operators_score": 80,
       "decentralization_score": 75
     }
+  }
+  ```
+
+
+### GET /api/v1/core-dao/stats
+Returns Satoshi Plus specific metrics for Core DAO.
+- **Response:**
+  ```json
+  {
+    "hashrate_contribution_pct": 15.4,
+    "dual_token_staking": "enabled",
+    "active_validators": 21,
+    "total_staked_btc": 2500.0,
+    "satoshi_plus_status": "Active"
   }
   ```
 

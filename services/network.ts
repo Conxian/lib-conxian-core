@@ -142,6 +142,13 @@ export const checkCompliance = async (address: string) => {
   return response.json();
 };
 
+
+export const getCoreDaoStats = async () => {
+  const url = `${getGatewayUrl("core-dao", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
 export const getB2Status = async () => {
   const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
   const response = await fetch(url);

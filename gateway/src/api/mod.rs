@@ -52,6 +52,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(citrea_proof_handler)
             .service(affiliates_handler)
             .service(marketing_handler)
+            .service(core_dao_stats_handler)
             .service(risk_assessment_handler)
     );
 }
@@ -417,6 +418,12 @@ async fn marketing_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let marketing = engine.get_marketing();
     HttpResponse::Ok().json(marketing)
+}
+
+#[get("/core-dao/stats")]
+async fn core_dao_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_core_dao_stats();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/risk-assessment")]

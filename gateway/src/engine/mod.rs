@@ -13,6 +13,8 @@ pub struct RiskAssessment {
     pub da_score: u32,
     pub settlement_score: u32,
     pub bridge_score: u32,
+    pub exit_mechanism_score: u32,
+    pub operators_score: u32,
     pub decentralization_score: u32,
 }
 
@@ -89,20 +91,29 @@ pub struct Engine {
     pub marketing: Arc<RwLock<Vec<MarketingInfo>>>,
 }
 
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Engine {
     fn evaluate_risk(latency: u32, trust_model: &str, da: &str, bridge: &str) -> RiskAssessment {
         let mut da_score = 90;
         let mut settlement_score = 85;
         let mut bridge_score = 80;
         let mut dec_score = 75;
+        let mut exit_score = 85;
+        let mut ops_score = 80;
 
         if da.contains("Off-chain") { da_score -= 30; }
-        if bridge.contains("Federated") || bridge.contains("Multisig") { bridge_score -= 25; }
+        if bridge.contains("Federated") || bridge.contains("Multisig") { bridge_score -= 25; ops_score -= 20; }
+        if bridge.contains("Non-custodial") { bridge_score += 10; exit_score += 10; }
         if trust_model == "Centralized" {
-            da_score = 10; settlement_score = 10; bridge_score = 10; dec_score = 10;
+            da_score = 10; settlement_score = 10; bridge_score = 10; dec_score = 10; exit_score = 10; ops_score = 10;
         }
 
-        let avg = (da_score + settlement_score + bridge_score + dec_score) / 4;
+        let avg = (da_score + settlement_score + bridge_score + dec_score + exit_score + ops_score) / 6;
         let level = if avg < 40 || latency > 250 {
             "High".to_string()
         } else if avg < 70 || latency > 150 {
@@ -117,20 +128,13 @@ impl Engine {
             settlement_score,
             bridge_score,
             decentralization_score: dec_score,
+            exit_mechanism_score: exit_score,
+            operators_score: ops_score,
         }
     }
-}
 
-impl Default for Engine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Engine {
-    pub fn new() -> Self {
+    fn initialize_services() -> HashMap<String, ServiceStatus> {
         let mut statuses = HashMap::new();
-
         let services = vec![
             ("bisq", 45, "P2P", "On-chain", "Bitcoin", "N/A", 0.0),
             ("rgb", 12, "Client-side", "Off-chain", "Bitcoin", "Client-side", 0.0),
@@ -201,6 +205,11 @@ impl Engine {
                 metadata,
             });
         }
+        statuses
+    }
+
+    pub fn new() -> Self {
+        let statuses = Self::initialize_services();
 
         let reserves = vec![
             ReserveAsset { asset: "Liquid (L-BTC)".to_string(), total_supplied: 452.4, total_reserves: 521.8, collateral_ratio: 115.3, status: "Audited".to_string() },
@@ -358,9 +367,7 @@ impl Engine {
             }
         });
     }
-}
 
-impl Engine {
     pub fn create_lightning_invoice(&self, amount_msat: u64, description: &str) -> serde_json::Value {
         self.increment_requests();
         serde_json::json!({
@@ -491,6 +498,18 @@ impl Engine {
     pub fn update_dynamic_stats(&self) {
         let new_tvl = self.calculate_total_tvl();
         self.total_tvl_usd.store(new_tvl, Ordering::SeqCst);
+    }
+
+    pub fn get_core_dao_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("core-dao");
+        serde_json::json!({
+            "hashrate_contribution_pct": 15.4,
+            "dual_token_staking": status.metadata.get("dual_token_staking").cloned().unwrap_or_default(),
+            "active_validators": 21,
+            "total_staked_btc": 2500.0,
+            "satoshi_plus_status": "Active"
+        })
     }
 
     pub fn get_b2_status(&self) -> serde_json::Value {
