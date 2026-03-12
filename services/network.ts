@@ -3,11 +3,22 @@
  * Replaces legacy Anya-core and OPSource endpoints.
  */
 
+export interface ServiceStatus {
+  name: string;
+  status: string;
+  last_checked: string;
+  latency_ms: number;
+  trust_model: string;
+  risk_level: string;
+  data_availability: string;
+  settlement: string;
+  bridge_security: string;
+  tvl_usd: number;
+  metadata: Record<string, string>;
+}
+
 /**
  * Returns the correct Gateway API route.
- *
- * @param service - The name of the service (e.g., 'bisq', 'rgb')
- * @param environment - The execution environment ('local', 'production', etc.)
  */
 export const getGatewayUrl = (service: string, environment: string): string => {
   const isProduction = environment === 'production';
@@ -149,6 +160,18 @@ export const getCoreDaoStats = async () => {
   return response.json();
 };
 
+export const getLorenzoStaking = async () => {
+  const url = `${getGatewayUrl("lorenzo", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getHemiStatus = async () => {
+  const url = `${getGatewayUrl("hemi", currentEnv)}/status`;
+  const response = await fetch(url);
+  return response.json();
+};
+
 export const getB2Status = async () => {
   const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
   const response = await fetch(url);
@@ -157,6 +180,72 @@ export const getB2Status = async () => {
 
 export const getCitreaProof = async (batchId: string) => {
   const url = `${getGatewayUrl("citrea", currentEnv)}/proof/${batchId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBobInfo = async () => {
+  const url = `${getGatewayUrl("bob", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getMerlinStats = async () => {
+  const url = `${getGatewayUrl("merlin", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getMezoYield = async () => {
+  const url = `${getGatewayUrl("mezo", currentEnv)}/yield`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getNubitDaInfo = async () => {
+  const url = `${getGatewayUrl("nubit", currentEnv)}/da`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBisonStats = async () => {
+  const url = `${getGatewayUrl("bison", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getZuluInfo = async () => {
+  const url = `${getGatewayUrl("zulu", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBotanixStats = async () => {
+  const url = `${getGatewayUrl("botanix", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBitlayerInfo = async () => {
+  const url = `${getGatewayUrl("bitlayer", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getAlpenStats = async () => {
+  const url = `${getGatewayUrl("alpen", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getTaprootAssetsStats = async () => {
+  const url = `${getGatewayUrl("taproot-assets", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBitvm2Info = async () => {
+  const url = `${getGatewayUrl("bitvm2", currentEnv)}/info`;
   const response = await fetch(url);
   return response.json();
 };
@@ -170,13 +259,13 @@ export const getRiskAssessment = async () => {
 /**
  * Monitoring & Aggregated Stats Helpers
  */
-export const getServiceStatus = async (service: string) => {
+export const getServiceStatus = async (service: string): Promise<ServiceStatus> => {
   const url = getGatewayUrl(service, currentEnv);
   const response = await fetch(url);
   return response.json();
 };
 
-export const getLayers = async () => {
+export const getLayers = async (): Promise<Record<string, ServiceStatus>> => {
   const url = getGatewayUrl("layers", currentEnv);
   const response = await fetch(url);
   return response.json();

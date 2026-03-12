@@ -10,6 +10,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(rgb_handler)
             .service(bitvm_handler)
             .service(bitvm2_handler)
+            .service(bitvm2_info_handler)
             .service(changelly_handler)
             .service(changelly_rate_handler)
             .service(stacks_handler)
@@ -28,19 +29,31 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(babylon_handler)
             .service(babylon_staking_handler)
             .service(bob_handler)
+            .service(bob_info_handler)
             .service(merlin_handler)
+            .service(merlin_stats_handler)
             .service(botanix_handler)
+            .service(botanix_stats_handler)
             .service(b2network_handler)
             .service(citrea_handler)
             .service(bitlayer_handler)
+            .service(bitlayer_info_handler)
             .service(alpen_handler)
+            .service(alpen_stats_handler)
             .service(mezo_handler)
+            .service(mezo_yield_handler)
             .service(zulu_handler)
+            .service(zulu_info_handler)
             .service(bison_handler)
+            .service(bison_stats_handler)
             .service(hemi_handler)
+            .service(hemi_status_handler)
             .service(taproot_assets_handler)
+            .service(taproot_assets_stats_handler)
             .service(nubit_handler)
+            .service(nubit_da_handler)
             .service(lorenzo_handler)
+            .service(lorenzo_staking_handler)
             .service(core_dao_handler)
             .service(prices_handler)
             .service(lightning_invoice_handler)
@@ -90,6 +103,12 @@ async fn bitvm2_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("bitvm2");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/bitvm2/info")]
+async fn bitvm2_info_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_bitvm2_info();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/changelly")]
@@ -237,6 +256,12 @@ async fn bob_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/bob/info")]
+async fn bob_info_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_bob_info();
+    HttpResponse::Ok().json(res)
+}
+
 #[derive(Deserialize)]
 struct InvoiceRequest {
     amount_msat: u64,
@@ -272,11 +297,23 @@ async fn merlin_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/merlin/stats")]
+async fn merlin_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_merlin_stats();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/botanix")]
 async fn botanix_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("botanix");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/botanix/stats")]
+async fn botanix_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_botanix_stats();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/b2network")]
@@ -312,6 +349,12 @@ async fn bitlayer_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/bitlayer/info")]
+async fn bitlayer_info_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_bitlayer_info();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/prices")]
 async fn prices_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
@@ -338,11 +381,23 @@ async fn alpen_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/alpen/stats")]
+async fn alpen_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_alpen_stats();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/mezo")]
 async fn mezo_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("mezo");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/mezo/yield")]
+async fn mezo_yield_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_mezo_yield();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/zulu")]
@@ -352,11 +407,23 @@ async fn zulu_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/zulu/info")]
+async fn zulu_info_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_zulu_info();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/bison")]
 async fn bison_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("bison");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/bison/stats")]
+async fn bison_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_bison_stats();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/hemi")]
@@ -366,11 +433,23 @@ async fn hemi_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/hemi/status")]
+async fn hemi_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_hemi_status();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/taproot-assets")]
 async fn taproot_assets_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("taproot-assets");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/taproot-assets/stats")]
+async fn taproot_assets_stats_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_taproot_assets_stats();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/nubit")]
@@ -380,11 +459,23 @@ async fn nubit_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(status)
 }
 
+#[get("/nubit/da")]
+async fn nubit_da_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_nubit_da_info();
+    HttpResponse::Ok().json(res)
+}
+
 #[get("/lorenzo")]
 async fn lorenzo_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("lorenzo");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/lorenzo/stats")]
+async fn lorenzo_staking_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_lorenzo_staking();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/core-dao")]
