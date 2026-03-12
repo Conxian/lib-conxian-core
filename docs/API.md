@@ -12,67 +12,53 @@ Returns general system information.
 
 ### GET /api/v1/risk-assessment
 Returns a detailed risk assessment for all layers.
-- **Response:**
-  ```json
-  {
-    "stacks": {
-      "overall_level": "Medium",
-      "da_score": 90,
-      "settlement_score": 85,
-      "bridge_score": 55,
-      "exit_mechanism_score": 85,
-      "operators_score": 80,
-      "decentralization_score": 75
-    }
-  }
-  ```
 
+### GET /api/v1/metrics
+Prometheus-compatible metrics endpoint.
 
-### GET /api/v1/core-dao/stats
-Returns Satoshi Plus specific metrics for Core DAO.
-- **Response:**
-  ```json
-  {
-    "hashrate_contribution_pct": 15.4,
-    "dual_token_staking": "enabled",
-    "active_validators": 21,
-    "total_staked_btc": 2500.0,
-    "satoshi_plus_status": "Active"
-  }
-  ```
+## 2. Protocol-Specific Endpoints
 
-### GET /api/v1/lorenzo/stats
-Returns staking metrics for Lorenzo.
-- **Response:**
-  ```json
-  {
-    "staked_btc": "150.0",
-    "reward_token": "stBTC",
-    "active_pools": 3,
-    "yield_apy": 4.5
-  }
-  ```
+### Core DAO
+- **GET /api/v1/core-dao/stats**: Satoshi Plus specific metrics.
 
-### GET /api/v1/hemi/status
-Returns network status for Hemi.
-- **Response:**
-  ```json
-  {
-    "sequencer_status": "Active",
-    "proof_submission": "On-chain",
-    "bitcoin_finality_depth": 6,
-    "ethereum_finality_depth": 32
-  }
-  ```
+### Lorenzo
+- **GET /api/v1/lorenzo/stats**: Staking and yield metrics.
 
-### GET /api/v1/layers
-Returns a consolidated view of all supported layers.
+### Hemi
+- **GET /api/v1/hemi/status**: Sequencer and finality status.
 
-## 2. Service Endpoints
-- **GET /api/v1/bitvm2**
-- **GET /api/v1/core-dao**
-- **GET /api/v1/prices**
-- **GET /api/v1/reserves**
+### BOB (Build on Bitcoin)
+- **GET /api/v1/bob/info**: TVL and bridge status.
+
+### Merlin Chain
+- **GET /api/v1/merlin/stats**: ZK proving and yield stats.
+
+### Mezo
+- **GET /api/v1/mezo/yield**: Economic security and yield info.
+
+### Nubit
+- **GET /api/v1/nubit/da**: Data availability throughput and nodes.
+
+### Bison
+- **GET /api/v1/bison/stats**: ZK Rollup uptime and settlement frequency.
+
+### Zulu Network
+- **GET /api/v1/zulu/info**: Layer type and bridge mode.
+
+### Botanix
+- **GET /api/v1/botanix/stats**: Spiderchain nodes and multisig threshold.
+
+### Bitlayer
+- **GET /api/v1/bitlayer/info**: BitVM challenge status and validator count.
+
+### Alpen
+- **GET /api/v1/alpen/stats**: ZK proof type and batch size.
+
+### Taproot Assets
+- **GET /api/v1/taproot-assets/stats**: Asset issuance and transfer stats.
+
+### BitVM2
+- **GET /api/v1/bitvm2/info**: ZK-Fraud Proof paradigm details.
 
 ## 3. Data Models
 

@@ -184,6 +184,21 @@ impl Engine {
                 "core-dao" => {
                     metadata.insert("dual_token_staking".to_string(), "enabled".to_string());
                 },
+                "bob" => {
+                    metadata.insert("connected_chains".to_string(), "Bitcoin,Ethereum".to_string());
+                },
+                "merlin" => {
+                    metadata.insert("zk_proving_status".to_string(), "Active".to_string());
+                },
+                "hemi" => {
+                    metadata.insert("bitcoin_finality_depth".to_string(), "6".to_string());
+                },
+                "lorenzo" => {
+                    metadata.insert("staked_btc".to_string(), "150.0".to_string());
+                },
+                "b2network" => {
+                    metadata.insert("block_height".to_string(), "12540".to_string());
+                },
                 _ => {}
             }
 
@@ -525,11 +540,11 @@ impl Engine {
 
     pub fn get_hemi_status(&self) -> serde_json::Value {
         self.increment_requests();
-        let _status = self.get_service_status("hemi");
+        let status = self.get_service_status("hemi");
         serde_json::json!({
             "sequencer_status": "Active",
             "proof_submission": "On-chain",
-            "bitcoin_finality_depth": 6,
+            "bitcoin_finality_depth": status.metadata.get("bitcoin_finality_depth").cloned().unwrap_or_else(|| "6".to_string()),
             "ethereum_finality_depth": 32
         })
     }
@@ -553,6 +568,127 @@ impl Engine {
             "zk_proof": "0xabc...",
             "settlement_tx": "0x123...",
             "timestamp": Utc::now()
+        })
+    }
+
+    pub fn get_bob_info(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("bob");
+        serde_json::json!({
+            "tvl_usd": status.tvl_usd,
+            "connected_chains": status.metadata.get("connected_chains").cloned().unwrap_or_else(|| "Bitcoin,Ethereum".to_string()).split(',').collect::<Vec<&str>>(),
+            "optimistic_bridge_status": "Active",
+            "exit_period_blocks": 2016
+        })
+    }
+
+    pub fn get_merlin_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("merlin");
+        serde_json::json!({
+            "tvl_usd": status.tvl_usd,
+            "zk_proving_status": status.metadata.get("zk_proving_status").cloned().unwrap_or_else(|| "Active".to_string()),
+            "sequencer_yield_pct": 12.5,
+            "active_users": 45000
+        })
+    }
+
+    pub fn get_mezo_yield(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("mezo");
+        serde_json::json!({
+            "staked_tbtc": status.metadata.get("staked_tbtc").cloned().unwrap_or_else(|| "1850.5".to_string()),
+            "current_yield_apy": 6.2,
+            "economic_security_usd": 150000000.0,
+            "hbt_token_status": "Active"
+        })
+    }
+
+    pub fn get_nubit_da_info(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("nubit");
+        serde_json::json!({
+            "da_throughput_mbps": 15.5,
+            "consensus_latency_ms": 250,
+            "active_da_nodes": 450,
+            "integrated_layers": ["B2Network", "Citrea"]
+        })
+    }
+
+    pub fn get_bison_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("bison");
+        serde_json::json!({
+            "tvl_usd": status.tvl_usd,
+            "zk_roll_uptime_pct": 99.98,
+            "proof_generation_latency_min": 15,
+            "settlement_frequency_hours": 1
+        })
+    }
+
+    pub fn get_zulu_info(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("zulu");
+        serde_json::json!({
+            "layer_type": "Multi-layer",
+            "evm_compatibility": "Full",
+            "bridge_mode": "Decentralized",
+            "active_canals": 12
+        })
+    }
+
+    pub fn get_botanix_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("botanix");
+        serde_json::json!({
+            "spiderchain_nodes": 144,
+            "multisig_threshold": "100-of-144",
+            "evm_block_height": 1245000,
+            "status": "Active"
+        })
+    }
+
+    pub fn get_bitlayer_info(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("bitlayer");
+        serde_json::json!({
+            "tvl_usd": status.tvl_usd,
+            "bitvm_challenge_status": "Healthy",
+            "active_validators": 21,
+            "block_time_sec": 2
+        })
+    }
+
+    pub fn get_alpen_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("alpen");
+        serde_json::json!({
+            "tvl_usd": status.tvl_usd,
+            "zk_proof_type": "SNARK",
+            "settlement_batch_size": 250,
+            "finality_depth_bitcoin": 3
+        })
+    }
+
+    pub fn get_taproot_assets_stats(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("taproot-assets");
+        serde_json::json!({
+            "total_assets_issued": 125,
+            "total_transfers_24h": 450,
+            "lightning_integration": "Enabled",
+            "status": "Active"
+        })
+    }
+
+    pub fn get_bitvm2_info(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("bitvm2");
+        serde_json::json!({
+            "paradigm": "ZK-Fraud Proofs",
+            "challenge_period_blocks": 144,
+            "active_verifiers": 15,
+            "status": "Operational"
         })
     }
 

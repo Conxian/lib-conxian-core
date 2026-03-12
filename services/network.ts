@@ -173,6 +173,72 @@ export const getCitreaProof = async (batchId: string) => {
   return response.json();
 };
 
+export const getBobInfo = async () => {
+  const url = `${getGatewayUrl("bob", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getMerlinStats = async () => {
+  const url = `${getGatewayUrl("merlin", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getMezoYield = async () => {
+  const url = `${getGatewayUrl("mezo", currentEnv)}/yield`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getNubitDaInfo = async () => {
+  const url = `${getGatewayUrl("nubit", currentEnv)}/da`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBisonStats = async () => {
+  const url = `${getGatewayUrl("bison", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getZuluInfo = async () => {
+  const url = `${getGatewayUrl("zulu", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBotanixStats = async () => {
+  const url = `${getGatewayUrl("botanix", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBitlayerInfo = async () => {
+  const url = `${getGatewayUrl("bitlayer", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getAlpenStats = async () => {
+  const url = `${getGatewayUrl("alpen", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getTaprootAssetsStats = async () => {
+  const url = `${getGatewayUrl("taproot-assets", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getBitvm2Info = async () => {
+  const url = `${getGatewayUrl("bitvm2", currentEnv)}/info`;
+  const response = await fetch(url);
+  return response.json();
+};
+
 export const getRiskAssessment = async () => {
   const url = getGatewayUrl("risk-assessment", currentEnv);
   const response = await fetch(url);
