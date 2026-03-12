@@ -3,11 +3,22 @@
  * Replaces legacy Anya-core and OPSource endpoints.
  */
 
+export interface ServiceStatus {
+  name: string;
+  status: string;
+  last_checked: string;
+  latency_ms: number;
+  trust_model: string;
+  risk_level: string;
+  data_availability: string;
+  settlement: string;
+  bridge_security: string;
+  tvl_usd: number;
+  metadata: Record<string, string>;
+}
+
 /**
  * Returns the correct Gateway API route.
- *
- * @param service - The name of the service (e.g., 'bisq', 'rgb')
- * @param environment - The execution environment ('local', 'production', etc.)
  */
 export const getGatewayUrl = (service: string, environment: string): string => {
   const isProduction = environment === 'production';
@@ -248,13 +259,13 @@ export const getRiskAssessment = async () => {
 /**
  * Monitoring & Aggregated Stats Helpers
  */
-export const getServiceStatus = async (service: string) => {
+export const getServiceStatus = async (service: string): Promise<ServiceStatus> => {
   const url = getGatewayUrl(service, currentEnv);
   const response = await fetch(url);
   return response.json();
 };
 
-export const getLayers = async () => {
+export const getLayers = async (): Promise<Record<string, ServiceStatus>> => {
   const url = getGatewayUrl("layers", currentEnv);
   const response = await fetch(url);
   return response.json();

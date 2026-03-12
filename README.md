@@ -45,7 +45,7 @@ The gateway listens on port 8080 by default. Use `RUST_LOG=info` for detailed lo
 
 ### Testing
 
-The Gateway includes a comprehensive suite of 29 integration tests covering all services and system endpoints.
+The Gateway includes a comprehensive suite of 59 integration tests covering all services and system endpoints.
 
 ```bash
 cd gateway

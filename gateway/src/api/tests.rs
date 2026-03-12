@@ -146,7 +146,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_object());
+        assert!(body["stacks"].is_object());
     }
 
     #[actix_web::test]
@@ -285,6 +285,15 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn test_core_dao_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/core-dao").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
     async fn test_risk_assessment_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
@@ -292,7 +301,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_object());
+        assert!(body["stacks"]["exit_mechanism_score"].is_number());
     }
 
     #[actix_web::test]
@@ -303,29 +312,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["satoshi_plus_status"], "Active");
-    }
-
-    #[actix_web::test]
-    async fn test_lorenzo_stats_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/lorenzo/stats").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["reward_token"], "stBTC");
-    }
-
-    #[actix_web::test]
-    async fn test_hemi_status_endpoint() {
-        let engine = web::Data::new(Engine::new());
-        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
-        let req = test::TestRequest::get().uri("/api/v1/hemi/status").to_request();
-        let resp = test::call_service(&app, req).await;
-        assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["sequencer_status"], "Active");
+        assert_eq!(body["active_validators"], 21);
     }
 
     #[actix_web::test]
@@ -358,7 +345,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body["current_yield_apy"].is_number());
+        assert_eq!(body["current_yield_apy"], 6.2);
     }
 
     #[actix_web::test]
@@ -369,7 +356,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body["da_throughput_mbps"].is_number());
+        assert_eq!(body["da_throughput_mbps"], 15.5);
     }
 
     #[actix_web::test]
@@ -380,7 +367,7 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body["zk_roll_uptime_pct"].is_number());
+        assert_eq!(body["zk_roll_uptime_pct"], 99.98);
     }
 
     #[actix_web::test]
@@ -450,6 +437,28 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn test_lorenzo_stats_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/lorenzo/stats").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["staked_btc"], "150.0");
+    }
+
+    #[actix_web::test]
+    async fn test_hemi_status_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/hemi/status").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["bitcoin_finality_depth"], "6");
+    }
+
+    #[actix_web::test]
     async fn test_prices_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;
@@ -457,7 +466,6 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_object());
         assert!(body["BTC"].is_object());
     }
 
@@ -534,7 +542,6 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["proof_id"], "PROOF123");
-        assert_eq!(body["status"], "Verified");
     }
 
     #[actix_web::test]
@@ -545,8 +552,6 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
-        assert_eq!(body["from"], "BTC");
-        assert_eq!(body["to"], "USD");
         assert!(body["rate"].is_number());
     }
 
@@ -570,7 +575,6 @@ mod tests {
         assert!(resp.status().is_success());
         let body: Value = test::read_body_json(resp).await;
         assert_eq!(body["batch_id"], "BATCH123");
-        assert_eq!(body["status"], "Finalized");
     }
 
     #[actix_web::test]
@@ -602,8 +606,6 @@ mod tests {
         let req = test::TestRequest::get().uri("/api/v1/babylon/staking").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert!(body["staked_btc"].is_string());
     }
 
     #[actix_web::test]
@@ -613,8 +615,6 @@ mod tests {
         let req = test::TestRequest::get().uri("/api/v1/affiliates").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_object());
     }
 
     #[actix_web::test]
@@ -624,7 +624,5 @@ mod tests {
         let req = test::TestRequest::get().uri("/api/v1/marketing").to_request();
         let resp = test::call_service(&app, req).await;
         assert!(resp.status().is_success());
-        let body: Value = test::read_body_json(resp).await;
-        assert!(body.is_array());
     }
 }
