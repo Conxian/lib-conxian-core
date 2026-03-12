@@ -41,6 +41,30 @@ Returns Satoshi Plus specific metrics for Core DAO.
   }
   ```
 
+### GET /api/v1/lorenzo/stats
+Returns staking metrics for Lorenzo.
+- **Response:**
+  ```json
+  {
+    "staked_btc": "150.0",
+    "reward_token": "stBTC",
+    "active_pools": 3,
+    "yield_apy": 4.5
+  }
+  ```
+
+### GET /api/v1/hemi/status
+Returns network status for Hemi.
+- **Response:**
+  ```json
+  {
+    "sequencer_status": "Active",
+    "proof_submission": "On-chain",
+    "bitcoin_finality_depth": 6,
+    "ethereum_finality_depth": 32
+  }
+  ```
+
 ### GET /api/v1/layers
 Returns a consolidated view of all supported layers.
 

@@ -486,18 +486,18 @@ impl Engine {
         })
     }
 
-    pub fn calculate_total_tvl(&self) -> u64 {
+    pub fn calculate_total_tvl(&self) -> f64 {
         let statuses = self.service_statuses.read().unwrap();
         let mut total = 0.0;
         for status in statuses.values() {
             total += status.tvl_usd;
         }
-        total as u64
+        total
     }
 
     pub fn update_dynamic_stats(&self) {
         let new_tvl = self.calculate_total_tvl();
-        self.total_tvl_usd.store(new_tvl, Ordering::SeqCst);
+        self.total_tvl_usd.store(new_tvl as u64, Ordering::SeqCst);
     }
 
     pub fn get_core_dao_stats(&self) -> serde_json::Value {
@@ -509,6 +509,28 @@ impl Engine {
             "active_validators": 21,
             "total_staked_btc": 2500.0,
             "satoshi_plus_status": "Active"
+        })
+    }
+
+    pub fn get_lorenzo_staking(&self) -> serde_json::Value {
+        self.increment_requests();
+        let status = self.get_service_status("lorenzo");
+        serde_json::json!({
+            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_else(|| "150.0".to_string()),
+            "reward_token": "stBTC",
+            "active_pools": 3,
+            "yield_apy": 4.5
+        })
+    }
+
+    pub fn get_hemi_status(&self) -> serde_json::Value {
+        self.increment_requests();
+        let _status = self.get_service_status("hemi");
+        serde_json::json!({
+            "sequencer_status": "Active",
+            "proof_submission": "On-chain",
+            "bitcoin_finality_depth": 6,
+            "ethereum_finality_depth": 32
         })
     }
 

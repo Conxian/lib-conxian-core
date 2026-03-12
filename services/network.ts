@@ -149,6 +149,18 @@ export const getCoreDaoStats = async () => {
   return response.json();
 };
 
+export const getLorenzoStaking = async () => {
+  const url = `${getGatewayUrl("lorenzo", currentEnv)}/stats`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getHemiStatus = async () => {
+  const url = `${getGatewayUrl("hemi", currentEnv)}/status`;
+  const response = await fetch(url);
+  return response.json();
+};
+
 export const getB2Status = async () => {
   const url = `${getGatewayUrl("b2network", currentEnv)}/status`;
   const response = await fetch(url);

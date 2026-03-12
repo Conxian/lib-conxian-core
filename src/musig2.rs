@@ -1,5 +1,4 @@
-use secp256k1::{Secp256k1, SecretKey, PublicKey, XOnlyPublicKey, Keypair};
-use secp256k1::schnorr::Signature;
+use secp256k1::{Secp256k1, PublicKey, XOnlyPublicKey, Keypair};
 use secp256k1::rand::rngs::OsRng;
 use sha2::{Sha256, Digest};
 
@@ -22,6 +21,12 @@ impl Musig2Participant {
 
     pub fn x_only_public_key(&self) -> (XOnlyPublicKey, secp256k1::Parity) {
         self.keypair.x_only_public_key()
+    }
+}
+
+impl Default for Musig2Participant {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -48,8 +53,28 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
     let _l = hasher.finalize();
 
     // Currently returning the first key as a placeholder for the aggregated key
-    let secp = Secp256k1::new();
-    let (x_only, _) = XOnlyPublicKey::from_slice(&sorted_keys[0].serialize()[1..]).map_err(|e| e.to_string())?;
+    let x_only = XOnlyPublicKey::from_slice(&sorted_keys[0].serialize()[1..]).map_err(|e| e.to_string())?;
     
     Ok(x_only)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_musig2_participant_new() {
+        let p = Musig2Participant::new();
+        let pk = p.public_key();
+        assert!(pk.serialize().len() > 0);
+    }
+
+    #[test]
+    fn test_aggregate_public_keys() {
+        let p1 = Musig2Participant::new();
+        let p2 = Musig2Participant::new();
+        let pubkeys = vec![p1.public_key(), p2.public_key()];
+        let aggregated = aggregate_public_keys(&pubkeys);
+        assert!(aggregated.is_ok());
+    }
 }

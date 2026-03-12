@@ -513,4 +513,49 @@ mod tests {
         assert!(body.is_array());
         assert_eq!(body[0]["channel"], "X/Twitter");
     }
+
+    #[actix_web::test]
+    async fn test_risk_assessment_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/risk-assessment").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert!(body.is_object());
+        assert!(body["stacks"].is_object());
+    }
+
+    #[actix_web::test]
+    async fn test_core_dao_stats_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/core-dao/stats").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["satoshi_plus_status"], "Active");
+    }
+
+    #[actix_web::test]
+    async fn test_lorenzo_stats_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/lorenzo/stats").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["reward_token"], "stBTC");
+    }
+
+    #[actix_web::test]
+    async fn test_hemi_status_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::get().uri("/api/v1/hemi/status").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["sequencer_status"], "Active");
+    }
 }

@@ -42,6 +42,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(nubit_handler)
             .service(lorenzo_handler)
             .service(core_dao_handler)
+            .service(lorenzo_staking_handler)
+            .service(hemi_status_handler)
             .service(prices_handler)
             .service(lightning_invoice_handler)
             .service(lightning_pay_handler)
@@ -392,6 +394,18 @@ async fn core_dao_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let status = engine.get_service_status("core-dao");
     HttpResponse::Ok().json(status)
+}
+
+#[get("/lorenzo/stats")]
+async fn lorenzo_staking_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_lorenzo_staking();
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/hemi/status")]
+async fn hemi_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_hemi_status();
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/b2network/status")]
