@@ -81,7 +81,7 @@ pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
     pub request_count: AtomicU64,
-    pub total_tvl_usd: AtomicU64,
+    pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
@@ -106,9 +106,10 @@ impl Engine {
         let mut exit_score = 85;
         let mut ops_score = 80;
 
-        if da.contains("Off-chain") { da_score -= 30; }
+        // Alignment with bitcoinlayers.org principles
+        if da.contains("Off-chain") || da.contains("DA") { da_score -= 30; }
         if bridge.contains("Federated") || bridge.contains("Multisig") { bridge_score -= 25; ops_score -= 20; }
-        if bridge.contains("Non-custodial") { bridge_score += 10; exit_score += 10; }
+        if bridge.contains("Non-custodial") || bridge.contains("ZK") { bridge_score += 10; exit_score += 10; }
         if trust_model == "Centralized" {
             da_score = 10; settlement_score = 10; bridge_score = 10; dec_score = 10; exit_score = 10; ops_score = 10;
         }
@@ -242,7 +243,7 @@ impl Engine {
                 settlement: settlement.to_string(),
                 bridge_security: bridge.to_string(),
                 tvl_usd: tvl,
-                version: Some("1.1.0".to_string()),
+                version: Some("1.2.0".to_string()),
                 metadata,
             });
         }
@@ -292,7 +293,7 @@ impl Engine {
             version: "0.2.0".to_string(),
             start_time: Utc::now(),
             request_count: AtomicU64::new(0),
-            total_tvl_usd: AtomicU64::new(0),
+            total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(10),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
@@ -357,7 +358,7 @@ impl Engine {
             "status": "operational",
             "total_requests": self.request_count.load(Ordering::SeqCst),
             "active_nodes": self.active_sovereign_nodes.load(Ordering::SeqCst),
-            "total_tvl_usd": self.total_tvl_usd.load(Ordering::SeqCst),
+            "total_tvl_usd": *self.total_tvl_usd.read().unwrap(),
         })
     }
 
@@ -538,7 +539,7 @@ impl Engine {
 
     pub fn update_dynamic_stats(&self) {
         let new_tvl = self.calculate_total_tvl();
-        self.total_tvl_usd.store(new_tvl as u64, Ordering::SeqCst);
+        *self.total_tvl_usd.write().unwrap() = new_tvl;
     }
 
     pub fn get_core_dao_stats(&self) -> serde_json::Value {

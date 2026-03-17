@@ -155,7 +155,7 @@ async fn compliance_check_handler(engine: web::Data<Engine>, req: web::Json<Comp
 async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
     let uptime = chrono::Utc::now().signed_duration_since(engine.start_time).num_seconds();
     let requests = engine.request_count.load(Ordering::SeqCst);
-    let tvl = engine.total_tvl_usd.load(Ordering::SeqCst);
+    let tvl = *engine.total_tvl_usd.read().unwrap();
     let nodes = engine.active_sovereign_nodes.load(Ordering::SeqCst);
 
     let mut metrics = format!(
