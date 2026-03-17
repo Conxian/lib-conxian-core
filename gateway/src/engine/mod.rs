@@ -226,6 +226,15 @@ impl Engine {
                 "bitvm2" => {
                     metadata.insert("paradigm".to_string(), "ZK-Fraud Proofs".to_string());
                 },
+                "babylon" => {
+                    metadata.insert("staked_btc".to_string(), "1250.0".to_string());
+                },
+                "liquid" => {
+                    metadata.insert("pegged_btc".to_string(), "3500.2".to_string());
+                },
+                "rootstock" => {
+                    metadata.insert("mining_hashrate_ph".to_string(), "250.5".to_string());
+                },
                 _ => {}
             }
 
@@ -467,7 +476,7 @@ impl Engine {
         let status = self.get_service_status("liquid");
         serde_json::json!({
             "asset": "L-BTC",
-            "pegged_amount": status.metadata.get("pegged_btc").cloned().unwrap_or_default(),
+            "pegged_amount": status.metadata.get("pegged_btc").cloned().unwrap_or_else(|| "0.0".to_string()),
             "federation_status": "Operational",
             "last_audit": Utc::now()
         })
@@ -478,7 +487,7 @@ impl Engine {
         let status = self.get_service_status("rootstock");
         serde_json::json!({
             "asset": "RBTC",
-            "mining_hashrate": status.metadata.get("mining_hashrate_ph").cloned().unwrap_or_default(),
+            "mining_hashrate": status.metadata.get("mining_hashrate_ph").cloned().unwrap_or_else(|| "0.0".to_string()),
             "peg_status": "active",
             "bridge_contract": "0x123..."
         })
@@ -488,7 +497,7 @@ impl Engine {
         self.increment_requests();
         let status = self.get_service_status("babylon");
         serde_json::json!({
-            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_default(),
+            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_else(|| "0.0".to_string()),
             "active_validators": 125,
             "security_score": 98.5
         })
