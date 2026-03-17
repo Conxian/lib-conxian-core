@@ -81,7 +81,7 @@ pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
     pub request_count: AtomicU64,
-    pub total_tvl_usd: AtomicU64,
+    pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
     pub service_statuses: Arc<RwLock<HashMap<String, ServiceStatus>>>,
     pub reserves: Arc<RwLock<Vec<ReserveAsset>>>,
@@ -106,9 +106,10 @@ impl Engine {
         let mut exit_score = 85;
         let mut ops_score = 80;
 
-        if da.contains("Off-chain") { da_score -= 30; }
+        // Alignment with bitcoinlayers.org principles
+        if da.contains("Off-chain") || da.contains("DA") { da_score -= 30; }
         if bridge.contains("Federated") || bridge.contains("Multisig") { bridge_score -= 25; ops_score -= 20; }
-        if bridge.contains("Non-custodial") { bridge_score += 10; exit_score += 10; }
+        if bridge.contains("Non-custodial") || bridge.contains("ZK") { bridge_score += 10; exit_score += 10; }
         if trust_model == "Centralized" {
             da_score = 10; settlement_score = 10; bridge_score = 10; dec_score = 10; exit_score = 10; ops_score = 10;
         }
@@ -225,6 +226,15 @@ impl Engine {
                 "bitvm2" => {
                     metadata.insert("paradigm".to_string(), "ZK-Fraud Proofs".to_string());
                 },
+                "babylon" => {
+                    metadata.insert("staked_btc".to_string(), "1250.0".to_string());
+                },
+                "liquid" => {
+                    metadata.insert("pegged_btc".to_string(), "3500.2".to_string());
+                },
+                "rootstock" => {
+                    metadata.insert("mining_hashrate_ph".to_string(), "250.5".to_string());
+                },
                 _ => {}
             }
 
@@ -242,7 +252,7 @@ impl Engine {
                 settlement: settlement.to_string(),
                 bridge_security: bridge.to_string(),
                 tvl_usd: tvl,
-                version: Some("1.1.0".to_string()),
+                version: Some("1.2.0".to_string()),
                 metadata,
             });
         }
@@ -292,7 +302,7 @@ impl Engine {
             version: "0.2.0".to_string(),
             start_time: Utc::now(),
             request_count: AtomicU64::new(0),
-            total_tvl_usd: AtomicU64::new(0),
+            total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(10),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(reserves)),
@@ -357,7 +367,7 @@ impl Engine {
             "status": "operational",
             "total_requests": self.request_count.load(Ordering::SeqCst),
             "active_nodes": self.active_sovereign_nodes.load(Ordering::SeqCst),
-            "total_tvl_usd": self.total_tvl_usd.load(Ordering::SeqCst),
+            "total_tvl_usd": *self.total_tvl_usd.read().unwrap(),
         })
     }
 
@@ -466,7 +476,7 @@ impl Engine {
         let status = self.get_service_status("liquid");
         serde_json::json!({
             "asset": "L-BTC",
-            "pegged_amount": status.metadata.get("pegged_btc").cloned().unwrap_or_default(),
+            "pegged_amount": status.metadata.get("pegged_btc").cloned().unwrap_or_else(|| "0.0".to_string()),
             "federation_status": "Operational",
             "last_audit": Utc::now()
         })
@@ -477,7 +487,7 @@ impl Engine {
         let status = self.get_service_status("rootstock");
         serde_json::json!({
             "asset": "RBTC",
-            "mining_hashrate": status.metadata.get("mining_hashrate_ph").cloned().unwrap_or_default(),
+            "mining_hashrate": status.metadata.get("mining_hashrate_ph").cloned().unwrap_or_else(|| "0.0".to_string()),
             "peg_status": "active",
             "bridge_contract": "0x123..."
         })
@@ -487,7 +497,7 @@ impl Engine {
         self.increment_requests();
         let status = self.get_service_status("babylon");
         serde_json::json!({
-            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_default(),
+            "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_else(|| "0.0".to_string()),
             "active_validators": 125,
             "security_score": 98.5
         })
@@ -538,7 +548,7 @@ impl Engine {
 
     pub fn update_dynamic_stats(&self) {
         let new_tvl = self.calculate_total_tvl();
-        self.total_tvl_usd.store(new_tvl as u64, Ordering::SeqCst);
+        *self.total_tvl_usd.write().unwrap() = new_tvl;
     }
 
     pub fn get_core_dao_stats(&self) -> serde_json::Value {
