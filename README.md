@@ -30,10 +30,12 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 ### Getting Started
 
 #### Prerequisites
+
 - Rust (Latest stable version)
 - Cargo
 
 #### Run the Gateway
+
 To run the gateway locally:
 
 ```bash
@@ -55,6 +57,7 @@ cargo test
 ## Architecture
 
 The system is organized into a modular Rust architecture:
+
 - `gateway/src/api`: Web handlers, routing, and request validation.
 - `gateway/src/engine`: Core logic, state management, background monitoring, and protocol handlers.
 - `services/`: Client-side TypeScript library for interacting with the Gateway.
