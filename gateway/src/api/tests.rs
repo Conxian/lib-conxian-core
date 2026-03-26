@@ -17,6 +17,20 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn test_compliance_zkml_endpoint() {
+        let engine = web::Data::new(Engine::new());
+        let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+        let req = test::TestRequest::post()
+            .uri("/api/v1/compliance/zkml-verify")
+            .set_json(serde_json::json!({"proof": "zkml_test_proof"}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body: Value = test::read_body_json(resp).await;
+        assert_eq!(body["verified"], true);
+    }
+
+    #[actix_web::test]
     async fn test_status_endpoint() {
         let engine = web::Data::new(Engine::new());
         let app = test::init_service(App::new().app_data(engine).configure(config)).await;

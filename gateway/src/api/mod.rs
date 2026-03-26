@@ -24,6 +24,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(health_handler)
             .service(compliance_handler)
             .service(compliance_check_handler)
+            .service(compliance_zkml_handler)
             .service(metrics_handler)
             .service(reserves_handler)
             .service(babylon_handler)
@@ -148,6 +149,17 @@ pub struct ComplianceCheckRequest {
 #[post("/compliance/check")]
 async fn compliance_check_handler(engine: web::Data<Engine>, req: web::Json<ComplianceCheckRequest>) -> impl Responder {
     let res = engine.check_compliance(&req.address);
+    HttpResponse::Ok().json(res)
+}
+
+#[derive(Deserialize)]
+pub struct ZKMLVerifyRequest {
+    pub proof: String,
+}
+
+#[post("/compliance/zkml-verify")]
+async fn compliance_zkml_handler(engine: web::Data<Engine>, req: web::Json<ZKMLVerifyRequest>) -> impl Responder {
+    let res = engine.verify_zkml_proof(&req.proof);
     HttpResponse::Ok().json(res)
 }
 

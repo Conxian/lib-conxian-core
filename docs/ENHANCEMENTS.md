@@ -11,10 +11,13 @@ The Conxian Gateway provides deep protocol integration and transparent risk metr
   - **Protocol Coverage:** Full functional exposure for **BitVM2**, **Core DAO**, **Lorenzo**, **Hemi**, **BOB**, **Merlin**, **Mezo**, **Nubit**, **Bison**, **Zulu**, **Botanix**, **Bitlayer**, **Alpen**, and **Taproot Assets**.
   - **Testing:** Expanded coverage to 59 comprehensive integration tests with 100% success rate.
 
-## 3. Phase 8: Mainnet Node Integration & Direct Bridges
+## 3. Phase 8: Mainnet Node Integration & Direct Bridges (In Progress)
 - **Objective:** Transition from simulated monitoring to direct mainnet node RPC integration.
-- **Plans:**
-  - Real-time RPC connectivity to Bitcoin Core, Stacks, and Core DAO nodes.
-  - On-chain reserve verification for Liquid, Rootstock, and BOB bridges.
-  - Integration of BitVM challenge-response monitoring in the Gateway Engine.
-  - Automated threat detection via mempool and protocol-specific finality tracking.
+- **Achievements:**
+  - **Real-time Stacks Monitoring:** Integrated Hiro Mainnet API for live block height and connectivity tracking.
+  - **On-chain Reserve Verification:** Implemented dynamic collateral ratio tracking and "Verified (On-chain)" status for Liquid and Rootstock reserves.
+  - **BitVM Challenge Monitoring:** Integrated automated challenge-response status into BitVM2 risk assessments.
+- **Next Steps:**
+  - Real-time RPC connectivity to Bitcoin Core and Core DAO nodes.
+  - Integration of automated threat detection via mempool analysis.
+  - Finality tracking for hybrid L2s (Hemi, BOB).

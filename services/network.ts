@@ -288,3 +288,13 @@ export const getHealth = async () => {
   const response = await fetch(url);
   return response.json();
 };
+
+export const verifyZkmlProof = async (proof: string) => {
+  const url = `${getGatewayUrl("compliance", currentEnv)}/zkml-verify`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ proof }),
+  });
+  return response.json();
+};
