@@ -20,7 +20,21 @@ Prometheus-compatible metrics including service latency and granular risk scores
 Check address compliance status.
 - **Request:** `{ "address": "bc1q..." }`
 
+### POST /api/v1/compliance/zkml-verify
+Verify a Zero-Knowledge Machine Learning proof (CON-70).
+- **Request:** `{ "proof": "zkml_..." }`
+- **Response:** `{ "verified": true, "attestation_role": "Guardian", "compliance_standard": "CARF/BRS v1.5", ... }`
+
 ## 2. Protocol-Specific Endpoints
+
+### Stacks
+- **Real-time:** Includes `block_height` and `hiro_api_connected` in metadata.
+
+### Liquid / Rootstock
+- **Reserves:** Dynamic collateral ratio tracking and "Verified (On-chain)" status.
+
+### BitVM2
+- **Challenges:** Real-time `bitvm_challenge_status` monitoring integrated into risk assessment.
 
 ### Core DAO
 - **GET /api/v1/core-dao/stats**: Satoshi Plus specific metrics and validator status.
@@ -61,9 +75,6 @@ Check address compliance status.
 ### Taproot Assets
 - **GET /api/v1/taproot-assets/stats**: Issuance stats and Lightning integration.
 
-### BitVM2
-- **GET /api/v1/bitvm2/info**: ZK-Fraud Proof verifier status.
-
 ## 3. Data Models
 
 ### ServiceStatus
@@ -88,6 +99,9 @@ Check address compliance status.
   "bridge_security": "sBTC Bridge",
   "tvl_usd": 12500000.0,
   "version": "1.2.0",
-  "metadata": { ... }
+  "metadata": {
+    "block_height": "841234",
+    "hiro_api_connected": "true"
+  }
 }
 ```

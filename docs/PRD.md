@@ -8,8 +8,8 @@ The Conxian Gateway is the core infrastructure component of the Conxian network,
 The Gateway exposes a RESTful API under the `/api/v1` prefix. All external service requests are routed through this gateway to ensure consistent authentication, logging, and monitoring.
 
 ### 2.2. Core Components
-- **API Layer (`gateway/src/api`):** Actix-web based handlers for service routing, health checks, compliance, affiliate management, risk assessment, and metrics.
-- **Engine Layer (`gateway/src/engine`):** Core logic for managing service states, request tracking, Bitcoin/Stacks integration, and ecosystem metrics. Includes a multi-factor risk engine.
+- **API Layer (`gateway/src/api`):** Actix-web based handlers for service routing, health checks, compliance, affiliate management, risk assessment, and metrics. Includes ZKML verification for Guardian attestation.
+- **Engine Layer (`gateway/src/engine`):** Core logic for managing service states, request tracking, Bitcoin/Stacks integration, and ecosystem metrics. Includes a multi-factor risk engine and real-time protocol monitoring.
 - **Infrastructure:** Managed via GCP using modular configurations in `gateway/infrastructure/gcp/`.
 
 ## 3. Supported Services
@@ -48,9 +48,10 @@ The Gateway provides detailed status information for each service, including:
 - **Health Check:** `/api/v1/health` for service availability.
 - **System Status:** `/api/v1/status` for real-time system metrics and uptime.
 - **Risk Assessment:** `/api/v1/risk-assessment` provides a multi-factor breakdown of security risks (DA, Settlement, Bridge).
-- **Compliance:** `/api/v1/compliance` for KYC/AML and network integrity monitoring.
+- **Compliance:** `/api/v1/compliance` for KYC/AML, network integrity, and ZKML attestation (CON-70).
 
 ## 5. Security & Auditing
 - Unified binary approach simplifies the attack surface.
 - Rust-based implementation ensures memory safety and high performance.
 - Multi-factor risk engine provides unprecedented transparency for users.
+- Real-time on-chain reserve verification ensures protocol solvency.
