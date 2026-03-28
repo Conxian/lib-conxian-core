@@ -1,7 +1,7 @@
+mod tests;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use crate::engine::Engine;
 use serde::Deserialize;
-use std::sync::atomic::Ordering;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -68,6 +68,13 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(marketing_handler)
             .service(core_dao_stats_handler)
             .service(risk_assessment_handler)
+            // New aligned endpoints
+            .service(financials_handler)
+            .service(identity_handler)
+            .service(erp_sync_handler)
+            .service(cjcs_spec_handler)
+            .service(dlc_bond_handler)
+            .service(state_commit_handler)
     );
 }
 
@@ -122,7 +129,8 @@ async fn changelly_handler(engine: web::Data<Engine>) -> impl Responder {
 #[get("/status")]
 async fn status_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
-    HttpResponse::Ok().json(engine.get_system_info())
+    let status = engine.get_status();
+    HttpResponse::Ok().json(status)
 }
 
 #[get("/health")]
@@ -130,13 +138,12 @@ async fn health_handler(engine: web::Data<Engine>) -> impl Responder {
     if engine.is_healthy() {
         HttpResponse::Ok().json(serde_json::json!({ "status": "healthy", "engine": "active" }))
     } else {
-        HttpResponse::ServiceUnavailable().json(serde_json::json!({ "status": "degraded", "engine": "stale" }))
+        HttpResponse::ServiceUnavailable().json(serde_json::json!({ "status": "unhealthy", "engine": "starting" }))
     }
 }
 
 #[get("/compliance")]
 async fn compliance_handler(engine: web::Data<Engine>) -> impl Responder {
-    engine.increment_requests();
     let compliance = engine.get_compliance_status();
     HttpResponse::Ok().json(compliance)
 }
@@ -165,41 +172,25 @@ async fn compliance_zkml_handler(engine: web::Data<Engine>, req: web::Json<ZKMLV
 
 #[get("/metrics")]
 async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
-    let uptime = chrono::Utc::now().signed_duration_since(engine.start_time).num_seconds();
-    let requests = engine.request_count.load(Ordering::SeqCst);
+    let requests = engine.request_count.load(std::sync::atomic::Ordering::SeqCst);
     let tvl = *engine.total_tvl_usd.read().unwrap();
-    let nodes = engine.active_sovereign_nodes.load(Ordering::SeqCst);
+    let uptime = (chrono::Utc::now() - engine.start_time).num_seconds();
 
     let mut metrics = format!(
-        "# HELP gateway_uptime_seconds Uptime in seconds\n# TYPE gateway_uptime_seconds counter\ngateway_uptime_seconds {}\n# HELP gateway_requests_total Total number of requests processed\n# TYPE gateway_requests_total counter\ngateway_requests_total {}\n# HELP gateway_tvl_usd Total Value Locked in USD\n# TYPE gateway_tvl_usd gauge\ngateway_tvl_usd {}\n# HELP gateway_active_nodes Number of active sovereign nodes\n# TYPE gateway_active_nodes gauge\ngateway_active_nodes {}\n",
-        uptime, requests, tvl, nodes
+        "# HELP gateway_requests_total Total number of requests processed\n# TYPE gateway_requests_total counter\ngateway_requests_total {}\n",
+        requests
     );
+    metrics.push_str(&format!(
+        "# HELP gateway_tvl_usd Total Value Locked in USD\n# TYPE gateway_tvl_usd gauge\ngateway_tvl_usd {:.2}\n",
+        tvl
+    ));
+    metrics.push_str(&format!(
+        "# HELP gateway_uptime_seconds System uptime in seconds\n# TYPE gateway_uptime_seconds gauge\ngateway_uptime_seconds {}\n",
+        uptime
+    ));
 
-    let statuses = engine.get_all_service_statuses();
-    for status in statuses.values() {
-        metrics.push_str(&format!(
-            "# HELP gateway_service_latency_ms Latency of {} in ms\ngateway_service_latency_ms{{service=\"{}\"}} {}\n",
-            status.name, status.name, status.latency_ms
-        ));
-        let risk_score = match status.risk_level.as_str() {
-            "Low" => 10,
-            "Medium" => 50,
-            "High" => 90,
-            _ => 0,
-        };
-        metrics.push_str(&format!(
-            "# HELP gateway_service_risk_score Risk score of {}\ngateway_service_risk_score{{service=\"{}\"}} {}\n",
-            status.name, status.name, risk_score
-        ));
-    }
-
-    HttpResponse::Ok()
-        .content_type("text/plain; version=0.0.4")
-        .body(metrics)
+    HttpResponse::Ok().content_type("text/plain").body(metrics)
 }
-
-#[cfg(test)]
-mod tests;
 
 #[get("/stacks")]
 async fn stacks_handler(engine: web::Data<Engine>) -> impl Responder {
@@ -534,4 +525,50 @@ async fn risk_assessment_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
     let assessments = engine.get_risk_assessments();
     HttpResponse::Ok().json(assessments)
+}
+
+#[get("/financials")]
+async fn financials_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_financial_metrics();
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/identity/{query}")]
+async fn identity_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.resolve_identity(&path.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[derive(Deserialize)]
+struct ErpSyncRequest {
+    system: String,
+}
+
+#[post("/erp/sync")]
+async fn erp_sync_handler(engine: web::Data<Engine>, req: web::Json<ErpSyncRequest>) -> impl Responder {
+    let res = engine.sync_erp_data(&req.system);
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/spec/cjcs")]
+async fn cjcs_spec_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_cjcs_v2_spec();
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/finance/bond/{id}")]
+async fn dlc_bond_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+    let res = engine.get_dlc_bond_info(&path.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[derive(Deserialize)]
+struct StateCommitRequest {
+    state_root: String,
+}
+
+#[post("/state/commit")]
+async fn state_commit_handler(engine: web::Data<Engine>, req: web::Json<StateCommitRequest>) -> impl Responder {
+    let res = engine.commit_state_to_tableland(&req.state_root);
+    HttpResponse::Ok().json(res)
 }
