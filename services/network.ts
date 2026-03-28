@@ -1,8 +1,8 @@
-/**
- * Conxian Gateway Network Routing
- * Replaces legacy Anya-core and OPSource endpoints.
- */
+import fetch from 'node-fetch';
 
+/**
+ * Service and System Models
+ */
 export interface ServiceStatus {
   name: string;
   status: string;
@@ -15,6 +15,28 @@ export interface ServiceStatus {
   bridge_security: string;
   tvl_usd: number;
   metadata: Record<string, string>;
+}
+
+export interface FinancialMetrics {
+  mrr_usd: number;
+  arr_usd: number;
+  churn_rate_pct: number;
+  protocol_fees_collected_usd: number;
+  last_updated: string;
+}
+
+export interface IdentityRecord {
+  address: string;
+  ens_name: string | null;
+  bns_name: string | null;
+  world_id_verified: boolean;
+}
+
+export interface ErpSyncRecord {
+  erp_system: string;
+  last_sync: string;
+  total_transactions_synced: number;
+  status: string;
 }
 
 /**
@@ -153,7 +175,6 @@ export const checkCompliance = async (address: string) => {
   return response.json();
 };
 
-
 export const getCoreDaoStats = async () => {
   const url = `${getGatewayUrl("core-dao", currentEnv)}/stats`;
   const response = await fetch(url);
@@ -256,6 +277,60 @@ export const getRiskAssessment = async () => {
   return response.json();
 };
 
+export const resolveIdentity = async (query: string): Promise<IdentityRecord> => {
+  const url = `${getGatewayUrl("identity", currentEnv)}/${query}`;
+  const response = await fetch(url);
+  return response.json() as Promise<IdentityRecord>;
+};
+
+export const syncErpData = async (system: string): Promise<ErpSyncRecord> => {
+  const url = `${getGatewayUrl("erp", currentEnv)}/sync`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system }),
+  });
+  return response.json() as Promise<ErpSyncRecord>;
+};
+
+export const getFinancials = async (): Promise<FinancialMetrics> => {
+  const url = getGatewayUrl("financials", currentEnv);
+  const response = await fetch(url);
+  return response.json() as Promise<FinancialMetrics>;
+};
+
+export const getCjcsSpec = async () => {
+  const url = getGatewayUrl("spec/cjcs", currentEnv);
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const getDlcBondInfo = async (bondId: string) => {
+  const url = `${getGatewayUrl("finance/bond", currentEnv)}/${bondId}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const commitState = async (stateRoot: string) => {
+  const url = `${getGatewayUrl("state", currentEnv)}/commit`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state_root: stateRoot }),
+  });
+  return response.json();
+};
+
+export const verifyZkmlProof = async (proof: string) => {
+  const url = `${getGatewayUrl("compliance", currentEnv)}/zkml-verify`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ proof }),
+  });
+  return response.json();
+};
+
 /**
  * Monitoring & Aggregated Stats Helpers
  */
@@ -286,15 +361,5 @@ export const getSystemStatus = async () => {
 export const getHealth = async () => {
   const url = getGatewayUrl("health", currentEnv);
   const response = await fetch(url);
-  return response.json();
-};
-
-export const verifyZkmlProof = async (proof: string) => {
-  const url = `${getGatewayUrl("compliance", currentEnv)}/zkml-verify`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ proof }),
-  });
   return response.json();
 };
