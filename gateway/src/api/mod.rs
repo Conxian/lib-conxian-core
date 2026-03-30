@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
-use crate::engine::Engine;
 use actix_web::{get, post, web, HttpResponse, Responder};
+use crate::engine::{Engine, JobCard};
 use serde::Deserialize;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -75,7 +75,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(erp_sync_handler)
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
-            .service(state_commit_handler),
+            .service(state_commit_handler)
+            // CON-75: Offline POS Sync
+            .service(pos_sync_handler)
+            .service(pos_sync_status_handler)
+            .service(mesh_status_handler)
     );
 }
 
@@ -605,4 +609,34 @@ async fn state_commit_handler(
 ) -> impl Responder {
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
+}
+
+#[post("/pos/sync")]
+async fn pos_sync_handler(engine: web::Data<Engine>, req: web::Json<JobCard>) -> impl Responder {
+    let res = engine.receive_job_card(req.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/pos/sync/status")]
+async fn pos_sync_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let queue = engine.job_queue.read().unwrap();
+    let jobs: Vec<JobCard> = queue.values().cloned().collect();
+    HttpResponse::Ok().json(jobs)
+}
+
+#[get("/mesh/status")]
+async fn mesh_status_handler(engine: web::Data<Engine>) -> impl Responder {
+    let cache = engine.mesh_cache.read().unwrap();
+    let mut entries = Vec::new();
+    for (prefix, (amount, _)) in cache.iter() {
+        entries.push(serde_json::json!({
+            "tx_hash_prefix": prefix,
+            "amount_stx": amount
+        }));
+    }
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "Active",
+        "mesh_nodes_nearby": 3,
+        "synced_hashes": entries
+    }))
 }

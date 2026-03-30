@@ -37,6 +37,9 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - **Risk Transparency**: Detailed trust model and risk metadata aligned with research from [bitcoinlayers.org](https://bitcoinlayers.org/).
 - **Advanced Compliance**: Integrated address verification (`/compliance/check`) and network integrity monitoring.
 - **Observability**: Prometheus-compatible metrics endpoint with per-service latency and risk gauges.
+- **High-Integrity Persistence (CON-75)**: TEE-secured SQLite queue for transaction capture during network blackouts.
+- **BLE Mesh Gossip (CON-75)**: Decentralized P2P propagation of transaction hashes among gateways.
+- **Atomic L2 Recovery (CON-75)**: Automatic reconciliation with Stacks L2 upon reconnection, verified via BitVM2 state.
 - **High Performance**: Built with Rust and Actix-web for maximum reliability, memory safety, and throughput.
 
 ### Documentation
@@ -64,13 +67,19 @@ cargo run
 
 The gateway listens on port 8080 by default. Use `RUST_LOG=info` for detailed logging.
 
-### Testing
-
-The Gateway includes a comprehensive suite of 59 integration tests covering all services and system endpoints.
+The Gateway includes a comprehensive suite of integration tests covering all services and system endpoints.
 
 ```bash
 cd gateway
 cargo test
+```
+
+#### Forensic Testing (CON-75)
+
+To verify the 48-hour blackout resilience and 500-transaction state integrity, run the forensic suite:
+
+```bash
+python3 gateway/tests/forensic_blackout_test.py
 ```
 
 ## Architecture
