@@ -19,7 +19,7 @@ Active development. Expect iteration as new layers, metadata, and compliance pri
 ## Relationship to the Conxian stack
 
 - Serves as the shared core for Conxian Gateway and related services.
-- Consumed by orchestration and product layers like `conxius-platform` and Conxius Wallet.
+- Consumed by orchestration and product layers like [`conxius-platform`](https://github.com/Conxian/conxius-platform) and [Conxius Wallet](https://github.com/Conxian/conxius-wallet).
 
 ## Conxian Gateway
 
