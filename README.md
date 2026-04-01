@@ -2,6 +2,25 @@
 
 This repository contains the core logic for the Conxian network, centered around the **Conxian Gateway**.
 
+## Purpose
+
+Centralize shared models, APIs, and core logic used by Conxian Gateway and downstream consumers (platform services, wallet integrations, and tooling).
+
+## Status
+
+Active development. Expect iteration as new layers, metadata, and compliance primitives are integrated.
+
+## Audience
+
+- Gateway engineers extending engine, API, and persistence logic.
+- Platform developers building shared clients and service integrations.
+- Contributors working on layer metadata, risk transparency, and observability.
+
+## Relationship to the Conxian stack
+
+- Serves as the shared core for Conxian Gateway and related services.
+- Consumed by orchestration and product layers like `conxius-platform` and Conxius Wallet.
+
 ## Conxian Gateway
 
 The Conxian Gateway is a unified, audit-ready Rust binary that serves as the single entry point for all sovereign services and Bitcoin/Stacks state logic. It provides a high-performance, secure bridge between sovereign services and various Bitcoin layers.
