@@ -1,12 +1,12 @@
-use reqwest;
-use serde::{Serialize, Deserialize};
+use actix_web::web;
 use chrono::{DateTime, Utc};
-use std::sync::atomic::{AtomicU64, Ordering};
+use reqwest;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::time::sleep;
-use actix_web::web;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RiskAssessment {
@@ -132,30 +132,214 @@ impl Engine {
         let mut statuses = HashMap::new();
         let services = vec![
             ("bisq", 45, "P2P", "On-chain", "Bitcoin", "N/A", 0.0),
-            ("rgb", 12, "Client-side", "Off-chain", "Bitcoin", "Client-side", 0.0),
-            ("bitvm", 88, "Optimistic", "On-chain", "Bitcoin", "Fraud Proofs", 0.0),
-            ("bitvm2", 75, "Optimistic (SNARK)", "On-chain", "Bitcoin", "ZK-Fraud Proofs", 0.0),
-            ("changelly", 120, "Centralized", "N/A", "Centralized", "Centralized", 0.0),
-            ("stacks", 65, "PoX", "On-chain", "Bitcoin", "sBTC Bridge", 0.0),
-            ("lightning", 5, "State Channels", "Off-chain", "Bitcoin", "N/A", 0.0),
-            ("liquid", 25, "Federated", "On-chain (Federated)", "Bitcoin", "Strong Federation", 0.0),
-            ("rootstock", 35, "Powpeg", "On-chain", "Bitcoin", "Powpeg", 0.0),
-            ("babylon", 55, "Staking", "On-chain", "Bitcoin", "Stake-based", 0.0),
-            ("bob", 40, "Optimistic/Rollup", "On-chain (ETH/BTC)", "Bitcoin/Ethereum", "Optimistic Bridge", 0.0),
-            ("merlin", 30, "ZK", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
-            ("botanix", 42, "Spiderchain", "On-chain (Spiderchain)", "Bitcoin", "Spiderchain", 0.0),
-            ("b2network", 28, "ZK", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
-            ("citrea", 32, "ZK", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
-            ("bitlayer", 45, "Optimistic", "On-chain", "Bitcoin", "BitVM Bridge", 0.0),
-            ("alpen", 38, "ZK", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
-            ("mezo", 50, "Economic Layer", "On-chain", "Bitcoin", "tBTC Bridge", 0.0),
-            ("zulu", 48, "Multi-layer", "On-chain", "Bitcoin", "Decentralized Bridge", 0.0),
-            ("bison", 35, "ZK", "On-chain (ZK)", "Bitcoin", "ZK Bridge", 0.0),
-            ("hemi", 40, "ZK", "On-chain (ZK)", "Bitcoin/Ethereum", "ZK Bridge", 0.0),
-            ("taproot-assets", 10, "Client-side", "Off-chain", "Bitcoin", "Client-side", 0.0),
+            (
+                "rgb",
+                12,
+                "Client-side",
+                "Off-chain",
+                "Bitcoin",
+                "Client-side",
+                0.0,
+            ),
+            (
+                "bitvm",
+                88,
+                "Optimistic",
+                "On-chain",
+                "Bitcoin",
+                "Fraud Proofs",
+                0.0,
+            ),
+            (
+                "bitvm2",
+                75,
+                "Optimistic (SNARK)",
+                "On-chain",
+                "Bitcoin",
+                "ZK-Fraud Proofs",
+                0.0,
+            ),
+            (
+                "changelly",
+                120,
+                "Centralized",
+                "N/A",
+                "Centralized",
+                "Centralized",
+                0.0,
+            ),
+            (
+                "stacks",
+                65,
+                "PoX",
+                "On-chain",
+                "Bitcoin",
+                "sBTC Bridge",
+                0.0,
+            ),
+            (
+                "lightning",
+                5,
+                "State Channels",
+                "Off-chain",
+                "Bitcoin",
+                "N/A",
+                0.0,
+            ),
+            (
+                "liquid",
+                25,
+                "Federated",
+                "On-chain (Federated)",
+                "Bitcoin",
+                "Strong Federation",
+                0.0,
+            ),
+            (
+                "rootstock",
+                35,
+                "Powpeg",
+                "On-chain",
+                "Bitcoin",
+                "Powpeg",
+                0.0,
+            ),
+            (
+                "babylon",
+                55,
+                "Staking",
+                "On-chain",
+                "Bitcoin",
+                "Stake-based",
+                0.0,
+            ),
+            (
+                "bob",
+                40,
+                "Optimistic/Rollup",
+                "On-chain (ETH/BTC)",
+                "Bitcoin/Ethereum",
+                "Optimistic Bridge",
+                0.0,
+            ),
+            (
+                "merlin",
+                30,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "botanix",
+                42,
+                "Spiderchain",
+                "On-chain (Spiderchain)",
+                "Bitcoin",
+                "Spiderchain",
+                0.0,
+            ),
+            (
+                "b2network",
+                28,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "citrea",
+                32,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "bitlayer",
+                45,
+                "Optimistic",
+                "On-chain",
+                "Bitcoin",
+                "BitVM Bridge",
+                0.0,
+            ),
+            (
+                "alpen",
+                38,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "mezo",
+                50,
+                "Economic Layer",
+                "On-chain",
+                "Bitcoin",
+                "tBTC Bridge",
+                0.0,
+            ),
+            (
+                "zulu",
+                48,
+                "Multi-layer",
+                "On-chain",
+                "Bitcoin",
+                "Decentralized Bridge",
+                0.0,
+            ),
+            (
+                "bison",
+                35,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "hemi",
+                40,
+                "ZK",
+                "On-chain (ZK)",
+                "Bitcoin/Ethereum",
+                "ZK Bridge",
+                0.0,
+            ),
+            (
+                "taproot-assets",
+                10,
+                "Client-side",
+                "Off-chain",
+                "Bitcoin",
+                "Client-side",
+                0.0,
+            ),
             ("nubit", 20, "DA", "On-chain", "Bitcoin", "DA Bridge", 0.0),
-            ("lorenzo", 45, "Staking", "On-chain", "Bitcoin", "Staking Bridge", 0.0),
-            ("core-dao", 35, "Satoshi Plus", "On-chain", "Bitcoin", "Decentralized Bridge", 0.0),
+            (
+                "lorenzo",
+                45,
+                "Staking",
+                "On-chain",
+                "Bitcoin",
+                "Staking Bridge",
+                0.0,
+            ),
+            (
+                "core-dao",
+                35,
+                "Satoshi Plus",
+                "On-chain",
+                "Bitcoin",
+                "Decentralized Bridge",
+                0.0,
+            ),
         ];
 
         for (name, latency, trust, da, settlement, bridge, tvl) in services {
@@ -164,109 +348,169 @@ impl Engine {
                 "stacks" => {
                     metadata.insert("block_height".to_string(), "841000".to_string());
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
-                },
+                }
                 "liquid" => {
                     metadata.insert("lbbtc_issued".to_string(), "3500.5".to_string());
-                    metadata.insert("reserve_status".to_string(), "Verified (On-chain)".to_string());
-                },
+                    metadata.insert(
+                        "reserve_status".to_string(),
+                        "Verified (On-chain)".to_string(),
+                    );
+                }
                 "rootstock" => {
                     metadata.insert("rbtc_issued".to_string(), "2800.2".to_string());
                     metadata.insert("powpeg_nodes".to_string(), "12".to_string());
-                    metadata.insert("reserve_status".to_string(), "Verified (On-chain)".to_string());
-                },
+                    metadata.insert(
+                        "reserve_status".to_string(),
+                        "Verified (On-chain)".to_string(),
+                    );
+                }
                 "core-dao" => {
                     metadata.insert("dual_token_staking".to_string(), "enabled".to_string());
                     metadata.insert("active_validators".to_string(), "21".to_string());
-                },
+                }
                 "hemi" => {
                     metadata.insert("bitcoin_finality_depth".to_string(), "6".to_string());
-                },
+                }
                 "bob" => {
-                    metadata.insert("connected_chains".to_string(), "Bitcoin,Ethereum,Arbitrum".to_string());
-                },
+                    metadata.insert(
+                        "connected_chains".to_string(),
+                        "Bitcoin,Ethereum,Arbitrum".to_string(),
+                    );
+                }
                 "merlin" => {
                     metadata.insert("zk_proving_status".to_string(), "Active".to_string());
-                },
+                }
                 "mezo" => {
                     metadata.insert("staked_tbtc".to_string(), "1850.5".to_string());
                     metadata.insert("yield_apy".to_string(), "6.2".to_string());
-                },
+                }
                 "nubit" => {
                     metadata.insert("da_throughput_mbps".to_string(), "15.5".to_string());
-                },
+                }
                 "bison" => {
                     metadata.insert("zk_roll_uptime_pct".to_string(), "99.98".to_string());
-                },
+                }
                 "zulu" => {
                     metadata.insert("layer_type".to_string(), "Multi-layer".to_string());
-                },
+                }
                 "taproot-assets" => {
                     metadata.insert("lightning_integration".to_string(), "Enabled".to_string());
-                },
+                }
                 "bitvm2" => {
                     metadata.insert("paradigm".to_string(), "ZK-Fraud Proofs".to_string());
                     metadata.insert("bitvm_challenge_status".to_string(), "Healthy".to_string());
-                },
+                }
                 "babylon" => {
                     metadata.insert("staked_btc".to_string(), "1250.0".to_string());
-                },
+                }
                 "lorenzo" => {
                     metadata.insert("staked_btc".to_string(), "450.0".to_string());
-                },
+                }
                 "botanix" => {
                     metadata.insert("spiderchain_nodes".to_string(), "144".to_string());
-                },
+                }
                 "b2network" => {
                     metadata.insert("block_height".to_string(), "12540".to_string());
-                },
+                }
                 "alpen" => {
                     metadata.insert("zk_proof_type".to_string(), "SNARK".to_string());
-                },
+                }
                 _ => {}
             }
 
             let ra = Self::evaluate_risk(latency, trust, da, bridge, &metadata);
 
-            statuses.insert(name.to_string(), ServiceStatus {
-                name: name.to_string(),
-                status: "active".to_string(),
-                last_checked: Utc::now(),
-                latency_ms: latency,
-                trust_model: trust.to_string(),
-                risk_level: ra.overall_level.clone(),
-                risk_assessment: Some(ra),
-                data_availability: da.to_string(),
-                settlement: settlement.to_string(),
-                bridge_security: bridge.to_string(),
-                tvl_usd: tvl,
-                version: Some("1.0.0".to_string()),
-                metadata,
-            });
+            statuses.insert(
+                name.to_string(),
+                ServiceStatus {
+                    name: name.to_string(),
+                    status: "active".to_string(),
+                    last_checked: Utc::now(),
+                    latency_ms: latency,
+                    trust_model: trust.to_string(),
+                    risk_level: ra.overall_level.clone(),
+                    risk_assessment: Some(ra),
+                    data_availability: da.to_string(),
+                    settlement: settlement.to_string(),
+                    bridge_security: bridge.to_string(),
+                    tvl_usd: tvl,
+                    version: Some("1.0.0".to_string()),
+                    metadata,
+                },
+            );
         }
 
         let mut prices = HashMap::new();
-        prices.insert("BTC".to_string(), PriceInfo { asset: "BTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "CoinGecko".to_string() });
-        prices.insert("STX".to_string(), PriceInfo { asset: "STX".to_string(), price_usd: 2.50, last_updated: Utc::now(), source: "CoinGecko".to_string() });
-        prices.insert("L-BTC".to_string(), PriceInfo { asset: "L-BTC".to_string(), price_usd: 65050.0, last_updated: Utc::now(), source: "Liquid".to_string() });
-        prices.insert("sBTC".to_string(), PriceInfo { asset: "sBTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "Stacks".to_string() });
-        prices.insert("RBTC".to_string(), PriceInfo { asset: "RBTC".to_string(), price_usd: 65000.0, last_updated: Utc::now(), source: "Rootstock".to_string() });
+        prices.insert(
+            "BTC".to_string(),
+            PriceInfo {
+                asset: "BTC".to_string(),
+                price_usd: 65000.0,
+                last_updated: Utc::now(),
+                source: "CoinGecko".to_string(),
+            },
+        );
+        prices.insert(
+            "STX".to_string(),
+            PriceInfo {
+                asset: "STX".to_string(),
+                price_usd: 2.50,
+                last_updated: Utc::now(),
+                source: "CoinGecko".to_string(),
+            },
+        );
+        prices.insert(
+            "L-BTC".to_string(),
+            PriceInfo {
+                asset: "L-BTC".to_string(),
+                price_usd: 65050.0,
+                last_updated: Utc::now(),
+                source: "Liquid".to_string(),
+            },
+        );
+        prices.insert(
+            "sBTC".to_string(),
+            PriceInfo {
+                asset: "sBTC".to_string(),
+                price_usd: 65000.0,
+                last_updated: Utc::now(),
+                source: "Stacks".to_string(),
+            },
+        );
+        prices.insert(
+            "RBTC".to_string(),
+            PriceInfo {
+                asset: "RBTC".to_string(),
+                price_usd: 65000.0,
+                last_updated: Utc::now(),
+                source: "Rootstock".to_string(),
+            },
+        );
 
         let compliance = ComplianceStatus {
             status: "compliant".to_string(),
             last_audit: Utc::now(),
-            rules_active: vec!["KYC".to_string(), "AML".to_string(), "NetworkIntegrity".to_string(), "ZKML_Verification".to_string()],
+            rules_active: vec![
+                "KYC".to_string(),
+                "AML".to_string(),
+                "NetworkIntegrity".to_string(),
+                "ZKML_Verification".to_string(),
+            ],
             risk_score: 15,
             zkml_enabled: true,
         };
 
         let mut affiliates = HashMap::new();
-        affiliates.insert("PARTNER-001".to_string(), AffiliateInfo {
-            partner_id: "PARTNER-001".to_string(),
-            status: "active".to_string(),
-            commission_rate: 0.15,
-            active_campaigns: 2,
-            total_referrals: 1250,
-        });
+        affiliates.insert(
+            "PARTNER-001".to_string(),
+            AffiliateInfo {
+                partner_id: "PARTNER-001".to_string(),
+                status: "active".to_string(),
+                commission_rate: 0.15,
+                active_campaigns: 2,
+                total_referrals: 1250,
+            },
+        );
 
         let financial_metrics = FinancialMetrics {
             mrr_usd: 125000.0,
@@ -277,12 +521,15 @@ impl Engine {
         };
 
         let mut erp_sync = HashMap::new();
-        erp_sync.insert("SAP".to_string(), ErpSyncRecord {
-            erp_system: "SAP".to_string(),
-            last_sync: Utc::now(),
-            total_transactions_synced: 15400,
-            status: "Healthy".to_string(),
-        });
+        erp_sync.insert(
+            "SAP".to_string(),
+            ErpSyncRecord {
+                erp_system: "SAP".to_string(),
+                last_sync: Utc::now(),
+                total_transactions_synced: 15400,
+                status: "Healthy".to_string(),
+            },
+        );
 
         Self {
             version: "0.2.0".to_string(),
@@ -292,15 +539,37 @@ impl Engine {
             active_sovereign_nodes: AtomicU64::new(173),
             service_statuses: Arc::new(RwLock::new(statuses)),
             reserves: Arc::new(RwLock::new(vec![
-                ReserveAsset { asset: "BTC".to_string(), total_supplied: 15000.0, total_reserves: 15500.0, collateral_ratio: 1.03, status: "Healthy".to_string() },
-                ReserveAsset { asset: "L-BTC".to_string(), total_supplied: 3500.0, total_reserves: 3510.0, collateral_ratio: 1.002, status: "Healthy".to_string() },
+                ReserveAsset {
+                    asset: "BTC".to_string(),
+                    total_supplied: 15000.0,
+                    total_reserves: 15500.0,
+                    collateral_ratio: 1.03,
+                    status: "Healthy".to_string(),
+                },
+                ReserveAsset {
+                    asset: "L-BTC".to_string(),
+                    total_supplied: 3500.0,
+                    total_reserves: 3510.0,
+                    collateral_ratio: 1.002,
+                    status: "Healthy".to_string(),
+                },
             ])),
             prices: Arc::new(RwLock::new(prices)),
             compliance: Arc::new(RwLock::new(compliance)),
             affiliates: Arc::new(RwLock::new(affiliates)),
             marketing: Arc::new(RwLock::new(vec![
-                MarketingInfo { channel: "Twitter".to_string(), status: "active".to_string(), active_offers: vec!["ReferralBonus".to_string()], reach: 450000 },
-                MarketingInfo { channel: "Farcaster".to_string(), status: "active".to_string(), active_offers: vec!["LP-Boost".to_string()], reach: 15000 },
+                MarketingInfo {
+                    channel: "Twitter".to_string(),
+                    status: "active".to_string(),
+                    active_offers: vec!["ReferralBonus".to_string()],
+                    reach: 450000,
+                },
+                MarketingInfo {
+                    channel: "Farcaster".to_string(),
+                    status: "active".to_string(),
+                    active_offers: vec!["LP-Boost".to_string()],
+                    reach: 15000,
+                },
             ])),
             financial_metrics: Arc::new(RwLock::new(financial_metrics)),
             identity_records: Arc::new(RwLock::new(HashMap::new())),
@@ -308,7 +577,13 @@ impl Engine {
         }
     }
 
-    fn evaluate_risk(_latency: u32, trust: &str, da: &str, bridge: &str, metadata: &HashMap<String, String>) -> RiskAssessment {
+    fn evaluate_risk(
+        _latency: u32,
+        trust: &str,
+        da: &str,
+        bridge: &str,
+        metadata: &HashMap<String, String>,
+    ) -> RiskAssessment {
         let mut da_score: u32 = match da {
             "On-chain" => 95,
             "On-chain (ZK)" => 98,
@@ -334,13 +609,35 @@ impl Engine {
             }
         }
 
-        let settlement_score = if trust.contains("ZK") { 98 } else if trust.contains("Optimistic") { 85 } else { 80 };
-        let exit_mechanism_score = if bridge.contains("Decentralized") { 95 } else { 85 };
+        let settlement_score = if trust.contains("ZK") {
+            98
+        } else if trust.contains("Optimistic") {
+            85
+        } else {
+            80
+        };
+        let exit_mechanism_score = if bridge.contains("Decentralized") {
+            95
+        } else {
+            85
+        };
         let operators_score = 90;
         let decentralization_score = 80;
 
-        let avg = (da_score + settlement_score + bridge_score + exit_mechanism_score + operators_score + decentralization_score) / 6;
-        let overall_level = if avg > 90 { "Low" } else if avg > 75 { "Medium" } else { "High" };
+        let avg = (da_score
+            + settlement_score
+            + bridge_score
+            + exit_mechanism_score
+            + operators_score
+            + decentralization_score)
+            / 6;
+        let overall_level = if avg > 90 {
+            "Low"
+        } else if avg > 75 {
+            "Medium"
+        } else {
+            "High"
+        };
 
         RiskAssessment {
             overall_level: overall_level.to_string(),
@@ -359,21 +656,24 @@ impl Engine {
 
     pub fn get_service_status(&self, name: &str) -> ServiceStatus {
         let statuses = self.service_statuses.read().unwrap();
-        statuses.get(name).cloned().unwrap_or_else(|| ServiceStatus {
-            name: name.to_string(),
-            status: "unknown".to_string(),
-            last_checked: Utc::now(),
-            latency_ms: 0,
-            trust_model: "unknown".to_string(),
-            risk_level: "High".to_string(),
-            risk_assessment: None,
-            data_availability: "unknown".to_string(),
-            settlement: "unknown".to_string(),
-            bridge_security: "unknown".to_string(),
-            tvl_usd: 0.0,
-            version: None,
-            metadata: HashMap::new(),
-        })
+        statuses
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| ServiceStatus {
+                name: name.to_string(),
+                status: "unknown".to_string(),
+                last_checked: Utc::now(),
+                latency_ms: 0,
+                trust_model: "unknown".to_string(),
+                risk_level: "High".to_string(),
+                risk_assessment: None,
+                data_availability: "unknown".to_string(),
+                settlement: "unknown".to_string(),
+                bridge_security: "unknown".to_string(),
+                tvl_usd: 0.0,
+                version: None,
+                metadata: HashMap::new(),
+            })
     }
 
     pub fn get_all_service_statuses(&self) -> HashMap<String, ServiceStatus> {
@@ -413,7 +713,8 @@ impl Engine {
 
     async fn fetch_stacks_realtime_status() -> (Option<u32>, bool) {
         let client = reqwest::Client::new();
-        let res = client.get("https://api.mainnet.hiro.so/extended/v1/block?limit=1")
+        let res = client
+            .get("https://api.mainnet.hiro.so/extended/v1/block?limit=1")
             .timeout(Duration::from_secs(3))
             .send()
             .await;
@@ -426,8 +727,8 @@ impl Engine {
                 } else {
                     (None, false)
                 }
-            },
-            Err(_) => (None, false)
+            }
+            Err(_) => (None, false),
         }
     }
 
@@ -458,18 +759,37 @@ impl Engine {
 
                         if status.name == "stacks" {
                             if let Some(h) = height {
-                                status.metadata.insert("block_height".to_string(), h.to_string());
+                                status
+                                    .metadata
+                                    .insert("block_height".to_string(), h.to_string());
                             }
-                            status.metadata.insert("hiro_api_connected".to_string(), stacks_connected.to_string());
+                            status.metadata.insert(
+                                "hiro_api_connected".to_string(),
+                                stacks_connected.to_string(),
+                            );
                         }
 
                         // BitVM2 real-time challenge monitoring (Simulated) (CON-75)
                         if status.name == "bitvm2" {
                             let is_healthy = Utc::now().timestamp() % 100 != 0; // 1% failure rate simulation
-                            status.metadata.insert("bitvm_challenge_status".to_string(), if is_healthy { "Healthy" } else { "Challenge Detected" }.to_string());
+                            status.metadata.insert(
+                                "bitvm_challenge_status".to_string(),
+                                if is_healthy {
+                                    "Healthy"
+                                } else {
+                                    "Challenge Detected"
+                                }
+                                .to_string(),
+                            );
                         }
 
-                        let ra = Self::evaluate_risk(status.latency_ms, &status.trust_model, &status.data_availability, &status.bridge_security, &status.metadata);
+                        let ra = Self::evaluate_risk(
+                            status.latency_ms,
+                            &status.trust_model,
+                            &status.data_availability,
+                            &status.bridge_security,
+                            &status.metadata,
+                        );
                         status.risk_assessment = Some(ra.clone());
                         status.risk_level = ra.overall_level;
                     }
@@ -477,7 +797,11 @@ impl Engine {
                     // Compliance updates
                     let mut compliance = engine_clone.compliance.write().unwrap();
                     compliance.risk_score = (10 + (current_requests % 20) as u32).min(100);
-                    compliance.status = if compliance.risk_score > 80 { "warning".to_string() } else { "compliant".to_string() };
+                    compliance.status = if compliance.risk_score > 80 {
+                        "warning".to_string()
+                    } else {
+                        "compliant".to_string()
+                    };
                     compliance.last_audit = Utc::now();
                 }
 
@@ -589,9 +913,13 @@ impl Engine {
 
     pub fn is_healthy(&self) -> bool {
         let statuses = self.service_statuses.read().unwrap();
-        if statuses.is_empty() { return false; }
+        if statuses.is_empty() {
+            return false;
+        }
         let now = Utc::now();
-        statuses.values().any(|s| (now - s.last_checked).num_seconds() < 60)
+        statuses
+            .values()
+            .any(|s| (now - s.last_checked).num_seconds() < 60)
     }
 
     pub fn check_compliance(&self, address: &str) -> serde_json::Value {
@@ -837,26 +1165,39 @@ impl Engine {
     pub fn resolve_identity(&self, query: &str) -> IdentityRecord {
         self.increment_requests();
         let mut records = self.identity_records.write().unwrap();
-        records.entry(query.to_string()).or_insert_with(|| {
-            // Simulated resolution logic (CON-66)
-            IdentityRecord {
-                address: query.to_string(),
-                ens_name: if query.starts_with("0x") { Some(format!("{}.eth", &query[2..6])) } else { None },
-                bns_name: if query.len() > 20 { Some("conxian.btc".to_string()) } else { None },
-                world_id_verified: query.contains("verified"),
-            }
-        }).clone()
+        records
+            .entry(query.to_string())
+            .or_insert_with(|| {
+                // Simulated resolution logic (CON-66)
+                IdentityRecord {
+                    address: query.to_string(),
+                    ens_name: if query.starts_with("0x") {
+                        Some(format!("{}.eth", &query[2..6]))
+                    } else {
+                        None
+                    },
+                    bns_name: if query.len() > 20 {
+                        Some("conxian.btc".to_string())
+                    } else {
+                        None
+                    },
+                    world_id_verified: query.contains("verified"),
+                }
+            })
+            .clone()
     }
 
     pub fn sync_erp_data(&self, system: &str) -> ErpSyncRecord {
         self.increment_requests();
         let mut erp_sync = self.erp_sync_status.write().unwrap();
-        let record = erp_sync.entry(system.to_string()).or_insert_with(|| ErpSyncRecord {
-            erp_system: system.to_string(),
-            last_sync: Utc::now(),
-            total_transactions_synced: 0,
-            status: "Initializing".to_string(),
-        });
+        let record = erp_sync
+            .entry(system.to_string())
+            .or_insert_with(|| ErpSyncRecord {
+                erp_system: system.to_string(),
+                last_sync: Utc::now(),
+                total_transactions_synced: 0,
+                status: "Initializing".to_string(),
+            });
 
         // Simulated sync logic (CON-63)
         record.last_sync = Utc::now();

@@ -1,8 +1,8 @@
 pub mod api;
 pub mod engine;
 
-use actix_web::{App, HttpServer, web, middleware::Logger};
 use crate::engine::Engine;
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use std::net::TcpListener;
 
 pub async fn start_gateway_server(port: u16) -> std::io::Result<()> {

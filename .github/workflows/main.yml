@@ -20,19 +20,20 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Lint and Format Check
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets -- -D warnings
+
       - name: Build Gateway
         run: |
           cd gateway
-          if [ -f Cargo.toml ]; then
-            cargo build --release
-          fi
+          cargo build --release
 
       - name: Test Gateway
         run: |
           cd gateway
-          if [ -f Cargo.toml ]; then
-            cargo test
-          fi
+          cargo test
 
       - name: Deploy to GCP
         if: github.ref == 'refs/heads/main'

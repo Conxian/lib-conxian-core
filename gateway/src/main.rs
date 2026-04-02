@@ -1,5 +1,5 @@
-use std::env;
 use conxian_gateway::start_gateway_server;
+use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -8,6 +8,6 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let port: u16 = 8080;
-    
+
     start_gateway_server(port).await
 }

@@ -1,6 +1,7 @@
+#[cfg(test)]
 mod tests;
-use actix_web::{get, post, web, HttpResponse, Responder};
 use crate::engine::Engine;
+use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::Deserialize;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -74,7 +75,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(erp_sync_handler)
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
-            .service(state_commit_handler)
+            .service(state_commit_handler),
     );
 }
 
@@ -138,7 +139,8 @@ async fn health_handler(engine: web::Data<Engine>) -> impl Responder {
     if engine.is_healthy() {
         HttpResponse::Ok().json(serde_json::json!({ "status": "healthy", "engine": "active" }))
     } else {
-        HttpResponse::ServiceUnavailable().json(serde_json::json!({ "status": "unhealthy", "engine": "starting" }))
+        HttpResponse::ServiceUnavailable()
+            .json(serde_json::json!({ "status": "unhealthy", "engine": "starting" }))
     }
 }
 
@@ -154,7 +156,10 @@ pub struct ComplianceCheckRequest {
 }
 
 #[post("/compliance/check")]
-async fn compliance_check_handler(engine: web::Data<Engine>, req: web::Json<ComplianceCheckRequest>) -> impl Responder {
+async fn compliance_check_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<ComplianceCheckRequest>,
+) -> impl Responder {
     let res = engine.check_compliance(&req.address);
     HttpResponse::Ok().json(res)
 }
@@ -165,14 +170,19 @@ pub struct ZKMLVerifyRequest {
 }
 
 #[post("/compliance/zkml-verify")]
-async fn compliance_zkml_handler(engine: web::Data<Engine>, req: web::Json<ZKMLVerifyRequest>) -> impl Responder {
+async fn compliance_zkml_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<ZKMLVerifyRequest>,
+) -> impl Responder {
     let res = engine.verify_zkml_proof(&req.proof);
     HttpResponse::Ok().json(res)
 }
 
 #[get("/metrics")]
 async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
-    let requests = engine.request_count.load(std::sync::atomic::Ordering::SeqCst);
+    let requests = engine
+        .request_count
+        .load(std::sync::atomic::Ordering::SeqCst);
     let tvl = *engine.total_tvl_usd.read().unwrap();
     let uptime = (chrono::Utc::now() - engine.start_time).num_seconds();
 
@@ -272,7 +282,10 @@ struct InvoiceRequest {
 }
 
 #[post("/lightning/invoice")]
-async fn lightning_invoice_handler(engine: web::Data<Engine>, req: web::Json<InvoiceRequest>) -> impl Responder {
+async fn lightning_invoice_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<InvoiceRequest>,
+) -> impl Responder {
     let res = engine.create_lightning_invoice(req.amount_msat, &req.description);
     HttpResponse::Ok().json(res)
 }
@@ -283,13 +296,19 @@ struct PayRequest {
 }
 
 #[post("/lightning/pay")]
-async fn lightning_pay_handler(engine: web::Data<Engine>, req: web::Json<PayRequest>) -> impl Responder {
+async fn lightning_pay_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<PayRequest>,
+) -> impl Responder {
     let res = engine.pay_lightning_invoice(&req.invoice);
     HttpResponse::Ok().json(res)
 }
 
 #[get("/stacks/contract/{id}")]
-async fn stacks_contract_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+async fn stacks_contract_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
     let res = engine.get_stacks_contract(&path.into_inner());
     HttpResponse::Ok().json(res)
 }
@@ -327,7 +346,10 @@ async fn b2network_handler(engine: web::Data<Engine>) -> impl Responder {
 }
 
 #[get("/rgb/contract/{id}")]
-async fn rgb_contract_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+async fn rgb_contract_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
     let res = engine.get_rgb_contract(&path.into_inner());
     HttpResponse::Ok().json(res)
 }
@@ -372,7 +394,10 @@ struct RateRequest {
 }
 
 #[get("/changelly/rate")]
-async fn changelly_rate_handler(engine: web::Data<Engine>, query: web::Query<RateRequest>) -> impl Responder {
+async fn changelly_rate_handler(
+    engine: web::Data<Engine>,
+    query: web::Query<RateRequest>,
+) -> impl Responder {
     let res = engine.get_exchange_rate(&query.from, &query.to);
     HttpResponse::Ok().json(res)
 }
@@ -495,7 +520,10 @@ async fn b2network_status_handler(engine: web::Data<Engine>) -> impl Responder {
 }
 
 #[get("/citrea/proof/{id}")]
-async fn citrea_proof_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+async fn citrea_proof_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
     let res = engine.get_citrea_proof(&path.into_inner());
     HttpResponse::Ok().json(res)
 }
@@ -545,7 +573,10 @@ struct ErpSyncRequest {
 }
 
 #[post("/erp/sync")]
-async fn erp_sync_handler(engine: web::Data<Engine>, req: web::Json<ErpSyncRequest>) -> impl Responder {
+async fn erp_sync_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<ErpSyncRequest>,
+) -> impl Responder {
     let res = engine.sync_erp_data(&req.system);
     HttpResponse::Ok().json(res)
 }
@@ -568,7 +599,10 @@ struct StateCommitRequest {
 }
 
 #[post("/state/commit")]
-async fn state_commit_handler(engine: web::Data<Engine>, req: web::Json<StateCommitRequest>) -> impl Responder {
+async fn state_commit_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<StateCommitRequest>,
+) -> impl Responder {
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
 }
