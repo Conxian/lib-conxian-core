@@ -16,9 +16,11 @@ env_logger = "0.10"
 log = "0.4"
 reqwest = { version = "0.11", features = ["json"] }
 futures = "0.3"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.31", features = ["bundled-sqlcipher"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 lru = "0.12"
+btleplug = "0.11"
+crc = "3.0"
 
 [lib]
 name = "conxian_gateway"

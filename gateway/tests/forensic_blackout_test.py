@@ -16,9 +16,13 @@ def test_offline_sync():
     env = os.environ.copy()
     env["CONXIAN_TESTING"] = "true"
     env["CONXIAN_OFFLINE"] = "true"
-    # Make sure cargo is in PATH
-    cargo_path = "/Users/composter/.rustup/toolchains/stable-x86_64-apple-darwin/bin"
-    env["PATH"] = f"{cargo_path}:{env.get('PATH', '')}"
+    
+    # Dynamically find cargo
+    import shutil
+    cargo_bin = shutil.which("cargo")
+    if not cargo_bin:
+        print("❌ Cargo not found in PATH.")
+        return False
 
     print("[-] Starting Gateway in Offline mode...")
     process = subprocess.Popen(["cargo", "run"], cwd="gateway", env=env)
@@ -80,6 +84,27 @@ def test_offline_sync():
         print(f"    - Current synced count (should be 0): {synced_count}")
         if synced_count > 0:
             print("❌ Error: Some jobs were synced in OFFLINE mode!")
+            return False
+
+        # 4.5 Verify SQLCipher Encryption (TEE Boundary check)
+        print("[-] Verifying TEE-Secured Persistence (SQLCipher check)...")
+        db_path = "gateway/conxian_gateway.db"
+        if os.path.exists(db_path):
+            try:
+                import sqlite3
+                # Standard sqlite3 should FAIL to read the schema without the key
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                res = cursor.fetchall()
+                if len(res) > 0:
+                    print("❌ Error: Database is NOT encrypted! TEE boundary breached.")
+                    return False
+                print("✅ Database is encrypted (Standard SQLite cannot read).")
+            except Exception as e:
+                print(f"✅ Verified: Standard SQLite rejected the database: {e}")
+        else:
+            print("❌ Error: Database file not found!")
             return False
 
         # 5. "Go online"
