@@ -23,7 +23,7 @@ jobs:
       - name: Lint and Format Check
         run: |
           cargo fmt --all -- --check
-          cargo clippy --all-targets -- -D warnings
+          cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Build Gateway
         run: |
