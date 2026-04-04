@@ -1171,16 +1171,14 @@ impl Engine {
                 // Simulated resolution logic (CON-66)
                 IdentityRecord {
                     address: query.to_string(),
-                    ens_name: query
-                        .strip_prefix("0x")
-                        .and_then(|s| {
-                            if s.is_empty() {
-                                None
-                            } else {
-                                Some(s.get(..4).unwrap_or(s))
-                            }
-                        })
-                        .map(|p| format!("{p}.eth")),
+                    ens_name: query.strip_prefix("0x").and_then(|s| {
+                        let prefix = s.get(..4).unwrap_or(s);
+                        if prefix.is_empty() {
+                            None
+                        } else {
+                            Some(format!("{prefix}.eth"))
+                        }
+                    }),
                     bns_name: if query.len() > 20 {
                         Some("conxian.btc".to_string())
                     } else {
