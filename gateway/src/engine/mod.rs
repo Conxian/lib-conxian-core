@@ -1172,7 +1172,7 @@ impl Engine {
                 IdentityRecord {
                     address: query.to_string(),
                     ens_name: query.strip_prefix("0x").and_then(|s| {
-                        let prefix = s.get(..4).unwrap_or(s);
+                        let prefix: String = s.chars().take(4).collect();
                         if prefix.is_empty() {
                             None
                         } else {
