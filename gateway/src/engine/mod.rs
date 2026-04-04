@@ -1173,7 +1173,13 @@ impl Engine {
                     address: query.to_string(),
                     ens_name: query
                         .strip_prefix("0x")
-                        .and_then(|s| s.get(0..4))
+                        .and_then(|s| {
+                            if s.is_empty() {
+                                None
+                            } else {
+                                Some(s.get(..4).unwrap_or(s))
+                            }
+                        })
                         .map(|p| format!("{p}.eth")),
                     bns_name: if query.len() > 20 {
                         Some("conxian.btc".to_string())
