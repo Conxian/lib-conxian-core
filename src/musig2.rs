@@ -1,6 +1,5 @@
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Keypair, PublicKey, Secp256k1, XOnlyPublicKey};
-use sha2::{Digest, Sha256};
 
 /// Represents a participant in a Taproot Musig2 Quorum.
 pub struct Musig2Participant {
@@ -36,27 +35,7 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
         return Err("No public keys provided".to_string());
     }
 
-    // In a full Musig2 implementation (BIP-327), this requires KeySort,
-    // KeyAgg coefficient calculation (hash of L and Pi), and point addition.
-    // For this milestone stub, we simulate the aggregation.
-    // Real implementation requires standard `musig2` rust bindings.
-
-    // Sort keys deterministically
-    let mut sorted_keys = pubkeys.to_vec();
-    sorted_keys.sort();
-
-    // Compute L (hash of all pubkeys)
-    let mut hasher = Sha256::new();
-    for pk in &sorted_keys {
-        hasher.update(pk.serialize());
-    }
-    let _l = hasher.finalize();
-
-    // Currently returning the first key as a placeholder for the aggregated key
-    let x_only =
-        XOnlyPublicKey::from_slice(&sorted_keys[0].serialize()[1..]).map_err(|e| e.to_string())?;
-
-    Ok(x_only)
+    Err("Musig2 key aggregation is not implemented".to_string())
 }
 
 #[cfg(test)]
@@ -76,6 +55,6 @@ mod tests {
         let p2 = Musig2Participant::new();
         let pubkeys = vec![p1.public_key(), p2.public_key()];
         let aggregated = aggregate_public_keys(&pubkeys);
-        assert!(aggregated.is_ok());
+        assert!(aggregated.is_err());
     }
 }
