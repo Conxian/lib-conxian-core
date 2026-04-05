@@ -29,6 +29,10 @@ jobs:
         run: |
           cargo build --workspace --release --locked
 
+      - name: Compile All Targets (no-run)
+        run: |
+          cargo test --workspace --all-targets --locked --no-run
+
       - name: Test Workspace
         run: |
           cargo test --workspace --locked
