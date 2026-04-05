@@ -1174,7 +1174,7 @@ impl Engine {
                     ens_name: query.strip_prefix("0x").and_then(|s| {
                         let prefix: String = s
                             .chars()
-                            .filter(|c| c.is_ascii_hexdigit())
+                            .take_while(|c| c.is_ascii_hexdigit())
                             .take(4)
                             .map(|c| c.to_ascii_lowercase())
                             .collect();
