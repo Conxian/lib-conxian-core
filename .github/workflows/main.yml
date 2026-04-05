@@ -23,15 +23,15 @@ jobs:
       - name: Lint and Format Check
         run: |
           cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets -- -D warnings
+          cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Build Workspace
         run: |
-          cargo build --workspace --release
+          cargo build --workspace --release --locked
 
       - name: Test Workspace
         run: |
-          cargo test --workspace
+          cargo test --workspace --locked
 
       - name: Deploy to GCP
         if: github.ref == 'refs/heads/main'
