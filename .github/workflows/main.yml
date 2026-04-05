@@ -30,6 +30,7 @@ jobs:
           cargo build --workspace --release --locked
 
       - name: Compile All Targets (no-run)
+        # Ensures tests/benches/examples compile without being executed.
         run: |
           cargo test --workspace --all-targets --locked --no-run
 
