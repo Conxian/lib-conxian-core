@@ -25,15 +25,13 @@ jobs:
           cargo fmt --all -- --check
           cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Build Gateway
+      - name: Build Workspace
         run: |
-          cd gateway
-          cargo build --release
+          cargo build --workspace --release
 
-      - name: Test Gateway
+      - name: Test Workspace
         run: |
-          cd gateway
-          cargo test
+          cargo test --workspace
 
       - name: Deploy to GCP
         if: github.ref == 'refs/heads/main'

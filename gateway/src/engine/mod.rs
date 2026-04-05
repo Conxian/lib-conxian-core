@@ -1172,12 +1172,13 @@ impl Engine {
                 IdentityRecord {
                     address: query.to_string(),
                     ens_name: query.strip_prefix("0x").and_then(|s| {
-                        let prefix: String = s.chars().take(4).collect();
-                        if prefix.is_empty() {
-                            None
-                        } else {
-                            Some(format!("{prefix}.eth"))
-                        }
+                        let prefix: String = s
+                            .chars()
+                            .filter(|c| c.is_ascii_hexdigit())
+                            .take(4)
+                            .map(|c| c.to_ascii_lowercase())
+                            .collect();
+                        (!prefix.is_empty()).then(|| format!("{prefix}.eth"))
                     }),
                     bns_name: if query.len() > 20 {
                         Some("conxian.btc".to_string())
