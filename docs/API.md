@@ -117,9 +117,11 @@ Lists all pending state proposals generated from external triggers.
 {
   "proposal_id": "prop-iso20022-trigger-1712412345",
   "trigger_id": "iso20022-trigger-1712412345",
-  "proposed_state": "SovereignStateUpdate",
+  "proposed_state": "MainnetSovereignStateUpdate",
   "timelock_end_block": 841144,
   "status": "Pending",
-  "tee_attestation": "VerifiedByStrongBox-v1.0"
+  "tee_attestation": "VerifiedByStrongBox-Mainnet-v1.0",
+  "yield_routing": "5/5/90",
+  "capital_status": "TransitBond"
 }
 ```
