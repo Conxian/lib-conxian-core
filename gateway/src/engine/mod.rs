@@ -1175,6 +1175,8 @@ impl Engine {
                         .strip_prefix("0x")
                         .or_else(|| query.strip_prefix("0X"))
                         .and_then(|s| {
+                            // Derive from the first <= 4 hex chars after 0x/0X.
+                            // A non-hex stops the prefix only if it appears within those first 4 chars.
                             let prefix: String = s
                                 .chars()
                                 .take(4)
