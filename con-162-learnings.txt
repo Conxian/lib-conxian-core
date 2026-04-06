@@ -1,5 +1,0 @@
-Pattern: Enforcing TEE boundaries in Gateway Engine.
-Issue: CON-162.
-Solution: Implement proposal-only ingress for external settlement triggers (ISO 20022, PAPSS, BRICS).
-Key Fields: VerifiedByStrongBox-Mainnet-v1.0 (attestation), 144-block timelock, 5/5/90 yield routing.
-Infrastructure: Arc-based Engine initialization to support background monitoring without panics.

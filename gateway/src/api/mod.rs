@@ -299,6 +299,7 @@ async fn lightning_invoice_handler(
 #[derive(Deserialize)]
 struct PayRequest {
     invoice: String,
+    testnet: Option<bool>,
 }
 
 #[post("/lightning/pay")]
@@ -306,6 +307,9 @@ async fn lightning_pay_handler(
     engine: web::Data<Engine>,
     req: web::Json<PayRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.pay_lightning_invoice(&req.invoice);
     HttpResponse::Ok().json(res)
 }
@@ -576,6 +580,7 @@ async fn identity_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 #[derive(Deserialize)]
 struct ErpSyncRequest {
     system: String,
+    testnet: Option<bool>,
 }
 
 #[post("/erp/sync")]
@@ -583,6 +588,9 @@ async fn erp_sync_handler(
     engine: web::Data<Engine>,
     req: web::Json<ErpSyncRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.sync_erp_data(&req.system);
     HttpResponse::Ok().json(res)
 }

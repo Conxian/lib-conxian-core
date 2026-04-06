@@ -33,9 +33,14 @@ Verify a Zero-Knowledge Machine Learning proof (CON-70). Aligned with CARF/BRS v
 Resolves identity via ENS, BNS, and World ID (CON-66).
 - **Response:** `{ "address": "...", "ens_name": "...", "bns_name": "...", "world_id_verified": true }`
 
+
+### POST /api/v1/lightning/pay
+Pays a Lightning Network invoice. Mainnet-only.
+- **Request:** `{ "invoice": "lnbc...", "testnet": true }`
+
 ### POST /api/v1/erp/sync
-Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63).
-- **Request:** `{ "system": "SAP" }`
+Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63). Mainnet-only.
+- **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
 Returns the CJCS v2.0 JSON-LD machine-readable definition (CON-73).

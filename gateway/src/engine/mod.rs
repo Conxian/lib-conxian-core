@@ -363,6 +363,7 @@ impl Engine {
         }
     }
 
+
     fn update_metrics(&self) {
         let total_requests = self.request_count.load(Ordering::SeqCst);
         let mut metrics = self.financial_metrics.write().unwrap();
@@ -373,8 +374,15 @@ impl Engine {
         let mut total_tvl = self.total_tvl_usd.write().unwrap();
         *total_tvl = self.calculate_total_tvl();
 
+        // Audit SAB wallets periodically (Simulated)
+        let wallets = self.sab_wallets.read().unwrap();
+        if wallets.is_empty() {
+            log::warn!("No SAB wallets configured for mainnet execution!");
+        }
+
         let _ = self.fetch_stacks_block_height();
     }
+
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
         Ok(841500)
@@ -886,8 +894,16 @@ impl Engine {
         })
     }
 
-    pub async fn start_monitoring(_engine: Arc<Engine>) {
+
+    pub async fn start_monitoring(engine: Arc<Engine>) {
+        tokio::spawn(async move {
+            loop {
+                engine.update_metrics();
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            }
+        });
     }
+
 
     pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
         self.sab_wallets.read().unwrap().clone()
