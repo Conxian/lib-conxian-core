@@ -138,3 +138,17 @@ async fn test_external_settlement_flow() {
     let proposals: Vec<Value> = test::read_body_json(resp).await;
     assert_eq!(proposals.len(), 1);
 }
+
+#[actix_web::test]
+async fn test_sab_wallets_endpoint() {
+    let engine_arc = Arc::new(Engine::new());
+    engine_arc.initialize();
+    let engine = web::Data::from(engine_arc);
+    let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+    let req = test::TestRequest::get().uri("/api/v1/sab/wallets").to_request();
+    let resp = test::call_service(&app, req).await;
+    assert!(resp.status().is_success());
+    let wallets: Vec<Value> = test::read_body_json(resp).await;
+    assert!(wallets.len() >= 1);
+    assert_eq!(wallets[0]["address"], "SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM");
+}

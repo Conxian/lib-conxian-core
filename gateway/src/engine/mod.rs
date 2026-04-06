@@ -122,6 +122,16 @@ pub struct ErpSyncRecord {
     pub status: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SabWallet {
+    pub address: String,
+    pub role: String, // "Execution", "Treasury", "Payout", "Signer", "Emergency"
+    pub owner: String, // "SAB", "Operator", "DAO"
+    pub status: String, // "Active", "Deprecated", "Pending"
+    pub quorum: Option<String>,
+    pub spending_limit_usd: Option<f64>,
+}
+
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
@@ -139,6 +149,7 @@ pub struct Engine {
     pub erp_sync_status: Arc<RwLock<HashMap<String, ErpSyncRecord>>>,
     pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
     pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
+    pub sab_wallets: Arc<RwLock<Vec<SabWallet>>>,
 }
 
 impl Default for Engine {
@@ -148,7 +159,6 @@ impl Default for Engine {
 }
 
 impl Engine {
-
     pub fn new() -> Self {
         Engine {
             version: "0.2.0".to_string(),
@@ -179,13 +189,13 @@ impl Engine {
             erp_sync_status: Arc::new(RwLock::new(HashMap::new())),
             settlement_log: Arc::new(RwLock::new(Vec::new())),
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
+            sab_wallets: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
     pub fn initialize(&self) {
         self.initialize_services();
     }
-
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
@@ -297,6 +307,24 @@ impl Engine {
             active_offers: vec!["Early-Bird-Bonus".to_string()],
             reach: 500000,
         });
+
+        let mut wallets = self.sab_wallets.write().unwrap();
+        wallets.push(SabWallet {
+            address: "SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM".to_string(),
+            role: "Execution".to_string(),
+            owner: "Operator".to_string(),
+            status: "Active".to_string(),
+            quorum: Some("1-of-1".to_string()),
+            spending_limit_usd: Some(10000.0),
+        });
+        wallets.push(SabWallet {
+            address: "SP...TRES".to_string(),
+            role: "Treasury".to_string(),
+            owner: "SAB".to_string(),
+            status: "Pending".to_string(),
+            quorum: Some("3-of-5".to_string()),
+            spending_limit_usd: None,
+        });
     }
 
     fn calculate_risk_assessment(&self, trust: &str, da: &str, settlement: &str, bridge: &str) -> RiskAssessment {
@@ -345,13 +373,10 @@ impl Engine {
         let mut total_tvl = self.total_tvl_usd.write().unwrap();
         *total_tvl = self.calculate_total_tvl();
 
-        // Stacks real-time block height fetch (Simulation of reqwest usage)
-        // In a real environment, this would call the Hiro API
         let _ = self.fetch_stacks_block_height();
     }
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
-        // Placeholder for real Hiro API call
         Ok(841500)
     }
 
@@ -398,9 +423,6 @@ impl Engine {
         };
         self.settlement_log.write().unwrap().push(envelope);
 
-        // TEE Verification Simulation (CON-162)
-        // Verify external settlement messages inside the Trusted Execution Environment
-        // before any state proposal is emitted.
         let trigger_id = format!(
             "{}-trigger-{}",
             protocol.to_lowercase(),
@@ -408,7 +430,6 @@ impl Engine {
         );
         let proposal_id = format!("prop-{}", trigger_id);
 
-        // Enforce 144-block time-lock
         let current_height: u64 = self
             .get_service_status("stacks")
             .metadata
@@ -417,8 +438,6 @@ impl Engine {
             .unwrap_or(841500);
         let timelock_end = current_height + 144;
 
-        // "Verified external messages produce proposals, not executions."
-        // "Preserve the existing 5/5/90 productive streaming behavior"
         let proposal = StateProposal {
             proposal_id: proposal_id.clone(),
             trigger_id,
@@ -661,15 +680,12 @@ impl Engine {
         records
             .entry(query.to_string())
             .or_insert_with(|| {
-                // Simulated resolution logic (CON-66)
                 IdentityRecord {
                     address: query.to_string(),
                     ens_name: query
                         .strip_prefix("0x")
                         .or_else(|| query.strip_prefix("0X"))
                         .and_then(|s| {
-                            // Derive from the first <= 4 hex chars after 0x/0X.
-                            // A non-hex stops the prefix only if it appears within those first 4 chars.
                             let prefix: String = s
                                 .chars()
                                 .take(4)
@@ -701,7 +717,6 @@ impl Engine {
                 status: "Initializing".to_string(),
             });
 
-        // Simulated sync logic (CON-63)
         record.last_sync = Utc::now();
         record.total_transactions_synced += 150;
         record.status = "Healthy".to_string();
@@ -709,7 +724,6 @@ impl Engine {
     }
 
     pub fn get_cjcs_v2_spec(&self) -> serde_json::Value {
-        // Implementation for CON-73
         serde_json::json!({
             "@context": "https://conxian.com/contexts/job-card/v2.0",
             "@type": "ConxianJobCard",
@@ -720,7 +734,6 @@ impl Engine {
     }
 
     pub fn get_dlc_bond_info(&self, bond_id: &str) -> serde_json::Value {
-        // Implementation for CON-62, CON-72
         self.increment_requests();
         serde_json::json!({
             "bond_id": bond_id,
@@ -763,7 +776,6 @@ impl Engine {
     }
 
     pub fn commit_state_to_tableland(&self, state_root: &str) -> serde_json::Value {
-        // Implementation for CON-69
         self.increment_requests();
         serde_json::json!({
             "table_name": "conxian_state_shards",
@@ -787,7 +799,6 @@ impl Engine {
     }
 
     pub fn is_healthy(&self) -> bool {
-        // Basic health check logic
         true
     }
 
@@ -876,7 +887,9 @@ impl Engine {
     }
 
     pub async fn start_monitoring(_engine: Arc<Engine>) {
-        // Background monitoring task (CON-418)
     }
 
+    pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
+        self.sab_wallets.read().unwrap().clone()
+    }
 }

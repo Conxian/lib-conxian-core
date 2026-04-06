@@ -418,3 +418,18 @@ export const submitBricsSettlement = async (payload: any): Promise<StateProposal
   });
   return response.json();
 };
+
+export interface SabWallet {
+  address: string;
+  role: string;
+  owner: string;
+  status: string;
+  quorum?: string;
+  spending_limit_usd?: number;
+}
+
+export const getSabWallets = async (): Promise<SabWallet[]> => {
+  const url = getGatewayUrl("sab/wallets", currentEnv);
+  const response = await fetch(url);
+  return response.json() as Promise<SabWallet[]>;
+};

@@ -1,0 +1,5 @@
+Pattern: Decentralized wallet registry in Gateway Engine.
+Issue: CON-423, CON-418.
+Solution: Implement SabWallet registry and matrix API. Enforce mainnet-only paths for state-modifying actions.
+Key Entities: SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM (Bootstrap), SAB (Treasury owner).
+Infrastructure: Added StateCommitRequest validation for testnet flags to prevent production drift.

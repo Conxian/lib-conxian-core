@@ -125,3 +125,11 @@ Lists all pending state proposals generated from external triggers.
   "capital_status": "TransitBond"
 }
 ```
+
+### GET /api/v1/sab/wallets
+Returns the canonical wallet inventory for BOS and related system operations (CON-423).
+- **Response:** Array of SabWallet objects.
+
+## 5. Data Models (Continued)
+
+### SabWallet
