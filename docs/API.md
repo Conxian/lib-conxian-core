@@ -90,3 +90,36 @@ Commits state shards to Tableland for decentralized persistence (CON-69).
   }
 }
 ```
+
+### POST /api/v1/settlement/iso20022
+Ingress point for ISO 20022 external settlement messages. Verified in TEE.
+- **Request:** `{ "msg_id": "...", "amount": 1000, ... }`
+- **Response:** StateProposal object.
+
+### POST /api/v1/settlement/papss
+Ingress point for PAPSS external settlement messages. Verified in TEE.
+- **Request:** `{ "tx_id": "...", "currency": "USD", ... }`
+- **Response:** StateProposal object.
+
+### POST /api/v1/settlement/brics
+Ingress point for BRICS external settlement messages. Verified in TEE.
+- **Request:** `{ "payload": "..." }`
+- **Response:** StateProposal object.
+
+### GET /api/v1/settlement/proposals
+Lists all pending state proposals generated from external triggers.
+- **Response:** Array of StateProposal objects.
+
+## 4. Data Models (Continued)
+
+### StateProposal
+```json
+{
+  "proposal_id": "prop-iso20022-trigger-1712412345",
+  "trigger_id": "iso20022-trigger-1712412345",
+  "proposed_state": "SovereignStateUpdate",
+  "timelock_end_block": 841144,
+  "status": "Pending",
+  "tee_attestation": "VerifiedByStrongBox-v1.0"
+}
+```

@@ -363,3 +363,39 @@ export const getHealth = async () => {
   const response = await fetch(url);
   return response.json();
 };
+
+export const getSettlementProposals = async () => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/proposals`;
+  const response = await fetch(url);
+  return response.json();
+};
+
+export const submitIso20022Settlement = async (payload: any) => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/iso20022`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};
+
+export const submitPapssSettlement = async (payload: any) => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/papss`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};
+
+export const submitBricsSettlement = async (payload: any) => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/brics`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+};

@@ -3,6 +3,7 @@ mod tests;
 use crate::engine::Engine;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::Deserialize;
+use serde_json::Value;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -48,6 +49,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(zulu_info_handler)
             .service(bison_handler)
             .service(bison_stats_handler)
+            .service(settlement_proposals_handler)
+            .service(iso20022_handler)
+            .service(papss_handler)
+            .service(brics_handler)
             .service(hemi_handler)
             .service(hemi_status_handler)
             .service(taproot_assets_handler)
@@ -604,5 +609,38 @@ async fn state_commit_handler(
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
     let res = engine.commit_state_to_tableland(&req.state_root);
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/settlement/proposals")]
+async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_proposals();
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/iso20022")]
+async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
+    let res = engine.process_external_settlement("ISO20022", payload.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/papss")]
+async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
+    let res = engine.process_external_settlement("PAPSS", payload.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/brics")]
+async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
+    let res = engine.process_external_settlement("BRICS", payload.into_inner());
     HttpResponse::Ok().json(res)
 }

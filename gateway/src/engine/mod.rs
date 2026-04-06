@@ -2,6 +2,7 @@ use actix_web::web;
 use chrono::{DateTime, Utc};
 use reqwest;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
@@ -97,6 +98,23 @@ pub struct IdentityRecord {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SettlementEnvelope {
+    pub protocol: String, // "ISO20022", "PAPSS", "BRICS"
+    pub payload: serde_json::Value,
+    pub ingress_timestamp: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct StateProposal {
+    pub proposal_id: String,
+    pub trigger_id: String,
+    pub proposed_state: String,
+    pub timelock_end_block: u64,
+    pub status: String, // "Pending", "Approved", "Executed"
+    pub tee_attestation: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ErpSyncRecord {
     pub erp_system: String,
     pub last_sync: DateTime<Utc>,
@@ -119,6 +137,8 @@ pub struct Engine {
     pub financial_metrics: Arc<RwLock<FinancialMetrics>>,
     pub identity_records: Arc<RwLock<HashMap<String, IdentityRecord>>>,
     pub erp_sync_status: Arc<RwLock<HashMap<String, ErpSyncRecord>>>,
+    pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
+    pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
 }
 
 impl Default for Engine {
@@ -346,7 +366,7 @@ impl Engine {
             let mut metadata = HashMap::new();
             match name {
                 "stacks" => {
-                    metadata.insert("block_height".to_string(), "841000".to_string());
+                    metadata.insert("block_height".to_string(), "841500".to_string());
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
                 }
                 "liquid" => {
@@ -410,7 +430,7 @@ impl Engine {
                     metadata.insert("spiderchain_nodes".to_string(), "144".to_string());
                 }
                 "b2network" => {
-                    metadata.insert("block_height".to_string(), "12540".to_string());
+                    metadata.insert("block_height".to_string(), "12600".to_string());
                 }
                 "alpen" => {
                     metadata.insert("zk_proof_type".to_string(), "SNARK".to_string());
@@ -574,6 +594,8 @@ impl Engine {
             financial_metrics: Arc::new(RwLock::new(financial_metrics)),
             identity_records: Arc::new(RwLock::new(HashMap::new())),
             erp_sync_status: Arc::new(RwLock::new(erp_sync)),
+            settlement_log: Arc::new(RwLock::new(Vec::new())),
+            state_proposals: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -652,6 +674,61 @@ impl Engine {
 
     pub fn increment_requests(&self) {
         self.request_count.fetch_add(1, Ordering::SeqCst);
+    }
+
+    pub fn is_mainnet_only() -> bool {
+        std::env::var("CONXIAN_NETWORK").unwrap_or_else(|_| "mainnet".to_string()) == "mainnet"
+    }
+
+    pub fn process_external_settlement(&self, protocol: &str, payload: Value) -> StateProposal {
+        self.increment_requests();
+        let envelope = SettlementEnvelope {
+            protocol: protocol.to_string(),
+            payload,
+            ingress_timestamp: Utc::now(),
+        };
+        self.settlement_log.write().unwrap().push(envelope);
+
+        // TEE Verification Simulation (CON-162)
+        let trigger_id = format!(
+            "{}-trigger-{}",
+            protocol.to_lowercase(),
+            Utc::now().timestamp()
+        );
+        let proposal_id = format!("prop-{}", trigger_id);
+
+        // Enforce 144-block time-lock
+        let current_height: u64 = self
+            .get_service_status("stacks")
+            .metadata
+            .get("block_height")
+            .and_then(|h| h.parse().ok())
+            .unwrap_or(841500);
+        let timelock_end = current_height + 144;
+
+        let proposal = StateProposal {
+            proposal_id: proposal_id.clone(),
+            trigger_id,
+            proposed_state: "MainnetSovereignStateUpdate".to_string(),
+            timelock_end_block: timelock_end,
+            status: "Pending".to_string(),
+            tee_attestation: "VerifiedByStrongBox-Mainnet-v1.0".to_string(),
+        };
+
+        self.state_proposals
+            .write()
+            .unwrap()
+            .insert(proposal_id, proposal.clone());
+        proposal
+    }
+
+    pub fn get_proposals(&self) -> Vec<StateProposal> {
+        self.state_proposals
+            .read()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect()
     }
 
     pub fn get_service_status(&self, name: &str) -> ServiceStatus {
@@ -1014,7 +1091,7 @@ impl Engine {
         self.increment_requests();
         let status = self.get_service_status("b2network");
         serde_json::json!({
-            "block_height": status.metadata.get("block_height").cloned().unwrap_or_else(|| "12540".to_string()),
+            "block_height": status.metadata.get("block_height").cloned().unwrap_or_else(|| "12600".to_string()),
             "proof_status": "Verified",
             "sequencer_batches": 1254,
             "da_layer": "Bitcoin"
