@@ -33,9 +33,14 @@ Verify a Zero-Knowledge Machine Learning proof (CON-70). Aligned with CARF/BRS v
 Resolves identity via ENS, BNS, and World ID (CON-66).
 - **Response:** `{ "address": "...", "ens_name": "...", "bns_name": "...", "world_id_verified": true }`
 
+
+### POST /api/v1/lightning/pay
+Pays a Lightning Network invoice. Mainnet-only.
+- **Request:** `{ "invoice": "lnbc...", "testnet": true }`
+
 ### POST /api/v1/erp/sync
-Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63).
-- **Request:** `{ "system": "SAP" }`
+Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63). Mainnet-only.
+- **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
 Returns the CJCS v2.0 JSON-LD machine-readable definition (CON-73).
@@ -117,9 +122,19 @@ Lists all pending state proposals generated from external triggers.
 {
   "proposal_id": "prop-iso20022-trigger-1712412345",
   "trigger_id": "iso20022-trigger-1712412345",
-  "proposed_state": "SovereignStateUpdate",
+  "proposed_state": "MainnetSovereignStateUpdate",
   "timelock_end_block": 841144,
   "status": "Pending",
-  "tee_attestation": "VerifiedByStrongBox-v1.0"
+  "tee_attestation": "VerifiedByStrongBox-Mainnet-v1.0",
+  "yield_routing": "5/5/90",
+  "capital_status": "TransitBond"
 }
 ```
+
+### GET /api/v1/sab/wallets
+Returns the canonical wallet inventory for BOS and related system operations (CON-423).
+- **Response:** Array of SabWallet objects.
+
+## 5. Data Models (Continued)
+
+### SabWallet

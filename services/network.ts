@@ -39,6 +39,25 @@ export interface ErpSyncRecord {
   status: string;
 }
 
+export interface StateProposal {
+  proposal_id: string;
+  trigger_id: string;
+  proposed_state: string;
+  timelock_end_block: number;
+  status: 'Pending' | 'Approved' | 'Executed';
+  tee_attestation: string;
+  yield_routing: string;
+  capital_status: 'TransitBond' | 'Escrow';
+}
+
+export interface SettlementEnvelope {
+  protocol: 'ISO20022' | 'PAPSS' | 'BRICS';
+  payload: any;
+  raw_payload_bytes: string;
+  ingress_timestamp: string;
+}
+
+
 /**
  * Returns the correct Gateway API route.
  */
@@ -364,13 +383,13 @@ export const getHealth = async () => {
   return response.json();
 };
 
-export const getSettlementProposals = async () => {
+export const getSettlementProposals = async (): Promise<StateProposal[]> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/proposals`;
   const response = await fetch(url);
   return response.json();
 };
 
-export const submitIso20022Settlement = async (payload: any) => {
+export const submitIso20022Settlement = async (payload: any): Promise<StateProposal> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/iso20022`;
   const response = await fetch(url, {
     method: "POST",
@@ -380,7 +399,7 @@ export const submitIso20022Settlement = async (payload: any) => {
   return response.json();
 };
 
-export const submitPapssSettlement = async (payload: any) => {
+export const submitPapssSettlement = async (payload: any): Promise<StateProposal> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/papss`;
   const response = await fetch(url, {
     method: "POST",
@@ -390,7 +409,7 @@ export const submitPapssSettlement = async (payload: any) => {
   return response.json();
 };
 
-export const submitBricsSettlement = async (payload: any) => {
+export const submitBricsSettlement = async (payload: any): Promise<StateProposal> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/brics`;
   const response = await fetch(url, {
     method: "POST",
@@ -398,4 +417,19 @@ export const submitBricsSettlement = async (payload: any) => {
     body: JSON.stringify(payload),
   });
   return response.json();
+};
+
+export interface SabWallet {
+  address: string;
+  role: string;
+  owner: string;
+  status: string;
+  quorum?: string;
+  spending_limit_usd?: number;
+}
+
+export const getSabWallets = async (): Promise<SabWallet[]> => {
+  const url = getGatewayUrl("sab/wallets", currentEnv);
+  const response = await fetch(url);
+  return response.json() as Promise<SabWallet[]>;
 };

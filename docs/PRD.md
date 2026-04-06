@@ -55,3 +55,9 @@ The Gateway provides detailed status information for each service, including:
 - Rust-based implementation ensures memory safety and high performance.
 - Multi-factor risk engine provides unprecedented transparency for users.
 - Real-time on-chain reserve verification ensures protocol solvency.
+
+### 5.2. External Settlement Triggers (CON-162)
+- **Proposal-Only:** External triggers (ISO 20022, PAPSS, BRICS) generate state proposals, never direct execution.
+- **TEE Verification:** All incoming messages are verified within the StrongBox TEE before a proposal is emitted.
+- **Mandatory Timelock:** Every proposal is subject to a 144-block timelock on the Stacks/Bitcoin layer.
+- **Yield Routing:** Capital locked via external triggers follows the 5/5/90 productive streaming behavior.

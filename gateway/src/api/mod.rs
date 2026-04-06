@@ -80,7 +80,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(erp_sync_handler)
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
-            .service(state_commit_handler),
+            .service(state_commit_handler)
+            .service(sab_wallets_handler),
     );
 }
 
@@ -298,6 +299,7 @@ async fn lightning_invoice_handler(
 #[derive(Deserialize)]
 struct PayRequest {
     invoice: String,
+    testnet: Option<bool>,
 }
 
 #[post("/lightning/pay")]
@@ -305,6 +307,9 @@ async fn lightning_pay_handler(
     engine: web::Data<Engine>,
     req: web::Json<PayRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.pay_lightning_invoice(&req.invoice);
     HttpResponse::Ok().json(res)
 }
@@ -575,6 +580,7 @@ async fn identity_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 #[derive(Deserialize)]
 struct ErpSyncRequest {
     system: String,
+    testnet: Option<bool>,
 }
 
 #[post("/erp/sync")]
@@ -582,6 +588,9 @@ async fn erp_sync_handler(
     engine: web::Data<Engine>,
     req: web::Json<ErpSyncRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.sync_erp_data(&req.system);
     HttpResponse::Ok().json(res)
 }
@@ -601,6 +610,7 @@ async fn dlc_bond_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 #[derive(Deserialize)]
 struct StateCommitRequest {
     state_root: String,
+    testnet: Option<bool>,
 }
 
 #[post("/state/commit")]
@@ -608,6 +618,9 @@ async fn state_commit_handler(
     engine: web::Data<Engine>,
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
 }
@@ -643,4 +656,11 @@ async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> 
     }
     let res = engine.process_external_settlement("BRICS", payload.into_inner());
     HttpResponse::Ok().json(res)
+}
+
+#[get("/sab/wallets")]
+async fn sab_wallets_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let wallets = engine.get_sab_wallets();
+    HttpResponse::Ok().json(wallets)
 }
