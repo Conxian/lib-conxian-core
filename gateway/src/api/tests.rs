@@ -120,8 +120,8 @@ async fn test_external_settlement_flow() {
         .unwrap()
         .starts_with("prop-iso20022"));
 
-    // 2. Verify 144-block timelock (Stacks height 841000 + 144)
-    assert_eq!(proposal["timelock_end_block"], 841144);
+    // 2. Verify 144-block timelock (Stacks height 841500 + 144)
+    assert_eq!(proposal["timelock_end_block"], 841644);
 
     // 3. List proposals
     let req = test::TestRequest::get()

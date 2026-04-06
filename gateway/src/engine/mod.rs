@@ -366,7 +366,7 @@ impl Engine {
             let mut metadata = HashMap::new();
             match name {
                 "stacks" => {
-                    metadata.insert("block_height".to_string(), "841000".to_string());
+                    metadata.insert("block_height".to_string(), "841500".to_string());
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
                 }
                 "liquid" => {
@@ -430,7 +430,7 @@ impl Engine {
                     metadata.insert("spiderchain_nodes".to_string(), "144".to_string());
                 }
                 "b2network" => {
-                    metadata.insert("block_height".to_string(), "12540".to_string());
+                    metadata.insert("block_height".to_string(), "12600".to_string());
                 }
                 "alpen" => {
                     metadata.insert("zk_proof_type".to_string(), "SNARK".to_string());
@@ -676,6 +676,10 @@ impl Engine {
         self.request_count.fetch_add(1, Ordering::SeqCst);
     }
 
+    pub fn is_mainnet_only() -> bool {
+        std::env::var("CONXIAN_NETWORK").unwrap_or_else(|_| "mainnet".to_string()) == "mainnet"
+    }
+
     pub fn process_external_settlement(&self, protocol: &str, payload: Value) -> StateProposal {
         self.increment_requests();
         let envelope = SettlementEnvelope {
@@ -699,16 +703,16 @@ impl Engine {
             .metadata
             .get("block_height")
             .and_then(|h| h.parse().ok())
-            .unwrap_or(841000);
+            .unwrap_or(841500);
         let timelock_end = current_height + 144;
 
         let proposal = StateProposal {
             proposal_id: proposal_id.clone(),
             trigger_id,
-            proposed_state: "SovereignStateUpdate".to_string(),
+            proposed_state: "MainnetSovereignStateUpdate".to_string(),
             timelock_end_block: timelock_end,
             status: "Pending".to_string(),
-            tee_attestation: "VerifiedByStrongBox-v1.0".to_string(),
+            tee_attestation: "VerifiedByStrongBox-Mainnet-v1.0".to_string(),
         };
 
         self.state_proposals
@@ -1087,7 +1091,7 @@ impl Engine {
         self.increment_requests();
         let status = self.get_service_status("b2network");
         serde_json::json!({
-            "block_height": status.metadata.get("block_height").cloned().unwrap_or_else(|| "12540".to_string()),
+            "block_height": status.metadata.get("block_height").cloned().unwrap_or_else(|| "12600".to_string()),
             "proof_status": "Verified",
             "sequencer_batches": 1254,
             "da_layer": "Bitcoin"

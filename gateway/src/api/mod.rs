@@ -620,18 +620,27 @@ async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Respond
 
 #[post("/settlement/iso20022")]
 async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.process_external_settlement("ISO20022", payload.into_inner());
     HttpResponse::Ok().json(res)
 }
 
 #[post("/settlement/papss")]
 async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.process_external_settlement("PAPSS", payload.into_inner());
     HttpResponse::Ok().json(res)
 }
 
 #[post("/settlement/brics")]
 async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if !Engine::is_mainnet_only() && payload.get("testnet").is_none() {
+        return HttpResponse::Forbidden().body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.process_external_settlement("BRICS", payload.into_inner());
     HttpResponse::Ok().json(res)
 }
