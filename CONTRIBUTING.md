@@ -36,6 +36,14 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
   - Ensure all types are properly defined.
   - Use `npm run lint` if applicable.
 
+## Development Workflow
+
+### Security First
+
+- **No Secrets**: Never commit API keys, private keys, or credentials.
+- **Ignore Rules**: Adhere to the `.gitignore` rules. Do not bypass them or use `git add --force` for sensitive files.
+- **Verification**: Ensure all changes are verified and do not introduce unintended public/private boundary issues.
+
 ## Pull Request Process
 
 1. Create a new branch for your feature or bug fix.

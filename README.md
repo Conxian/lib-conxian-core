@@ -75,7 +75,7 @@ cargo test
 
 ## Architecture
 
-The system is organized into a modular Rust architecture:
+The system is organized into a unified modular Rust architecture (internal/gateway) to maintain security boundaries and audit-readiness:
 
 - `gateway/src/api`: Web handlers, routing, and request validation.
 - `gateway/src/engine`: Core logic, state management, background monitoring, and protocol handlers.
