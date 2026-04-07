@@ -81,7 +81,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
             .service(state_commit_handler)
-            // CON-75: Offline POS Sync
+            // Offline POS Sync
             .service(pos_sync_handler)
             .service(pos_sync_status_handler)
             .service(mesh_status_handler)
