@@ -46,10 +46,25 @@ fn decode_hex_32(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
     Ok(bytes)
 }
 
+fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
+    let trimmed = s.trim().strip_prefix("0x").unwrap_or(s.trim());
+    if trimmed.is_empty() {
+        return Err(Bitvm2VerifyError::InvalidHex);
+    }
+
+    let normalized = if trimmed.len() % 2 == 0 {
+        trimmed.to_owned()
+    } else {
+        format!("0{trimmed}")
+    };
+
+    hex::decode(normalized).map_err(|_| Bitvm2VerifyError::InvalidHex)
+}
+
 fn parse_public_input(s: &str) -> Result<Fr, Bitvm2VerifyError> {
     let s = s.trim();
     if s.starts_with("0x") {
-        let bytes = decode_hex_32(s)?;
+        let bytes = decode_hex_any(s)?;
         Ok(Fr::from_be_bytes_mod_order(&bytes))
     } else {
         Fr::from_str(s).map_err(|_| Bitvm2VerifyError::InvalidPublicInput)
