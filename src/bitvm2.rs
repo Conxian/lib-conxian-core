@@ -43,7 +43,11 @@ fn decode_b64(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
 }
 
 fn decode_hex_32(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
-    let trimmed = s.trim().strip_prefix("0x").unwrap_or(s.trim());
+    let trimmed = s.trim();
+    let trimmed = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
     let bytes = hex::decode(trimmed).map_err(|_| Bitvm2VerifyError::InvalidHex)?;
     if bytes.len() != 32 {
         return Err(Bitvm2VerifyError::InvalidHex);
@@ -52,7 +56,11 @@ fn decode_hex_32(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
 }
 
 fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
-    let trimmed = s.trim().strip_prefix("0x").unwrap_or(s.trim());
+    let trimmed = s.trim();
+    let trimmed = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .unwrap_or(trimmed);
     if trimmed.is_empty() {
         return Err(Bitvm2VerifyError::InvalidHex);
     }
@@ -68,7 +76,7 @@ fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
 
 fn parse_public_input(s: &str) -> Result<Fr, Bitvm2VerifyError> {
     let s = s.trim();
-    if s.starts_with("0x") {
+    if s.starts_with("0x") || s.starts_with("0X") {
         let bytes = decode_hex_any(s)?;
         Ok(Fr::from_be_bytes_mod_order(&bytes))
     } else {
