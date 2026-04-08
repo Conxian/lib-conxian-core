@@ -1,8 +1,11 @@
+use std::sync::{Arc, Mutex};
+
 use super::*;
 use crate::engine::Engine;
 use actix_web::{test, web, App};
 use serde_json::Value;
-use std::sync::Arc;
+
+static ENV_VAR_MUTEX: Mutex<()> = Mutex::new(());
 
 #[actix_web::test]
 async fn test_health_endpoint() {
@@ -181,6 +184,8 @@ async fn test_sab_wallets_endpoint() {
 
 #[actix_web::test]
 async fn test_bitvm2_verify_state_root_missing_vk() {
+    let _env_lock = ENV_VAR_MUTEX.lock().expect("env var mutex poisoned");
+
     struct EnvVarGuard {
         key: &'static str,
         prev: Option<String>,
@@ -198,7 +203,7 @@ async fn test_bitvm2_verify_state_root_missing_vk() {
     let key = lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64;
     let prev = std::env::var(key).ok();
     std::env::remove_var(key);
-    let _guard = EnvVarGuard { key, prev };
+    let _vk_guard = EnvVarGuard { key, prev };
 
     let engine_arc = Arc::new(Engine::new());
     engine_arc.initialize();
