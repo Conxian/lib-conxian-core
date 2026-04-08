@@ -155,7 +155,25 @@ async fn test_sab_wallets_endpoint() {
 
 #[actix_web::test]
 async fn test_bitvm2_verify_state_root_missing_vk() {
-    std::env::remove_var("BITVM2_GROTH16_VK_B64");
+    struct EnvVarGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match self.prev.take() {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
+    let key = lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64;
+    let prev = std::env::var(key).ok();
+    std::env::remove_var(key);
+    let _guard = EnvVarGuard { key, prev };
+
     let engine_arc = Arc::new(Engine::new()); engine_arc.initialize(); let engine = web::Data::from(engine_arc);
     let app = test::init_service(App::new().app_data(engine).configure(config)).await;
     let req = test::TestRequest::post()
