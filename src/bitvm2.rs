@@ -75,16 +75,17 @@ pub fn verify_state_root_bn254_groth16(
         CanonicalDeserialize::deserialize_compressed(&mut proof_cursor)
             .map_err(|_| Bitvm2VerifyError::InvalidProof)?;
 
-    let inputs: Vec<Fr> = match public_inputs {
-        Some(values) => values
-            .iter()
-            .map(|v| parse_public_input(v))
-            .collect::<Result<Vec<_>, _>>()?,
-        None => {
-            let root_bytes = decode_hex_32(state_root)?;
-            vec![Fr::from_be_bytes_mod_order(&root_bytes)]
-        }
-    };
+    let root_bytes = decode_hex_32(state_root)?;
+    let mut inputs = vec![Fr::from_be_bytes_mod_order(&root_bytes)];
+
+    if let Some(values) = public_inputs {
+        inputs.extend(
+            values
+                .iter()
+                .map(|v| parse_public_input(v))
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+    }
 
     Groth16::<Bn254>::verify_proof(&pvk, &proof, &inputs)
         .map_err(|_| Bitvm2VerifyError::InvalidProof)
