@@ -152,3 +152,16 @@ async fn test_sab_wallets_endpoint() {
     assert!(wallets.len() >= 1);
     assert_eq!(wallets[0]["address"], "SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM");
 }
+
+#[actix_web::test]
+async fn test_bitvm2_verify_state_root_missing_vk() {
+    std::env::remove_var("BITVM2_GROTH16_VK_B64");
+    let engine_arc = Arc::new(Engine::new()); engine_arc.initialize(); let engine = web::Data::from(engine_arc);
+    let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+    let req = test::TestRequest::post()
+        .uri("/api/v1/bitvm2/verify-state-root")
+        .set_json(serde_json::json!({"state_root": "0x0000000000000000000000000000000000000000000000000000000000000000", "proof": ""}))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), actix_web::http::StatusCode::SERVICE_UNAVAILABLE);
+}

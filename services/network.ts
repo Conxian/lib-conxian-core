@@ -290,6 +290,32 @@ export const getBitvm2Info = async () => {
   return response.json();
 };
 
+export interface Bitvm2StateRootVerificationResult {
+  state_root: string;
+  verified: boolean;
+  proof_system?: string;
+  curve?: string;
+  error?: string;
+}
+
+export const verifyBitvm2StateRoot = async (
+  stateRoot: string,
+  proof: string,
+  publicInputs?: string[],
+): Promise<Bitvm2StateRootVerificationResult> => {
+  const url = `${getGatewayUrl("bitvm2", currentEnv)}/verify-state-root`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      state_root: stateRoot,
+      proof,
+      public_inputs: publicInputs,
+    }),
+  });
+  return response.json() as Promise<Bitvm2StateRootVerificationResult>;
+};
+
 export const getRiskAssessment = async () => {
   const url = getGatewayUrl("risk-assessment", currentEnv);
   const response = await fetch(url);
