@@ -10,6 +10,10 @@ Centralize shared models, APIs, and core logic used by Conxian Gateway and downs
 
 Active development. Expect iteration as new layers, metadata, and compliance primitives are integrated.
 
+## Ownership
+
+Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
+
 ## Audience
 
 - Gateway engineers extending engine, API, and persistence logic.
