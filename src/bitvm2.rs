@@ -1,12 +1,17 @@
 use ark_bn254::{Bn254, Fr};
 use ark_ff::PrimeField;
-use ark_groth16::{prepare_verifying_key, Groth16, Proof, VerifyingKey};
+use ark_groth16::{prepare_verifying_key, Groth16, PreparedVerifyingKey, Proof, VerifyingKey};
 use ark_serialize::CanonicalDeserialize;
 use base64::engine::general_purpose;
 use base64::Engine as _;
+use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::{Arc, OnceLock, RwLock};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
+
+static CACHED_PVKS: OnceLock<RwLock<HashMap<String, Arc<PreparedVerifyingKey<Bn254>>>>> =
+    OnceLock::new();
 
 #[derive(Debug)]
 pub enum Bitvm2VerifyError {
@@ -71,20 +76,45 @@ fn parse_public_input(s: &str) -> Result<Fr, Bitvm2VerifyError> {
     }
 }
 
-pub fn verify_state_root_bn254_groth16(
-    vk_b64: &str,
-    state_root: &str,
-    proof_b64: &str,
-    extra_public_inputs: Option<&[String]>,
-) -> Result<bool, Bitvm2VerifyError> {
-    let vk_bytes = decode_b64(vk_b64).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bitvm2VerifyError> {
+    let key = vk_b64.trim();
+    let cache = CACHED_PVKS.get_or_init(|| RwLock::new(HashMap::new()));
+
+    {
+        let guard = cache
+            .read()
+            .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+
+        if let Some(pvk) = guard.get(key) {
+            return Ok(Arc::clone(pvk));
+        }
+    }
+
+    let vk_bytes = decode_b64(key).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let mut vk_cursor = vk_bytes.as_slice();
     let vk: VerifyingKey<Bn254> = CanonicalDeserialize::deserialize_compressed(&mut vk_cursor)
         .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     if !vk_cursor.is_empty() {
         return Err(Bitvm2VerifyError::InvalidVerifyingKey);
     }
-    let pvk = prepare_verifying_key(&vk);
+    let pvk = Arc::new(prepare_verifying_key(&vk));
+
+    let mut guard = cache
+        .write()
+        .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+    let entry = guard
+        .entry(key.to_owned())
+        .or_insert_with(|| Arc::clone(&pvk));
+    Ok(Arc::clone(entry))
+}
+
+pub fn verify_state_root_bn254_groth16(
+    vk_b64: &str,
+    state_root: &str,
+    proof_b64: &str,
+    extra_public_inputs: Option<&[String]>,
+) -> Result<bool, Bitvm2VerifyError> {
+    let pvk = get_or_init_pvk(vk_b64)?;
 
     let proof_bytes = decode_b64(proof_b64).map_err(|_| Bitvm2VerifyError::InvalidProof)?;
     let mut proof_cursor = proof_bytes.as_slice();
@@ -106,6 +136,6 @@ pub fn verify_state_root_bn254_groth16(
         );
     }
 
-    Groth16::<Bn254>::verify_proof(&pvk, &proof, &inputs)
+    Groth16::<Bn254>::verify_proof(pvk.as_ref(), &proof, &inputs)
         .map_err(|_| Bitvm2VerifyError::InvalidProof)
 }
