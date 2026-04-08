@@ -144,6 +144,7 @@ fn get_or_prepare_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, 
 /// Verifies a Groth16 proof whose first public input is the provided `state_root`.
 ///
 /// Any `extra_public_inputs` are appended to the public-input vector in-order.
+/// Callers should not include the `state_root` again in `extra_public_inputs`.
 pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
