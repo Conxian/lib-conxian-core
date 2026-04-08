@@ -1,11 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::*;
 use crate::engine::Engine;
 use actix_web::{test, web, App};
 use serde_json::Value;
 
-static ENV_VAR_MUTEX: Mutex<()> = Mutex::new(());
+static ENV_VAR_MUTEX: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[actix_web::test]
 async fn test_health_endpoint() {
@@ -184,7 +184,7 @@ async fn test_sab_wallets_endpoint() {
 
 #[actix_web::test]
 async fn test_bitvm2_verify_state_root_missing_vk() {
-    let _env_lock = ENV_VAR_MUTEX.lock().expect("env var mutex poisoned");
+    let _env_lock = ENV_VAR_MUTEX.lock().await;
 
     struct EnvVarGuard {
         key: &'static str,
