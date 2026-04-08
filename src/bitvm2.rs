@@ -60,7 +60,7 @@ pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
     proof_b64: &str,
-    public_inputs: Option<&[String]>,
+    extra_public_inputs: Option<&[String]>,
 ) -> Result<bool, Bitvm2VerifyError> {
     let vk_bytes = decode_b64(vk_b64).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let mut vk_cursor = vk_bytes.as_slice();
@@ -78,7 +78,7 @@ pub fn verify_state_root_bn254_groth16(
     let root_bytes = decode_hex_32(state_root)?;
     let mut inputs = vec![Fr::from_be_bytes_mod_order(&root_bytes)];
 
-    if let Some(values) = public_inputs {
+    if let Some(values) = extra_public_inputs {
         inputs.extend(
             values
                 .iter()

@@ -174,7 +174,9 @@ async fn test_bitvm2_verify_state_root_missing_vk() {
     std::env::remove_var(key);
     let _guard = EnvVarGuard { key, prev };
 
-    let engine_arc = Arc::new(Engine::new()); engine_arc.initialize(); let engine = web::Data::from(engine_arc);
+    let engine_arc = Arc::new(Engine::new());
+    engine_arc.initialize();
+    let engine = web::Data::from(engine_arc);
     let app = test::init_service(App::new().app_data(engine).configure(config)).await;
     let req = test::TestRequest::post()
         .uri("/api/v1/bitvm2/verify-state-root")

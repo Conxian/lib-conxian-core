@@ -167,6 +167,13 @@ async fn bitvm2_verify_state_root_handler(
             "proof_system": "groth16",
             "curve": "bn254"
         })),
+        Err(lib_conxian_core::bitvm2::Bitvm2VerifyError::InvalidVerifyingKey) => {
+            HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "state_root": req.state_root,
+                "verified": false,
+                "error": "verifying key is not valid/configured",
+            }))
+        }
         Err(err) => HttpResponse::BadRequest().json(serde_json::json!({
             "state_root": req.state_root,
             "verified": false,
