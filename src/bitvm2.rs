@@ -76,6 +76,7 @@ fn fr_from_be_bytes_32_canonical(bytes: &[u8]) -> Result<Fr, Bitvm2VerifyError> 
     }
 
     let fr = Fr::from_be_bytes_mod_order(bytes);
+
     let mut roundtrip = fr.into_bigint().to_bytes_be();
     if roundtrip.len() > 32 {
         return Err(Bitvm2VerifyError::InvalidPublicInput);

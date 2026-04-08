@@ -8,6 +8,28 @@ use tokio::sync::Mutex;
 
 static ENV_VAR_MUTEX: Mutex<()> = Mutex::const_new(());
 
+struct EnvVarGuard {
+    key: &'static str,
+    prev: Option<String>,
+}
+
+impl EnvVarGuard {
+    fn unset(key: &'static str) -> Self {
+        let prev = std::env::var(key).ok();
+        std::env::remove_var(key);
+        Self { key, prev }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        match self.prev.take() {
+            Some(v) => std::env::set_var(self.key, v),
+            None => std::env::remove_var(self.key),
+        }
+    }
+}
+
 #[actix_web::test]
 async fn test_health_endpoint() {
     let engine_arc = Arc::new(Engine::new());
@@ -186,25 +208,8 @@ async fn test_sab_wallets_endpoint() {
 #[actix_web::test]
 async fn test_bitvm2_verify_state_root_missing_vk() {
     let _env_lock = ENV_VAR_MUTEX.lock().await;
-
-    struct EnvVarGuard {
-        key: &'static str,
-        prev: Option<String>,
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            match self.prev.take() {
-                Some(value) => std::env::set_var(self.key, value),
-                None => std::env::remove_var(self.key),
-            }
-        }
-    }
-
     let key = lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64;
-    let prev = std::env::var(key).ok();
-    std::env::remove_var(key);
-    let _vk_guard = EnvVarGuard { key, prev };
+    let _env_guard = EnvVarGuard::unset(key);
 
     let engine_arc = Arc::new(Engine::new());
     engine_arc.initialize();
@@ -212,7 +217,10 @@ async fn test_bitvm2_verify_state_root_missing_vk() {
     let app = test::init_service(App::new().app_data(engine).configure(config)).await;
     let req = test::TestRequest::post()
         .uri("/api/v1/bitvm2/verify-state-root")
-        .set_json(serde_json::json!({"state_root": "0x0000000000000000000000000000000000000000000000000000000000000000", "proof": ""}))
+        .set_json(serde_json::json!({
+            "state_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "proof": ""
+        }))
         .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(
