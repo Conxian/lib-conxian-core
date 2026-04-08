@@ -79,16 +79,14 @@ pub fn verify_state_root_bn254_groth16(
 ) -> Result<bool, Bitvm2VerifyError> {
     let vk_bytes = decode_b64(vk_b64).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let mut vk_cursor = vk_bytes.as_slice();
-    let vk: VerifyingKey<Bn254> =
-        CanonicalDeserialize::deserialize_compressed(&mut vk_cursor)
-            .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+    let vk: VerifyingKey<Bn254> = CanonicalDeserialize::deserialize_compressed(&mut vk_cursor)
+        .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let pvk = prepare_verifying_key(&vk);
 
     let proof_bytes = decode_b64(proof_b64).map_err(|_| Bitvm2VerifyError::InvalidProof)?;
     let mut proof_cursor = proof_bytes.as_slice();
-    let proof: Proof<Bn254> =
-        CanonicalDeserialize::deserialize_compressed(&mut proof_cursor)
-            .map_err(|_| Bitvm2VerifyError::InvalidProof)?;
+    let proof: Proof<Bn254> = CanonicalDeserialize::deserialize_compressed(&mut proof_cursor)
+        .map_err(|_| Bitvm2VerifyError::InvalidProof)?;
 
     let root_bytes = decode_hex_32(state_root)?;
     let mut inputs = vec![Fr::from_be_bytes_mod_order(&root_bytes)];

@@ -1,2 +1,2 @@
-pub mod musig2;
 pub mod bitvm2;
+pub mod musig2;
