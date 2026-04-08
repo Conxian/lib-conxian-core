@@ -144,7 +144,9 @@ fn get_or_prepare_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, 
 /// Verifies a Groth16 proof whose first public input is the provided `state_root`.
 ///
 /// Any `extra_public_inputs` are appended to the public-input vector in-order.
-/// Callers should not include the `state_root` again in `extra_public_inputs`.
+///
+/// For backward compatibility, if `extra_public_inputs[0]` parses to the same value as
+/// `state_root`, it is treated as the root input instead of prefixing `state_root` again.
 pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
@@ -162,15 +164,29 @@ pub fn verify_state_root_bn254_groth16(
     }
 
     let root_bytes = decode_hex_32(state_root)?;
-    let mut inputs = vec![fr_from_be_bytes_32_canonical(&root_bytes)?];
+    let root_fr = fr_from_be_bytes_32_canonical(&root_bytes)?;
+
+    let mut inputs = Vec::new();
 
     if let Some(values) = extra_public_inputs {
-        inputs.extend(
-            values
-                .iter()
-                .map(|v| parse_public_input(v))
-                .collect::<Result<Vec<_>, _>>()?,
-        );
+        let mut iter = values.iter();
+        if let Some(first) = iter.next() {
+            let first_fr = parse_public_input(first)?;
+            if first_fr == root_fr {
+                inputs.push(first_fr);
+            } else {
+                inputs.push(root_fr);
+                inputs.push(first_fr);
+            }
+        } else {
+            inputs.push(root_fr);
+        }
+
+        for v in iter {
+            inputs.push(parse_public_input(v)?);
+        }
+    } else {
+        inputs.push(root_fr);
     }
 
     Groth16::<Bn254>::verify_proof(pvk.as_ref(), &proof, &inputs)
