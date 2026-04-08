@@ -534,7 +534,7 @@ impl Engine {
         }
     }
 
-    fn update_metrics(&self) {
+    fn update_metrics(self: &Arc<Self>) {
         let total_requests = self.request_count.load(Ordering::SeqCst);
         let mut metrics = self.financial_metrics.write().unwrap();
         metrics.protocol_fees_collected_usd = total_requests as f64 * 0.05;
@@ -545,12 +545,17 @@ impl Engine {
         *total_tvl = self.calculate_total_tvl();
 
         // Audit SAB wallets periodically (Simulated)
-        let wallets = self.sab_wallets.read().unwrap();
-        if wallets.is_empty() {
-            log::warn!("No SAB wallets configured for mainnet execution!");
+        {
+            let wallets = self.sab_wallets.read().unwrap();
+            if wallets.is_empty() {
+                log::warn!("No SAB wallets configured for mainnet execution!");
+            }
         }
 
-        std::mem::drop(self.fetch_stacks_block_height());
+        let engine = Arc::clone(self);
+        tokio::spawn(async move {
+            let _ = engine.fetch_stacks_block_height().await;
+        });
     }
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
