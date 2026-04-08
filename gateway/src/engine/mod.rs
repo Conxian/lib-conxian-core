@@ -380,7 +380,7 @@ impl Engine {
             log::warn!("No SAB wallets configured for mainnet execution!");
         }
 
-        let _ = self.fetch_stacks_block_height();
+        std::mem::drop(self.fetch_stacks_block_height());
     }
 
 

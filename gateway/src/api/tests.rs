@@ -149,7 +149,7 @@ async fn test_sab_wallets_endpoint() {
     let resp = test::call_service(&app, req).await;
     assert!(resp.status().is_success());
     let wallets: Vec<Value> = test::read_body_json(resp).await;
-    assert!(wallets.len() >= 1);
+    assert!(!wallets.is_empty());
     assert_eq!(wallets[0]["address"], "SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM");
 }
 
