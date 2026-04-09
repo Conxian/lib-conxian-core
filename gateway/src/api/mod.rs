@@ -174,6 +174,13 @@ async fn bitvm2_verify_state_root_handler(
                 "error": "verifying key is not valid/configured",
             }))
         }
+        Err(lib_conxian_core::bitvm2::Bitvm2VerifyError::Internal) => {
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "state_root": req.state_root,
+                "verified": false,
+                "error": "internal verification error",
+            }))
+        }
         Err(err) => HttpResponse::BadRequest().json(serde_json::json!({
             "state_root": req.state_root,
             "verified": false,
