@@ -101,11 +101,6 @@ fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bit
         }
     }
 
-    let mut guard = cache.write().map_err(|_| Bitvm2VerifyError::Internal)?;
-    if let Some(pvk) = guard.get(key) {
-        return Ok(Arc::clone(pvk));
-    }
-
     let vk_bytes = decode_b64(key).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let mut vk_cursor = vk_bytes.as_slice();
     let vk: VerifyingKey<Bn254> = CanonicalDeserialize::deserialize_compressed(&mut vk_cursor)
@@ -115,14 +110,21 @@ fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bit
     }
     let pvk = Arc::new(prepare_verifying_key(&vk));
 
+    let mut guard = cache.write().map_err(|_| Bitvm2VerifyError::Internal)?;
+    if let Some(existing) = guard.get(key) {
+        return Ok(Arc::clone(existing));
+    }
+
     if guard.len() >= MAX_CACHED_PVKS {
         if let Some(evict) = guard.keys().next().cloned() {
             guard.remove(&evict);
         }
     }
 
-    guard.insert(key.to_owned(), Arc::clone(&pvk));
-    Ok(pvk)
+    let entry = guard
+        .entry(key.to_owned())
+        .or_insert_with(|| Arc::clone(&pvk));
+    Ok(Arc::clone(entry))
 }
 
 pub fn verify_state_root_bn254_groth16(
