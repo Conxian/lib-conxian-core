@@ -10,11 +10,14 @@ use std::sync::{Arc, OnceLock, RwLock};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
+const MAX_CACHED_PVKS: usize = 4;
+
 static CACHED_PVKS: OnceLock<RwLock<HashMap<String, Arc<PreparedVerifyingKey<Bn254>>>>> =
     OnceLock::new();
 
 #[derive(Debug)]
 pub enum Bitvm2VerifyError {
+    Internal,
     InvalidBase64,
     InvalidHex,
     InvalidProof,
@@ -25,6 +28,7 @@ pub enum Bitvm2VerifyError {
 impl std::fmt::Display for Bitvm2VerifyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Internal => write!(f, "internal error"),
             Self::InvalidBase64 => write!(f, "invalid base64"),
             Self::InvalidHex => write!(f, "invalid hex"),
             Self::InvalidProof => write!(f, "invalid Groth16 proof"),
@@ -89,13 +93,16 @@ fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bit
     let cache = CACHED_PVKS.get_or_init(|| RwLock::new(HashMap::new()));
 
     {
-        let guard = cache
-            .read()
-            .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+        let guard = cache.read().map_err(|_| Bitvm2VerifyError::Internal)?;
 
         if let Some(pvk) = guard.get(key) {
             return Ok(Arc::clone(pvk));
         }
+    }
+
+    let mut guard = cache.write().map_err(|_| Bitvm2VerifyError::Internal)?;
+    if let Some(pvk) = guard.get(key) {
+        return Ok(Arc::clone(pvk));
     }
 
     let vk_bytes = decode_b64(key).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
@@ -107,13 +114,14 @@ fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bit
     }
     let pvk = Arc::new(prepare_verifying_key(&vk));
 
-    let mut guard = cache
-        .write()
-        .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
-    let entry = guard
-        .entry(key.to_owned())
-        .or_insert_with(|| Arc::clone(&pvk));
-    Ok(Arc::clone(entry))
+    if guard.len() >= MAX_CACHED_PVKS {
+        if let Some(evict) = guard.keys().next().cloned() {
+            guard.remove(&evict);
+        }
+    }
+
+    guard.insert(key.to_owned(), Arc::clone(&pvk));
+    Ok(pvk)
 }
 
 pub fn verify_state_root_bn254_groth16(
