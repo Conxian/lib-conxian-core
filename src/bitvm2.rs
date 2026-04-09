@@ -15,6 +15,7 @@ const MAX_CACHED_PVKS: usize = 4;
 static CACHED_PVKS: OnceLock<RwLock<HashMap<String, Arc<PreparedVerifyingKey<Bn254>>>>> =
     OnceLock::new();
 
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum Bitvm2VerifyError {
     Internal,
