@@ -2,6 +2,10 @@
 
 ## 1. System Endpoints
 
+### Production Branch Policy (CON-407)
+All production-facing endpoints (/api/v1/settlement/*, /api/v1/erp/*, /api/v1/state/*) enforce mainnet-only behavior. In production environments (CONXIAN_NETWORK=mainnet), testnet bypasses are strictly prohibited. Non-production environments MUST provide an explicit `testnet` flag in the JSON payload to acknowledge validation state.
+
+
 ### GET /api/v1/health
 Returns the health status.
 - **Response:** `{ "status": "healthy", "engine": "active" }`
