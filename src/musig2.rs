@@ -42,7 +42,7 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
 
     // 1. Sort public keys lexicographically to ensure deterministic aggregation
     let mut sorted_keys = pubkeys.to_vec();
-    sorted_keys.sort_by(|a, b| a.serialize().cmp(&b.serialize()));
+    sorted_keys.sort_by_key(|key| key.serialize());
 
     // 2. Compute the aggregation hash (L)
     let mut hasher = Sha256::new();
