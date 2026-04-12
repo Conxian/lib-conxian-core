@@ -18,6 +18,7 @@ The Conxian Gateway provides deep protocol integration and transparent risk metr
   - **On-chain Reserve Verification:** Implemented dynamic collateral ratio tracking and "Verified (On-chain)" status for Liquid and Rootstock reserves.
   - **BitVM Challenge Monitoring:** Integrated automated challenge-response status into BitVM2 risk assessments.
   - **MuSig2 Key Aggregation:** Implemented BIP327-compliant deterministic key aggregation for trust-minimized bridging (CON-145).
+  - **BitVM2 Segment Orchestration:** Implemented on-chain segment generation (364 chunks) and disprove logic for optimistic bridge safety (CON-464).
   - **External Settlement Proposals:** Implemented TEE-verified proposal-only triggers for ISO 20022, PAPSS, and BRICS with 144-block timelocks (CON-162).
 - **Next Steps:**
   - Real-time RPC connectivity to Bitcoin Core and Core DAO nodes.
