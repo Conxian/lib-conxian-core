@@ -57,6 +57,7 @@ The Conxian network implements a creator-first, sovereign economic model designe
 - Unified binary approach simplifies the attack surface.
 - Rust-based implementation ensures memory safety and high performance.
 - Multi-factor risk engine provides unprecedented transparency for users.
+- BIP327-compliant MuSig2 key aggregation ensures deterministic Taproot multi-signature security.
 - Real-time on-chain reserve verification ensures protocol solvency.
 
 ### 6.1. External Settlement Triggers (CON-162)

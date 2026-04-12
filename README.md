@@ -1,4 +1,4 @@
-# Conxian Core Libraries
+# lib-conxian-core
 
 This repository contains the core logic for the Conxian network, centered around the **Conxian Gateway**.
 
@@ -86,3 +86,19 @@ The system is organized into a unified modular Rust architecture (internal/gatew
 - `services/`: Client-side TypeScript library for interacting with the Gateway.
 
 For detailed infrastructure information, see [docs/architecture/GCP_INFRASTRUCTURE.md](docs/architecture/GCP_INFRASTRUCTURE.md).
+
+## Security & Mainnet Readiness (CON-145)
+
+This repository is classified as a **P0 Mainnet Blocker**. The following security and readiness standards are enforced:
+
+- **Fail-Closed Logic**: All cryptographic and protocol operations must fail closed.
+- **No Mocks in Production**: Implementation stubs or simulated behaviors are strictly prohibited on the `main` branch.
+- **Dependency Integrity**: Only audited or standard industry-vetted dependencies are permitted for core protocol logic.
+- **MuSig2 Compliance**: Key aggregation follows the BIP327 standard for deterministic Taproot compatibility.
+- **BitVM2 Verification**: Groth16 proof verification is performed using standard ark-works curves and verifiers.
+
+## Release Hygiene (CON-218)
+
+- **Versioning**: Adheres to Semantic Versioning (SemVer).
+- **Changelog**: All changes are documented in [`CHANGELOG.md`](./CHANGELOG.md).
+- **Audit Trails**: Security assessments and audit reports are preserved in `docs/architecture/`.

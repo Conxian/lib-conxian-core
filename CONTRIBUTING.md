@@ -57,3 +57,13 @@ All PRs require review from at least one core maintainer before merging.
 ## Security
 
 If you discover a security vulnerability, please refer to our [Security Policy](SECURITY.md) for reporting instructions.
+
+## Release Discipline & Versioning
+
+- **Semantic Versioning**: We use [SemVer](https://semver.org/).
+  - `MAJOR` version for incompatible API changes.
+  - `MINOR` version for functionality in a backwards compatible manner.
+  - `PATCH` version for backwards compatible bug fixes.
+- **Changelog**: All changes must be recorded in `CHANGELOG.md`.
+- **Tags**: Releases must be tagged in Git (e.g., `v0.2.0`).
+- **Mainnet Safety**: Code promoted to the `main` branch must be mainnet-ready. Non-production behavior (stubs, mocks) is restricted to `dev` or `staged` branches.
