@@ -1,5 +1,5 @@
+use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
-use chrono::{Datelike, DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -48,11 +48,26 @@ pub struct SupportConfig {
 impl Default for SupportConfig {
     fn default() -> Self {
         let mut mappings = HashMap::new();
-        mappings.insert("support@conxian-labs.com".to_string(), SupportChannel::Public);
-        mappings.insert("info@conxian-labs.com".to_string(), SupportChannel::Internal);
-        mappings.insert("admin@conxian-labs.com".to_string(), SupportChannel::Internal);
-        mappings.insert("community@conxian-labs.com".to_string(), SupportChannel::Community);
-        mappings.insert("builders@conxian-labs.com".to_string(), SupportChannel::Community);
+        mappings.insert(
+            "support@conxian-labs.com".to_string(),
+            SupportChannel::Public,
+        );
+        mappings.insert(
+            "info@conxian-labs.com".to_string(),
+            SupportChannel::Internal,
+        );
+        mappings.insert(
+            "admin@conxian-labs.com".to_string(),
+            SupportChannel::Internal,
+        );
+        mappings.insert(
+            "community@conxian-labs.com".to_string(),
+            SupportChannel::Community,
+        );
+        mappings.insert(
+            "builders@conxian-labs.com".to_string(),
+            SupportChannel::Community,
+        );
 
         Self {
             imap_host: "mail.privateemail.com".to_string(),
@@ -112,9 +127,9 @@ impl SupportIntake {
         let mut result = input.to_string();
         if let Some(at_idx) = result.find('@') {
             if let Some(start_idx) = result[..at_idx].rfind(' ') {
-                 result.replace_range(start_idx + 1..at_idx + 1, "[REDACTED]@");
+                result.replace_range(start_idx + 1..at_idx + 1, "[REDACTED]@");
             } else {
-                 result.replace_range(0..at_idx + 1, "[REDACTED]@");
+                result.replace_range(0..at_idx + 1, "[REDACTED]@");
             }
         }
         result
@@ -174,23 +189,37 @@ mod tests {
     #[test]
     fn test_classification() {
         let intake = SupportIntake::new(SupportConfig::default());
-        assert_eq!(intake.classify_recipient("support@conxian-labs.com"), SupportChannel::Public);
-        assert_eq!(intake.classify_recipient("community@conxian-labs.com"), SupportChannel::Community);
-        assert_eq!(intake.classify_recipient("unknown@conxian-labs.com"), SupportChannel::Public);
+        assert_eq!(
+            intake.classify_recipient("support@conxian-labs.com"),
+            SupportChannel::Public
+        );
+        assert_eq!(
+            intake.classify_recipient("community@conxian-labs.com"),
+            SupportChannel::Community
+        );
+        assert_eq!(
+            intake.classify_recipient("unknown@conxian-labs.com"),
+            SupportChannel::Public
+        );
     }
 
     #[test]
     fn test_sanitization() {
         let intake = SupportIntake::new(SupportConfig::default());
-        let (subject, domain) = intake.sanitize_metadata("Issue from user@example.com", "sender@example.com");
+        let (subject, domain) =
+            intake.sanitize_metadata("Issue from user@example.com", "sender@example.com");
         assert!(subject.contains("[REDACTED]"));
         assert_eq!(domain, "example.com");
     }
 
     #[test]
     fn test_linear_labels() {
-        assert!(SupportChannel::Public.to_linear_labels().contains(&"Support-Public".to_string()));
-        assert!(SupportChannel::Community.to_linear_labels().contains(&"Publish-Candidate".to_string()));
+        assert!(SupportChannel::Public
+            .to_linear_labels()
+            .contains(&"Support-Public".to_string()));
+        assert!(SupportChannel::Community
+            .to_linear_labels()
+            .contains(&"Publish-Candidate".to_string()));
     }
 }
 
@@ -222,7 +251,10 @@ mod verification_tests {
         let labels = linear_issue["labels"].as_array().unwrap();
         assert!(labels.contains(&serde_json::json!("Support-Community")));
         assert!(labels.contains(&serde_json::json!("Publish-Candidate")));
-        assert!(linear_issue["title"].as_str().unwrap().contains(&ticket.token));
+        assert!(linear_issue["title"]
+            .as_str()
+            .unwrap()
+            .contains(&ticket.token));
     }
 
     #[test]
@@ -231,7 +263,13 @@ mod verification_tests {
         let ts = Utc::now();
 
         let recipient = "admin@conxian-labs.com";
-        let ticket = intake.process_inbound_metadata(recipient, "admin@internal.com", "System Alert", "id-1", ts);
+        let ticket = intake.process_inbound_metadata(
+            recipient,
+            "admin@internal.com",
+            "System Alert",
+            "id-1",
+            ts,
+        );
 
         assert_eq!(ticket.channel, SupportChannel::Internal);
         assert!(!ticket.publish_candidate);
