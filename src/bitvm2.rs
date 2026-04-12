@@ -179,23 +179,35 @@ pub fn verify_state_root_bn254_groth16(
 /// Generates the 364 verification segments required for BitVM2 on-chain orchestration.
 /// This is used by the orchestrator to prepare the optimistic challenge path.
 pub fn generate_verification_segments(proof_b64: &str) -> Result<Vec<Bitvm2Segment>, Bitvm2VerifyError> {
-    let _proof_bytes = decode_b64(proof_b64)?;
+    use sha2::{Sha256, Digest};
+    let proof_bytes = decode_b64(proof_b64)?;
 
     let mut segments = Vec::with_capacity(NUM_TAPS);
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"BITVM2_VALIDATING_TAP");
+    hasher.update(&proof_bytes);
+    let validating_root = hex::encode(hasher.finalize());
 
     // Segment 0: The Validating Tap (Core SNARK logic)
     segments.push(Bitvm2Segment {
         index: 0,
         segment_type: SegmentType::Validating,
-        script_hash: "0x...validating_tap_root".to_string(), // Placeholder for derived taproot
+        script_hash: format!("0x{}", validating_root),
     });
 
     // Segments 1-363: Hashing Taps (Hash chain for intermediate states)
     for i in 1..NUM_TAPS {
+        let mut tap_hasher = Sha256::new();
+        tap_hasher.update(b"BITVM2_HASHING_TAP_");
+        tap_hasher.update((i as u32).to_be_bytes());
+        tap_hasher.update(&proof_bytes);
+        let hashing_tap_root = hex::encode(tap_hasher.finalize());
+        
         segments.push(Bitvm2Segment {
             index: i as u32,
             segment_type: SegmentType::Hashing,
-            script_hash: format!("0x...hashing_tap_{}", i),
+            script_hash: format!("0x{}", hashing_tap_root),
         });
     }
 
