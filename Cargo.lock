@@ -1509,6 +1509,7 @@ dependencies = [
  "hex",
  "rand 0.8.5",
  "secp256k1",
+ "serde",
  "sha2",
 ]
 

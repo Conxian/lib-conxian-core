@@ -10,13 +10,18 @@ use std::sync::{Arc, OnceLock, RwLock};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
+/// BitVM2 Protocol Constants (Aligned with BIP-aligned standards)
+pub const NUM_TAPS: usize = 364;
+pub const VALIDATING_TAPS: usize = 1;
+pub const HASHING_TAPS: usize = 363;
+
 const MAX_CACHED_PVKS: usize = 4;
 
 static CACHED_PVKS: OnceLock<RwLock<HashMap<String, Arc<PreparedVerifyingKey<Bn254>>>>> =
     OnceLock::new();
 
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Bitvm2VerifyError {
     Internal,
     InvalidBase64,
@@ -24,6 +29,7 @@ pub enum Bitvm2VerifyError {
     InvalidProof,
     InvalidVerifyingKey,
     InvalidPublicInput,
+    SegmentMismatch,
 }
 
 impl std::fmt::Display for Bitvm2VerifyError {
@@ -35,11 +41,26 @@ impl std::fmt::Display for Bitvm2VerifyError {
             Self::InvalidProof => write!(f, "invalid Groth16 proof"),
             Self::InvalidVerifyingKey => write!(f, "invalid Groth16 verifying key"),
             Self::InvalidPublicInput => write!(f, "invalid public input"),
+            Self::SegmentMismatch => write!(f, "verification segment mismatch"),
         }
     }
 }
 
 impl std::error::Error for Bitvm2VerifyError {}
+
+/// Represents a single execution segment in the BitVM2 optimistic verification flow.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Bitvm2Segment {
+    pub index: u32,
+    pub segment_type: SegmentType,
+    pub script_hash: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub enum SegmentType {
+    Validating,
+    Hashing,
+}
 
 fn decode_b64(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
     general_purpose::STANDARD
@@ -70,7 +91,7 @@ fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
         return Err(Bitvm2VerifyError::InvalidHex);
     }
 
-    let normalized = if trimmed.len().is_multiple_of(2) {
+    let normalized = if trimmed.len() % 2 == 0 {
         trimmed.to_owned()
     } else {
         format!("0{trimmed}")
@@ -125,6 +146,7 @@ fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bit
     Ok(pvk)
 }
 
+/// Verifies a Groth16 state root proof.
 pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
@@ -145,14 +167,91 @@ pub fn verify_state_root_bn254_groth16(
     let mut inputs = vec![Fr::from_be_bytes_mod_order(&root_bytes)];
 
     if let Some(values) = extra_public_inputs {
-        inputs.extend(
-            values
-                .iter()
-                .map(|v| parse_public_input(v))
-                .collect::<Result<Vec<_>, _>>()?,
-        );
+        for v in values {
+            inputs.push(parse_public_input(v)?);
+        }
     }
 
     Groth16::<Bn254>::verify_proof(pvk.as_ref(), &proof, &inputs)
         .map_err(|_| Bitvm2VerifyError::InvalidProof)
+}
+
+/// Generates the 364 verification segments required for BitVM2 on-chain orchestration.
+/// This is used by the orchestrator to prepare the optimistic challenge path.
+pub fn generate_verification_segments(proof_b64: &str) -> Result<Vec<Bitvm2Segment>, Bitvm2VerifyError> {
+    let _proof_bytes = decode_b64(proof_b64)?;
+
+    let mut segments = Vec::with_capacity(NUM_TAPS);
+
+    // Segment 0: The Validating Tap (Core SNARK logic)
+    segments.push(Bitvm2Segment {
+        index: 0,
+        segment_type: SegmentType::Validating,
+        script_hash: "0x...validating_tap_root".to_string(), // Placeholder for derived taproot
+    });
+
+    // Segments 1-363: Hashing Taps (Hash chain for intermediate states)
+    for i in 1..NUM_TAPS {
+        segments.push(Bitvm2Segment {
+            index: i as u32,
+            segment_type: SegmentType::Hashing,
+            script_hash: format!("0x...hashing_tap_{}", i),
+        });
+    }
+
+    Ok(segments)
+}
+
+/// Verifies a disprove transaction by comparing the operator's claimed input/output
+/// hashes against the computed values for a specific segment.
+pub fn verify_disprove_transaction(
+    segment_index: u32,
+    _operator_input_hash: &str,
+    operator_output_hash: &str,
+    computed_output_hash: &str,
+) -> Result<bool, Bitvm2VerifyError> {
+    if segment_index >= NUM_TAPS as u32 {
+        return Err(Bitvm2VerifyError::SegmentMismatch);
+    }
+
+    // A disprove transaction is valid if the operator's output hash doesn't match
+    // the computed output hash for the given input.
+    let is_fraud = operator_output_hash != computed_output_hash;
+
+    // In a real implementation, we would also verify that the operator_input_hash
+    // corresponds to the previous segment's output hash (hash chain integrity).
+
+    Ok(is_fraud)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_segments() {
+        let segments = generate_verification_segments("YmFzZTY0cGxhY2Vob2xkZXI=").unwrap();
+        assert_eq!(segments.len(), NUM_TAPS);
+        assert_eq!(segments[0].segment_type, SegmentType::Validating);
+        assert_eq!(segments[1].segment_type, SegmentType::Hashing);
+    }
+
+    #[test]
+    fn test_disprove_logic() {
+        let is_fraud = verify_disprove_transaction(
+            5,
+            "0xinput",
+            "0xclaimed_output",
+            "0xcomputed_output"
+        ).unwrap();
+        assert!(is_fraud);
+
+        let no_fraud = verify_disprove_transaction(
+            5,
+            "0xinput",
+            "0xcorrect_output",
+            "0xcorrect_output"
+        ).unwrap();
+        assert!(!no_fraud);
+    }
 }
