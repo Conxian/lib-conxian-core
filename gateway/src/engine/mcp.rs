@@ -94,7 +94,14 @@ impl McpManager {
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
                 let id = _arguments.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                json!({ "content": [{ "type": "text", "text": format!("Proof data for {} (ID: {}) retrieved.", protocol, id) }] })
+
+                let proof_data = match protocol {
+                    "bitvm" => self.engine.get_bitvm_proof(id),
+                    "citrea" => self.engine.get_citrea_proof(id),
+                    _ => json!({ "error": "Protocol not supported via MCP yet" }),
+                };
+
+                json!({ "content": [{ "type": "text", "text": format!("Proof data for {}: {}", protocol, proof_data) }] })
             }
             "get_yield_metrics" => {
                 let financials = self.engine.get_financial_metrics();
