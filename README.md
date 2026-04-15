@@ -102,4 +102,5 @@ This repository is classified as a **P0 Mainnet Blocker**. The following securit
 
 - **Versioning**: Adheres to Semantic Versioning (SemVer).
 - **Changelog**: All changes are documented in [`CHANGELOG.md`](./CHANGELOG.md).
+- **Licensing**: Dual-licensed under [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE).
 - **Audit Trails**: Security assessments and audit reports are preserved in `docs/architecture/`.
