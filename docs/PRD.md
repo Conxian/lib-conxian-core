@@ -50,6 +50,9 @@ The Gateway provides detailed status information for each service, including:
 - **Risk Assessment:** `/api/v1/risk-assessment` provides a multi-factor breakdown of security risks (DA, Settlement, Bridge).
 - **Compliance:** `/api/v1/compliance` for KYC/AML, network integrity, and ZKML attestation (CON-70).
 
+## 6. Agentic & Autonomous Surface (MCP)
+The Gateway exposes a read-only Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents. This includes telemetry auditing, protocol proof discovery, and agent drafting for human signing.
+
 ## 5. Economic Model
 The Conxian network implements a creator-first, sovereign economic model designed to reward value creation and preserve builder freedom. For detailed operating rules, participation models, and reward logic, see [docs/ECONOMY.md](ECONOMY.md).
 

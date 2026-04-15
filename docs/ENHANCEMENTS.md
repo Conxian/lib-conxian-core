@@ -24,3 +24,14 @@ The Conxian Gateway provides deep protocol integration and transparent risk metr
   - Real-time RPC connectivity to Bitcoin Core and Core DAO nodes.
   - Integration of automated threat detection via mempool analysis.
   - Finality tracking for hybrid L2s (Hemi, BOB).
+
+## 4. Phase 9: Agentic Surface & Autonomous Systems (Active)
+- **Objective:** Enable programmatic trust and autonomous interaction via Model Context Protocol (MCP).
+- **Achievements:**
+  - **Read-First Agentic Surface:** Implemented an MCP layer allowing agents to audit system state, telemetry, and protocol proofs without alteration capabilities.
+  - **Agent Drafting Flow:** Implemented logic for agent-constructed financial intents, converting complex maneuvers into standard StateProposals for human signing.
+  - **Sovereign Handshake:** Defined a visualization layer for "Human-in-the-Loop" validation of agent-drafted actions, ensuring Zero Secret Egress and TEE-backed security.
+  - **Industrial Intent Discovery:** Enabled broadcasting of self-describing tool schemas for FSOC validation and settlement triggers.
+- **Next Steps:**
+  - Parallel mcp-server process for real-time intent broadcasting.
+  - Integration with `lib-conclave-sdk` for headless execution of approved intents.

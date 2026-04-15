@@ -1,3 +1,4 @@
+pub mod mcp;
 pub mod remediation;
 pub mod support;
 use chrono::{DateTime, Utc};

@@ -40,6 +40,7 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - **Automated TVL Aggregation**: Centralized monitoring of Total Value Locked across the entire ecosystem.
 - **Risk Transparency**: Detailed trust model and risk metadata aligned with research from [bitcoinlayers.org](https://bitcoinlayers.org/).
 - **Advanced Compliance**: Integrated address verification (`/compliance/check`) and network integrity monitoring.
+- **Agentic Surface (MCP)**: Read-only audit layer for AI agents to verify telemetry, proofs, and financials.
 - **Observability**: Prometheus-compatible metrics endpoint with per-service latency and risk gauges.
 - **High Performance**: Built with Rust and Actix-web for maximum reliability, memory safety, and throughput.
 

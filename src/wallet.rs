@@ -27,8 +27,8 @@ impl Wallet {
     }
 
     pub fn from_private_key_hex(hex_key: &str) -> anyhow::Result<Self> {
-        let bytes = hex::decode(hex_key.trim())
-            .with_context(|| "invalid hex in private key env var")?;
+        let bytes =
+            hex::decode(hex_key.trim()).with_context(|| "invalid hex in private key env var")?;
         Self::from_private_key_bytes(&bytes)
     }
 
@@ -68,4 +68,30 @@ impl Wallet {
 pub fn sign_transaction(tx_id: &str) -> anyhow::Result<String> {
     let wallet = Wallet::new()?;
     Ok(wallet.sign(tx_id))
+}
+
+/// A "Sovereign Handshake" visualizing state change for hardware approval.
+pub struct SovereignHandshake {
+    pub proposal_id: String,
+    pub intent_type: String,
+    pub state_change_summary: String,
+    pub timelock_end_block: u64,
+}
+
+impl SovereignHandshake {
+    pub fn new(proposal_id: String, intent_type: String, summary: String, end_block: u64) -> Self {
+        Self {
+            proposal_id,
+            intent_type,
+            state_change_summary: summary,
+            timelock_end_block: end_block,
+        }
+    }
+
+    pub fn visualize(&self) -> String {
+        format!(
+            "SOVEREIGN HANDSHAKE REQUIRED\n             ===========================\n             Proposal ID: {}\n             Intent Type: {}\n             Change:      {}\n             Timelock:    Until block {}\n             ===========================\n             Approve this agent-drafted action?",
+            self.proposal_id, self.intent_type, self.state_change_summary, self.timelock_end_block
+        )
+    }
 }
