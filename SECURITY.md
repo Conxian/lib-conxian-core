@@ -13,7 +13,7 @@ We take the security of our services seriously. If you believe you've found a se
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please send an email to [security@conxian.com](mailto:security@conxian.com).
+Instead, please send an email to [security@conxian-labs.com](mailto:security@conxian-labs.com).
 
 Please include:
 - A description of the issue.
