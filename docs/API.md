@@ -142,3 +142,24 @@ Returns the canonical wallet inventory for BOS and related system operations (CO
 ## 5. Data Models (Continued)
 
 ### SabWallet
+
+## 6. Agentic & Autonomous Surface (MCP)
+
+The Gateway exposes a read-only Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
+
+### POST /api/v1/mcp
+Unified entry point for MCP interactions (Tools, Resources, Prompts).
+
+#### MCP Tools
+- **get_system_telemetry**: Retrieve real-time TVL and node status.
+- **get_protocol_proof**: Audit specific protocol proofs (BitVM, Citrea).
+- **get_yield_metrics**: Analyze non-dilutive financial health and yield streams.
+- **list_industrial_intents**: Discover tool schemas for FSOC validation or settlement triggers.
+- **draft_financial_intent**: Construct complex financial intents for human signing (Subject to 144-block timelock).
+
+#### Execution Flow
+1. **Agent Drafting**: AI Agent construct an intent using `draft_financial_intent`.
+2. **Proposal Creation**: Gateway emits a `StateProposal` with `Pending` status.
+3. **Governance Gate**: Mandatory 144-block timelock is applied.
+4. **Human Handshake**: Conxius Wallet visualizes the state change for hardware approval.
+5. **Final Execution**: Transaction is executed via `lib-conclave-sdk` after multi-sig rules pass.

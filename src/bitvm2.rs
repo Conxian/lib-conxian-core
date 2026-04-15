@@ -91,7 +91,7 @@ fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
         return Err(Bitvm2VerifyError::InvalidHex);
     }
 
-    let normalized = if trimmed.len() % 2 == 0 {
+    let normalized = if trimmed.len().is_multiple_of(2) {
         trimmed.to_owned()
     } else {
         format!("0{trimmed}")
@@ -178,8 +178,10 @@ pub fn verify_state_root_bn254_groth16(
 
 /// Generates the 364 verification segments required for BitVM2 on-chain orchestration.
 /// This is used by the orchestrator to prepare the optimistic challenge path.
-pub fn generate_verification_segments(proof_b64: &str) -> Result<Vec<Bitvm2Segment>, Bitvm2VerifyError> {
-    use sha2::{Sha256, Digest};
+pub fn generate_verification_segments(
+    proof_b64: &str,
+) -> Result<Vec<Bitvm2Segment>, Bitvm2VerifyError> {
+    use sha2::{Digest, Sha256};
     let proof_bytes = decode_b64(proof_b64)?;
 
     let mut segments = Vec::with_capacity(NUM_TAPS);
@@ -203,7 +205,7 @@ pub fn generate_verification_segments(proof_b64: &str) -> Result<Vec<Bitvm2Segme
         tap_hasher.update((i as u32).to_be_bytes());
         tap_hasher.update(&proof_bytes);
         let hashing_tap_root = hex::encode(tap_hasher.finalize());
-        
+
         segments.push(Bitvm2Segment {
             index: i as u32,
             segment_type: SegmentType::Hashing,
@@ -250,20 +252,14 @@ mod tests {
 
     #[test]
     fn test_disprove_logic() {
-        let is_fraud = verify_disprove_transaction(
-            5,
-            "0xinput",
-            "0xclaimed_output",
-            "0xcomputed_output"
-        ).unwrap();
+        let is_fraud =
+            verify_disprove_transaction(5, "0xinput", "0xclaimed_output", "0xcomputed_output")
+                .unwrap();
         assert!(is_fraud);
 
-        let no_fraud = verify_disprove_transaction(
-            5,
-            "0xinput",
-            "0xcorrect_output",
-            "0xcorrect_output"
-        ).unwrap();
+        let no_fraud =
+            verify_disprove_transaction(5, "0xinput", "0xcorrect_output", "0xcorrect_output")
+                .unwrap();
         assert!(!no_fraud);
     }
 }

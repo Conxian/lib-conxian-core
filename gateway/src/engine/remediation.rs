@@ -14,7 +14,9 @@ pub fn validate_request(is_testnet_request: bool) -> Result<(), String> {
             return Err("Testnet bypass is strictly prohibited on production mainnet.".to_string());
         }
     } else if !is_testnet_request {
-        return Err("Non-production environment requires explicit testnet flag for validation.".to_string());
+        return Err(
+            "Non-production environment requires explicit testnet flag for validation.".to_string(),
+        );
     }
     Ok(())
 }

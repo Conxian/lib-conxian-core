@@ -1,5 +1,5 @@
 use secp256k1::rand::rngs::OsRng;
-use secp256k1::{Keypair, PublicKey, Secp256k1, XOnlyPublicKey, Scalar};
+use secp256k1::{Keypair, PublicKey, Scalar, Secp256k1, XOnlyPublicKey};
 use sha2::{Digest, Sha256};
 
 /// Represents a participant in a Taproot Musig2 Quorum.
@@ -67,7 +67,8 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
         let tweak = Scalar::from_be_bytes(tweak_bytes)
             .map_err(|_| "Invalid scalar from tweak hash".to_string())?;
 
-        combined_pk = combined_pk.add_exp_tweak(&secp, &tweak)
+        combined_pk = combined_pk
+            .add_exp_tweak(&secp, &tweak)
             .map_err(|e| format!("Key tweak failed: {}", e))?;
     }
 
@@ -99,7 +100,8 @@ mod tests {
 
         // Test sorting invariance
         let pubkeys_reversed = vec![p2.public_key(), p1.public_key()];
-        let aggregated_rev = aggregate_public_keys(&pubkeys_reversed).expect("Should aggregate reversed");
+        let aggregated_rev =
+            aggregate_public_keys(&pubkeys_reversed).expect("Should aggregate reversed");
         assert_eq!(aggregated2, aggregated_rev);
     }
 }
