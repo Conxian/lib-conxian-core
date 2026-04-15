@@ -1,6 +1,6 @@
 [package]
 name = "conxian-gateway"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["Conxian Team"]
 description = "Unified Gateway for Conxian Network Sovereign Services and Bitcoin Layers"

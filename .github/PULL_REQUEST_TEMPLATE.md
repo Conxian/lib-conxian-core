@@ -11,6 +11,12 @@
 - [ ] Documentation update
 - [ ] Security hardening / alignment
 
+## BOS Classification (CON-412)
+- [ ] **Docs-only**: Documentation, README, or strategic spec changes.
+- [ ] **Stub-isolation**: Refactoring to move mocks/stubs out of production paths.
+- [ ] **Dev-only implementation**: Feature work targeting the `dev` branch only.
+- [ ] **Production implementation**: Core logic targeting `main` (must be mainnet-ready).
+
 ## Mandatory Checklist
 - [ ] My code follows the style guidelines of this project (cargo fmt).
 - [ ] I have performed a self-review of my own code.
@@ -21,6 +27,8 @@
 - [ ] New and existing unit tests pass locally with my changes.
 - [ ] Any public/private boundaries are respected (ZSE compliant).
 
-## Mainnet Safety
+## Mainnet Safety & Release Operations
 - [ ] This PR contains NO mocks, stubs, or testnet-only logic for the `main` branch.
 - [ ] Intent-based actions follow the StateProposal/Timelock flow (CON-162).
+- [ ] Verified that UI, docs, and config match actual runtime behavior.
+- [ ] Required status checks and linting have passed.
