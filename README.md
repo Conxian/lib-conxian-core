@@ -1,5 +1,7 @@
 # lib-conxian-core
 
+![CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)
+
 This repository contains the core logic for the Conxian network, centered around the **Conxian Gateway**.
 
 ## Purpose
@@ -50,6 +52,8 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - [API Reference](docs/API.md) - Detailed endpoint documentation and data models.
 - [Enhancement Roadmap](docs/ENHANCEMENTS.md) - Evolution plan and current progress.
 - [Architecture & Infrastructure](docs/architecture/GCP_INFRASTRUCTURE.md) - Deployment and topology details.
+- [BOS Ownership Map](docs/architecture/BOS_OWNERSHIP_MAP.md) - Canonical repo and runtime ownership.
+- [Portfolio Map](docs/architecture/PORTFOLIO_MAP.md) - Repository classification and review standards.
 
 ### Getting Started
 
