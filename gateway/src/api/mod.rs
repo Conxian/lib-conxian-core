@@ -171,9 +171,16 @@ async fn bitvm2_verify_state_root_handler(
         &req.proof,
         req.public_inputs.as_deref(),
     ) {
-        Ok(verified) => HttpResponse::Ok().json(serde_json::json!({
+        Ok(true) => HttpResponse::Ok().json(serde_json::json!({
             "state_root": req.state_root,
-            "verified": verified,
+            "verified": true,
+            "proof_system": "groth16",
+            "curve": "bn254"
+        })),
+        Ok(false) => HttpResponse::UnprocessableEntity().json(serde_json::json!({
+            "state_root": req.state_root,
+            "verified": false,
+            "error": "verification failed",
             "proof_system": "groth16",
             "curve": "bn254"
         })),
