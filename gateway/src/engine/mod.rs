@@ -1,8 +1,8 @@
 pub mod mcp;
 pub mod remediation;
 pub mod support;
+use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
-use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -105,6 +105,104 @@ pub struct SettlementEnvelope {
     pub ingress_timestamp: DateTime<Utc>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PartnerLeadStatus {
+    New,
+    Assigned,
+    InProgress,
+    Escalated,
+    Closed,
+}
+
+impl PartnerLeadStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::New => "new",
+            Self::Assigned => "assigned",
+            Self::InProgress => "in_progress",
+            Self::Escalated => "escalated",
+            Self::Closed => "closed",
+        }
+    }
+
+    fn can_transition_to(&self, next: &Self) -> bool {
+        matches!(
+            (self, next),
+            (Self::New, Self::Assigned)
+                | (Self::Assigned, Self::InProgress)
+                | (Self::InProgress, Self::Escalated)
+                | (Self::Escalated, Self::Closed)
+        )
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLead {
+    pub id: String,
+    pub partner_name: String,
+    pub contact_name: String,
+    pub contact_email: String,
+    pub company_name: Option<String>,
+    pub notes: Option<String>,
+    pub status: PartnerLeadStatus,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub closed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLeadEvent {
+    pub event_id: String,
+    pub lead_id: String,
+    pub event_type: String,
+    pub previous_status: Option<PartnerLeadStatus>,
+    pub next_status: Option<PartnerLeadStatus>,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub note: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PartnerLeadCreateInput {
+    pub partner_name: String,
+    pub contact_name: String,
+    pub contact_email: String,
+    pub company_name: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PartnerLeadStatusUpdateInput {
+    pub status: PartnerLeadStatus,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub event_note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLeadCreateOutcome {
+    pub lead: PartnerLead,
+    pub idempotent_replay: bool,
+}
+
+#[derive(Clone, Debug)]
+pub enum PartnerLeadTransitionError {
+    NotFound,
+    InvalidTransition {
+        from: PartnerLeadStatus,
+        to: PartnerLeadStatus,
+    },
+    OwnerRequired,
+    EscalationReasonRequired,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -138,6 +236,7 @@ pub struct SabWallet {
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
+    pub support_intake: Arc<SupportIntake>,
     pub request_count: AtomicU64,
     pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
@@ -152,6 +251,10 @@ pub struct Engine {
     pub erp_sync_status: Arc<RwLock<HashMap<String, ErpSyncRecord>>>,
     pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
     pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
+    pub partner_leads: Arc<RwLock<HashMap<String, PartnerLead>>>,
+    pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
+    pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
+    pub partner_lead_sequence: AtomicU64,
     pub sab_wallets: Arc<RwLock<Vec<SabWallet>>>,
 }
 
@@ -164,8 +267,9 @@ impl Default for Engine {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            version: "0.2.0".to_string(),
+            version: "0.2.1".to_string(),
             start_time: Utc::now(),
+            support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
             total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(5),
@@ -192,6 +296,10 @@ impl Engine {
             erp_sync_status: Arc::new(RwLock::new(HashMap::new())),
             settlement_log: Arc::new(RwLock::new(Vec::new())),
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
+            partner_leads: Arc::new(RwLock::new(HashMap::new())),
+            partner_lead_events: Arc::new(RwLock::new(Vec::new())),
+            partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
+            partner_lead_sequence: AtomicU64::new(1),
             sab_wallets: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -202,199 +310,334 @@ impl Engine {
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
-        let services = vec![
-            (
-                "stacks",
-                65,
-                "PoX",
-                "On-chain",
-                "Bitcoin",
-                "sBTC Bridge",
-                12500000.0,
-            ),
-            (
-                "lightning",
-                15,
-                "State Channels",
-                "Off-chain",
-                "Bitcoin",
-                "P2P",
-                850000.0,
-            ),
-            (
-                "liquid",
-                45,
-                "Federation",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                25000000.0,
-            ),
-            (
-                "rootstock",
-                55,
-                "Merge-mined",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                18500000.0,
-            ),
-            (
-                "bisq",
-                120,
-                "P2P",
-                "Off-chain",
-                "Bitcoin",
-                "Atomic",
-                450000.0,
-            ),
-            (
-                "rgb",
-                35,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                1200000.0,
-            ),
-            (
-                "bitvm",
-                90,
-                "Optimistic",
-                "On-chain",
-                "Bitcoin",
-                "BitVM",
-                5000000.0,
-            ),
-            (
-                "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
-            ),
-            (
-                "core-dao",
-                40,
-                "Satoshi Plus",
-                "Sidechain",
-                "Bitcoin",
-                "Relayer",
-                75000000.0,
-            ),
-            (
-                "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
-            ),
-            (
-                "hemi",
-                50,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                35000000.0,
-            ),
-            (
-                "bob",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "Optimistic",
-                28000000.0,
-            ),
-            (
-                "merlin",
-                35,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                45000000.0,
-            ),
-            (
-                "mezo",
-                25,
-                "Economic Layer",
-                "On-chain",
-                "Bitcoin",
-                "tBTC",
-                150000000.0,
-            ),
-            ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
-            (
-                "bison",
-                55,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                10000000.0,
-            ),
-            (
-                "zulu",
-                40,
-                "Multi-layer",
-                "On-chain",
-                "Bitcoin",
-                "N/A",
-                15000000.0,
-            ),
-            (
-                "botanix",
-                60,
-                "Spiderchain",
-                "Sidechain",
-                "Bitcoin",
-                "Spiderchain",
-                8000000.0,
-            ),
-            (
-                "bitlayer",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "BitVM",
-                25000000.0,
-            ),
-            (
-                "alpen",
-                30,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                12000000.0,
-            ),
-            (
-                "taproot-assets",
-                15,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                5500000.0,
-            ),
-            (
-                "bitvm2",
-                85,
-                "ZK-Fraud Proofs",
-                "On-chain",
-                "Bitcoin",
-                "BitVM2",
-                15000000.0,
-            ),
-        ];
+
+        // CON-501: Remove static seeds from production mainnet
+        let is_mainnet = remediation::is_production_mainnet();
+
+        let services = if is_mainnet {
+            // Production paths must fetch data from real RPCs/Nodes
+            // Initializing with zero/placeholder to ensure discovery before functional use
+            vec![
+                (
+                    "stacks",
+                    0,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    0.0,
+                ),
+                (
+                    "lightning",
+                    0,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    0.0,
+                ),
+                (
+                    "liquid",
+                    0,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
+                (
+                    "rootstock",
+                    0,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
+                ("bisq", 0, "P2P", "Off-chain", "Bitcoin", "Atomic", 0.0),
+                ("rgb", 0, "Client-side", "Off-chain", "Bitcoin", "N/A", 0.0),
+                (
+                    "bitvm",
+                    0,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
+                (
+                    "babylon", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
+                (
+                    "core-dao",
+                    0,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    0.0,
+                ),
+                (
+                    "lorenzo", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
+                ("hemi", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "bob",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    0.0,
+                ),
+                ("merlin", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "mezo",
+                    0,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    0.0,
+                ),
+                ("nubit", 0, "DA", "On-chain", "Bitcoin", "N/A", 0.0),
+                ("bison", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                ("zulu", 0, "Multi-layer", "On-chain", "Bitcoin", "N/A", 0.0),
+                (
+                    "botanix",
+                    0,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    0.0,
+                ),
+                (
+                    "bitlayer",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
+                ("alpen", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "taproot-assets",
+                    0,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    0.0,
+                ),
+                (
+                    "bitvm2",
+                    0,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    0.0,
+                ),
+            ]
+        } else {
+            vec![
+                (
+                    "stacks",
+                    65,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    12500000.0,
+                ),
+                (
+                    "lightning",
+                    15,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    850000.0,
+                ),
+                (
+                    "liquid",
+                    45,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    25000000.0,
+                ),
+                (
+                    "rootstock",
+                    55,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    18500000.0,
+                ),
+                (
+                    "bisq",
+                    120,
+                    "P2P",
+                    "Off-chain",
+                    "Bitcoin",
+                    "Atomic",
+                    450000.0,
+                ),
+                (
+                    "rgb",
+                    35,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    1200000.0,
+                ),
+                (
+                    "bitvm",
+                    90,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    5000000.0,
+                ),
+                (
+                    "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
+                ),
+                (
+                    "core-dao",
+                    40,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    75000000.0,
+                ),
+                (
+                    "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
+                ),
+                (
+                    "hemi",
+                    50,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    35000000.0,
+                ),
+                (
+                    "bob",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    28000000.0,
+                ),
+                (
+                    "merlin",
+                    35,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    45000000.0,
+                ),
+                (
+                    "mezo",
+                    25,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    150000000.0,
+                ),
+                ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
+                (
+                    "bison",
+                    55,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    10000000.0,
+                ),
+                (
+                    "zulu",
+                    40,
+                    "Multi-layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "N/A",
+                    15000000.0,
+                ),
+                (
+                    "botanix",
+                    60,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    8000000.0,
+                ),
+                (
+                    "bitlayer",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    25000000.0,
+                ),
+                (
+                    "alpen",
+                    30,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    12000000.0,
+                ),
+                (
+                    "taproot-assets",
+                    15,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    5500000.0,
+                ),
+                (
+                    "bitvm2",
+                    85,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    15000000.0,
+                ),
+            ]
+        };
 
         for (name, latency, trust, da, settlement, bridge, tvl) in services {
             let mut metadata = HashMap::new();
             metadata.insert("version".to_string(), "1.2.0".to_string());
-            if name == "stacks" {
-                metadata.insert("block_height".to_string(), "841500".to_string());
-                metadata.insert("hiro_api_connected".to_string(), "true".to_string());
-            }
-            if name == "lorenzo" {
-                metadata.insert("staked_btc".to_string(), "1250.5".to_string());
-            }
-            if name == "b2network" {
-                metadata.insert("block_height".to_string(), "12600".to_string());
+            if !is_mainnet {
+                if name == "stacks" {
+                    metadata.insert("block_height".to_string(), "841500".to_string());
+                    metadata.insert("hiro_api_connected".to_string(), "true".to_string());
+                }
+                if name == "lorenzo" {
+                    metadata.insert("staked_btc".to_string(), "1250.5".to_string());
+                }
+                if name == "b2network" {
+                    metadata.insert("block_height".to_string(), "12600".to_string());
+                }
             }
 
             let assessment = self.calculate_risk_assessment(trust, da, settlement, bridge);
@@ -420,41 +663,43 @@ impl Engine {
             );
         }
 
-        let mut reserves = self.reserves.write().unwrap();
-        reserves.push(ReserveAsset {
-            asset: "L-BTC".to_string(),
-            total_supplied: 1500.0,
-            total_reserves: 1500.0,
-            collateral_ratio: 1.0,
-            status: "Verified (On-chain)".to_string(),
-        });
-        reserves.push(ReserveAsset {
-            asset: "RBTC".to_string(),
-            total_supplied: 2500.0,
-            total_reserves: 2500.0,
-            collateral_ratio: 1.0,
-            status: "Verified (On-chain)".to_string(),
-        });
+        if !is_mainnet {
+            let mut reserves = self.reserves.write().unwrap();
+            reserves.push(ReserveAsset {
+                asset: "L-BTC".to_string(),
+                total_supplied: 1500.0,
+                total_reserves: 1500.0,
+                collateral_ratio: 1.0,
+                status: "Verified (On-chain)".to_string(),
+            });
+            reserves.push(ReserveAsset {
+                asset: "RBTC".to_string(),
+                total_supplied: 2500.0,
+                total_reserves: 2500.0,
+                collateral_ratio: 1.0,
+                status: "Verified (On-chain)".to_string(),
+            });
 
-        let mut prices = self.prices.write().unwrap();
-        prices.insert(
-            "BTC".to_string(),
-            PriceInfo {
-                asset: "BTC".to_string(),
-                price_usd: 65000.0,
-                last_updated: Utc::now(),
-                source: "CoinGecko".to_string(),
-            },
-        );
-        prices.insert(
-            "STX".to_string(),
-            PriceInfo {
-                asset: "STX".to_string(),
-                price_usd: 2.50,
-                last_updated: Utc::now(),
-                source: "CoinGecko".to_string(),
-            },
-        );
+            let mut prices = self.prices.write().unwrap();
+            prices.insert(
+                "BTC".to_string(),
+                PriceInfo {
+                    asset: "BTC".to_string(),
+                    price_usd: 65000.0,
+                    last_updated: Utc::now(),
+                    source: "CoinGecko (Simulated)".to_string(),
+                },
+            );
+            prices.insert(
+                "STX".to_string(),
+                PriceInfo {
+                    asset: "STX".to_string(),
+                    price_usd: 2.50,
+                    last_updated: Utc::now(),
+                    source: "CoinGecko (Simulated)".to_string(),
+                },
+            );
+        }
 
         let mut affiliates = self.affiliates.write().unwrap();
         affiliates.insert(
@@ -537,7 +782,7 @@ impl Engine {
         }
     }
 
-    fn update_metrics(self: &Arc<Self>) {
+    fn update_metrics(&self) {
         let total_requests = self.request_count.load(Ordering::SeqCst);
         let mut metrics = self.financial_metrics.write().unwrap();
         metrics.protocol_fees_collected_usd = total_requests as f64 * 0.05;
@@ -554,32 +799,43 @@ impl Engine {
                 log::warn!("No SAB wallets configured for mainnet execution!");
             }
         }
-
-        let engine = Arc::clone(self);
-        tokio::spawn(async move {
-            let _ = engine.fetch_stacks_block_height().await;
-        });
     }
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
         let fallback_height = 841500;
         let client = reqwest::Client::new();
-        match client
+        let res = client
             .get("https://api.mainnet.hiro.so/v2/info")
             .timeout(std::time::Duration::from_secs(5))
             .send()
-            .await
-        {
+            .await;
+
+        let height = match res {
             Ok(resp) => {
                 if let Ok(info) = resp.json::<serde_json::Value>().await {
-                    if let Some(height) = info["stacks_tip_height"].as_u64() {
-                        return Ok(height);
-                    }
+                    info["stacks_tip_height"]
+                        .as_u64()
+                        .unwrap_or(fallback_height)
+                } else {
+                    fallback_height
                 }
-                Ok(fallback_height)
             }
-            Err(_) => Ok(fallback_height),
+            Err(_) => fallback_height,
+        };
+
+        // Update Stacks metadata
+        let mut statuses = self.service_statuses.write().unwrap();
+        if let Some(status) = statuses.get_mut("stacks") {
+            status
+                .metadata
+                .insert("block_height".to_string(), height.to_string());
+            status
+                .metadata
+                .insert("hiro_api_connected".to_string(), "true".to_string());
+            status.last_checked = Utc::now();
         }
+
+        Ok(height)
     }
 
     pub fn calculate_total_tvl(&self) -> f64 {
@@ -661,6 +917,231 @@ impl Engine {
         proposal
     }
 
+    fn next_partner_lead_token(&self, prefix: &str) -> String {
+        let seq = self.partner_lead_sequence.fetch_add(1, Ordering::SeqCst);
+        format!("{prefix}-{}-{seq}", Utc::now().timestamp_millis())
+    }
+
+    pub fn create_partner_lead(
+        &self,
+        input: PartnerLeadCreateInput,
+        idempotency_key: &str,
+    ) -> PartnerLeadCreateOutcome {
+        self.increment_requests();
+
+        if let Some(existing_id) = self
+            .partner_lead_idempotency
+            .read()
+            .unwrap()
+            .get(idempotency_key)
+            .cloned()
+        {
+            if let Some(existing_lead) = self
+                .partner_leads
+                .read()
+                .unwrap()
+                .get(&existing_id)
+                .cloned()
+            {
+                return PartnerLeadCreateOutcome {
+                    lead: existing_lead,
+                    idempotent_replay: true,
+                };
+            }
+        }
+
+        let now = Utc::now();
+        let lead_id = self.next_partner_lead_token("lead");
+        let lead = PartnerLead {
+            id: lead_id.clone(),
+            partner_name: input.partner_name,
+            contact_name: input.contact_name,
+            contact_email: input.contact_email,
+            company_name: input.company_name,
+            notes: input.notes,
+            status: PartnerLeadStatus::New,
+            owner: None,
+            escalated_to: None,
+            escalation_reason: None,
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
+        };
+
+        self.partner_leads
+            .write()
+            .unwrap()
+            .insert(lead_id.clone(), lead.clone());
+        self.partner_lead_idempotency
+            .write()
+            .unwrap()
+            .insert(idempotency_key.to_string(), lead_id.clone());
+
+        self.partner_lead_events
+            .write()
+            .unwrap()
+            .push(PartnerLeadEvent {
+                event_id: self.next_partner_lead_token("plevent"),
+                lead_id,
+                event_type: "created".to_string(),
+                previous_status: None,
+                next_status: Some(PartnerLeadStatus::New),
+                owner: lead.owner.clone(),
+                escalated_to: lead.escalated_to.clone(),
+                escalation_reason: lead.escalation_reason.clone(),
+                note: None,
+                created_at: now,
+            });
+
+        PartnerLeadCreateOutcome {
+            lead,
+            idempotent_replay: false,
+        }
+    }
+
+    pub fn get_partner_lead(&self, lead_id: &str) -> Option<PartnerLead> {
+        self.increment_requests();
+        self.partner_leads.read().unwrap().get(lead_id).cloned()
+    }
+
+    pub fn list_partner_leads(
+        &self,
+        status_filter: Option<PartnerLeadStatus>,
+        owner_filter: Option<&str>,
+    ) -> Vec<PartnerLead> {
+        self.increment_requests();
+        let owner_filter = owner_filter
+            .map(str::trim)
+            .filter(|owner| !owner.is_empty())
+            .map(ToOwned::to_owned);
+
+        let leads = self.partner_leads.read().unwrap();
+        let mut rows: Vec<_> = leads
+            .values()
+            .filter(|lead| {
+                let status_match = status_filter
+                    .as_ref()
+                    .map(|status| lead.status == *status)
+                    .unwrap_or(true);
+                let owner_match = owner_filter
+                    .as_deref()
+                    .map(|owner| {
+                        lead.owner
+                            .as_deref()
+                            .map(|candidate| candidate.eq_ignore_ascii_case(owner))
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(true);
+                status_match && owner_match
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        rows
+    }
+
+    pub fn transition_partner_lead(
+        &self,
+        lead_id: &str,
+        input: PartnerLeadStatusUpdateInput,
+    ) -> Result<PartnerLead, PartnerLeadTransitionError> {
+        self.increment_requests();
+
+        let mut leads = self.partner_leads.write().unwrap();
+        let lead = leads
+            .get_mut(lead_id)
+            .ok_or(PartnerLeadTransitionError::NotFound)?;
+
+        let from_status = lead.status.clone();
+        if !from_status.can_transition_to(&input.status) {
+            return Err(PartnerLeadTransitionError::InvalidTransition {
+                from: from_status,
+                to: input.status,
+            });
+        }
+
+        let normalized_owner = input
+            .owner
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+        let normalized_escalated_to = input
+            .escalated_to
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+        let normalized_escalation_reason = input
+            .escalation_reason
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+
+        if let Some(owner) = normalized_owner.clone() {
+            lead.owner = Some(owner);
+        }
+
+        match input.status {
+            PartnerLeadStatus::Assigned => {
+                if lead.owner.as_deref().unwrap_or_default().trim().is_empty() {
+                    return Err(PartnerLeadTransitionError::OwnerRequired);
+                }
+            }
+            PartnerLeadStatus::InProgress => {
+                if lead.owner.as_deref().unwrap_or_default().trim().is_empty() {
+                    return Err(PartnerLeadTransitionError::OwnerRequired);
+                }
+            }
+            PartnerLeadStatus::Escalated => {
+                let reason = normalized_escalation_reason
+                    .clone()
+                    .ok_or(PartnerLeadTransitionError::EscalationReasonRequired)?;
+                lead.escalation_reason = Some(reason);
+                if let Some(escalated_to) = normalized_escalated_to.clone() {
+                    lead.escalated_to = Some(escalated_to);
+                }
+            }
+            PartnerLeadStatus::Closed => {
+                lead.closed_at = Some(Utc::now());
+            }
+            PartnerLeadStatus::New => {}
+        }
+
+        let now = Utc::now();
+        let next_status = input.status;
+        lead.status = next_status.clone();
+        lead.updated_at = now;
+
+        let updated = lead.clone();
+        drop(leads);
+
+        self.partner_lead_events
+            .write()
+            .unwrap()
+            .push(PartnerLeadEvent {
+                event_id: self.next_partner_lead_token("plevent"),
+                lead_id: lead_id.to_string(),
+                event_type: "status_transition".to_string(),
+                previous_status: Some(from_status),
+                next_status: Some(next_status),
+                owner: updated.owner.clone(),
+                escalated_to: updated.escalated_to.clone(),
+                escalation_reason: updated.escalation_reason.clone(),
+                note: input
+                    .event_note
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                    .map(ToOwned::to_owned),
+                created_at: now,
+            });
+
+        Ok(updated)
+    }
+
     pub fn get_proposals(&self) -> Vec<StateProposal> {
         self.state_proposals
             .read()
@@ -707,6 +1188,14 @@ impl Engine {
 
     pub fn get_bitvm_proof(&self, proof_id: &str) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "proof_id": proof_id,
+                "status": "ConnectionRequired",
+                "error": "Mainnet node connection required for real-time proof auditing.",
+                "remediation": "Configure BITCOIN_RPC_URL and BITVM_DISPROVER_ENDPOINT"
+            });
+        }
         serde_json::json!({
             "proof_id": proof_id,
             "status": "verified",
@@ -740,6 +1229,14 @@ impl Engine {
 
     pub fn get_citrea_proof(&self, batch_id: &str) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "batch_id": batch_id,
+                "status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Citrea ZK-proof verification.",
+                "remediation": "Configure CITREA_RPC_URL"
+            });
+        }
         serde_json::json!({
             "batch_id": batch_id,
             "status": "Finalized",
@@ -1028,6 +1525,14 @@ impl Engine {
 
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "asset": "L-BTC",
+                "peg_status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Liquid peg verification.",
+                "remediation": "Configure LIQUID_RPC_URL"
+            });
+        }
         serde_json::json!({
             "asset": "L-BTC",
             "peg_status": "Active",
@@ -1038,6 +1543,14 @@ impl Engine {
 
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "asset": "RBTC",
+                "powpeg_status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Rootstock powpeg verification.",
+                "remediation": "Configure ROOTSTOCK_RPC_URL"
+            });
+        }
         serde_json::json!({
             "asset": "RBTC",
             "powpeg_status": "Active",
@@ -1102,6 +1615,12 @@ impl Engine {
         tokio::spawn(async move {
             loop {
                 engine.update_metrics();
+
+                let engine_clone = Arc::clone(&engine);
+                tokio::spawn(async move {
+                    let _ = engine_clone.fetch_stacks_block_height().await;
+                });
+
                 tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             }
         });
@@ -1109,5 +1628,32 @@ impl Engine {
 
     pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
         self.sab_wallets.read().unwrap().clone()
+    }
+
+    pub async fn poll_support(engine: Arc<Engine>) {
+        tokio::spawn(async move {
+            loop {
+                // In a real implementation, this would connect to IMAP
+                // For now, we simulate periodic polling of the support mailbox
+                log::info!("Polling support mailbox for new tickets...");
+
+                // Simulate finding an email
+                let ts = Utc::now();
+                let ticket = engine.support_intake.process_inbound_metadata(
+                    "support@conxian-labs.com",
+                    "user@external.com",
+                    "Assistance required with MuSig2",
+                    "<sim-123@external.com>",
+                    ts,
+                );
+
+                log::info!("Generated support ticket: {}", ticket.token);
+
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    engine.support_intake.config.poll_interval_secs,
+                ))
+                .await;
+            }
+        });
     }
 }

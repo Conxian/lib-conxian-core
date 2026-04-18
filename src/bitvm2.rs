@@ -1,27 +1,15 @@
 use ark_bn254::{Bn254, Fr};
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{prepare_verifying_key, Groth16, PreparedVerifyingKey, Proof, VerifyingKey};
 use ark_serialize::CanonicalDeserialize;
 use base64::engine::general_purpose;
 use base64::Engine as _;
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
-/// BitVM2 Protocol Constants (Aligned with BIP-aligned standards)
-pub const NUM_TAPS: usize = 364;
-pub const VALIDATING_TAPS: usize = 1;
-pub const HASHING_TAPS: usize = 363;
-
-const MAX_CACHED_PVKS: usize = 4;
-
-static CACHED_PVKS: OnceLock<RwLock<HashMap<String, Arc<PreparedVerifyingKey<Bn254>>>>> =
-    OnceLock::new();
-
-#[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Bitvm2VerifyError {
     Internal,
     InvalidBase64,
@@ -29,7 +17,6 @@ pub enum Bitvm2VerifyError {
     InvalidProof,
     InvalidVerifyingKey,
     InvalidPublicInput,
-    SegmentMismatch,
 }
 
 impl std::fmt::Display for Bitvm2VerifyError {
@@ -41,26 +28,11 @@ impl std::fmt::Display for Bitvm2VerifyError {
             Self::InvalidProof => write!(f, "invalid Groth16 proof"),
             Self::InvalidVerifyingKey => write!(f, "invalid Groth16 verifying key"),
             Self::InvalidPublicInput => write!(f, "invalid public input"),
-            Self::SegmentMismatch => write!(f, "verification segment mismatch"),
         }
     }
 }
 
 impl std::error::Error for Bitvm2VerifyError {}
-
-/// Represents a single execution segment in the BitVM2 optimistic verification flow.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Bitvm2Segment {
-    pub index: u32,
-    pub segment_type: SegmentType,
-    pub script_hash: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
-pub enum SegmentType {
-    Validating,
-    Hashing,
-}
 
 fn decode_b64(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
     general_purpose::STANDARD
@@ -69,11 +41,11 @@ fn decode_b64(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
 }
 
 fn decode_hex_32(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
-    let trimmed = s.trim();
-    let trimmed = trimmed
+    let s = s.trim();
+    let trimmed = s
         .strip_prefix("0x")
-        .or_else(|| trimmed.strip_prefix("0X"))
-        .unwrap_or(trimmed);
+        .or_else(|| s.strip_prefix("0X"))
+        .unwrap_or(s);
     let bytes = hex::decode(trimmed).map_err(|_| Bitvm2VerifyError::InvalidHex)?;
     if bytes.len() != 32 {
         return Err(Bitvm2VerifyError::InvalidHex);
@@ -82,16 +54,16 @@ fn decode_hex_32(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
 }
 
 fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
-    let trimmed = s.trim();
-    let trimmed = trimmed
+    let s = s.trim();
+    let trimmed = s
         .strip_prefix("0x")
-        .or_else(|| trimmed.strip_prefix("0X"))
-        .unwrap_or(trimmed);
+        .or_else(|| s.strip_prefix("0X"))
+        .unwrap_or(s);
     if trimmed.is_empty() {
         return Err(Bitvm2VerifyError::InvalidHex);
     }
 
-    let normalized = if trimmed.len().is_multiple_of(2) {
+    let normalized = if trimmed.len() % 2 == 0 {
         trimmed.to_owned()
     } else {
         format!("0{trimmed}")
@@ -100,62 +72,90 @@ fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
     hex::decode(normalized).map_err(|_| Bitvm2VerifyError::InvalidHex)
 }
 
+fn fr_from_be_bytes_32_canonical(bytes: &[u8]) -> Result<Fr, Bitvm2VerifyError> {
+    if bytes.len() != 32 {
+        return Err(Bitvm2VerifyError::InvalidPublicInput);
+    }
+
+    let fr = Fr::from_be_bytes_mod_order(bytes);
+
+    let mut roundtrip = fr.into_bigint().to_bytes_be();
+    if roundtrip.len() > 32 {
+        return Err(Bitvm2VerifyError::InvalidPublicInput);
+    }
+    if roundtrip.len() < 32 {
+        let mut padded = vec![0u8; 32 - roundtrip.len()];
+        padded.append(&mut roundtrip);
+        roundtrip = padded;
+    }
+    if roundtrip != bytes {
+        return Err(Bitvm2VerifyError::InvalidPublicInput);
+    }
+
+    Ok(fr)
+}
+
 fn parse_public_input(s: &str) -> Result<Fr, Bitvm2VerifyError> {
     let s = s.trim();
     if s.starts_with("0x") || s.starts_with("0X") {
         let bytes = decode_hex_any(s)?;
-        Ok(Fr::from_be_bytes_mod_order(&bytes))
+        if bytes.len() == 32 {
+            fr_from_be_bytes_32_canonical(&bytes)
+        } else {
+            Ok(Fr::from_be_bytes_mod_order(&bytes))
+        }
     } else {
         Fr::from_str(s).map_err(|_| Bitvm2VerifyError::InvalidPublicInput)
     }
 }
 
-fn get_or_init_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bitvm2VerifyError> {
-    let key = vk_b64.trim();
-    let cache = CACHED_PVKS.get_or_init(|| RwLock::new(HashMap::new()));
+struct PvkCache {
+    vk_b64: String,
+    pvk: Arc<PreparedVerifyingKey<Bn254>>,
+}
 
-    {
-        let guard = cache.read().map_err(|_| Bitvm2VerifyError::Internal)?;
+static PVK_CACHE: OnceLock<RwLock<Option<PvkCache>>> = OnceLock::new();
 
-        if let Some(pvk) = guard.get(key) {
-            return Ok(Arc::clone(pvk));
+fn get_or_prepare_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, Bitvm2VerifyError> {
+    let cache_lock = PVK_CACHE.get_or_init(|| RwLock::new(None));
+    let vk_b64 = vk_b64.trim();
+
+    if let Some(cache) = cache_lock.read().unwrap().as_ref() {
+        if cache.vk_b64 == vk_b64 {
+            return Ok(Arc::clone(&cache.pvk));
         }
     }
 
-    let vk_bytes = decode_b64(key).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
+    let vk_bytes = decode_b64(vk_b64).map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     let mut vk_cursor = vk_bytes.as_slice();
     let vk: VerifyingKey<Bn254> = CanonicalDeserialize::deserialize_compressed(&mut vk_cursor)
         .map_err(|_| Bitvm2VerifyError::InvalidVerifyingKey)?;
     if !vk_cursor.is_empty() {
         return Err(Bitvm2VerifyError::InvalidVerifyingKey);
     }
+
     let pvk = Arc::new(prepare_verifying_key(&vk));
+    *cache_lock.write().unwrap() = Some(PvkCache {
+        vk_b64: vk_b64.to_string(),
+        pvk: Arc::clone(&pvk),
+    });
 
-    let mut guard = cache.write().map_err(|_| Bitvm2VerifyError::Internal)?;
-    if let Some(existing) = guard.get(key) {
-        return Ok(Arc::clone(existing));
-    }
-
-    if guard.len() >= MAX_CACHED_PVKS {
-        if let Some(evict) = guard.keys().next().cloned() {
-            guard.remove(&evict);
-        }
-    }
-
-    let entry = guard
-        .entry(key.to_owned())
-        .or_insert_with(|| Arc::clone(&pvk));
-    Ok(Arc::clone(entry))
+    Ok(pvk)
 }
 
-/// Verifies a Groth16 state root proof.
+/// Verifies a Groth16 proof whose first public input is the provided `state_root`.
+///
+/// Any `extra_public_inputs` are appended to the public-input vector in-order.
+///
+/// For backward compatibility, if `extra_public_inputs[0]` parses to the same value as
+/// `state_root`, it is treated as the root input instead of prefixing `state_root` again.
 pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
     proof_b64: &str,
     extra_public_inputs: Option<&[String]>,
 ) -> Result<bool, Bitvm2VerifyError> {
-    let pvk = get_or_init_pvk(vk_b64)?;
+    let pvk = get_or_prepare_pvk(vk_b64)?;
 
     let proof_bytes = decode_b64(proof_b64).map_err(|_| Bitvm2VerifyError::InvalidProof)?;
     let mut proof_cursor = proof_bytes.as_slice();
@@ -166,102 +166,31 @@ pub fn verify_state_root_bn254_groth16(
     }
 
     let root_bytes = decode_hex_32(state_root)?;
-    let mut inputs = vec![Fr::from_be_bytes_mod_order(&root_bytes)];
+    let root_fr = fr_from_be_bytes_32_canonical(&root_bytes)?;
+
+    let mut inputs = Vec::new();
 
     if let Some(values) = extra_public_inputs {
-        for v in values {
+        let mut iter = values.iter();
+        if let Some(first) = iter.next() {
+            let first_fr = parse_public_input(first)?;
+            if first_fr == root_fr {
+                inputs.push(first_fr);
+            } else {
+                inputs.push(root_fr);
+                inputs.push(first_fr);
+            }
+        } else {
+            inputs.push(root_fr);
+        }
+
+        for v in iter {
             inputs.push(parse_public_input(v)?);
         }
+    } else {
+        inputs.push(root_fr);
     }
 
     Groth16::<Bn254>::verify_proof(pvk.as_ref(), &proof, &inputs)
         .map_err(|_| Bitvm2VerifyError::InvalidProof)
-}
-
-/// Generates the 364 verification segments required for BitVM2 on-chain orchestration.
-/// This is used by the orchestrator to prepare the optimistic challenge path.
-pub fn generate_verification_segments(
-    proof_b64: &str,
-) -> Result<Vec<Bitvm2Segment>, Bitvm2VerifyError> {
-    use sha2::{Digest, Sha256};
-    let proof_bytes = decode_b64(proof_b64)?;
-
-    let mut segments = Vec::with_capacity(NUM_TAPS);
-
-    let mut hasher = Sha256::new();
-    hasher.update(b"BITVM2_VALIDATING_TAP");
-    hasher.update(&proof_bytes);
-    let validating_root = hex::encode(hasher.finalize());
-
-    // Segment 0: The Validating Tap (Core SNARK logic)
-    segments.push(Bitvm2Segment {
-        index: 0,
-        segment_type: SegmentType::Validating,
-        script_hash: format!("0x{}", validating_root),
-    });
-
-    // Segments 1-363: Hashing Taps (Hash chain for intermediate states)
-    for i in 1..NUM_TAPS {
-        let mut tap_hasher = Sha256::new();
-        tap_hasher.update(b"BITVM2_HASHING_TAP_");
-        tap_hasher.update((i as u32).to_be_bytes());
-        tap_hasher.update(&proof_bytes);
-        let hashing_tap_root = hex::encode(tap_hasher.finalize());
-
-        segments.push(Bitvm2Segment {
-            index: i as u32,
-            segment_type: SegmentType::Hashing,
-            script_hash: format!("0x{}", hashing_tap_root),
-        });
-    }
-
-    Ok(segments)
-}
-
-/// Verifies a disprove transaction by comparing the operator's claimed input/output
-/// hashes against the computed values for a specific segment.
-pub fn verify_disprove_transaction(
-    segment_index: u32,
-    _operator_input_hash: &str,
-    operator_output_hash: &str,
-    computed_output_hash: &str,
-) -> Result<bool, Bitvm2VerifyError> {
-    if segment_index >= NUM_TAPS as u32 {
-        return Err(Bitvm2VerifyError::SegmentMismatch);
-    }
-
-    // A disprove transaction is valid if the operator's output hash doesn't match
-    // the computed output hash for the given input.
-    let is_fraud = operator_output_hash != computed_output_hash;
-
-    // In a real implementation, we would also verify that the operator_input_hash
-    // corresponds to the previous segment's output hash (hash chain integrity).
-
-    Ok(is_fraud)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_segments() {
-        let segments = generate_verification_segments("YmFzZTY0cGxhY2Vob2xkZXI=").unwrap();
-        assert_eq!(segments.len(), NUM_TAPS);
-        assert_eq!(segments[0].segment_type, SegmentType::Validating);
-        assert_eq!(segments[1].segment_type, SegmentType::Hashing);
-    }
-
-    #[test]
-    fn test_disprove_logic() {
-        let is_fraud =
-            verify_disprove_transaction(5, "0xinput", "0xclaimed_output", "0xcomputed_output")
-                .unwrap();
-        assert!(is_fraud);
-
-        let no_fraud =
-            verify_disprove_transaction(5, "0xinput", "0xcorrect_output", "0xcorrect_output")
-                .unwrap();
-        assert!(!no_fraud);
-    }
 }

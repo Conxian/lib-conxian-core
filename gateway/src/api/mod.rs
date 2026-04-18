@@ -2,8 +2,11 @@ pub mod mcp_handler;
 use crate::engine::remediation;
 #[cfg(test)]
 mod tests;
-use crate::engine::Engine;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use crate::engine::{
+    Engine, PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
+    PartnerLeadTransitionError,
+};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -85,6 +88,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(dlc_bond_handler)
             .service(state_commit_handler)
             .service(sab_wallets_handler)
+            .service(partner_intake_create_handler)
+            .service(partner_intake_get_handler)
+            .service(partner_intake_list_handler)
+            .service(partner_intake_status_update_handler)
             .service(mcp_handler::mcp_handler),
     );
 }
@@ -164,9 +171,16 @@ async fn bitvm2_verify_state_root_handler(
         &req.proof,
         req.public_inputs.as_deref(),
     ) {
-        Ok(verified) => HttpResponse::Ok().json(serde_json::json!({
+        Ok(true) => HttpResponse::Ok().json(serde_json::json!({
             "state_root": req.state_root,
-            "verified": verified,
+            "verified": true,
+            "proof_system": "groth16",
+            "curve": "bn254"
+        })),
+        Ok(false) => HttpResponse::UnprocessableEntity().json(serde_json::json!({
+            "state_root": req.state_root,
+            "verified": false,
+            "error": "verification failed",
             "proof_system": "groth16",
             "curve": "bn254"
         })),
@@ -690,6 +704,262 @@ async fn state_commit_handler(
     }
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
+}
+
+/// Partner intake endpoints require this header and env var pairing:
+/// - Header: `X-Partner-Intake-Key`
+/// - Env var: `PARTNER_INTAKE_API_KEY`
+///
+/// If the env var is absent/empty, handlers return `503 Service Unavailable`.
+/// If the header is missing or mismatched, handlers return `401 Unauthorized`.
+const PARTNER_INTAKE_API_KEY_ENV: &str = "PARTNER_INTAKE_API_KEY";
+const PARTNER_INTAKE_API_KEY_HEADER: &str = "X-Partner-Intake-Key";
+const PARTNER_INTAKE_IDEMPOTENCY_KEY_HEADER: &str = "Idempotency-Key";
+
+fn require_partner_intake_auth(req: &HttpRequest) -> Result<(), HttpResponse> {
+    let expected = match std::env::var(PARTNER_INTAKE_API_KEY_ENV) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return Err(HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "error": "partner_intake_not_configured",
+                "message": format!(
+                    "{} must be set to enable partner intake APIs",
+                    PARTNER_INTAKE_API_KEY_ENV
+                ),
+            })))
+        }
+    };
+
+    let provided = req
+        .headers()
+        .get(PARTNER_INTAKE_API_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    match provided {
+        Some(value) if value == expected => Ok(()),
+        _ => Err(HttpResponse::Unauthorized().json(serde_json::json!({
+            "error": "unauthorized",
+            "message": format!(
+                "Provide {} header matching configured intake key",
+                PARTNER_INTAKE_API_KEY_HEADER
+            ),
+        }))),
+    }
+}
+
+fn require_idempotency_key(req: &HttpRequest) -> Result<String, HttpResponse> {
+    req.headers()
+        .get(PARTNER_INTAKE_IDEMPOTENCY_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "missing_idempotency_key",
+                "message": format!(
+                    "{} header is required for partner intake create requests",
+                    PARTNER_INTAKE_IDEMPOTENCY_KEY_HEADER
+                ),
+            }))
+        })
+}
+
+fn trim_optional(input: Option<String>) -> Option<String> {
+    input
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+#[derive(Deserialize)]
+struct PartnerLeadCreateRequest {
+    partner_name: Option<String>,
+    contact_name: Option<String>,
+    contact_email: Option<String>,
+    company_name: Option<String>,
+    notes: Option<String>,
+}
+
+impl PartnerLeadCreateRequest {
+    fn validate(self) -> Result<PartnerLeadCreateInput, Vec<String>> {
+        let mut errors = Vec::new();
+
+        let partner_name = trim_optional(self.partner_name).unwrap_or_else(|| {
+            errors.push("partner_name is required".to_string());
+            String::new()
+        });
+
+        let contact_name = trim_optional(self.contact_name).unwrap_or_else(|| {
+            errors.push("contact_name is required".to_string());
+            String::new()
+        });
+
+        let contact_email = trim_optional(self.contact_email).unwrap_or_else(|| {
+            errors.push("contact_email is required".to_string());
+            String::new()
+        });
+
+        if !contact_email.is_empty() && !contact_email.contains('@') {
+            errors.push("contact_email must be a valid email address".to_string());
+        }
+
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(PartnerLeadCreateInput {
+            partner_name,
+            contact_name,
+            contact_email,
+            company_name: trim_optional(self.company_name),
+            notes: trim_optional(self.notes),
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct PartnerLeadListQuery {
+    status: Option<PartnerLeadStatus>,
+    owner: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PartnerLeadStatusUpdateRequest {
+    status: PartnerLeadStatus,
+    owner: Option<String>,
+    escalated_to: Option<String>,
+    escalation_reason: Option<String>,
+    event_note: Option<String>,
+}
+
+impl PartnerLeadStatusUpdateRequest {
+    fn into_engine_input(self) -> PartnerLeadStatusUpdateInput {
+        PartnerLeadStatusUpdateInput {
+            status: self.status,
+            owner: trim_optional(self.owner),
+            escalated_to: trim_optional(self.escalated_to),
+            escalation_reason: trim_optional(self.escalation_reason),
+            event_note: trim_optional(self.event_note),
+        }
+    }
+}
+
+fn map_partner_transition_error(err: PartnerLeadTransitionError) -> HttpResponse {
+    match err {
+        PartnerLeadTransitionError::NotFound => {
+            HttpResponse::NotFound().json(serde_json::json!({"error": "lead_not_found"}))
+        }
+        PartnerLeadTransitionError::InvalidTransition { from, to } => HttpResponse::Conflict()
+            .json(serde_json::json!({
+                "error": "invalid_transition",
+                "message": format!(
+                    "Transition {} -> {} is not allowed",
+                    from.as_str(),
+                    to.as_str()
+                ),
+            })),
+        PartnerLeadTransitionError::OwnerRequired => {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "message": "owner is required for assigned/in_progress states",
+            }))
+        }
+        PartnerLeadTransitionError::EscalationReasonRequired => {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "message": "escalation_reason is required when moving to escalated",
+            }))
+        }
+    }
+}
+
+#[post("/intake/partner")]
+async fn partner_intake_create_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+    payload: web::Json<PartnerLeadCreateRequest>,
+) -> impl Responder {
+    if let Err(response) = require_partner_intake_auth(&req) {
+        return response;
+    }
+
+    let idempotency_key = match require_idempotency_key(&req) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+
+    let input = match payload.into_inner().validate() {
+        Ok(input) => input,
+        Err(errors) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "details": errors,
+            }))
+        }
+    };
+
+    let outcome = engine.create_partner_lead(input, &idempotency_key);
+    if outcome.idempotent_replay {
+        HttpResponse::Ok().json(outcome)
+    } else {
+        HttpResponse::Created().json(outcome)
+    }
+}
+
+#[get("/intake/partner/{id}")]
+async fn partner_intake_get_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> impl Responder {
+    if let Err(response) = require_partner_intake_auth(&req) {
+        return response;
+    }
+
+    let lead_id = path.into_inner();
+    match engine.get_partner_lead(&lead_id) {
+        Some(lead) => HttpResponse::Ok().json(lead),
+        None => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "lead_not_found",
+            "lead_id": lead_id,
+        })),
+    }
+}
+
+#[get("/intake/partner")]
+async fn partner_intake_list_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+    query: web::Query<PartnerLeadListQuery>,
+) -> impl Responder {
+    if let Err(response) = require_partner_intake_auth(&req) {
+        return response;
+    }
+
+    let leads = engine.list_partner_leads(query.status.clone(), query.owner.as_deref());
+    HttpResponse::Ok().json(leads)
+}
+
+#[post("/intake/partner/{id}/status")]
+async fn partner_intake_status_update_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+    path: web::Path<String>,
+    payload: web::Json<PartnerLeadStatusUpdateRequest>,
+) -> impl Responder {
+    if let Err(response) = require_partner_intake_auth(&req) {
+        return response;
+    }
+
+    let lead_id = path.into_inner();
+    match engine.transition_partner_lead(&lead_id, payload.into_inner().into_engine_input()) {
+        Ok(lead) => HttpResponse::Ok().json(lead),
+        Err(err) => map_partner_transition_error(err),
+    }
 }
 
 #[get("/settlement/proposals")]
