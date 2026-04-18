@@ -766,7 +766,7 @@ dependencies = [
 
 [[package]]
 name = "conxian-gateway"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "actix-web",
  "async-imap",
@@ -1684,7 +1684,7 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "lib-conxian-core"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "ark-bn254",

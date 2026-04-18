@@ -1,4 +1,4 @@
-# Conxian Gateway API Reference v2
+# Conxian Gateway API Reference v0.2.1
 
 ## 1. System Endpoints
 
@@ -12,7 +12,7 @@ Returns the health status.
 
 ### GET /api/v1/status
 Returns general system information with high-precision metrics.
-- **Response:** `{ "version": "0.2.0", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
+- **Response:** `{ "version": "0.2.1", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
 
 ### GET /api/v1/financials
 Returns real-time financial intelligence metrics (MRR, ARR, Churn).
@@ -47,7 +47,7 @@ Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63
 - **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
-Returns the CJCS v2.0 JSON-LD machine-readable definition (CON-73).
+Returns the CJCS v0.2.1 JSON-LD machine-readable definition (CON-73).
 
 ### GET /api/v1/finance/bond/{id}
 Retrieves Bitcoin DLC Bond lifecycle information (CON-62, CON-72).
@@ -163,3 +163,38 @@ Unified entry point for MCP interactions (Tools, Resources, Prompts).
 3. **Governance Gate**: Mandatory 144-block timelock is applied.
 4. **Human Handshake**: Conxius Wallet visualizes the state change for hardware approval.
 5. **Final Execution**: Transaction is executed via `lib-conclave-sdk` after multi-sig rules pass.
+
+## 7. Partner Intake Endpoints
+
+### POST /api/v1/intake/partner
+Creates a new partner lead. Requires `X-Partner-Intake-Key` and `Idempotency-Key` headers.
+- **Request:**
+  ```json
+  {
+    "partner_name": "Acme Corp",
+    "contact_name": "John Doe",
+    "contact_email": "john@acme.com",
+    "company_name": "Acme Services",
+    "notes": "Interested in sBTC integration"
+  }
+  ```
+- **Response:** PartnerLead object.
+
+### GET /api/v1/intake/partner/{id}
+Retrieves a specific partner lead by ID.
+- **Response:** PartnerLead object.
+
+### GET /api/v1/intake/partner
+Lists partner leads with optional filtering.
+- **Query Params:** `status`, `owner`
+
+### POST /api/v1/intake/partner/{id}/status
+Updates the status of a partner lead.
+- **Request:**
+  ```json
+  {
+    "status": "assigned",
+    "owner": "admin@conxian-labs.com",
+    "event_note": "Assigned to primary review"
+  }
+  ```
