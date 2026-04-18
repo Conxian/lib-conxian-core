@@ -1,4 +1,6 @@
-# Conxian Core Libraries
+# lib-conxian-core
+
+![CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)
 
 This repository contains the core logic for the Conxian network, centered around the **Conxian Gateway**.
 
@@ -9,6 +11,10 @@ Centralize shared models, APIs, and core logic used by Conxian Gateway and downs
 ## Status
 
 Active development. Expect iteration as new layers, metadata, and compliance primitives are integrated.
+
+## Ownership
+
+Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
 
 ## Audience
 
@@ -36,6 +42,7 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - **Automated TVL Aggregation**: Centralized monitoring of Total Value Locked across the entire ecosystem.
 - **Risk Transparency**: Detailed trust model and risk metadata aligned with research from [bitcoinlayers.org](https://bitcoinlayers.org/).
 - **Advanced Compliance**: Integrated address verification (`/compliance/check`) and network integrity monitoring.
+- **Agentic Surface (MCP)**: Read-only audit layer for AI agents to verify telemetry, proofs, and financials.
 - **Observability**: Prometheus-compatible metrics endpoint with per-service latency and risk gauges.
 - **High Performance**: Built with Rust and Actix-web for maximum reliability, memory safety, and throughput.
 
@@ -45,6 +52,8 @@ The Conxian Gateway is a unified, audit-ready Rust binary that serves as the sin
 - [API Reference](docs/API.md) - Detailed endpoint documentation and data models.
 - [Enhancement Roadmap](docs/ENHANCEMENTS.md) - Evolution plan and current progress.
 - [Architecture & Infrastructure](docs/architecture/GCP_INFRASTRUCTURE.md) - Deployment and topology details.
+- [BOS Ownership Map](docs/architecture/BOS_OWNERSHIP_MAP.md) - Canonical repo and runtime ownership.
+- [Portfolio Map](docs/architecture/PORTFOLIO_MAP.md) - Repository classification and review standards.
 
 ### Getting Started
 
@@ -75,10 +84,27 @@ cargo test
 
 ## Architecture
 
-The system is organized into a modular Rust architecture:
+The system is organized into a unified modular Rust architecture (internal/gateway) to maintain security boundaries and audit-readiness:
 
 - `gateway/src/api`: Web handlers, routing, and request validation.
 - `gateway/src/engine`: Core logic, state management, background monitoring, and protocol handlers.
 - `services/`: Client-side TypeScript library for interacting with the Gateway.
 
 For detailed infrastructure information, see [docs/architecture/GCP_INFRASTRUCTURE.md](docs/architecture/GCP_INFRASTRUCTURE.md).
+
+## Security & Mainnet Readiness (CON-145)
+
+This repository is classified as a **P0 Mainnet Blocker**. The following security and readiness standards are enforced:
+
+- **Fail-Closed Logic**: All cryptographic and protocol operations must fail closed.
+- **No Mocks in Production**: Implementation stubs or simulated behaviors are strictly prohibited on the `main` branch.
+- **Dependency Integrity**: Only audited or standard industry-vetted dependencies are permitted for core protocol logic.
+- **MuSig2 Compliance**: Key aggregation follows the BIP327 standard for deterministic Taproot compatibility.
+- **BitVM2 Verification**: Groth16 proof verification is performed using standard ark-works curves and verifiers.
+
+## Release Hygiene (CON-218)
+
+- **Versioning**: Adheres to Semantic Versioning (SemVer).
+- **Changelog**: All changes are documented in [`CHANGELOG.md`](./CHANGELOG.md).
+- **Licensing**: Dual-licensed under [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE).
+- **Audit Trails**: Security assessments and audit reports are preserved in `docs/architecture/`.

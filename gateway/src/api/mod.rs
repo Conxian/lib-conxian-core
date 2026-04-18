@@ -1,8 +1,11 @@
+pub mod mcp_handler;
+use crate::engine::remediation;
 #[cfg(test)]
 mod tests;
 use crate::engine::Engine;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde::Deserialize;
+use serde_json::Value;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -12,6 +15,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bitvm_handler)
             .service(bitvm2_handler)
             .service(bitvm2_info_handler)
+            .service(bitvm2_verify_state_root_handler)
             .service(changelly_handler)
             .service(changelly_rate_handler)
             .service(stacks_handler)
@@ -48,6 +52,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(zulu_info_handler)
             .service(bison_handler)
             .service(bison_stats_handler)
+            .service(settlement_proposals_handler)
+            .service(iso20022_handler)
+            .service(papss_handler)
+            .service(brics_handler)
             .service(hemi_handler)
             .service(hemi_status_handler)
             .service(taproot_assets_handler)
@@ -75,7 +83,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(erp_sync_handler)
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
-            .service(state_commit_handler),
+            .service(state_commit_handler)
+            .service(sab_wallets_handler)
+            .service(mcp_handler::mcp_handler),
     );
 }
 
@@ -118,6 +128,68 @@ async fn bitvm2_handler(engine: web::Data<Engine>) -> impl Responder {
 async fn bitvm2_info_handler(engine: web::Data<Engine>) -> impl Responder {
     let res = engine.get_bitvm2_info();
     HttpResponse::Ok().json(res)
+}
+
+#[derive(Deserialize)]
+pub struct Bitvm2VerifyStateRootRequest {
+    pub state_root: String,
+    pub proof: String,
+    pub public_inputs: Option<Vec<String>>,
+}
+
+#[post("/bitvm2/verify-state-root")]
+async fn bitvm2_verify_state_root_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<Bitvm2VerifyStateRootRequest>,
+) -> impl Responder {
+    engine.increment_requests();
+
+    let vk_b64 = match std::env::var(lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "state_root": req.state_root,
+                "verified": false,
+                "error": format!(
+                    "{} is not configured",
+                    lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64
+                ),
+            }))
+        }
+    };
+
+    match lib_conxian_core::bitvm2::verify_state_root_bn254_groth16(
+        &vk_b64,
+        &req.state_root,
+        &req.proof,
+        req.public_inputs.as_deref(),
+    ) {
+        Ok(verified) => HttpResponse::Ok().json(serde_json::json!({
+            "state_root": req.state_root,
+            "verified": verified,
+            "proof_system": "groth16",
+            "curve": "bn254"
+        })),
+        Err(lib_conxian_core::bitvm2::Bitvm2VerifyError::InvalidVerifyingKey) => {
+            HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "state_root": req.state_root,
+                "verified": false,
+                "error": "verifying key is not valid/configured",
+            }))
+        }
+        Err(lib_conxian_core::bitvm2::Bitvm2VerifyError::Internal) => {
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "state_root": req.state_root,
+                "verified": false,
+                "error": "internal verification error",
+            }))
+        }
+        Err(err) => HttpResponse::BadRequest().json(serde_json::json!({
+            "state_root": req.state_root,
+            "verified": false,
+            "error": err.to_string(),
+        })),
+    }
 }
 
 #[get("/changelly")]
@@ -293,6 +365,7 @@ async fn lightning_invoice_handler(
 #[derive(Deserialize)]
 struct PayRequest {
     invoice: String,
+    testnet: Option<bool>,
 }
 
 #[post("/lightning/pay")]
@@ -300,6 +373,10 @@ async fn lightning_pay_handler(
     engine: web::Data<Engine>,
     req: web::Json<PayRequest>,
 ) -> impl Responder {
+    if !Engine::is_mainnet_only() && req.testnet.is_none() {
+        return HttpResponse::Forbidden()
+            .body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
+    }
     let res = engine.pay_lightning_invoice(&req.invoice);
     HttpResponse::Ok().json(res)
 }
@@ -570,6 +647,7 @@ async fn identity_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 #[derive(Deserialize)]
 struct ErpSyncRequest {
     system: String,
+    testnet: Option<bool>,
 }
 
 #[post("/erp/sync")]
@@ -577,6 +655,9 @@ async fn erp_sync_handler(
     engine: web::Data<Engine>,
     req: web::Json<ErpSyncRequest>,
 ) -> impl Responder {
+    if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
+        return HttpResponse::Forbidden().body(e);
+    }
     let res = engine.sync_erp_data(&req.system);
     HttpResponse::Ok().json(res)
 }
@@ -596,6 +677,7 @@ async fn dlc_bond_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 #[derive(Deserialize)]
 struct StateCommitRequest {
     state_root: String,
+    testnet: Option<bool>,
 }
 
 #[post("/state/commit")]
@@ -603,6 +685,49 @@ async fn state_commit_handler(
     engine: web::Data<Engine>,
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
+    if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
+        return HttpResponse::Forbidden().body(e);
+    }
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
+}
+
+#[get("/settlement/proposals")]
+async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Responder {
+    let res = engine.get_proposals();
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/iso20022")]
+async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
+        return HttpResponse::Forbidden().body(e);
+    }
+    let res = engine.process_external_settlement("ISO20022", payload.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/papss")]
+async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
+        return HttpResponse::Forbidden().body(e);
+    }
+    let res = engine.process_external_settlement("PAPSS", payload.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/brics")]
+async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
+    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
+        return HttpResponse::Forbidden().body(e);
+    }
+    let res = engine.process_external_settlement("BRICS", payload.into_inner());
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/sab/wallets")]
+async fn sab_wallets_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    let wallets = engine.get_sab_wallets();
+    HttpResponse::Ok().json(wallets)
 }

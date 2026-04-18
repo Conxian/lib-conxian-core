@@ -2,6 +2,10 @@
 
 ## 1. System Endpoints
 
+### Production Branch Policy (CON-407)
+All production-facing endpoints (/api/v1/settlement/*, /api/v1/erp/*, /api/v1/state/*) enforce mainnet-only behavior. In production environments (CONXIAN_NETWORK=mainnet), testnet bypasses are strictly prohibited. Non-production environments MUST provide an explicit `testnet` flag in the JSON payload to acknowledge validation state.
+
+
 ### GET /api/v1/health
 Returns the health status.
 - **Response:** `{ "status": "healthy", "engine": "active" }`
@@ -33,9 +37,14 @@ Verify a Zero-Knowledge Machine Learning proof (CON-70). Aligned with CARF/BRS v
 Resolves identity via ENS, BNS, and World ID (CON-66).
 - **Response:** `{ "address": "...", "ens_name": "...", "bns_name": "...", "world_id_verified": true }`
 
+
+### POST /api/v1/lightning/pay
+Pays a Lightning Network invoice. Mainnet-only.
+- **Request:** `{ "invoice": "lnbc...", "testnet": true }`
+
 ### POST /api/v1/erp/sync
-Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63).
-- **Request:** `{ "system": "SAP" }`
+Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63). Mainnet-only.
+- **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
 Returns the CJCS v2.0 JSON-LD machine-readable definition (CON-73).
@@ -90,3 +99,67 @@ Commits state shards to Tableland for decentralized persistence (CON-69).
   }
 }
 ```
+
+### POST /api/v1/settlement/iso20022
+Ingress point for ISO 20022 external settlement messages. Verified in TEE.
+- **Request:** `{ "msg_id": "...", "amount": 1000, ... }`
+- **Response:** StateProposal object.
+
+### POST /api/v1/settlement/papss
+Ingress point for PAPSS external settlement messages. Verified in TEE.
+- **Request:** `{ "tx_id": "...", "currency": "USD", ... }`
+- **Response:** StateProposal object.
+
+### POST /api/v1/settlement/brics
+Ingress point for BRICS external settlement messages. Verified in TEE.
+- **Request:** `{ "payload": "..." }`
+- **Response:** StateProposal object.
+
+### GET /api/v1/settlement/proposals
+Lists all pending state proposals generated from external triggers.
+- **Response:** Array of StateProposal objects.
+
+## 4. Data Models (Continued)
+
+### StateProposal
+```json
+{
+  "proposal_id": "prop-iso20022-trigger-1712412345",
+  "trigger_id": "iso20022-trigger-1712412345",
+  "proposed_state": "MainnetSovereignStateUpdate",
+  "timelock_end_block": 841144,
+  "status": "Pending",
+  "tee_attestation": "VerifiedByStrongBox-Mainnet-v1.0",
+  "yield_routing": "5/5/90",
+  "capital_status": "TransitBond"
+}
+```
+
+### GET /api/v1/sab/wallets
+Returns the canonical wallet inventory for BOS and related system operations (CON-423).
+- **Response:** Array of SabWallet objects.
+
+## 5. Data Models (Continued)
+
+### SabWallet
+
+## 6. Agentic & Autonomous Surface (MCP)
+
+The Gateway exposes a read-only Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
+
+### POST /api/v1/mcp
+Unified entry point for MCP interactions (Tools, Resources, Prompts).
+
+#### MCP Tools
+- **get_system_telemetry**: Retrieve real-time TVL and node status.
+- **get_protocol_proof**: Audit specific protocol proofs (BitVM, Citrea).
+- **get_yield_metrics**: Analyze non-dilutive financial health and yield streams.
+- **list_industrial_intents**: Discover tool schemas for FSOC validation or settlement triggers.
+- **draft_financial_intent**: Construct complex financial intents for human signing (Subject to 144-block timelock).
+
+#### Execution Flow
+1. **Agent Drafting**: AI Agent construct an intent using `draft_financial_intent`.
+2. **Proposal Creation**: Gateway emits a `StateProposal` with `Pending` status.
+3. **Governance Gate**: Mandatory 144-block timelock is applied.
+4. **Human Handshake**: Conxius Wallet visualizes the state change for hardware approval.
+5. **Final Execution**: Transaction is executed via `lib-conclave-sdk` after multi-sig rules pass.
