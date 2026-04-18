@@ -3,7 +3,6 @@ pub mod remediation;
 pub mod support;
 use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
-use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -783,7 +782,7 @@ impl Engine {
         }
     }
 
-    fn update_metrics(self: &Arc<Self>) {
+    fn update_metrics(&self) {
         let total_requests = self.request_count.load(Ordering::SeqCst);
         let mut metrics = self.financial_metrics.write().unwrap();
         metrics.protocol_fees_collected_usd = total_requests as f64 * 0.05;
@@ -800,11 +799,6 @@ impl Engine {
                 log::warn!("No SAB wallets configured for mainnet execution!");
             }
         }
-
-        let engine = Arc::clone(self);
-        tokio::spawn(async move {
-            let _ = engine.fetch_stacks_block_height().await;
-        });
     }
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
@@ -1621,6 +1615,12 @@ impl Engine {
         tokio::spawn(async move {
             loop {
                 engine.update_metrics();
+
+                let engine_clone = Arc::clone(&engine);
+                tokio::spawn(async move {
+                    let _ = engine_clone.fetch_stacks_block_height().await;
+                });
+
                 tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             }
         });
