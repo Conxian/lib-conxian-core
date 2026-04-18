@@ -105,6 +105,104 @@ pub struct SettlementEnvelope {
     pub ingress_timestamp: DateTime<Utc>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PartnerLeadStatus {
+    New,
+    Assigned,
+    InProgress,
+    Escalated,
+    Closed,
+}
+
+impl PartnerLeadStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::New => "new",
+            Self::Assigned => "assigned",
+            Self::InProgress => "in_progress",
+            Self::Escalated => "escalated",
+            Self::Closed => "closed",
+        }
+    }
+
+    fn can_transition_to(&self, next: &Self) -> bool {
+        matches!(
+            (self, next),
+            (Self::New, Self::Assigned)
+                | (Self::Assigned, Self::InProgress)
+                | (Self::InProgress, Self::Escalated)
+                | (Self::Escalated, Self::Closed)
+        )
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLead {
+    pub id: String,
+    pub partner_name: String,
+    pub contact_name: String,
+    pub contact_email: String,
+    pub company_name: Option<String>,
+    pub notes: Option<String>,
+    pub status: PartnerLeadStatus,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub closed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLeadEvent {
+    pub event_id: String,
+    pub lead_id: String,
+    pub event_type: String,
+    pub previous_status: Option<PartnerLeadStatus>,
+    pub next_status: Option<PartnerLeadStatus>,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub note: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PartnerLeadCreateInput {
+    pub partner_name: String,
+    pub contact_name: String,
+    pub contact_email: String,
+    pub company_name: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PartnerLeadStatusUpdateInput {
+    pub status: PartnerLeadStatus,
+    pub owner: Option<String>,
+    pub escalated_to: Option<String>,
+    pub escalation_reason: Option<String>,
+    pub event_note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerLeadCreateOutcome {
+    pub lead: PartnerLead,
+    pub idempotent_replay: bool,
+}
+
+#[derive(Clone, Debug)]
+pub enum PartnerLeadTransitionError {
+    NotFound,
+    InvalidTransition {
+        from: PartnerLeadStatus,
+        to: PartnerLeadStatus,
+    },
+    OwnerRequired,
+    EscalationReasonRequired,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -152,6 +250,10 @@ pub struct Engine {
     pub erp_sync_status: Arc<RwLock<HashMap<String, ErpSyncRecord>>>,
     pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
     pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
+    pub partner_leads: Arc<RwLock<HashMap<String, PartnerLead>>>,
+    pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
+    pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
+    pub partner_lead_sequence: AtomicU64,
     pub sab_wallets: Arc<RwLock<Vec<SabWallet>>>,
 }
 
@@ -192,6 +294,10 @@ impl Engine {
             erp_sync_status: Arc::new(RwLock::new(HashMap::new())),
             settlement_log: Arc::new(RwLock::new(Vec::new())),
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
+            partner_leads: Arc::new(RwLock::new(HashMap::new())),
+            partner_lead_events: Arc::new(RwLock::new(Vec::new())),
+            partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
+            partner_lead_sequence: AtomicU64::new(1),
             sab_wallets: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -659,6 +765,231 @@ impl Engine {
             .unwrap()
             .insert(proposal_id, proposal.clone());
         proposal
+    }
+
+    fn next_partner_lead_token(&self, prefix: &str) -> String {
+        let seq = self.partner_lead_sequence.fetch_add(1, Ordering::SeqCst);
+        format!("{prefix}-{}-{seq}", Utc::now().timestamp_millis())
+    }
+
+    pub fn create_partner_lead(
+        &self,
+        input: PartnerLeadCreateInput,
+        idempotency_key: &str,
+    ) -> PartnerLeadCreateOutcome {
+        self.increment_requests();
+
+        if let Some(existing_id) = self
+            .partner_lead_idempotency
+            .read()
+            .unwrap()
+            .get(idempotency_key)
+            .cloned()
+        {
+            if let Some(existing_lead) = self
+                .partner_leads
+                .read()
+                .unwrap()
+                .get(&existing_id)
+                .cloned()
+            {
+                return PartnerLeadCreateOutcome {
+                    lead: existing_lead,
+                    idempotent_replay: true,
+                };
+            }
+        }
+
+        let now = Utc::now();
+        let lead_id = self.next_partner_lead_token("lead");
+        let lead = PartnerLead {
+            id: lead_id.clone(),
+            partner_name: input.partner_name,
+            contact_name: input.contact_name,
+            contact_email: input.contact_email,
+            company_name: input.company_name,
+            notes: input.notes,
+            status: PartnerLeadStatus::New,
+            owner: None,
+            escalated_to: None,
+            escalation_reason: None,
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
+        };
+
+        self.partner_leads
+            .write()
+            .unwrap()
+            .insert(lead_id.clone(), lead.clone());
+        self.partner_lead_idempotency
+            .write()
+            .unwrap()
+            .insert(idempotency_key.to_string(), lead_id.clone());
+
+        self.partner_lead_events
+            .write()
+            .unwrap()
+            .push(PartnerLeadEvent {
+                event_id: self.next_partner_lead_token("plevent"),
+                lead_id,
+                event_type: "created".to_string(),
+                previous_status: None,
+                next_status: Some(PartnerLeadStatus::New),
+                owner: lead.owner.clone(),
+                escalated_to: lead.escalated_to.clone(),
+                escalation_reason: lead.escalation_reason.clone(),
+                note: None,
+                created_at: now,
+            });
+
+        PartnerLeadCreateOutcome {
+            lead,
+            idempotent_replay: false,
+        }
+    }
+
+    pub fn get_partner_lead(&self, lead_id: &str) -> Option<PartnerLead> {
+        self.increment_requests();
+        self.partner_leads.read().unwrap().get(lead_id).cloned()
+    }
+
+    pub fn list_partner_leads(
+        &self,
+        status_filter: Option<PartnerLeadStatus>,
+        owner_filter: Option<&str>,
+    ) -> Vec<PartnerLead> {
+        self.increment_requests();
+        let owner_filter = owner_filter
+            .map(str::trim)
+            .filter(|owner| !owner.is_empty())
+            .map(ToOwned::to_owned);
+
+        let leads = self.partner_leads.read().unwrap();
+        let mut rows: Vec<_> = leads
+            .values()
+            .filter(|lead| {
+                let status_match = status_filter
+                    .as_ref()
+                    .map(|status| lead.status == *status)
+                    .unwrap_or(true);
+                let owner_match = owner_filter
+                    .as_deref()
+                    .map(|owner| {
+                        lead.owner
+                            .as_deref()
+                            .map(|candidate| candidate.eq_ignore_ascii_case(owner))
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(true);
+                status_match && owner_match
+            })
+            .cloned()
+            .collect();
+
+        rows.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        rows
+    }
+
+    pub fn transition_partner_lead(
+        &self,
+        lead_id: &str,
+        input: PartnerLeadStatusUpdateInput,
+    ) -> Result<PartnerLead, PartnerLeadTransitionError> {
+        self.increment_requests();
+
+        let mut leads = self.partner_leads.write().unwrap();
+        let lead = leads
+            .get_mut(lead_id)
+            .ok_or(PartnerLeadTransitionError::NotFound)?;
+
+        let from_status = lead.status.clone();
+        if !from_status.can_transition_to(&input.status) {
+            return Err(PartnerLeadTransitionError::InvalidTransition {
+                from: from_status,
+                to: input.status,
+            });
+        }
+
+        let normalized_owner = input
+            .owner
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+        let normalized_escalated_to = input
+            .escalated_to
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+        let normalized_escalation_reason = input
+            .escalation_reason
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned);
+
+        if let Some(owner) = normalized_owner.clone() {
+            lead.owner = Some(owner);
+        }
+
+        match input.status {
+            PartnerLeadStatus::Assigned => {
+                if lead.owner.as_deref().unwrap_or_default().trim().is_empty() {
+                    return Err(PartnerLeadTransitionError::OwnerRequired);
+                }
+            }
+            PartnerLeadStatus::InProgress => {
+                if lead.owner.as_deref().unwrap_or_default().trim().is_empty() {
+                    return Err(PartnerLeadTransitionError::OwnerRequired);
+                }
+            }
+            PartnerLeadStatus::Escalated => {
+                let reason = normalized_escalation_reason
+                    .clone()
+                    .ok_or(PartnerLeadTransitionError::EscalationReasonRequired)?;
+                lead.escalation_reason = Some(reason);
+                if let Some(escalated_to) = normalized_escalated_to.clone() {
+                    lead.escalated_to = Some(escalated_to);
+                }
+            }
+            PartnerLeadStatus::Closed => {
+                lead.closed_at = Some(Utc::now());
+            }
+            PartnerLeadStatus::New => {}
+        }
+
+        let now = Utc::now();
+        let next_status = input.status;
+        lead.status = next_status.clone();
+        lead.updated_at = now;
+
+        let updated = lead.clone();
+        drop(leads);
+
+        self.partner_lead_events
+            .write()
+            .unwrap()
+            .push(PartnerLeadEvent {
+                event_id: self.next_partner_lead_token("plevent"),
+                lead_id: lead_id.to_string(),
+                event_type: "status_transition".to_string(),
+                previous_status: Some(from_status),
+                next_status: Some(next_status),
+                owner: updated.owner.clone(),
+                escalated_to: updated.escalated_to.clone(),
+                escalation_reason: updated.escalation_reason.clone(),
+                note: input
+                    .event_note
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                    .map(ToOwned::to_owned),
+                created_at: now,
+            });
+
+        Ok(updated)
     }
 
     pub fn get_proposals(&self) -> Vec<StateProposal> {
