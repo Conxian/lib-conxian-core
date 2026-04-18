@@ -4,31 +4,8 @@ use super::*;
 use crate::engine::Engine;
 use actix_web::{test, web, App};
 use serde_json::Value;
-use tokio::sync::Mutex;
 
-static ENV_VAR_MUTEX: Mutex<()> = Mutex::const_new(());
-
-struct EnvVarGuard {
-    key: &'static str,
-    prev: Option<String>,
-}
-
-impl EnvVarGuard {
-    fn unset(key: &'static str) -> Self {
-        let prev = std::env::var(key).ok();
-        std::env::remove_var(key);
-        Self { key, prev }
-    }
-}
-
-impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
-        match self.prev.take() {
-            Some(v) => std::env::set_var(self.key, v),
-            None => std::env::remove_var(self.key),
-        }
-    }
-}
+static ENV_VAR_MUTEX: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[actix_web::test]
 async fn test_health_endpoint() {
@@ -208,8 +185,25 @@ async fn test_sab_wallets_endpoint() {
 #[actix_web::test]
 async fn test_bitvm2_verify_state_root_missing_vk() {
     let _env_lock = ENV_VAR_MUTEX.lock().await;
+
+    struct EnvVarGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match self.prev.take() {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
     let key = lib_conxian_core::bitvm2::ENV_BITVM2_GROTH16_VK_B64;
-    let _env_guard = EnvVarGuard::unset(key);
+    let prev = std::env::var(key).ok();
+    std::env::remove_var(key);
+    let _vk_guard = EnvVarGuard { key, prev };
 
     let engine_arc = Arc::new(Engine::new());
     engine_arc.initialize();
@@ -217,14 +211,69 @@ async fn test_bitvm2_verify_state_root_missing_vk() {
     let app = test::init_service(App::new().app_data(engine).configure(config)).await;
     let req = test::TestRequest::post()
         .uri("/api/v1/bitvm2/verify-state-root")
-        .set_json(serde_json::json!({
-            "state_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "proof": ""
-        }))
+        .set_json(serde_json::json!({"state_root": "0x0000000000000000000000000000000000000000000000000000000000000000", "proof": ""}))
         .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(
         resp.status(),
         actix_web::http::StatusCode::SERVICE_UNAVAILABLE
     );
+}
+
+#[actix_web::test]
+async fn test_mcp_tools_list() {
+    let engine = Arc::new(Engine::new());
+    engine.initialize();
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::from(engine))
+            .configure(crate::api::config),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/mcp")
+        .set_json(serde_json::json!({
+            "method": "tools/list",
+            "params": {}
+        }))
+        .to_request();
+
+    let resp = test::call_service(&app, req).await;
+    assert!(resp.status().is_success());
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["tools"].is_array());
+    assert!(body["tools"].as_array().unwrap().len() >= 4);
+}
+
+#[actix_web::test]
+async fn test_mcp_draft_intent() {
+    let engine = Arc::new(Engine::new());
+    engine.initialize();
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::from(engine))
+            .configure(crate::api::config),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/mcp")
+        .set_json(serde_json::json!({
+            "method": "tools/call",
+            "params": {
+                "name": "draft_financial_intent",
+                "arguments": {
+                    "type": "YieldOptimization",
+                    "details": { "target": "sBTC-LP" }
+                }
+            }
+        }))
+        .to_request();
+
+    let resp = test::call_service(&app, req).await;
+    assert!(resp.status().is_success());
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["requires_handshake"].as_bool().unwrap());
+    assert!(body["proposal_id"].is_string());
 }

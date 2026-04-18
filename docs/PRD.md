@@ -50,13 +50,21 @@ The Gateway provides detailed status information for each service, including:
 - **Risk Assessment:** `/api/v1/risk-assessment` provides a multi-factor breakdown of security risks (DA, Settlement, Bridge).
 - **Compliance:** `/api/v1/compliance` for KYC/AML, network integrity, and ZKML attestation (CON-70).
 
-## 5. Security & Auditing
+## 6. Agentic & Autonomous Surface (MCP)
+The Gateway exposes a read-only Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents. This includes telemetry auditing, protocol proof discovery, and agent drafting for human signing.
+
+## 5. Economic Model
+The Conxian network implements a creator-first, sovereign economic model designed to reward value creation and preserve builder freedom. For detailed operating rules, participation models, and reward logic, see [docs/ECONOMY.md](ECONOMY.md).
+
+## 6. Security & Auditing
 - Unified binary approach simplifies the attack surface.
 - Rust-based implementation ensures memory safety and high performance.
 - Multi-factor risk engine provides unprecedented transparency for users.
+- BIP327-compliant MuSig2 key aggregation ensures deterministic Taproot multi-signature security (CON-145).
+- BitVM2 & sBTC Target Architecture: Unified trust-minimized bridge model for Bitcoin liquidity (CON-464).
 - Real-time on-chain reserve verification ensures protocol solvency.
 
-### 5.2. External Settlement Triggers (CON-162)
+### 6.1. External Settlement Triggers (CON-162)
 - **Proposal-Only:** External triggers (ISO 20022, PAPSS, BRICS) generate state proposals, never direct execution.
 - **TEE Verification:** All incoming messages are verified within the StrongBox TEE before a proposal is emitted.
 - **Mandatory Timelock:** Every proposal is subject to a 144-block timelock on the Stacks/Bitcoin layer.

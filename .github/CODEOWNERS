@@ -1,4 +1,19 @@
-* @Conxian/mobile
+# Code owners for the lib-conxian-core repository.
+#
+# Notes:
+# - GitHub uses this file to auto-request reviews when a PR touches matching paths.
+
+* @botshelomokoka @admin-conxian-labs @Conxian/mobile
+
+# Specific owners for governance and configuration
+/.github/ @botshelomokoka @admin-conxian-labs
+/README.md @botshelomokoka @admin-conxian-labs
+/SECURITY.md @botshelomokoka @admin-conxian-labs
+/CONTRIBUTING.md @botshelomokoka @admin-conxian-labs
+/LICENSE-MIT @botshelomokoka @admin-conxian-labs
+/LICENSE-APACHE @botshelomokoka @admin-conxian-labs
+
+# Component-specific ownership
 /docs/ @Conxian/mobile
 /gateway/ @Conxian/mobile
 /services/ @Conxian/mobile

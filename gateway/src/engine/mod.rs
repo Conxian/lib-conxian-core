@@ -1,3 +1,6 @@
+pub mod mcp;
+pub mod remediation;
+pub mod support;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -553,7 +556,24 @@ impl Engine {
     }
 
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
-        Ok(841500)
+        let fallback_height = 841500;
+        let client = reqwest::Client::new();
+        match client
+            .get("https://api.mainnet.hiro.so/v2/info")
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                if let Ok(info) = resp.json::<serde_json::Value>().await {
+                    if let Some(height) = info["stacks_tip_height"].as_u64() {
+                        return Ok(height);
+                    }
+                }
+                Ok(fallback_height)
+            }
+            Err(_) => Ok(fallback_height),
+        }
     }
 
     pub fn calculate_total_tvl(&self) -> f64 {
@@ -588,7 +608,7 @@ impl Engine {
     }
 
     pub fn is_mainnet_only() -> bool {
-        std::env::var("CONXIAN_NETWORK").unwrap_or_else(|_| "mainnet".to_string()) == "mainnet"
+        remediation::is_production_mainnet()
     }
 
     pub fn process_external_settlement(&self, protocol: &str, payload: Value) -> StateProposal {

@@ -11,6 +11,7 @@ pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
 #[derive(Debug)]
 pub enum Bitvm2VerifyError {
+    Internal,
     InvalidBase64,
     InvalidHex,
     InvalidProof,
@@ -21,6 +22,7 @@ pub enum Bitvm2VerifyError {
 impl std::fmt::Display for Bitvm2VerifyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Internal => write!(f, "internal error"),
             Self::InvalidBase64 => write!(f, "invalid base64"),
             Self::InvalidHex => write!(f, "invalid hex"),
             Self::InvalidProof => write!(f, "invalid Groth16 proof"),
