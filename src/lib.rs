@@ -1,5 +1,5 @@
-pub mod deployment;
 pub mod bitvm2;
+pub mod deployment;
 pub mod musig2;
 
 pub mod cjcs;

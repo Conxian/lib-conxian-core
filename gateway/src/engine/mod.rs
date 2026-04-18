@@ -1,6 +1,7 @@
 pub mod mcp;
 pub mod remediation;
 pub mod support;
+use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -236,6 +237,7 @@ pub struct SabWallet {
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
+    pub support_intake: Arc<SupportIntake>,
     pub request_count: AtomicU64,
     pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
@@ -266,8 +268,9 @@ impl Default for Engine {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            version: "0.2.0".to_string(),
+            version: "0.2.1".to_string(),
             start_time: Utc::now(),
+            support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
             total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(5),
@@ -308,199 +311,334 @@ impl Engine {
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
-        let services = vec![
-            (
-                "stacks",
-                65,
-                "PoX",
-                "On-chain",
-                "Bitcoin",
-                "sBTC Bridge",
-                12500000.0,
-            ),
-            (
-                "lightning",
-                15,
-                "State Channels",
-                "Off-chain",
-                "Bitcoin",
-                "P2P",
-                850000.0,
-            ),
-            (
-                "liquid",
-                45,
-                "Federation",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                25000000.0,
-            ),
-            (
-                "rootstock",
-                55,
-                "Merge-mined",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                18500000.0,
-            ),
-            (
-                "bisq",
-                120,
-                "P2P",
-                "Off-chain",
-                "Bitcoin",
-                "Atomic",
-                450000.0,
-            ),
-            (
-                "rgb",
-                35,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                1200000.0,
-            ),
-            (
-                "bitvm",
-                90,
-                "Optimistic",
-                "On-chain",
-                "Bitcoin",
-                "BitVM",
-                5000000.0,
-            ),
-            (
-                "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
-            ),
-            (
-                "core-dao",
-                40,
-                "Satoshi Plus",
-                "Sidechain",
-                "Bitcoin",
-                "Relayer",
-                75000000.0,
-            ),
-            (
-                "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
-            ),
-            (
-                "hemi",
-                50,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                35000000.0,
-            ),
-            (
-                "bob",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "Optimistic",
-                28000000.0,
-            ),
-            (
-                "merlin",
-                35,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                45000000.0,
-            ),
-            (
-                "mezo",
-                25,
-                "Economic Layer",
-                "On-chain",
-                "Bitcoin",
-                "tBTC",
-                150000000.0,
-            ),
-            ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
-            (
-                "bison",
-                55,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                10000000.0,
-            ),
-            (
-                "zulu",
-                40,
-                "Multi-layer",
-                "On-chain",
-                "Bitcoin",
-                "N/A",
-                15000000.0,
-            ),
-            (
-                "botanix",
-                60,
-                "Spiderchain",
-                "Sidechain",
-                "Bitcoin",
-                "Spiderchain",
-                8000000.0,
-            ),
-            (
-                "bitlayer",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "BitVM",
-                25000000.0,
-            ),
-            (
-                "alpen",
-                30,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                12000000.0,
-            ),
-            (
-                "taproot-assets",
-                15,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                5500000.0,
-            ),
-            (
-                "bitvm2",
-                85,
-                "ZK-Fraud Proofs",
-                "On-chain",
-                "Bitcoin",
-                "BitVM2",
-                15000000.0,
-            ),
-        ];
+
+        // CON-501: Remove static seeds from production mainnet
+        let is_mainnet = remediation::is_production_mainnet();
+
+        let services = if is_mainnet {
+            // Production paths must fetch data from real RPCs/Nodes
+            // Initializing with zero/placeholder to ensure discovery before functional use
+            vec![
+                (
+                    "stacks",
+                    0,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    0.0,
+                ),
+                (
+                    "lightning",
+                    0,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    0.0,
+                ),
+                (
+                    "liquid",
+                    0,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
+                (
+                    "rootstock",
+                    0,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
+                ("bisq", 0, "P2P", "Off-chain", "Bitcoin", "Atomic", 0.0),
+                ("rgb", 0, "Client-side", "Off-chain", "Bitcoin", "N/A", 0.0),
+                (
+                    "bitvm",
+                    0,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
+                (
+                    "babylon", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
+                (
+                    "core-dao",
+                    0,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    0.0,
+                ),
+                (
+                    "lorenzo", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
+                ("hemi", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "bob",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    0.0,
+                ),
+                ("merlin", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "mezo",
+                    0,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    0.0,
+                ),
+                ("nubit", 0, "DA", "On-chain", "Bitcoin", "N/A", 0.0),
+                ("bison", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                ("zulu", 0, "Multi-layer", "On-chain", "Bitcoin", "N/A", 0.0),
+                (
+                    "botanix",
+                    0,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    0.0,
+                ),
+                (
+                    "bitlayer",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
+                ("alpen", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
+                (
+                    "taproot-assets",
+                    0,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    0.0,
+                ),
+                (
+                    "bitvm2",
+                    0,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    0.0,
+                ),
+            ]
+        } else {
+            vec![
+                (
+                    "stacks",
+                    65,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    12500000.0,
+                ),
+                (
+                    "lightning",
+                    15,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    850000.0,
+                ),
+                (
+                    "liquid",
+                    45,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    25000000.0,
+                ),
+                (
+                    "rootstock",
+                    55,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    18500000.0,
+                ),
+                (
+                    "bisq",
+                    120,
+                    "P2P",
+                    "Off-chain",
+                    "Bitcoin",
+                    "Atomic",
+                    450000.0,
+                ),
+                (
+                    "rgb",
+                    35,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    1200000.0,
+                ),
+                (
+                    "bitvm",
+                    90,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    5000000.0,
+                ),
+                (
+                    "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
+                ),
+                (
+                    "core-dao",
+                    40,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    75000000.0,
+                ),
+                (
+                    "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
+                ),
+                (
+                    "hemi",
+                    50,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    35000000.0,
+                ),
+                (
+                    "bob",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    28000000.0,
+                ),
+                (
+                    "merlin",
+                    35,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    45000000.0,
+                ),
+                (
+                    "mezo",
+                    25,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    150000000.0,
+                ),
+                ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
+                (
+                    "bison",
+                    55,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    10000000.0,
+                ),
+                (
+                    "zulu",
+                    40,
+                    "Multi-layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "N/A",
+                    15000000.0,
+                ),
+                (
+                    "botanix",
+                    60,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    8000000.0,
+                ),
+                (
+                    "bitlayer",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    25000000.0,
+                ),
+                (
+                    "alpen",
+                    30,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    12000000.0,
+                ),
+                (
+                    "taproot-assets",
+                    15,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    5500000.0,
+                ),
+                (
+                    "bitvm2",
+                    85,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    15000000.0,
+                ),
+            ]
+        };
 
         for (name, latency, trust, da, settlement, bridge, tvl) in services {
             let mut metadata = HashMap::new();
             metadata.insert("version".to_string(), "1.2.0".to_string());
-            if name == "stacks" {
-                metadata.insert("block_height".to_string(), "841500".to_string());
-                metadata.insert("hiro_api_connected".to_string(), "true".to_string());
-            }
-            if name == "lorenzo" {
-                metadata.insert("staked_btc".to_string(), "1250.5".to_string());
-            }
-            if name == "b2network" {
-                metadata.insert("block_height".to_string(), "12600".to_string());
+            if !is_mainnet {
+                if name == "stacks" {
+                    metadata.insert("block_height".to_string(), "841500".to_string());
+                    metadata.insert("hiro_api_connected".to_string(), "true".to_string());
+                }
+                if name == "lorenzo" {
+                    metadata.insert("staked_btc".to_string(), "1250.5".to_string());
+                }
+                if name == "b2network" {
+                    metadata.insert("block_height".to_string(), "12600".to_string());
+                }
             }
 
             let assessment = self.calculate_risk_assessment(trust, da, settlement, bridge);
@@ -526,41 +664,43 @@ impl Engine {
             );
         }
 
-        let mut reserves = self.reserves.write().unwrap();
-        reserves.push(ReserveAsset {
-            asset: "L-BTC".to_string(),
-            total_supplied: 1500.0,
-            total_reserves: 1500.0,
-            collateral_ratio: 1.0,
-            status: "Verified (On-chain)".to_string(),
-        });
-        reserves.push(ReserveAsset {
-            asset: "RBTC".to_string(),
-            total_supplied: 2500.0,
-            total_reserves: 2500.0,
-            collateral_ratio: 1.0,
-            status: "Verified (On-chain)".to_string(),
-        });
+        if !is_mainnet {
+            let mut reserves = self.reserves.write().unwrap();
+            reserves.push(ReserveAsset {
+                asset: "L-BTC".to_string(),
+                total_supplied: 1500.0,
+                total_reserves: 1500.0,
+                collateral_ratio: 1.0,
+                status: "Verified (On-chain)".to_string(),
+            });
+            reserves.push(ReserveAsset {
+                asset: "RBTC".to_string(),
+                total_supplied: 2500.0,
+                total_reserves: 2500.0,
+                collateral_ratio: 1.0,
+                status: "Verified (On-chain)".to_string(),
+            });
 
-        let mut prices = self.prices.write().unwrap();
-        prices.insert(
-            "BTC".to_string(),
-            PriceInfo {
-                asset: "BTC".to_string(),
-                price_usd: 65000.0,
-                last_updated: Utc::now(),
-                source: "CoinGecko".to_string(),
-            },
-        );
-        prices.insert(
-            "STX".to_string(),
-            PriceInfo {
-                asset: "STX".to_string(),
-                price_usd: 2.50,
-                last_updated: Utc::now(),
-                source: "CoinGecko".to_string(),
-            },
-        );
+            let mut prices = self.prices.write().unwrap();
+            prices.insert(
+                "BTC".to_string(),
+                PriceInfo {
+                    asset: "BTC".to_string(),
+                    price_usd: 65000.0,
+                    last_updated: Utc::now(),
+                    source: "CoinGecko (Simulated)".to_string(),
+                },
+            );
+            prices.insert(
+                "STX".to_string(),
+                PriceInfo {
+                    asset: "STX".to_string(),
+                    price_usd: 2.50,
+                    last_updated: Utc::now(),
+                    source: "CoinGecko (Simulated)".to_string(),
+                },
+            );
+        }
 
         let mut affiliates = self.affiliates.write().unwrap();
         affiliates.insert(
@@ -670,22 +810,38 @@ impl Engine {
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
         let fallback_height = 841500;
         let client = reqwest::Client::new();
-        match client
+        let res = client
             .get("https://api.mainnet.hiro.so/v2/info")
             .timeout(std::time::Duration::from_secs(5))
             .send()
-            .await
-        {
+            .await;
+
+        let height = match res {
             Ok(resp) => {
                 if let Ok(info) = resp.json::<serde_json::Value>().await {
-                    if let Some(height) = info["stacks_tip_height"].as_u64() {
-                        return Ok(height);
-                    }
+                    info["stacks_tip_height"]
+                        .as_u64()
+                        .unwrap_or(fallback_height)
+                } else {
+                    fallback_height
                 }
-                Ok(fallback_height)
             }
-            Err(_) => Ok(fallback_height),
+            Err(_) => fallback_height,
+        };
+
+        // Update Stacks metadata
+        let mut statuses = self.service_statuses.write().unwrap();
+        if let Some(status) = statuses.get_mut("stacks") {
+            status
+                .metadata
+                .insert("block_height".to_string(), height.to_string());
+            status
+                .metadata
+                .insert("hiro_api_connected".to_string(), "true".to_string());
+            status.last_checked = Utc::now();
         }
+
+        Ok(height)
     }
 
     pub fn calculate_total_tvl(&self) -> f64 {
@@ -1038,6 +1194,14 @@ impl Engine {
 
     pub fn get_bitvm_proof(&self, proof_id: &str) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "proof_id": proof_id,
+                "status": "ConnectionRequired",
+                "error": "Mainnet node connection required for real-time proof auditing.",
+                "remediation": "Configure BITCOIN_RPC_URL and BITVM_DISPROVER_ENDPOINT"
+            });
+        }
         serde_json::json!({
             "proof_id": proof_id,
             "status": "verified",
@@ -1071,6 +1235,14 @@ impl Engine {
 
     pub fn get_citrea_proof(&self, batch_id: &str) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "batch_id": batch_id,
+                "status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Citrea ZK-proof verification.",
+                "remediation": "Configure CITREA_RPC_URL"
+            });
+        }
         serde_json::json!({
             "batch_id": batch_id,
             "status": "Finalized",
@@ -1359,6 +1531,14 @@ impl Engine {
 
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "asset": "L-BTC",
+                "peg_status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Liquid peg verification.",
+                "remediation": "Configure LIQUID_RPC_URL"
+            });
+        }
         serde_json::json!({
             "asset": "L-BTC",
             "peg_status": "Active",
@@ -1369,6 +1549,14 @@ impl Engine {
 
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
+        if remediation::is_production_mainnet() {
+            return serde_json::json!({
+                "asset": "RBTC",
+                "powpeg_status": "ConnectionRequired",
+                "error": "Mainnet node connection required for Rootstock powpeg verification.",
+                "remediation": "Configure ROOTSTOCK_RPC_URL"
+            });
+        }
         serde_json::json!({
             "asset": "RBTC",
             "powpeg_status": "Active",
@@ -1440,5 +1628,32 @@ impl Engine {
 
     pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
         self.sab_wallets.read().unwrap().clone()
+    }
+
+    pub async fn poll_support(engine: Arc<Engine>) {
+        tokio::spawn(async move {
+            loop {
+                // In a real implementation, this would connect to IMAP
+                // For now, we simulate periodic polling of the support mailbox
+                log::info!("Polling support mailbox for new tickets...");
+
+                // Simulate finding an email
+                let ts = Utc::now();
+                let ticket = engine.support_intake.process_inbound_metadata(
+                    "support@conxian-labs.com",
+                    "user@external.com",
+                    "Assistance required with MuSig2",
+                    "<sim-123@external.com>",
+                    ts,
+                );
+
+                log::info!("Generated support ticket: {}", ticket.token);
+
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    engine.support_intake.config.poll_interval_secs,
+                ))
+                .await;
+            }
+        });
     }
 }
