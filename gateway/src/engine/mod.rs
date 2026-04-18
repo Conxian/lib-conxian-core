@@ -1,6 +1,7 @@
 pub mod mcp;
 pub mod remediation;
 pub mod support;
+use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -8,7 +9,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
-use crate::engine::support::{SupportConfig, SupportIntake};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RiskAssessment {
@@ -319,210 +319,311 @@ impl Engine {
             // Production paths must fetch data from real RPCs/Nodes
             // Initializing with zero/placeholder to ensure discovery before functional use
             vec![
-                ("stacks", 0, "PoX", "On-chain", "Bitcoin", "sBTC Bridge", 0.0),
-                ("lightning", 0, "State Channels", "Off-chain", "Bitcoin", "P2P", 0.0),
-                ("liquid", 0, "Federation", "Sidechain", "Bitcoin", "Powpeg", 0.0),
-                ("rootstock", 0, "Merge-mined", "Sidechain", "Bitcoin", "Powpeg", 0.0),
+                (
+                    "stacks",
+                    0,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    0.0,
+                ),
+                (
+                    "lightning",
+                    0,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    0.0,
+                ),
+                (
+                    "liquid",
+                    0,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
+                (
+                    "rootstock",
+                    0,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    0.0,
+                ),
                 ("bisq", 0, "P2P", "Off-chain", "Bitcoin", "Atomic", 0.0),
                 ("rgb", 0, "Client-side", "Off-chain", "Bitcoin", "N/A", 0.0),
-                ("bitvm", 0, "Optimistic", "On-chain", "Bitcoin", "BitVM", 0.0),
-                ("babylon", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0),
-                ("core-dao", 0, "Satoshi Plus", "Sidechain", "Bitcoin", "Relayer", 0.0),
-                ("lorenzo", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0),
+                (
+                    "bitvm",
+                    0,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
+                (
+                    "babylon", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
+                (
+                    "core-dao",
+                    0,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    0.0,
+                ),
+                (
+                    "lorenzo", 0, "Staking", "On-chain", "Bitcoin", "Staking", 0.0,
+                ),
                 ("hemi", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
-                ("bob", 0, "Optimistic", "Rollup", "Bitcoin", "Optimistic", 0.0),
+                (
+                    "bob",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    0.0,
+                ),
                 ("merlin", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
-                ("mezo", 0, "Economic Layer", "On-chain", "Bitcoin", "tBTC", 0.0),
+                (
+                    "mezo",
+                    0,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    0.0,
+                ),
                 ("nubit", 0, "DA", "On-chain", "Bitcoin", "N/A", 0.0),
                 ("bison", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
                 ("zulu", 0, "Multi-layer", "On-chain", "Bitcoin", "N/A", 0.0),
-                ("botanix", 0, "Spiderchain", "Sidechain", "Bitcoin", "Spiderchain", 0.0),
-                ("bitlayer", 0, "Optimistic", "Rollup", "Bitcoin", "BitVM", 0.0),
+                (
+                    "botanix",
+                    0,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    0.0,
+                ),
+                (
+                    "bitlayer",
+                    0,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    0.0,
+                ),
                 ("alpen", 0, "ZK", "Rollup", "Bitcoin", "ZK Bridge", 0.0),
-                ("taproot-assets", 0, "Client-side", "Off-chain", "Bitcoin", "N/A", 0.0),
-                ("bitvm2", 0, "ZK-Fraud Proofs", "On-chain", "Bitcoin", "BitVM2", 0.0),
+                (
+                    "taproot-assets",
+                    0,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    0.0,
+                ),
+                (
+                    "bitvm2",
+                    0,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    0.0,
+                ),
             ]
         } else {
             vec![
-            (
-                "stacks",
-                65,
-                "PoX",
-                "On-chain",
-                "Bitcoin",
-                "sBTC Bridge",
-                12500000.0,
-            ),
-            (
-                "lightning",
-                15,
-                "State Channels",
-                "Off-chain",
-                "Bitcoin",
-                "P2P",
-                850000.0,
-            ),
-            (
-                "liquid",
-                45,
-                "Federation",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                25000000.0,
-            ),
-            (
-                "rootstock",
-                55,
-                "Merge-mined",
-                "Sidechain",
-                "Bitcoin",
-                "Powpeg",
-                18500000.0,
-            ),
-            (
-                "bisq",
-                120,
-                "P2P",
-                "Off-chain",
-                "Bitcoin",
-                "Atomic",
-                450000.0,
-            ),
-            (
-                "rgb",
-                35,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                1200000.0,
-            ),
-            (
-                "bitvm",
-                90,
-                "Optimistic",
-                "On-chain",
-                "Bitcoin",
-                "BitVM",
-                5000000.0,
-            ),
-            (
-                "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
-            ),
-            (
-                "core-dao",
-                40,
-                "Satoshi Plus",
-                "Sidechain",
-                "Bitcoin",
-                "Relayer",
-                75000000.0,
-            ),
-            (
-                "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
-            ),
-            (
-                "hemi",
-                50,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                35000000.0,
-            ),
-            (
-                "bob",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "Optimistic",
-                28000000.0,
-            ),
-            (
-                "merlin",
-                35,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                45000000.0,
-            ),
-            (
-                "mezo",
-                25,
-                "Economic Layer",
-                "On-chain",
-                "Bitcoin",
-                "tBTC",
-                150000000.0,
-            ),
-            ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
-            (
-                "bison",
-                55,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                10000000.0,
-            ),
-            (
-                "zulu",
-                40,
-                "Multi-layer",
-                "On-chain",
-                "Bitcoin",
-                "N/A",
-                15000000.0,
-            ),
-            (
-                "botanix",
-                60,
-                "Spiderchain",
-                "Sidechain",
-                "Bitcoin",
-                "Spiderchain",
-                8000000.0,
-            ),
-            (
-                "bitlayer",
-                45,
-                "Optimistic",
-                "Rollup",
-                "Bitcoin",
-                "BitVM",
-                25000000.0,
-            ),
-            (
-                "alpen",
-                30,
-                "ZK",
-                "Rollup",
-                "Bitcoin",
-                "ZK Bridge",
-                12000000.0,
-            ),
-            (
-                "taproot-assets",
-                15,
-                "Client-side",
-                "Off-chain",
-                "Bitcoin",
-                "N/A",
-                5500000.0,
-            ),
-            (
-                "bitvm2",
-                85,
-                "ZK-Fraud Proofs",
-                "On-chain",
-                "Bitcoin",
-                "BitVM2",
-                15000000.0,
-            ),
-        ]};
+                (
+                    "stacks",
+                    65,
+                    "PoX",
+                    "On-chain",
+                    "Bitcoin",
+                    "sBTC Bridge",
+                    12500000.0,
+                ),
+                (
+                    "lightning",
+                    15,
+                    "State Channels",
+                    "Off-chain",
+                    "Bitcoin",
+                    "P2P",
+                    850000.0,
+                ),
+                (
+                    "liquid",
+                    45,
+                    "Federation",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    25000000.0,
+                ),
+                (
+                    "rootstock",
+                    55,
+                    "Merge-mined",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Powpeg",
+                    18500000.0,
+                ),
+                (
+                    "bisq",
+                    120,
+                    "P2P",
+                    "Off-chain",
+                    "Bitcoin",
+                    "Atomic",
+                    450000.0,
+                ),
+                (
+                    "rgb",
+                    35,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    1200000.0,
+                ),
+                (
+                    "bitvm",
+                    90,
+                    "Optimistic",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM",
+                    5000000.0,
+                ),
+                (
+                    "babylon", 25, "Staking", "On-chain", "Bitcoin", "Staking", 15000000.0,
+                ),
+                (
+                    "core-dao",
+                    40,
+                    "Satoshi Plus",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Relayer",
+                    75000000.0,
+                ),
+                (
+                    "lorenzo", 30, "Staking", "On-chain", "Bitcoin", "Staking", 12000000.0,
+                ),
+                (
+                    "hemi",
+                    50,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    35000000.0,
+                ),
+                (
+                    "bob",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "Optimistic",
+                    28000000.0,
+                ),
+                (
+                    "merlin",
+                    35,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    45000000.0,
+                ),
+                (
+                    "mezo",
+                    25,
+                    "Economic Layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "tBTC",
+                    150000000.0,
+                ),
+                ("nubit", 20, "DA", "On-chain", "Bitcoin", "N/A", 5000000.0),
+                (
+                    "bison",
+                    55,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    10000000.0,
+                ),
+                (
+                    "zulu",
+                    40,
+                    "Multi-layer",
+                    "On-chain",
+                    "Bitcoin",
+                    "N/A",
+                    15000000.0,
+                ),
+                (
+                    "botanix",
+                    60,
+                    "Spiderchain",
+                    "Sidechain",
+                    "Bitcoin",
+                    "Spiderchain",
+                    8000000.0,
+                ),
+                (
+                    "bitlayer",
+                    45,
+                    "Optimistic",
+                    "Rollup",
+                    "Bitcoin",
+                    "BitVM",
+                    25000000.0,
+                ),
+                (
+                    "alpen",
+                    30,
+                    "ZK",
+                    "Rollup",
+                    "Bitcoin",
+                    "ZK Bridge",
+                    12000000.0,
+                ),
+                (
+                    "taproot-assets",
+                    15,
+                    "Client-side",
+                    "Off-chain",
+                    "Bitcoin",
+                    "N/A",
+                    5500000.0,
+                ),
+                (
+                    "bitvm2",
+                    85,
+                    "ZK-Fraud Proofs",
+                    "On-chain",
+                    "Bitcoin",
+                    "BitVM2",
+                    15000000.0,
+                ),
+            ]
+        };
 
         for (name, latency, trust, da, settlement, bridge, tvl) in services {
             let mut metadata = HashMap::new();
@@ -709,22 +810,38 @@ impl Engine {
     async fn fetch_stacks_block_height(&self) -> Result<u64, reqwest::Error> {
         let fallback_height = 841500;
         let client = reqwest::Client::new();
-        match client
+        let res = client
             .get("https://api.mainnet.hiro.so/v2/info")
             .timeout(std::time::Duration::from_secs(5))
             .send()
-            .await
-        {
+            .await;
+
+        let height = match res {
             Ok(resp) => {
                 if let Ok(info) = resp.json::<serde_json::Value>().await {
-                    if let Some(height) = info["stacks_tip_height"].as_u64() {
-                        return Ok(height);
-                    }
+                    info["stacks_tip_height"]
+                        .as_u64()
+                        .unwrap_or(fallback_height)
+                } else {
+                    fallback_height
                 }
-                Ok(fallback_height)
             }
-            Err(_) => Ok(fallback_height),
+            Err(_) => fallback_height,
+        };
+
+        // Update Stacks metadata
+        let mut statuses = self.service_statuses.write().unwrap();
+        if let Some(status) = statuses.get_mut("stacks") {
+            status
+                .metadata
+                .insert("block_height".to_string(), height.to_string());
+            status
+                .metadata
+                .insert("hiro_api_connected".to_string(), "true".to_string());
+            status.last_checked = Utc::now();
         }
+
+        Ok(height)
     }
 
     pub fn calculate_total_tvl(&self) -> f64 {
@@ -1078,7 +1195,7 @@ impl Engine {
     pub fn get_bitvm_proof(&self, proof_id: &str) -> serde_json::Value {
         self.increment_requests();
         if remediation::is_production_mainnet() {
-             return serde_json::json!({
+            return serde_json::json!({
                 "proof_id": proof_id,
                 "status": "ConnectionRequired",
                 "error": "Mainnet node connection required for real-time proof auditing.",
@@ -1119,7 +1236,7 @@ impl Engine {
     pub fn get_citrea_proof(&self, batch_id: &str) -> serde_json::Value {
         self.increment_requests();
         if remediation::is_production_mainnet() {
-             return serde_json::json!({
+            return serde_json::json!({
                 "batch_id": batch_id,
                 "status": "ConnectionRequired",
                 "error": "Mainnet node connection required for Citrea ZK-proof verification.",
@@ -1415,7 +1532,7 @@ impl Engine {
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
         if remediation::is_production_mainnet() {
-             return serde_json::json!({
+            return serde_json::json!({
                 "asset": "L-BTC",
                 "peg_status": "ConnectionRequired",
                 "error": "Mainnet node connection required for Liquid peg verification.",
@@ -1433,7 +1550,7 @@ impl Engine {
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
         if remediation::is_production_mainnet() {
-             return serde_json::json!({
+            return serde_json::json!({
                 "asset": "RBTC",
                 "powpeg_status": "ConnectionRequired",
                 "error": "Mainnet node connection required for Rootstock powpeg verification.",
@@ -1532,7 +1649,10 @@ impl Engine {
 
                 log::info!("Generated support ticket: {}", ticket.token);
 
-                tokio::time::sleep(std::time::Duration::from_secs(engine.support_intake.config.poll_interval_secs)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    engine.support_intake.config.poll_interval_secs,
+                ))
+                .await;
             }
         });
     }
