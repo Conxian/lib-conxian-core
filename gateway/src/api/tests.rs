@@ -219,3 +219,61 @@ async fn test_bitvm2_verify_state_root_missing_vk() {
         actix_web::http::StatusCode::SERVICE_UNAVAILABLE
     );
 }
+
+#[actix_web::test]
+async fn test_mcp_tools_list() {
+    let engine = Arc::new(Engine::new());
+    engine.initialize();
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::from(engine))
+            .configure(crate::api::config),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/mcp")
+        .set_json(serde_json::json!({
+            "method": "tools/list",
+            "params": {}
+        }))
+        .to_request();
+
+    let resp = test::call_service(&app, req).await;
+    assert!(resp.status().is_success());
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["tools"].is_array());
+    assert!(body["tools"].as_array().unwrap().len() >= 4);
+}
+
+#[actix_web::test]
+async fn test_mcp_draft_intent() {
+    let engine = Arc::new(Engine::new());
+    engine.initialize();
+    let app = test::init_service(
+        App::new()
+            .app_data(web::Data::from(engine))
+            .configure(crate::api::config),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/mcp")
+        .set_json(serde_json::json!({
+            "method": "tools/call",
+            "params": {
+                "name": "draft_financial_intent",
+                "arguments": {
+                    "type": "YieldOptimization",
+                    "details": { "target": "sBTC-LP" }
+                }
+            }
+        }))
+        .to_request();
+
+    let resp = test::call_service(&app, req).await;
+    assert!(resp.status().is_success());
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["requires_handshake"].as_bool().unwrap());
+    assert!(body["proposal_id"].is_string());
+}

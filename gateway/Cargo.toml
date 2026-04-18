@@ -1,12 +1,13 @@
 [package]
 name = "conxian-gateway"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2021"
 authors = ["Conxian Team"]
 description = "Unified Gateway for Conxian Network Sovereign Services and Bitcoin Layers"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+mcp-sdk-rs = "0.3.4"
 actix-web = "4.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -17,6 +18,8 @@ log = "0.4"
 reqwest = { version = "0.11", features = ["json"] }
 futures = "0.3"
 lib-conxian-core = { path = ".." }
+async-imap = "0.9"
+mailparse = "0.14"
 
 [lib]
 name = "conxian_gateway"
