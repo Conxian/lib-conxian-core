@@ -47,7 +47,7 @@ Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63
 - **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
-Returns the CJCS v0.2.1.0 JSON-LD machine-readable definition (CON-73).
+Returns the CJCS v0.2.1 JSON-LD machine-readable definition (CON-73).
 
 ### GET /api/v1/finance/bond/{id}
 Retrieves Bitcoin DLC Bond lifecycle information (CON-62, CON-72).
