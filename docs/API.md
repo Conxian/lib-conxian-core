@@ -142,6 +142,16 @@ Returns the canonical wallet inventory for BOS and related system operations (CO
 ## 5. Data Models (Continued)
 
 ### SabWallet
+```json
+{
+  "address": "SPSZXAKV7DWTDZN2601WR31BM51BD3YTQWE97VRM",
+  "role": "Execution",
+  "owner": "Operator",
+  "status": "Active",
+  "quorum": "1-of-1",
+  "spending_limit_usd": 10000.0
+}
+```
 
 ## 6. Agentic & Autonomous Surface (MCP)
 
