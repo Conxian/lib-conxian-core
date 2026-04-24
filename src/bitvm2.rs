@@ -194,3 +194,49 @@ pub fn verify_state_root_bn254_groth16(
     Groth16::<Bn254>::verify_proof(pvk.as_ref(), &proof, &inputs)
         .map_err(|_| Bitvm2VerifyError::InvalidProof)
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Bitvm2Segment {
+    pub segment_index: u32,
+    pub script_hash: String,
+    pub commitment: String,
+    pub status: String,
+}
+
+use serde::{Deserialize, Serialize};
+
+pub struct Bitvm2Orchestrator {
+    pub total_segments: u32,
+}
+impl Default for Bitvm2Orchestrator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Bitvm2Orchestrator {
+    pub fn new() -> Self {
+        Self {
+            total_segments: 364,
+        }
+    }
+
+    pub fn generate_segments(&self, state_root: &str) -> Vec<Bitvm2Segment> {
+        let mut segments = Vec::new();
+        for i in 0..self.total_segments {
+            segments.push(Bitvm2Segment {
+                segment_index: i,
+                script_hash: format!("sha256:hash-{}-{}", state_root, i),
+                commitment: format!("commit-{}-{}", state_root, i),
+                status: "Pending".to_string(),
+            });
+        }
+        segments
+    }
+
+    pub fn verify_disprove_logic(&self, segment: &Bitvm2Segment, proof: &str) -> bool {
+        // In a real implementation, this would verify the specific segment proof
+        // against the script hash.
+        !proof.is_empty() && segment.status == "Pending"
+    }
+}

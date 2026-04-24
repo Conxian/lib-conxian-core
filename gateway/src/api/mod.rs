@@ -18,6 +18,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bitvm_handler)
             .service(bitvm2_handler)
             .service(bitvm2_info_handler)
+            .service(bitvm2_segments_handler)
             .service(bitvm2_verify_state_root_handler)
             .service(changelly_handler)
             .service(changelly_rate_handler)
@@ -134,6 +135,15 @@ async fn bitvm2_handler(engine: web::Data<Engine>) -> impl Responder {
 #[get("/bitvm2/info")]
 async fn bitvm2_info_handler(engine: web::Data<Engine>) -> impl Responder {
     let res = engine.get_bitvm2_info();
+    HttpResponse::Ok().json(res)
+}
+#[get("/bitvm2/segments/{state_root}")]
+async fn bitvm2_segments_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
+    let state_root = path.into_inner();
+    let res = engine.get_bitvm2_segments(&state_root);
     HttpResponse::Ok().json(res)
 }
 

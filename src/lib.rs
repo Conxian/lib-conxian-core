@@ -24,3 +24,17 @@ mod deployment_tests {
         assert!(readable.contains("nakamoto_integrity_hash"));
     }
 }
+
+#[cfg(test)]
+mod bitvm2_orchestration_tests {
+    use super::bitvm2::*;
+
+    #[test]
+    fn test_segment_generation() {
+        let orchestrator = Bitvm2Orchestrator::new();
+        let segments = orchestrator.generate_segments("0xabc");
+        assert_eq!(segments.len(), 364);
+        assert_eq!(segments[0].segment_index, 0);
+        assert!(segments[0].script_hash.contains("0xabc"));
+    }
+}

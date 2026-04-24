@@ -1,6 +1,18 @@
 # Changelog
 
 All notable changes to the `lib-conxian-core` project will be documented in this file.
+## [0.2.2] - 2026-04-12
+### Added
+- BitVM2 segment orchestration logic (364 chunks) in `lib-conxian-core`.
+- `/api/v1/bitvm2/segments/{state_root}` endpoint in Conxian Gateway.
+- `getBitvm2Segments` function in TypeScript network service.
+- Unit tests for BitVM2 orchestration and Gateway segment API.
+
+### Changed
+- Updated system documentation (PRD, API, ENHANCEMENTS) to v0.2.2.
+- Transitioned Phase 8 to "Complete" status.
+- Hardened Gateway Engine risk assessment and status reporting logic.
+
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

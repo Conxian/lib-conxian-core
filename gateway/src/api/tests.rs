@@ -479,3 +479,19 @@ async fn test_mcp_draft_intent() {
     assert!(body["requires_handshake"].as_bool().unwrap());
     assert!(body["proposal_id"].is_string());
 }
+
+#[actix_web::test]
+async fn test_bitvm2_segments_endpoint() {
+    let engine_arc = Arc::new(Engine::new());
+    engine_arc.initialize();
+    let engine = web::Data::from(engine_arc);
+    let app = test::init_service(App::new().app_data(engine).configure(config)).await;
+    let req = test::TestRequest::get()
+        .uri("/api/v1/bitvm2/segments/0xabc")
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["segments"].is_array());
+    assert_eq!(body["segments"].as_array().unwrap().len(), 364);
+}

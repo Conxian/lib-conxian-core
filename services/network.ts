@@ -284,6 +284,12 @@ export const getTaprootAssetsStats = async () => {
   return response.json();
 };
 
+export const getBitvm2Segments = async (stateRoot: string) => {
+  const url = `${getGatewayUrl("bitvm2", currentEnv)}/segments/${stateRoot}`;
+  const response = await fetch(url);
+  return response.json();
+};
+
 export const getBitvm2Info = async () => {
   const url = `${getGatewayUrl("bitvm2", currentEnv)}/info`;
   const response = await fetch(url);
