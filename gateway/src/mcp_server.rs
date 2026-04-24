@@ -1,5 +1,5 @@
-use conxian_gateway::engine::Engine;
 use conxian_gateway::engine::mcp::McpManager;
+use conxian_gateway::engine::Engine;
 use std::sync::Arc;
 use tokio::io::{stdin, AsyncBufReadExt, BufReader};
 
@@ -62,7 +62,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "tools/call" => {
                 let params = req.get("params").cloned().unwrap_or(serde_json::json!({}));
                 let tool_name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                let arguments = params.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+                let arguments = params
+                    .get("arguments")
+                    .cloned()
+                    .unwrap_or(serde_json::json!({}));
 
                 let result = manager.handle_call(tool_name, arguments).await;
 
