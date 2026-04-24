@@ -208,10 +208,17 @@ use serde::{Deserialize, Serialize};
 pub struct Bitvm2Orchestrator {
     pub total_segments: u32,
 }
+impl Default for Bitvm2Orchestrator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Bitvm2Orchestrator {
     pub fn new() -> Self {
-        Self { total_segments: 364 }
+        Self {
+            total_segments: 364,
+        }
     }
 
     pub fn generate_segments(&self, state_root: &str) -> Vec<Bitvm2Segment> {

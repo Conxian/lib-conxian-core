@@ -138,12 +138,14 @@ async fn bitvm2_info_handler(engine: web::Data<Engine>) -> impl Responder {
     HttpResponse::Ok().json(res)
 }
 #[get("/bitvm2/segments/{state_root}")]
-async fn bitvm2_segments_handler(engine: web::Data<Engine>, path: web::Path<String>) -> impl Responder {
+async fn bitvm2_segments_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
     let state_root = path.into_inner();
     let res = engine.get_bitvm2_segments(&state_root);
     HttpResponse::Ok().json(res)
 }
-
 
 #[derive(Deserialize)]
 pub struct Bitvm2VerifyStateRootRequest {

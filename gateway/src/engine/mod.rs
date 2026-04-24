@@ -1362,7 +1362,6 @@ impl Engine {
         serde_json::json!({ "segments": segments })
     }
 
-
     pub fn get_bitvm2_info(&self) -> serde_json::Value {
         self.increment_requests();
         let status = self.get_service_status("bitvm2");
