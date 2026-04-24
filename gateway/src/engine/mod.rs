@@ -1355,6 +1355,13 @@ impl Engine {
             "status": "Active"
         })
     }
+    pub fn get_bitvm2_segments(&self, state_root: &str) -> serde_json::Value {
+        self.increment_requests();
+        let orchestrator = lib_conxian_core::bitvm2::Bitvm2Orchestrator::new();
+        let segments = orchestrator.generate_segments(state_root);
+        serde_json::json!({ "segments": segments })
+    }
+
 
     pub fn get_bitvm2_info(&self) -> serde_json::Value {
         self.increment_requests();
