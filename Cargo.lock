@@ -762,6 +762,7 @@ name = "conxian-gateway"
 version = "0.2.2"
 dependencies = [
  "actix-web",
+ "anyhow",
  "async-imap",
  "chrono",
  "env_logger",

@@ -267,7 +267,7 @@ impl Default for Engine {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            version: "0.2.1".to_string(),
+            version: "0.2.2".to_string(),
             start_time: Utc::now(),
             support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
