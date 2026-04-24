@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to the `lib-conxian-core` project will be documented in this file.
-## [0.2.2] - 2026-04-12
+## [0.2.2] - 2026-04-24
 ### Added
 - BitVM2 segment orchestration logic (364 chunks) in `lib-conxian-core`.
 - `/api/v1/bitvm2/segments/{state_root}` endpoint in Conxian Gateway.

@@ -19,7 +19,7 @@
 
 ## 3. Remediation
 - Verified `.gitignore` hardening to prevent future leakage of `*.key`, `*.keystore`, and `.env*` files.
-- Version bumped to 0.2.1 to reflect the alignment sweep completion.
+- Version bumped to 0.2.2 to reflect the alignment sweep completion.
 
 ## 4. Conclusion
 The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards.
