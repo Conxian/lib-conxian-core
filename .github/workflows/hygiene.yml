@@ -1,0 +1,45 @@
+name: Repository Hygiene Check
+
+on:
+  push:
+    branches: [ main, dev, staged ]
+  pull_request:
+    branches: [ main, dev, staged ]
+
+jobs:
+  check-forbidden-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Scan for forbidden files
+        run: |
+          FORBIDDEN_PATTERNS=(
+            ".env"
+            "*.pem"
+            "*.key"
+            "node_modules"
+            "test-results"
+            "playwright-report"
+            "target"
+            "dist"
+            "build"
+          )
+
+          FOUND_FILES=""
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            MATCHES=$(git ls-files "$pattern")
+            if [ ! -z "$MATCHES" ]; then
+              echo "Error: Forbidden files matching '$pattern' found in repository:"
+              echo "$MATCHES"
+              FOUND_FILES="$FOUND_FILES $MATCHES"
+            fi
+          done
+
+          if [ ! -z "$FOUND_FILES" ]; then
+            echo "Hygiene check failed. Please remove these files from version control and ensure they are ignored in .gitignore."
+            false
+          else
+            echo "No forbidden files found. Hygiene check passed."
+          fi
