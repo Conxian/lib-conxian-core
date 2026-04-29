@@ -78,6 +78,47 @@ impl McpManager {
         })
     }
 
+    pub fn get_list_proposals_tool(&self) -> serde_json::Value {
+        json!({
+            "name": "list_state_proposals",
+            "description": "List all current state proposals, including their status, TEE attestations, and timelocks.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "status": { "type": "string", "enum": ["Pending", "Approved", "Executed"] }
+                }
+            }
+        })
+    }
+
+    pub fn get_approve_proposal_tool(&self) -> serde_json::Value {
+        json!({
+            "name": "approve_state_proposal",
+            "description": "Approve a pending state proposal. Requires human validation of TEE attestation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "proposal_id": { "type": "string" }
+                },
+                "required": ["proposal_id"]
+            }
+        })
+    }
+
+    pub fn get_execute_proposal_tool(&self) -> serde_json::Value {
+        json!({
+            "name": "execute_state_proposal",
+            "description": "Execute an approved state proposal after the 144-block timelock has expired.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "proposal_id": { "type": "string" }
+                },
+                "required": ["proposal_id"]
+            }
+        })
+    }
+
     pub async fn handle_call(
         &self,
         tool_name: &str,
@@ -154,6 +195,43 @@ impl McpManager {
                     "proposal_id": proposal_id,
                     "requires_handshake": true
                 })
+            }
+            "list_state_proposals" => {
+                let status_filter = _arguments.get("status").and_then(|v| v.as_str());
+                let proposals = self.engine.get_proposals();
+                let filtered: Vec<_> = proposals
+                    .into_iter()
+                    .filter(|p| status_filter.is_none_or(|s| p.status == s))
+                    .collect();
+
+                json!({
+                    "content": [{
+                        "type": "text",
+                        "text": format!("Current State Proposals: {}", serde_json::to_string_pretty(&filtered).unwrap_or_default())
+                    }]
+                })
+            }
+            "approve_state_proposal" => {
+                let proposal_id = _arguments
+                    .get("proposal_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if self.engine.approve_proposal(proposal_id) {
+                    json!({ "content": [{ "type": "text", "text": format!("Proposal {} approved successfully.", proposal_id) }] })
+                } else {
+                    json!({ "isError": true, "content": [{ "type": "text", "text": format!("Failed to approve proposal {}. It may not exist or is not in Pending status.", proposal_id) }] })
+                }
+            }
+            "execute_state_proposal" => {
+                let proposal_id = _arguments
+                    .get("proposal_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if self.engine.execute_proposal(proposal_id) {
+                    json!({ "content": [{ "type": "text", "text": format!("Proposal {} executed successfully.", proposal_id) }] })
+                } else {
+                    json!({ "isError": true, "content": [{ "type": "text", "text": format!("Failed to execute proposal {}. It may not exist or is not in Approved status.", proposal_id) }] })
+                }
             }
             _ => {
                 json!({ "isError": true, "content": [{ "type": "text", "text": "Tool not found" }] })

@@ -57,6 +57,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bison_handler)
             .service(bison_stats_handler)
             .service(settlement_proposals_handler)
+            .service(settlement_proposal_approve_handler)
+            .service(settlement_proposal_execute_handler)
             .service(iso20022_handler)
             .service(papss_handler)
             .service(brics_handler)
@@ -976,6 +978,34 @@ async fn partner_intake_status_update_handler(
 async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Responder {
     let res = engine.get_proposals();
     HttpResponse::Ok().json(res)
+}
+
+#[post("/settlement/proposals/{id}/approve")]
+async fn settlement_proposal_approve_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
+    let proposal_id = path.into_inner();
+    if engine.approve_proposal(&proposal_id) {
+        HttpResponse::Ok().json(serde_json::json!({"status": "Approved"}))
+    } else {
+        HttpResponse::NotFound()
+            .json(serde_json::json!({"error": "Proposal not found or not Pending"}))
+    }
+}
+
+#[post("/settlement/proposals/{id}/execute")]
+async fn settlement_proposal_execute_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
+    let proposal_id = path.into_inner();
+    if engine.execute_proposal(&proposal_id) {
+        HttpResponse::Ok().json(serde_json::json!({"status": "Executed"}))
+    } else {
+        HttpResponse::NotFound()
+            .json(serde_json::json!({"error": "Proposal not found or not Approved"}))
+    }
 }
 
 #[post("/settlement/iso20022")]

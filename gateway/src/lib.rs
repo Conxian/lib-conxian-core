@@ -15,6 +15,7 @@ pub async fn start_gateway_server(port: u16) -> std::io::Result<()> {
     // Start background monitoring
     Engine::start_monitoring(Arc::clone(&engine)).await;
     Engine::poll_support(Arc::clone(&engine)).await;
+    Engine::broadcast_intents(Arc::clone(&engine)).await;
 
     let host = "0.0.0.0";
     log::info!("Starting Conxian Gateway Service on {}:{}", host, port);
