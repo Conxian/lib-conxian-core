@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod cxip20_architecture_tests {
-    use crate::crypto::{AdaptorSignature, WitnessEncryption, PVDE};
+    use crate::crypto::{AdaptorSignature, WitnessEncryption, WitnessEncryptionError, PVDE};
     use crate::enclave::ZKCompliance;
     use crate::lightning::LightningNode;
     use crate::rgb::RGBRuntime;
@@ -14,8 +14,24 @@ mod cxip20_architecture_tests {
     #[test]
     fn test_advanced_crypto_stubs() {
         assert!(PVDE::generate_puzzle(1000, b"secret").contains("pvde-puzzle-1000"));
-        assert!(WitnessEncryption::encrypt_to_bitcoin_finality(6, b"data").contains("depth-6"));
+        assert!(WitnessEncryption::encrypt_to_bitcoin_finality(6, b"data")
+            .contains("we-unimplemented-depth-6"));
         assert!(AdaptorSignature::create_adaptor_signature("sec", "msg").contains("adaptor-sig"));
+    }
+
+    #[test]
+    fn test_witness_encryption_placeholder_does_not_leak_plaintext() {
+        let payload = b"highly-sensitive-data";
+        let placeholder = WitnessEncryption::encrypt_to_bitcoin_finality(6, payload);
+
+        assert!(!placeholder.contains("highly-sensitive-data"));
+        assert!(!placeholder.contains(&hex::encode(payload)));
+    }
+
+    #[test]
+    fn test_witness_encryption_try_api_reports_unimplemented() {
+        let result = WitnessEncryption::try_encrypt_to_bitcoin_finality(6, b"data");
+        assert_eq!(result, Err(WitnessEncryptionError::Unimplemented));
     }
 
     #[test]
