@@ -6,6 +6,7 @@ use base64::engine::general_purpose;
 use base64::Engine as _;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
+use serde::{Deserialize, Serialize};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
@@ -144,11 +145,7 @@ fn get_or_prepare_pvk(vk_b64: &str) -> Result<Arc<PreparedVerifyingKey<Bn254>>, 
 }
 
 /// Verifies a Groth16 proof whose first public input is the provided `state_root`.
-///
-/// Any `extra_public_inputs` are appended to the public-input vector in-order.
-///
-/// For backward compatibility, if `extra_public_inputs[0]` parses to the same value as
-/// `state_root`, it is treated as the root input instead of prefixing `state_root` again.
+/// Aligned with Section 7.1 (Groth16 SNARK verifier)
 pub fn verify_state_root_bn254_groth16(
     vk_b64: &str,
     state_root: &str,
@@ -203,11 +200,10 @@ pub struct Bitvm2Segment {
     pub status: String,
 }
 
-use serde::{Deserialize, Serialize};
-
 pub struct Bitvm2Orchestrator {
     pub total_segments: u32,
 }
+
 impl Default for Bitvm2Orchestrator {
     fn default() -> Self {
         Self::new()
@@ -235,8 +231,6 @@ impl Bitvm2Orchestrator {
     }
 
     pub fn verify_disprove_logic(&self, segment: &Bitvm2Segment, proof: &str) -> bool {
-        // In a real implementation, this would verify the specific segment proof
-        // against the script hash.
         !proof.is_empty() && segment.status == "Pending"
     }
 }

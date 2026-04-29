@@ -1,11 +1,20 @@
 pub mod bitvm2;
 pub mod deployment;
 pub mod musig2;
-
 pub mod cjcs;
 pub mod contract_bridge;
 pub mod gateway;
 pub mod wallet;
+
+// CXIP 20 Modular Architecture
+pub mod enclave;
+pub mod crypto;
+pub mod bitcoin;
+pub mod lightning;
+pub mod rgb;
+pub mod stacks;
+#[cfg(test)]
+mod tests;
 
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
 pub use wallet::{sign_transaction, Wallet};
