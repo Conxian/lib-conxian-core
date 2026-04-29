@@ -198,6 +198,35 @@ pub enum PartnerLeadTransitionError {
     EscalationReasonRequired,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProposalExecutionError {
+    NotFound,
+    NotApproved,
+    TimelockNotExpired {
+        current_block: u64,
+        timelock_end_block: u64,
+    },
+}
+
+impl ProposalExecutionError {
+    pub fn message(&self, proposal_id: &str) -> String {
+        match self {
+            ProposalExecutionError::NotFound => {
+                format!("Proposal {proposal_id} not found.")
+            }
+            ProposalExecutionError::NotApproved => {
+                format!("Proposal {proposal_id} is not in Approved status.")
+            }
+            ProposalExecutionError::TimelockNotExpired {
+                current_block,
+                timelock_end_block,
+            } => format!(
+                "Proposal {proposal_id} timelock not expired: current block {current_block}, required block {timelock_end_block}."
+            ),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -1132,15 +1161,32 @@ impl Engine {
         }
         false
     }
-    pub fn execute_proposal(&self, proposal_id: &str) -> bool {
+    pub fn execute_proposal(&self, proposal_id: &str) -> Result<(), ProposalExecutionError> {
         let mut proposals = self.state_proposals.write().unwrap();
-        if let Some(proposal) = proposals.get_mut(proposal_id) {
-            if proposal.status == "Approved" {
-                proposal.status = "Executed".to_string();
-                return true;
-            }
+        let proposal = proposals
+            .get_mut(proposal_id)
+            .ok_or(ProposalExecutionError::NotFound)?;
+
+        if proposal.status != "Approved" {
+            return Err(ProposalExecutionError::NotApproved);
         }
-        false
+
+        let current_height: u64 = self
+            .get_service_status("stacks")
+            .metadata
+            .get("block_height")
+            .and_then(|h| h.parse().ok())
+            .unwrap_or(841500);
+
+        if current_height < proposal.timelock_end_block {
+            return Err(ProposalExecutionError::TimelockNotExpired {
+                current_block: current_height,
+                timelock_end_block: proposal.timelock_end_block,
+            });
+        }
+
+        proposal.status = "Executed".to_string();
+        Ok(())
     }
     pub fn get_reserves(&self) -> Vec<ReserveAsset> {
         self.reserves.read().unwrap().clone()
