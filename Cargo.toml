@@ -26,6 +26,9 @@ bdk = { version = "0.29", features = ["key-value-db"] }
 lightning = { version = "0.0.123", features = ["std"] }
 wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
+rgb-core = "0.10.6"
+rgb-std = "0.10.6"
+aluvm = "0.10.6"
 
 [workspace]
 members = ["gateway"]
