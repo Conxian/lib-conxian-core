@@ -1,4 +1,4 @@
-# Conxian Gateway API Reference v0.2.2
+# Conxian Gateway API Reference v0.2.3
 
 ## 1. System Endpoints
 
@@ -47,7 +47,7 @@ Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63
 - **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
-Returns the CJCS v0.2.2 JSON-LD machine-readable definition (CON-73).
+Returns the CJCS v0.2.3 JSON-LD machine-readable definition (CON-73).
 
 ### GET /api/v1/finance/bond/{id}
 Retrieves Bitcoin DLC Bond lifecycle information (CON-62, CON-72).
@@ -119,6 +119,12 @@ Ingress point for BRICS external settlement messages. Verified in TEE.
 Lists all pending state proposals generated from external triggers.
 - **Response:** Array of StateProposal objects.
 
+### POST /api/v1/settlement/proposals/{id}/approve
+Approves a pending state proposal. Transition status to "Approved".
+
+### POST /api/v1/settlement/proposals/{id}/execute
+Executes an approved state proposal. Transition status to "Executed".
+
 ## 4. Data Models (Continued)
 
 ### StateProposal
@@ -155,7 +161,7 @@ Returns the canonical wallet inventory for BOS and related system operations (CO
 
 ## 6. Agentic & Autonomous Surface (MCP)
 
-The Gateway exposes a read-only Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
+The Gateway exposes a read-first Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
 
 ### POST /api/v1/mcp
 Unified entry point for MCP interactions (Tools, Resources, Prompts).
@@ -166,13 +172,16 @@ Unified entry point for MCP interactions (Tools, Resources, Prompts).
 - **get_yield_metrics**: Analyze non-dilutive financial health and yield streams.
 - **list_industrial_intents**: Discover tool schemas for FSOC validation or settlement triggers.
 - **draft_financial_intent**: Construct complex financial intents for human signing (Subject to 144-block timelock).
+- **list_state_proposals**: List all current state proposals, including their status and TEE attestations.
+- **approve_state_proposal**: Approve a pending state proposal (Human-in-the-loop validation).
+- **execute_state_proposal**: Execute an approved state proposal after timelock expiration.
 
 #### Execution Flow
 1. **Agent Drafting**: AI Agent construct an intent using `draft_financial_intent`.
 2. **Proposal Creation**: Gateway emits a `StateProposal` with `Pending` status.
 3. **Governance Gate**: Mandatory 144-block timelock is applied.
-4. **Human Handshake**: Conxius Wallet visualizes the state change for hardware approval.
-5. **Final Execution**: Transaction is executed via `lib-conclave-sdk` after multi-sig rules pass.
+4. **Human Handshake**: Conxius Wallet visualizes the state change for hardware approval via `approve_state_proposal`.
+5. **Final Execution**: Transaction is executed via `execute_state_proposal` (internally invoking `lib-conclave-sdk` logic when integrated).
 
 ## 7. Partner Intake Endpoints
 

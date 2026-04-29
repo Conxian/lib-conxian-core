@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let manager = McpManager::new(engine);
 
-    eprintln!("Conxian MCP Server v0.2.2 is starting (stdio)...");
+    eprintln!("Conxian MCP Server v0.2.3 is starting (stdio)...");
 
     let mut reader = BufReader::new(stdin()).lines();
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         },
                         "serverInfo": {
                             "name": "conxian-gateway-mcp",
-                            "version": "0.2.2"
+                            "version": "0.2.3"
                         }
                     }
                 });
@@ -49,6 +49,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     manager.get_yield_oracle_tool(),
                     manager.get_industrial_intents_tool(),
                     manager.get_draft_intent_tool(),
+                    manager.get_list_proposals_tool(),
+                    manager.get_approve_proposal_tool(),
+                    manager.get_execute_proposal_tool(),
                 ];
                 let response = serde_json::json!({
                     "jsonrpc": "2.0",

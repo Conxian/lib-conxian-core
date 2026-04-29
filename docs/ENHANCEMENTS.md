@@ -25,13 +25,14 @@ The Conxian Gateway provides deep protocol integration and transparent risk metr
   - Integration of automated threat detection via mempool analysis.
   - Finality tracking for hybrid L2s (Hemi, BOB).
 
-## 4. Phase 9: Agentic Surface & Autonomous Systems (Active)
+## 4. Phase 9: Agentic Surface & Autonomous Systems (Complete)
 - **Objective:** Enable programmatic trust and autonomous interaction via Model Context Protocol (MCP).
 - **Achievements:**
-  - **Read-First Agentic Surface:** Implemented an MCP layer allowing agents to audit system state, telemetry, and protocol proofs without alteration capabilities.
+  - **Read-First Agentic Surface:** Implemented an MCP layer allowing agents to audit system state, telemetry, and protocol proofs.
   - **Agent Drafting Flow:** Implemented logic for agent-constructed financial intents, converting complex maneuvers into standard StateProposals for human signing.
-  - **Sovereign Handshake:** Defined a visualization layer for "Human-in-the-Loop" validation of agent-drafted actions, ensuring Zero Secret Egress and TEE-backed security.
+  - **Sovereign Handshake:** Implemented full proposal lifecycle (Draft -> Approve -> Execute) with human-in-the-loop validation via MCP tools and REST endpoints.
   - **Industrial Intent Discovery:** Enabled broadcasting of self-describing tool schemas for FSOC validation and settlement triggers.
+  - **Real-time Intent Broadcasting:** Implemented background tasks for periodic status updates of pending intents and proposals.
 - **Next Steps:**
-  - Parallel mcp-server process for real-time intent broadcasting.
-  - Integration with `lib-conclave-sdk` for headless execution of approved intents.
+  - Integration with `lib-conclave-sdk` for hardware-anchored execution of approved intents.
+  - Expansion of MCP resources for real-time mempool and bridge auditing.
