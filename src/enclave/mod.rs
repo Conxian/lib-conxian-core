@@ -5,7 +5,9 @@ pub struct HeadlessEnclave;
 
 impl HeadlessEnclave {
     pub fn execute_stateless<F, R>(f: F) -> R
-    where F: FnOnce() -> R {
+    where
+        F: FnOnce() -> R,
+    {
         // In a real SGX environment, this would be an ecall
         f()
     }

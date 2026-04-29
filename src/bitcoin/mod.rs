@@ -1,8 +1,8 @@
 //! Base Layer Orchestration: rust-bitcoin and BDK
 //! Aligned with CXIP 20 Section 4.0
 
-use bitcoin::{Transaction, psbt::PartiallySignedTransaction};
 use bdk::Wallet;
+use bitcoin::{psbt::PartiallySignedTransaction, Transaction};
 
 pub struct BitcoinOrchestrator;
 
@@ -15,7 +15,9 @@ impl BitcoinOrchestrator {
 
     /// PSBT Workflow (BIP-174)
     /// Roles: Creator, Updater, Signer, Extractor
-    pub fn create_psbt(_wallet: &Wallet<bdk::database::MemoryDatabase>) -> anyhow::Result<PartiallySignedTransaction> {
+    pub fn create_psbt(
+        _wallet: &Wallet<bdk::database::MemoryDatabase>,
+    ) -> anyhow::Result<PartiallySignedTransaction> {
         Err(anyhow::anyhow!("Unimplemented: BDK PSBT workflow"))
     }
 }

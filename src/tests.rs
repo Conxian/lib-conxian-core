@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod cxip20_architecture_tests {
+    use crate::crypto::{AdaptorSignature, WitnessEncryption, PVDE};
     use crate::enclave::ZKCompliance;
-    use crate::crypto::{PVDE, WitnessEncryption, AdaptorSignature};
     use crate::lightning::LightningNode;
-    use crate::stacks::{StacksNakamoto, SBTCBridge};
     use crate::rgb::RGBRuntime;
+    use crate::stacks::{SBTCBridge, StacksNakamoto};
 
     #[test]
     fn test_enclave_zkc_logic() {

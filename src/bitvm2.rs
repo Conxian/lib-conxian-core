@@ -4,9 +4,9 @@ use ark_groth16::{prepare_verifying_key, Groth16, PreparedVerifyingKey, Proof, V
 use ark_serialize::CanonicalDeserialize;
 use base64::engine::general_purpose;
 use base64::Engine as _;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
-use serde::{Deserialize, Serialize};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
