@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod cxip20_architecture_tests {
-    use crate::crypto::{AdaptorSignature, WitnessEncryption, PVDE};
+    use crate::crypto::{AdaptorSignature, CryptoStubError, WitnessEncryption, PVDE};
     use crate::enclave::ZKCompliance;
     use crate::lightning::LightningNode;
     use crate::rgb::RGBRuntime;
@@ -13,28 +13,33 @@ mod cxip20_architecture_tests {
 
     #[test]
     fn test_advanced_crypto_stubs() {
-        assert!(PVDE::generate_puzzle(1000, b"secret").contains("pvde-puzzle-1000"));
-        assert!(WitnessEncryption::encrypt_to_bitcoin_finality(6, b"data").contains("depth-6"));
-
-        let secret = "s3cr3t-value::do-not-leak";
-        let message = "msg";
-        let signature = AdaptorSignature::create_adaptor_signature(secret, message);
-
-        assert!(signature.starts_with("adaptor-sig-"));
-        assert!(!signature.contains(secret));
-        assert!(!signature.contains(message));
-
-        // Keep stub behavior deterministic for repeated invocations.
+        let pvde_err =
+            PVDE::generate_puzzle(1000, b"secret").expect_err("PVDE stub should fail closed");
         assert_eq!(
-            signature,
-            AdaptorSignature::create_adaptor_signature(secret, message)
+            pvde_err,
+            CryptoStubError::NotImplemented("PVDE::generate_puzzle")
         );
+        assert!(!pvde_err.to_string().contains("secret"));
 
-        // Different messages should produce different adaptor signatures.
-        assert_ne!(
-            signature,
-            AdaptorSignature::create_adaptor_signature(secret, "different-msg")
+        let witness_err = WitnessEncryption::encrypt_to_bitcoin_finality(6, b"data")
+            .expect_err("Witness encryption stub should fail closed");
+        assert_eq!(
+            witness_err,
+            CryptoStubError::NotImplemented("WitnessEncryption::encrypt_to_bitcoin_finality")
         );
+        let witness_msg = witness_err.to_string();
+        assert!(!witness_msg.contains("data"));
+        assert!(!witness_msg.contains("64617461"));
+
+        let adaptor_err = AdaptorSignature::create_adaptor_signature("sec", "msg")
+            .expect_err("Adaptor signature stub should fail closed");
+        assert_eq!(
+            adaptor_err,
+            CryptoStubError::NotImplemented("AdaptorSignature::create_adaptor_signature")
+        );
+        let adaptor_msg = adaptor_err.to_string();
+        assert!(!adaptor_msg.contains("sec"));
+        assert!(!adaptor_msg.contains("msg"));
     }
 
     #[test]
