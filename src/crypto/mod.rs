@@ -1,6 +1,8 @@
 //! Advanced Cryptography for Trust-Minimized Execution
 //! Aligned with CXIP 20 Section 3.0
 
+use sha2::{Digest, Sha256};
+
 pub struct PVDE; // Practical Verifiable Delay Encryption
 
 impl PVDE {
@@ -21,6 +23,12 @@ pub struct AdaptorSignature;
 
 impl AdaptorSignature {
     pub fn create_adaptor_signature(secret: &str, message: &str) -> String {
-        format!("adaptor-sig-{}-{}", secret, message)
+        let mut hasher = Sha256::new();
+        hasher.update(secret.as_bytes());
+        hasher.update(b":");
+        hasher.update(message.as_bytes());
+
+        let digest = hasher.finalize();
+        format!("adaptor-sig-{}", hex::encode(digest))
     }
 }

@@ -15,7 +15,26 @@ mod cxip20_architecture_tests {
     fn test_advanced_crypto_stubs() {
         assert!(PVDE::generate_puzzle(1000, b"secret").contains("pvde-puzzle-1000"));
         assert!(WitnessEncryption::encrypt_to_bitcoin_finality(6, b"data").contains("depth-6"));
-        assert!(AdaptorSignature::create_adaptor_signature("sec", "msg").contains("adaptor-sig"));
+
+        let secret = "s3cr3t-value::do-not-leak";
+        let message = "msg";
+        let signature = AdaptorSignature::create_adaptor_signature(secret, message);
+
+        assert!(signature.starts_with("adaptor-sig-"));
+        assert!(!signature.contains(secret));
+        assert!(!signature.contains(message));
+
+        // Keep stub behavior deterministic for repeated invocations.
+        assert_eq!(
+            signature,
+            AdaptorSignature::create_adaptor_signature(secret, message)
+        );
+
+        // Different messages should produce different adaptor signatures.
+        assert_ne!(
+            signature,
+            AdaptorSignature::create_adaptor_signature(secret, "different-msg")
+        );
     }
 
     #[test]
