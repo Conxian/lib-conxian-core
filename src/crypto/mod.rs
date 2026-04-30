@@ -29,7 +29,7 @@ impl PVDE {
         if data.is_empty() {
             return Err(CryptoStubError::NotImplemented("PVDE::generate_puzzle_empty"));
         }
-        
+
         let mut hasher = Sha256::new();
         hasher.update(&delay.to_be_bytes());
         hasher.update(data);
@@ -38,6 +38,30 @@ impl PVDE {
     }
 }
 
+/// Error type for witness-encryption placeholder APIs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WitnessEncryptionError {
+    /// Real witness encryption has not yet been implemented.
+    Unimplemented,
+}
+
+impl fmt::Display for WitnessEncryptionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WitnessEncryptionError::Unimplemented => {
+                write!(f, "witness encryption is not implemented yet")
+            }
+        }
+    }
+}
+
+impl std::error::Error for WitnessEncryptionError {}
+
+/// Placeholder witness-encryption API.
+///
+/// # Warning
+/// Real witness encryption is **not implemented** yet. This type currently
+/// exposes explicit placeholder behavior only.
 pub struct WitnessEncryption;
 
 impl WitnessEncryption {
@@ -49,6 +73,19 @@ impl WitnessEncryption {
         Err(CryptoStubError::NotImplemented(
             "WitnessEncryption::encrypt_to_bitcoin_finality",
         ))
+    }
+
+    /// Fallible witness-encryption entry point for future callers.
+    ///
+    /// # Warning
+    /// Real witness encryption is **not implemented**. Callers should handle
+    /// `Err(WitnessEncryptionError::Unimplemented)` until a real cryptographic
+    /// implementation exists.
+    pub fn try_encrypt_to_bitcoin_finality(
+        _depth: u32,
+        _data: &[u8],
+    ) -> Result<String, WitnessEncryptionError> {
+        Err(WitnessEncryptionError::Unimplemented)
     }
 }
 
@@ -62,10 +99,10 @@ impl AdaptorSignature {
         let secp = Secp256k1::new();
         let secret_bytes = hex::decode(secret_hex).map_err(|_| CryptoStubError::InvalidKey)?;
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
-        
+
         let _secret_key = SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
         let _message = Message::from_digest_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
-        
+
         // Return a mock hex string of the adaptor signature in production (defer to actual PTLC)
         Ok("0000000000000000000000000000000000000000000000000000000000000000".to_string())
     }
