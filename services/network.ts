@@ -469,6 +469,8 @@ export const getSabWallets = async (): Promise<SabWallet[]> => {
 /**
  * Partner Intake Endpoints
  */
+export type PartnerLeadStatus = 'new' | 'assigned' | 'in_progress' | 'qualified' | 'escalated' | 'closed_won' | 'closed_lost';
+
 export interface PartnerLead {
   id: string;
   partner_name: string;
@@ -476,8 +478,16 @@ export interface PartnerLead {
   contact_email: string;
   company_name?: string;
   notes?: string;
-  status: 'new' | 'assigned' | 'in_progress' | 'escalated' | 'closed';
+  status: PartnerLeadStatus;
   owner?: string;
+}
+
+export interface PartnerLeadStatusUpdate {
+  status: PartnerLeadStatus;
+  owner?: string;
+  escalated_to?: string;
+  escalation_reason?: string;
+  event_note?: string;
 }
 
 export const createPartnerLead = async (lead: Partial<PartnerLead>, idempotencyKey: string, apiKey: string) => {
@@ -494,10 +504,48 @@ export const createPartnerLead = async (lead: Partial<PartnerLead>, idempotencyK
   return response.json();
 };
 
+export const approveSettlementProposal = async (id: string): Promise<{ status: string }> => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/proposals/${id}/approve`;
+  const response = await fetch(url, { method: "POST" });
+  return response.json();
+};
+
+export const executeSettlementProposal = async (id: string): Promise<{ status: string }> => {
+  const url = `${getGatewayUrl("settlement", currentEnv)}/proposals/${id}/execute`;
+  const response = await fetch(url, { method: "POST" });
+  return response.json();
+};
+
 export const getPartnerLead = async (id: string, apiKey: string) => {
   const url = `${getGatewayUrl("intake/partner", currentEnv)}/${id}`;
   const response = await fetch(url, {
     headers: { "X-Partner-Intake-Key": apiKey }
+  });
+  return response.json();
+};
+
+export const updatePartnerLeadStatus = async (id: string, update: PartnerLeadStatusUpdate, apiKey: string): Promise<PartnerLead> => {
+  const url = `${getGatewayUrl("intake/partner", currentEnv)}/${id}/status`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Partner-Intake-Key": apiKey
+    },
+    body: JSON.stringify(update),
+  });
+  return response.json() as Promise<PartnerLead>;
+};
+
+/**
+ * MCP Interaction Helpers
+ */
+export const callMcp = async (method: string, params: any = {}) => {
+  const url = getGatewayUrl("mcp", currentEnv);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method, params }),
   });
   return response.json();
 };
