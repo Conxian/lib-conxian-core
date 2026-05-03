@@ -7,6 +7,7 @@ mod tests {
     #[tokio::test]
     async fn test_proposal_lifecycle() {
         let engine = Engine::new();
+        std::env::set_var("CONXIAN_NETWORK", "testnet");
 
         // 1. Create a proposal via process_external_settlement
         let payload = serde_json::json!({"testnet": true, "amount": 100});
@@ -119,14 +120,18 @@ mod tests {
     #[tokio::test]
     async fn test_rpc_metadata_updates() {
         let engine = Engine::new();
+        std::env::set_var("CONXIAN_NETWORK", "testnet");
         engine.initialize();
         let status = engine.get_service_status("stacks");
         assert!(status.metadata.contains_key("version"));
+        let bitvm_status = engine.get_service_status("bitvm2");
+        assert!(bitvm_status.metadata.contains_key("bitvm_challenge_status"));
     }
 
     #[tokio::test]
     async fn test_service_status_coverage() {
         let engine = Engine::new();
+        std::env::set_var("CONXIAN_NETWORK", "testnet");
         engine.initialize();
         let layers = vec![
             "bitvm2", "bob", "merlin", "botanix", "hemi", "alpen", "bison",

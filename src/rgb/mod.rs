@@ -1,12 +1,12 @@
 //! Client-Side Validation: RGB Protocol Integration
 //! Aligned with CXIP 20 Section 6.0
 
-use rgb_core::schema::Schema;
-use rgb_core::ContractId;
-use aluvm::isa::Instr;
 use std::str::FromStr;
 
+use rgb::ContractId;
+
 pub struct RGBRuntime;
+pub struct Schema;
 
 impl RGBRuntime {
     //! Client-Side Validation (CSV) evaluation via AluVM

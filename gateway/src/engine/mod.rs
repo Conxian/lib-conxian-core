@@ -617,6 +617,9 @@ impl Engine {
                     metadata.insert("block_height".to_string(), "841500".to_string());
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
                 }
+                if name == "bitvm2" {
+                    metadata.insert("bitvm_challenge_status".to_string(), "NoActiveChallenges".to_string());
+                }
                 if name == "lorenzo" {
                     metadata.insert("staked_btc".to_string(), "1250.5".to_string());
                 }
@@ -813,7 +816,7 @@ impl Engine {
                     log::warn!("High mempool congestion detected: {} txs", size);
                 }
                 let mut statuses = self.service_statuses.write().unwrap();
-                if let Some(status) = statuses.get_mut("bitvm") {
+                if let Some(status) = statuses.get_mut("bitvm2") {
                     status
                         .metadata
                         .insert("mempool_size".to_string(), size.to_string());
@@ -841,7 +844,7 @@ impl Engine {
             }
         }
         let mut statuses = self.service_statuses.write().unwrap();
-        if let Some(status) = statuses.get_mut("bitvm") {
+        if let Some(status) = statuses.get_mut("bitvm2") {
             if connected {
                 let height = height_opt.unwrap_or(841500);
                 status
