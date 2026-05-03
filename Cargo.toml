@@ -9,7 +9,7 @@ anyhow = "1.0"
 k256 = { version = "0.13", features = ["ecdsa", "sha256"] }
 ripemd = "0.2"
 serde_json = "1.0"
-secp256k1 = { version = "0.29.1", features = ["rand-std", "global-context"] }
+secp256k1 = { version = "0.27", features = ["rand", "global-context"] }
 sha2 = "0.11.0"
 rand = "0.8"
 hex = "0.4.3"
@@ -22,13 +22,13 @@ serde = { version = "1.0", features = ["derive"] }
 
 # CXIP 20 Foundational Dependencies
 bitcoin = { version = "0.30", features = ["serde", "rand", "std"] }
-bdk = { version = "0.29", features = ["key-value-db"] }
-lightning = { version = "0.0.123", features = ["std"] }
+bdk = { version = "0.30", features = ["key-value-db"] }
+lightning = { version = "0.0.125", features = ["std"] }
 wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
-rgb-core = "0.10.6"
-rgb-std = "0.10.6"
-aluvm = "0.10.6"
+rgb-core = "0.12.0"
+rgb-std = "0.12.0-rc.3"
+aluvm = "0.12.0"
 
 [workspace]
 members = ["gateway"]

@@ -3,7 +3,7 @@
 
 use bdk::{Wallet, SignOptions};
 use bdk::database::MemoryDatabase;
-use bitcoin::{psbt::PartiallySignedTransaction, Transaction};
+use bitcoin::{psbt::Psbt, Transaction};
 use bitcoin::consensus::deserialize;
 
 pub struct BitcoinOrchestrator;
@@ -22,7 +22,7 @@ impl BitcoinOrchestrator {
         wallet: &Wallet<MemoryDatabase>,
         recipient: bitcoin::Address,
         amount_sats: u64,
-    ) -> anyhow::Result<PartiallySignedTransaction> {
+    ) -> anyhow::Result<Psbt> {
         let mut tx_builder = wallet.build_tx();
         tx_builder.add_recipient(recipient.script_pubkey(), amount_sats);
         let (mut psbt, _details) = tx_builder.finish().map_err(|e| anyhow::anyhow!("TxBuilder error: {:?}", e))?;

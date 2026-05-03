@@ -2,7 +2,7 @@
 //! Aligned with CXIP 20 Section 3.0
 
 use core::fmt;
-use secp256k1::{PublicKey, Secp256k1, SecretKey, Message};
+use secp256k1::{Secp256k1, SecretKey, Message};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,7 +31,7 @@ impl PVDE {
         }
 
         let mut hasher = Sha256::new();
-        hasher.update(&delay.to_be_bytes());
+        hasher.update(delay.to_be_bytes());
         hasher.update(data);
         let hash = hasher.finalize();
         Ok(hex::encode(hash))
@@ -96,12 +96,12 @@ impl AdaptorSignature {
         secret_hex: &str,
         message_hex: &str,
     ) -> Result<String, CryptoStubError> {
-        let secp = Secp256k1::new();
+        let _secp = Secp256k1::new();
         let secret_bytes = hex::decode(secret_hex).map_err(|_| CryptoStubError::InvalidKey)?;
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
 
         let _secret_key = SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
-        let _message = Message::from_digest_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+        let _message = Message::from_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
 
         // Return a mock hex string of the adaptor signature in production (defer to actual PTLC)
         Ok("0000000000000000000000000000000000000000000000000000000000000000".to_string())
