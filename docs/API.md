@@ -5,6 +5,9 @@
 ### Production Branch Policy (CON-407)
 All production-facing endpoints (/api/v1/settlement/*, /api/v1/erp/*, /api/v1/state/*) enforce mainnet-only behavior. In production environments (CONXIAN_NETWORK=mainnet), testnet bypasses are strictly prohibited. Non-production environments MUST provide an explicit `testnet` flag in the JSON payload to acknowledge validation state.
 
+### Administrative Authentication Policy
+High-privilege endpoints (Proposal Approval, Execution, and the MCP surface) require administrative authentication via the `X-Gateway-Admin-Key` header. The expected value must be configured in the `GATEWAY_ADMIN_API_KEY` environment variable. If the environment variable is not set, these endpoints will return `503 Service Unavailable`.
+
 
 ### GET /api/v1/health
 Returns the health status.
@@ -120,10 +123,10 @@ Lists all pending state proposals generated from external triggers.
 - **Response:** Array of StateProposal objects.
 
 ### POST /api/v1/settlement/proposals/{id}/approve
-Approves a pending state proposal. Transition status to "Approved".
+Approves a pending state proposal. Transition status to "Approved". Requires `X-Gateway-Admin-Key` authentication.
 
 ### POST /api/v1/settlement/proposals/{id}/execute
-Executes an approved state proposal. Transition status to "Executed".
+Executes an approved state proposal. Transition status to "Executed". Requires `X-Gateway-Admin-Key` authentication.
 
 ## 4. Data Models (Continued)
 
@@ -164,7 +167,7 @@ Returns the canonical wallet inventory for BOS and related system operations (CO
 The Gateway exposes a read-first Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
 
 ### POST /api/v1/mcp
-Unified entry point for MCP interactions (Tools, Resources, Prompts).
+Unified entry point for MCP interactions (Tools, Resources, Prompts). Requires `X-Gateway-Admin-Key` authentication.
 
 #### MCP Tools
 - **get_system_telemetry**: Retrieve real-time TVL and node status.

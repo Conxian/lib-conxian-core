@@ -20,6 +20,7 @@
 ## 3. Remediation
 - Verified `.gitignore` hardening to prevent future leakage of `*.key`, `*.keystore`, and `.env*` files.
 - Version bumped to 0.2.2 to reflect the alignment sweep completion.
+- **2026-05-05 Update:** Implemented mandatory administrative authentication for high-privilege endpoints (Proposal Approval/Execution, MCP) via `X-Gateway-Admin-Key` requirement (CON-420).
 
 ## 4. Conclusion
-The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards.
+The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards. High-privilege state transition endpoints are now protected by mandatory administrative authentication.

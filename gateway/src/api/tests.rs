@@ -142,4 +142,55 @@ mod tests {
             assert_eq!(status.name, layer);
         }
     }
+
+    use actix_web::{http, test, web, App};
+    use crate::api;
+
+    #[tokio::test]
+    async fn test_admin_auth_required_for_sensitive_endpoints() {
+        let engine = Arc::new(Engine::new());
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::from(Arc::clone(&engine)))
+                .configure(api::config)
+        ).await;
+
+        // Ensure GATEWAY_ADMIN_API_KEY is NOT set for the first part of the test
+        std::env::remove_var("GATEWAY_ADMIN_API_KEY");
+
+        // 1. Test Settlement Approval (Expect 503 as key is not configured)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/settlement/proposals/prop-1/approve")
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::SERVICE_UNAVAILABLE);
+
+        // 2. Set the key
+        std::env::set_var("GATEWAY_ADMIN_API_KEY", "secret-admin-key");
+
+        // 3. Test Settlement Approval with WRONG key (Expect 401)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/settlement/proposals/prop-1/approve")
+            .insert_header(("X-Gateway-Admin-Key", "wrong-key"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::UNAUTHORIZED);
+
+        // 4. Test MCP with NO key (Expect 401)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/mcp")
+            .set_json(serde_json::json!({"method": "tools/list", "params": {}}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::UNAUTHORIZED);
+
+        // 5. Test MCP with CORRECT key (Expect 200)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/mcp")
+            .insert_header(("X-Gateway-Admin-Key", "secret-admin-key"))
+            .set_json(serde_json::json!({"method": "tools/list", "params": {}}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
 }
