@@ -142,4 +142,54 @@ mod tests {
             assert_eq!(status.name, layer);
         }
     }
+
+    #[tokio::test]
+    async fn test_full_system_alignment_musig2_intent() {
+        let engine = Arc::new(Engine::new());
+        let manager = McpManager::new(Arc::clone(&engine));
+        std::env::set_var("CONXIAN_NETWORK", "testnet");
+
+        // 1. Simulate MuSig2 Key Aggregation (Core Logic)
+        let p1 = lib_conxian_core::musig2::Musig2Participant::new();
+        let p2 = lib_conxian_core::musig2::Musig2Participant::new();
+        let aggregated_key = lib_conxian_core::musig2::aggregate_public_keys(&[p1.public_key(), p2.public_key()]).unwrap();
+        let key_hex = lib_conxian_core::hex::encode(aggregated_key.serialize());
+
+        // 2. Draft financial intent using the aggregated key via MCP (Gateway Engine)
+        let draft_result = manager
+            .handle_call(
+                "draft_financial_intent",
+                serde_json::json!({
+                    "type": "JointAssetPegIn",
+                    "details": {
+                        "aggregated_pubkey": key_hex,
+                        "amount_sbtc": 1.25,
+                        "participants": 2
+                    }
+                }),
+            )
+            .await;
+
+        let proposal_id = draft_result["proposal_id"].as_str().expect("Proposal ID should be returned");
+
+        // 3. Verify proposal exists with correct TEE attestation
+        let proposals = engine.get_proposals();
+        let proposal = proposals.iter().find(|p| p.proposal_id == proposal_id).unwrap();
+        assert_eq!(proposal.status, "Pending");
+        assert!(proposal.proposed_state.contains("JointAssetPegIn"));
+        assert_eq!(proposal.tee_attestation, "DraftedByAgent-v1.0");
+
+        // 4. Approve Proposal
+        let approve_result = manager.handle_call("approve_state_proposal", serde_json::json!({"proposal_id": proposal_id})).await;
+        assert!(approve_result["content"][0]["text"].as_str().unwrap().contains("approved"));
+
+        // 5. Execute Proposal
+        let execute_result = manager.handle_call("execute_state_proposal", serde_json::json!({"proposal_id": proposal_id})).await;
+        assert!(execute_result["content"][0]["text"].as_str().unwrap().contains("executed"));
+
+        // 6. Final Status Check
+        let final_proposals = engine.get_proposals();
+        let final_prop = final_proposals.iter().find(|p| p.proposal_id == proposal_id).unwrap();
+        assert_eq!(final_prop.status, "Executed");
+    }
 }
