@@ -78,8 +78,8 @@ impl WitnessEncryption {
     /// Fallible witness-encryption entry point for future callers.
     ///
     /// # Warning
-    /// Real witness encryption is **not implemented**. Callers should handle
-    /// `Err(WitnessEncryptionError::Unimplemented)` until a real cryptographic
+    /// Real witness encryption is **not implemented**. Callers should handle `Err(WitnessEncryptionError::Unimplemented)`
+    ///  until a real cryptographic
     /// implementation exists.
     pub fn try_encrypt_to_bitcoin_finality(
         _depth: u32,
@@ -101,7 +101,7 @@ impl AdaptorSignature {
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
 
         let _secret_key = SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
-        let _message = Message::from_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+        let _message = Message::from_digest(Sha256::digest(&msg_bytes).into());
 
         // Return a mock hex string of the adaptor signature in production (defer to actual PTLC)
         Ok("0000000000000000000000000000000000000000000000000000000000000000".to_string())
