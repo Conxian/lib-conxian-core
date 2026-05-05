@@ -47,3 +47,4 @@ mod bitvm2_orchestration_tests {
         assert!(segments[0].script_hash.contains("0xabc"));
     }
 }
+pub use hex;
