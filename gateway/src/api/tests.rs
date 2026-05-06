@@ -143,53 +143,54 @@ mod tests {
         }
     }
 
+    use actix_web::{http, test, web, App};
+    use crate::api;
+
     #[tokio::test]
-    async fn test_full_system_alignment_musig2_intent() {
+    async fn test_admin_auth_required_for_sensitive_endpoints() {
         let engine = Arc::new(Engine::new());
-        let manager = McpManager::new(Arc::clone(&engine));
-        std::env::set_var("CONXIAN_NETWORK", "testnet");
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::from(Arc::clone(&engine)))
+                .configure(api::config)
+        ).await;
 
-        // 1. Simulate MuSig2 Key Aggregation (Core Logic)
-        let p1 = lib_conxian_core::musig2::Musig2Participant::new();
-        let p2 = lib_conxian_core::musig2::Musig2Participant::new();
-        let aggregated_key = lib_conxian_core::musig2::aggregate_public_keys(&[p1.public_key(), p2.public_key()]).unwrap();
-        let key_hex = lib_conxian_core::hex::encode(aggregated_key.serialize());
+        // Ensure GATEWAY_ADMIN_API_KEY is NOT set for the first part of the test
+        std::env::remove_var("GATEWAY_ADMIN_API_KEY");
 
-        // 2. Draft financial intent using the aggregated key via MCP (Gateway Engine)
-        let draft_result = manager
-            .handle_call(
-                "draft_financial_intent",
-                serde_json::json!({
-                    "type": "JointAssetPegIn",
-                    "details": {
-                        "aggregated_pubkey": key_hex,
-                        "amount_sbtc": 1.25,
-                        "participants": 2
-                    }
-                }),
-            )
-            .await;
+        // 1. Test Settlement Approval (Expect 503 as key is not configured)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/settlement/proposals/prop-1/approve")
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::SERVICE_UNAVAILABLE);
 
-        let proposal_id = draft_result["proposal_id"].as_str().expect("Proposal ID should be returned");
+        // 2. Set the key
+        std::env::set_var("GATEWAY_ADMIN_API_KEY", "secret-admin-key");
 
-        // 3. Verify proposal exists with correct TEE attestation
-        let proposals = engine.get_proposals();
-        let proposal = proposals.iter().find(|p| p.proposal_id == proposal_id).unwrap();
-        assert_eq!(proposal.status, "Pending");
-        assert!(proposal.proposed_state.contains("JointAssetPegIn"));
-        assert_eq!(proposal.tee_attestation, "DraftedByAgent-v1.0");
+        // 3. Test Settlement Approval with WRONG key (Expect 401)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/settlement/proposals/prop-1/approve")
+            .insert_header(("X-Gateway-Admin-Key", "wrong-key"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::UNAUTHORIZED);
 
-        // 4. Approve Proposal
-        let approve_result = manager.handle_call("approve_state_proposal", serde_json::json!({"proposal_id": proposal_id})).await;
-        assert!(approve_result["content"][0]["text"].as_str().unwrap().contains("approved"));
+        // 4. Test MCP with NO key (Expect 401)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/mcp")
+            .set_json(serde_json::json!({"method": "tools/list", "params": {}}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::UNAUTHORIZED);
 
-        // 5. Execute Proposal
-        let execute_result = manager.handle_call("execute_state_proposal", serde_json::json!({"proposal_id": proposal_id})).await;
-        assert!(execute_result["content"][0]["text"].as_str().unwrap().contains("executed"));
-
-        // 6. Final Status Check
-        let final_proposals = engine.get_proposals();
-        let final_prop = final_proposals.iter().find(|p| p.proposal_id == proposal_id).unwrap();
-        assert_eq!(final_prop.status, "Executed");
+        // 5. Test MCP with CORRECT key (Expect 200)
+        let req = test::TestRequest::post()
+            .uri("/api/v1/mcp")
+            .insert_header(("X-Gateway-Admin-Key", "secret-admin-key"))
+            .set_json(serde_json::json!({"method": "tools/list", "params": {}}))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
     }
 }

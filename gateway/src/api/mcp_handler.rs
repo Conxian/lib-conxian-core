@@ -1,6 +1,7 @@
+use crate::api::require_admin_auth;
 use crate::engine::mcp::McpManager;
 use crate::engine::Engine;
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -11,7 +12,15 @@ pub struct McpRequest {
 }
 
 #[post("/mcp")]
-pub async fn mcp_handler(engine: web::Data<Engine>, req: web::Json<McpRequest>) -> impl Responder {
+pub async fn mcp_handler(
+    engine: web::Data<Engine>,
+    http_req: HttpRequest,
+    req: web::Json<McpRequest>,
+) -> impl Responder {
+    if let Err(response) = require_admin_auth(&http_req) {
+        return response;
+    }
+
     let mcp = McpManager::new(engine.into_inner());
 
     match req.method.as_str() {

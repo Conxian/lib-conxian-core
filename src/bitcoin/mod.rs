@@ -3,7 +3,7 @@
 
 use bdk::{Wallet, SignOptions};
 use bdk::database::MemoryDatabase;
-use bitcoin::{Transaction, psbt::Psbt};
+use bitcoin::Transaction;
 use bitcoin::consensus::deserialize;
 
 pub struct BitcoinOrchestrator;
@@ -22,11 +22,11 @@ impl BitcoinOrchestrator {
         wallet: &Wallet<MemoryDatabase>,
         recipient: bitcoin::Address,
         amount_sats: u64,
-    ) -> anyhow::Result<Psbt> {
+    ) -> anyhow::Result<bdk::bitcoin::psbt::PartiallySignedTransaction> {
         let mut tx_builder = wallet.build_tx();
-        // Convert bitcoin::ScriptBuf (0.32) to bdk::bitcoin::ScriptBuf (0.30)
+        // Convert bitcoin v0.32 ScriptBuf to bdk (v0.30) compatible bitcoin v0.30 ScriptBuf
         let script_bytes = recipient.script_pubkey().to_bytes();
-        let bdk_script = bdk::bitcoin::ScriptBuf::from_bytes(script_bytes);
+        let bdk_script = bdk::bitcoin::ScriptBuf::from(script_bytes);
 
         tx_builder.add_recipient(bdk_script, amount_sats);
         let (mut psbt, _details) = tx_builder.finish().map_err(|e| anyhow::anyhow!("TxBuilder error: {:?}", e))?;
@@ -34,11 +34,7 @@ impl BitcoinOrchestrator {
         let sign_opts = SignOptions::default();
         let _ = wallet.sign(&mut psbt, sign_opts).map_err(|e| anyhow::anyhow!("Sign error: {:?}", e))?;
         
-        // Convert bdk::bitcoin::psbt::PartiallySignedTransaction (0.30) to bitcoin::psbt::Psbt (0.32)
-        let psbt_bytes = psbt.serialize();
-        let final_psbt = Psbt::deserialize(&psbt_bytes).map_err(|e| anyhow::anyhow!("PSBT conversion error: {:?}", e))?;
-
-        Ok(final_psbt)
+        Ok(psbt)
     }
 }
 
