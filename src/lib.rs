@@ -5,6 +5,9 @@ pub mod deployment;
 pub mod gateway;
 pub mod musig2;
 pub mod wallet;
+pub mod sdk_primitive;
+mod audit_sdk_extraction;
+mod audit_fail_safe;
 
 // CXIP 20 Modular Architecture
 pub mod bitcoin;
@@ -17,6 +20,7 @@ pub mod stacks;
 mod tests;
 
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
+pub use sdk_primitive::{SigningPolicy, VaultSDK};
 pub use wallet::{sign_transaction, Wallet};
 
 #[cfg(test)]
