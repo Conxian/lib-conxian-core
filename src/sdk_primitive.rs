@@ -13,6 +13,8 @@ pub struct SigningPolicy {
     pub timelock_blocks: u32,
 }
 
+ /// The VaultSDK is the primary entry point for integrators building native Bitcoin apps.
+ /// It encapsulates hardware-backed signing, mandatory policy enforcement, and multi-sig aggregation.
 pub struct VaultSDK {
     wallet: Wallet,
     policy: SigningPolicy,

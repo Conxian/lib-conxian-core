@@ -1,3 +1,13 @@
+//! # lib-conxian-core / Vault SDK
+//!
+//! This library provides the production-grade primitives for native Bitcoin applications.
+//! It is divided into two primary areas:
+//!
+//! 1. **Vault SDK (Public Boundary)**: The `sdk_primitive` and `wallet` modules provide
+//!    hardware-backed signing and policy enforcement for third-party integrators.
+//! 2. **Protocol Primitives (Internal Core)**: Modules like `musig2`, `bitvm2`, and chain adapters
+//!    provide the low-level logic required for Bitcoin-anchored orchestration.
+
 pub mod bitvm2;
 pub mod cjcs;
 pub mod contract_bridge;
