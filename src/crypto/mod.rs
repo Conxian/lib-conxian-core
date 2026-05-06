@@ -101,7 +101,12 @@ impl AdaptorSignature {
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
 
         let _secret_key = SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
-        let _message = Message::from_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+
+        // Use from_digest to avoid deprecation warning for from_slice
+        let mut hasher = Sha256::new();
+        hasher.update(&msg_bytes);
+        let hash: [u8; 32] = hasher.finalize().into();
+        let _message = Message::from_digest(hash);
 
         // Return a mock hex string of the adaptor signature in production (defer to actual PTLC)
         Ok("0000000000000000000000000000000000000000000000000000000000000000".to_string())
