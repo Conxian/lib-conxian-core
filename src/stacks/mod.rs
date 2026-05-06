@@ -18,7 +18,7 @@ impl SBTCBridge {
     pub fn initiate_peg_in(amount_satoshi: u64, btc_txid: &str) -> String {
         format!("sbtc-pegin-tx-{}-{}", btc_txid, amount_satoshi)
     }
-    
+
     /// Decentralized Peg-Out logic.
     pub fn initiate_peg_out(amount_satoshi: u64, stacks_address: &str) -> String {
         format!("sbtc-pegout-tx-{}-{}", stacks_address, amount_satoshi)

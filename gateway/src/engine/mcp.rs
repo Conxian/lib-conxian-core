@@ -13,6 +13,17 @@ impl McpManager {
         Self { engine }
     }
 
+    pub fn get_mempool_tool(&self) -> serde_json::Value {
+        json!({
+            "name": "audit_bitcoin_mempool",
+            "description": "Retrieve real-time Bitcoin mempool statistics and congestion metrics.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            }
+        })
+    }
+
     pub fn get_telemetry_tool(&self) -> serde_json::Value {
         json!({
             "name": "get_system_telemetry",
@@ -125,6 +136,20 @@ impl McpManager {
         _arguments: serde_json::Value,
     ) -> serde_json::Value {
         match tool_name {
+            "audit_bitcoin_mempool" => {
+                let status = self.engine.get_service_status("bitvm2");
+                let size = status
+                    .metadata
+                    .get("mempool_size")
+                    .cloned()
+                    .unwrap_or_else(|| "0".to_string());
+                let bytes = status
+                    .metadata
+                    .get("mempool_bytes")
+                    .cloned()
+                    .unwrap_or_else(|| "0".to_string());
+                json!({ "content": [{ "type": "text", "text": format!("Bitcoin Mempool Status: {} transactions, {} bytes", size, bytes) }] })
+            }
             "get_system_telemetry" => {
                 let status = self.engine.get_status();
                 json!({ "content": [{ "type": "text", "text": format!("System Status: {}", status) }] })
