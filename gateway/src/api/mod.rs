@@ -4,7 +4,7 @@ use crate::engine::remediation;
 mod tests;
 use crate::engine::{
     Engine, PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
-    PartnerLeadTransitionError,
+    PartnerLeadTransitionError, ProposalExecutionError,
 };
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
@@ -1016,14 +1016,24 @@ async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Respond
     HttpResponse::Ok().json(res)
 }
 
+#[derive(Deserialize)]
+struct SettlementMutationRequest {
+    testnet: Option<bool>,
+}
+
 #[post("/settlement/proposals/{id}/approve")]
 async fn settlement_proposal_approve_handler(
     engine: web::Data<Engine>,
     req: HttpRequest,
     path: web::Path<String>,
+    query: web::Query<SettlementMutationRequest>,
 ) -> impl Responder {
     if let Err(response) = require_admin_auth(&req) {
         return response;
+    }
+
+    if let Err(e) = remediation::validate_request(query.testnet.unwrap_or(false)) {
+        return HttpResponse::Forbidden().body(e);
     }
 
     let proposal_id = path.into_inner();
@@ -1040,17 +1050,36 @@ async fn settlement_proposal_execute_handler(
     engine: web::Data<Engine>,
     req: HttpRequest,
     path: web::Path<String>,
+    query: web::Query<SettlementMutationRequest>,
 ) -> impl Responder {
     if let Err(response) = require_admin_auth(&req) {
         return response;
     }
 
+    if let Err(e) = remediation::validate_request(query.testnet.unwrap_or(false)) {
+        return HttpResponse::Forbidden().body(e);
+    }
+
     let proposal_id = path.into_inner();
-    if engine.execute_proposal(&proposal_id) {
-        HttpResponse::Ok().json(serde_json::json!({"status": "Executed"}))
-    } else {
-        HttpResponse::NotFound()
-            .json(serde_json::json!({"error": "Proposal not found or not Approved"}))
+    match engine.execute_proposal(&proposal_id) {
+        Ok(()) => HttpResponse::Ok().json(serde_json::json!({"status": "Executed"})),
+        Err(ProposalExecutionError::NotFound | ProposalExecutionError::NotApproved) => {
+            HttpResponse::NotFound().json(serde_json::json!({
+                "error": "Proposal not found or not Approved",
+            }))
+        }
+        Err(ProposalExecutionError::TimelockNotExpired {
+            current_block,
+            timelock_end_block,
+        }) => HttpResponse::BadRequest().json(serde_json::json!({
+            "error": "Timelock not expired",
+            "message": format!(
+                "Proposal {} cannot be executed before block {} (current block {}).",
+                proposal_id, timelock_end_block, current_block
+            ),
+            "current_block": current_block,
+            "timelock_end_block": timelock_end_block,
+        })),
     }
 }
 

@@ -227,10 +227,13 @@ impl McpManager {
                     .get("proposal_id")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                if self.engine.execute_proposal(proposal_id) {
-                    json!({ "content": [{ "type": "text", "text": format!("Proposal {} executed successfully.", proposal_id) }] })
-                } else {
-                    json!({ "isError": true, "content": [{ "type": "text", "text": format!("Failed to execute proposal {}. It may not exist or is not in Approved status.", proposal_id) }] })
+                match self.engine.execute_proposal(proposal_id) {
+                    Ok(()) => {
+                        json!({ "content": [{ "type": "text", "text": format!("Proposal {} executed successfully.", proposal_id) }] })
+                    }
+                    Err(err) => {
+                        json!({ "isError": true, "content": [{ "type": "text", "text": err.message(proposal_id) }] })
+                    }
                 }
             }
             _ => {

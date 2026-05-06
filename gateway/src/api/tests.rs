@@ -1,8 +1,24 @@
 #[cfg(test)]
 mod tests {
+    use crate::api;
     use crate::engine::mcp::McpManager;
-    use crate::engine::Engine;
+    use crate::engine::{remediation, Engine, ProposalExecutionError};
+    use actix_web::{http::StatusCode, test, web, App};
     use std::sync::Arc;
+
+    fn set_stacks_block_height(engine: &Engine, height: u64) {
+        let mut statuses = engine.service_statuses.write().unwrap();
+        let stacks = statuses
+            .get_mut("stacks")
+            .expect("stacks service status should exist");
+        stacks
+            .metadata
+            .insert("block_height".to_string(), height.to_string());
+    }
+
+    fn invalid_testnet_flag() -> bool {
+        remediation::is_production_mainnet()
+    }
 
     #[tokio::test]
     async fn test_proposal_lifecycle() {
@@ -12,7 +28,7 @@ mod tests {
         // 1. Create a proposal via process_external_settlement
         let payload = serde_json::json!({"testnet": true, "amount": 100});
         let proposal = engine.process_external_settlement("ISO20022", payload);
-        let proposal_id = proposal.proposal_id;
+        let proposal_id = proposal.proposal_id.clone();
 
         assert_eq!(proposal.status, "Pending");
 
@@ -31,9 +47,23 @@ mod tests {
             .unwrap();
         assert_eq!(approved_prop.status, "Approved");
 
-        // 4. Execute it
-        let executed = engine.execute_proposal(&proposal_id);
-        assert!(executed);
+        // 4. Execution should fail until timelock expires
+        let execution_err = engine.execute_proposal(&proposal_id).unwrap_err();
+        assert!(matches!(
+            execution_err,
+            ProposalExecutionError::TimelockNotExpired { .. }
+        ));
+
+        let proposals = engine.get_proposals();
+        let still_approved = proposals
+            .iter()
+            .find(|p| p.proposal_id == proposal_id)
+            .unwrap();
+        assert_eq!(still_approved.status, "Approved");
+
+        // 5. Advance block height to timelock end and execute successfully
+        set_stacks_block_height(&engine, proposal.timelock_end_block);
+        engine.execute_proposal(&proposal_id).unwrap();
 
         let proposals = engine.get_proposals();
         let executed_prop = proposals
@@ -41,6 +71,62 @@ mod tests {
             .find(|p| p.proposal_id == proposal_id)
             .unwrap();
         assert_eq!(executed_prop.status, "Executed");
+    }
+
+    #[tokio::test]
+    async fn test_settlement_proposal_approve_requires_validation_guard() {
+        let engine = web::Data::new(Engine::new());
+        let proposal = engine.process_external_settlement("ISO20022", serde_json::json!({}));
+
+        let app =
+            test::init_service(App::new().app_data(engine.clone()).configure(api::config)).await;
+
+        let req = test::TestRequest::post()
+            .uri(&format!(
+                "/api/v1/settlement/proposals/{}/approve?testnet={}",
+                proposal.proposal_id,
+                invalid_testnet_flag()
+            ))
+            .to_request();
+        let response = test::call_service(&app, req).await;
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let proposal_after = engine
+            .get_proposals()
+            .into_iter()
+            .find(|p| p.proposal_id == proposal.proposal_id)
+            .unwrap();
+        assert_eq!(proposal_after.status, "Pending");
+    }
+
+    #[tokio::test]
+    async fn test_settlement_proposal_execute_requires_validation_guard() {
+        let engine = web::Data::new(Engine::new());
+        let proposal = engine.process_external_settlement("ISO20022", serde_json::json!({}));
+        assert!(engine.approve_proposal(&proposal.proposal_id));
+        set_stacks_block_height(engine.get_ref(), proposal.timelock_end_block);
+
+        let app =
+            test::init_service(App::new().app_data(engine.clone()).configure(api::config)).await;
+
+        let req = test::TestRequest::post()
+            .uri(&format!(
+                "/api/v1/settlement/proposals/{}/execute?testnet={}",
+                proposal.proposal_id,
+                invalid_testnet_flag()
+            ))
+            .to_request();
+        let response = test::call_service(&app, req).await;
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let proposal_after = engine
+            .get_proposals()
+            .into_iter()
+            .find(|p| p.proposal_id == proposal.proposal_id)
+            .unwrap();
+        assert_eq!(proposal_after.status, "Approved");
     }
 
     #[tokio::test]
@@ -93,7 +179,15 @@ mod tests {
             .unwrap()
             .contains("approved successfully"));
 
-        // 3. Execute via MCP
+        // 3. Advance stack block height past timelock and execute via MCP
+        let timelock_end_block = engine
+            .get_proposals()
+            .into_iter()
+            .find(|p| p.proposal_id == proposal_id)
+            .unwrap()
+            .timelock_end_block;
+        set_stacks_block_height(engine.as_ref(), timelock_end_block);
+
         let execute_result = manager
             .handle_call(
                 "execute_state_proposal",
