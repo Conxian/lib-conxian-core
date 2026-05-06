@@ -2,6 +2,18 @@
 
 All notable changes to the lib-conxian-core project will be documented in this file.
 
+## [0.2.5] - 2026-05-06
+### Added
+- SAB Migration Timeline & Cutover Plan (CON-332): Established four-wave strategy for mainnet activation.
+- Flagship Repository Selection (CON-298): Standardized pinned repo ordering and narrative classification.
+- Supplier-State SLO (CON-542): Defined service level objectives for security and hygiene remediation.
+- Minimalist Reference Wallet Scope (CON-629): Defined technical boundary for the conxius-wallet.
+- Routing-Fee Economics Analysis (CON-631): Modeled SDK business sustainability and failure modes.
+
+### Changed
+- Synchronized Gateway REST MCP handler with full Phase 9 state proposal tool parity.
+- Bumped system-wide version to v0.2.5.
+
 ## [0.2.4] - 2026-05-06
 ### Added
 - Vault SDK Primitive (CON-633): Production-ready hardware-backed signing with policy enforcement and BIP327 MuSig2 key aggregation.

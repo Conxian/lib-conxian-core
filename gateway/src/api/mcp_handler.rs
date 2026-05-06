@@ -26,11 +26,15 @@ pub async fn mcp_handler(
     match req.method.as_str() {
         "tools/list" => {
             let tools = vec![
+                mcp.get_mempool_tool(),
                 mcp.get_telemetry_tool(),
                 mcp.get_proof_tool(),
                 mcp.get_yield_oracle_tool(),
                 mcp.get_industrial_intents_tool(),
                 mcp.get_draft_intent_tool(),
+                mcp.get_list_proposals_tool(),
+                mcp.get_approve_proposal_tool(),
+                mcp.get_execute_proposal_tool(),
             ];
             HttpResponse::Ok().json(serde_json::json!({ "tools": tools }))
         }
