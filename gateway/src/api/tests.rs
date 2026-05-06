@@ -9,21 +9,24 @@ mod integration_tests {
     fn ensure_stacks_service(engine: &Engine) {
         let mut statuses = engine.service_statuses.write().unwrap();
         if !statuses.contains_key("stacks") {
-            statuses.insert("stacks".to_string(), crate::engine::ServiceStatus {
-                name: "stacks".to_string(),
-                status: "active".to_string(),
-                last_checked: chrono::Utc::now(),
-                latency_ms: 0,
-                trust_model: "PoX".to_string(),
-                risk_level: "Low".to_string(),
-                risk_assessment: None,
-                data_availability: "On-chain".to_string(),
-                settlement: "Bitcoin".to_string(),
-                bridge_security: "sBTC".to_string(),
-                tvl_usd: 0.0,
-                version: None,
-                metadata: std::collections::HashMap::new(),
-            });
+            statuses.insert(
+                "stacks".to_string(),
+                crate::engine::ServiceStatus {
+                    name: "stacks".to_string(),
+                    status: "active".to_string(),
+                    last_checked: chrono::Utc::now(),
+                    latency_ms: 0,
+                    trust_model: "PoX".to_string(),
+                    risk_level: "Low".to_string(),
+                    risk_assessment: None,
+                    data_availability: "On-chain".to_string(),
+                    settlement: "Bitcoin".to_string(),
+                    bridge_security: "sBTC".to_string(),
+                    tvl_usd: 0.0,
+                    version: None,
+                    metadata: std::collections::HashMap::new(),
+                },
+            );
         }
     }
 
@@ -100,10 +103,15 @@ mod integration_tests {
         let engine = Engine::new();
         ensure_stacks_service(&engine);
         let engine_data = web::Data::new(engine);
-        let proposal = engine_data.process_external_settlement("ISO20022", serde_json::json!({"testnet": true}));
+        let proposal = engine_data
+            .process_external_settlement("ISO20022", serde_json::json!({"testnet": true}));
 
-        let app =
-            test::init_service(App::new().app_data(engine_data.clone()).configure(api::config)).await;
+        let app = test::init_service(
+            App::new()
+                .app_data(engine_data.clone())
+                .configure(api::config),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri(&format!(
@@ -132,12 +140,17 @@ mod integration_tests {
         let engine = Engine::new();
         ensure_stacks_service(&engine);
         let engine_data = web::Data::new(engine);
-        let proposal = engine_data.process_external_settlement("ISO20022", serde_json::json!({"testnet": true}));
+        let proposal = engine_data
+            .process_external_settlement("ISO20022", serde_json::json!({"testnet": true}));
         assert!(engine_data.approve_proposal(&proposal.proposal_id));
         set_stacks_block_height(engine_data.get_ref(), proposal.timelock_end_block);
 
-        let app =
-            test::init_service(App::new().app_data(engine_data.clone()).configure(api::config)).await;
+        let app = test::init_service(
+            App::new()
+                .app_data(engine_data.clone())
+                .configure(api::config),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri(&format!(
@@ -282,8 +295,9 @@ mod integration_tests {
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::from(Arc::clone(&engine)))
-                .configure(api::config)
-        ).await;
+                .configure(api::config),
+        )
+        .await;
 
         // 1. Test Settlement Approval with NO key (Expect 401 or 503 if env not set)
         // Here we override env in the same process, so we must be careful with concurrency.

@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use crate::wallet::Wallet;
 use crate::musig2;
+use crate::wallet::Wallet;
 use secp256k1::{PublicKey, XOnlyPublicKey};
+use serde::{Deserialize, Serialize};
 
 /// The first commercial SDK primitive: Hardware-backed Bitcoin signing plus policy enforcement.
 /// This defines the core capabilities for target integrators.
@@ -13,8 +13,8 @@ pub struct SigningPolicy {
     pub timelock_blocks: u32,
 }
 
- /// The VaultSDK is the primary entry point for integrators building native Bitcoin apps.
- /// It encapsulates hardware-backed signing, mandatory policy enforcement, and multi-sig aggregation.
+/// The VaultSDK is the primary entry point for integrators building native Bitcoin apps.
+/// It encapsulates hardware-backed signing, mandatory policy enforcement, and multi-sig aggregation.
 pub struct VaultSDK {
     wallet: Wallet,
     policy: SigningPolicy,
@@ -28,10 +28,18 @@ impl VaultSDK {
     /// Validates a transaction request against the enforced policy.
     pub fn validate_request(&self, amount_sats: u64, destination: &str) -> Result<(), String> {
         if amount_sats > self.policy.max_amount_sats {
-            return Err(format!("Policy violation: amount {} exceeds limit {}", amount_sats, self.policy.max_amount_sats));
+            return Err(format!(
+                "Policy violation: amount {} exceeds limit {}",
+                amount_sats, self.policy.max_amount_sats
+            ));
         }
 
-        if !self.policy.allowed_destinations.is_empty() && !self.policy.allowed_destinations.contains(&destination.to_string()) {
+        if !self.policy.allowed_destinations.is_empty()
+            && !self
+                .policy
+                .allowed_destinations
+                .contains(&destination.to_string())
+        {
             return Err("Policy violation: destination not in allowlist".to_string());
         }
 
@@ -39,7 +47,12 @@ impl VaultSDK {
     }
 
     /// Signs a Bitcoin transaction ID using the hardware-backed wallet after policy verification.
-    pub fn sign_with_policy(&self, tx_id: &str, amount_sats: u64, destination: &str) -> Result<String, String> {
+    pub fn sign_with_policy(
+        &self,
+        tx_id: &str,
+        amount_sats: u64,
+        destination: &str,
+    ) -> Result<String, String> {
         self.validate_request(amount_sats, destination)?;
 
         if self.policy.require_biometric {
@@ -52,7 +65,10 @@ impl VaultSDK {
 
     /// Aggregates keys for MuSig2 Taproot multi-sig, a core SDK capability.
     /// This implementation includes the internal wallet key in the aggregation.
-    pub fn aggregate_musig2_keys(&self, other_pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, String> {
+    pub fn aggregate_musig2_keys(
+        &self,
+        other_pubkeys: &[PublicKey],
+    ) -> Result<XOnlyPublicKey, String> {
         let all_keys = [self.wallet.public_key_bytes()];
         let mut pubkeys = Vec::new();
 
@@ -100,12 +116,15 @@ mod tests {
     fn test_vault_sdk_musig2_aggregation() {
         let key_hex = "01".repeat(32);
         let wallet = Wallet::from_private_key_hex(&key_hex).unwrap();
-        let sdk = VaultSDK::new(wallet, SigningPolicy {
-            max_amount_sats: 0,
-            allowed_destinations: vec![],
-            require_biometric: false,
-            timelock_blocks: 0,
-        });
+        let sdk = VaultSDK::new(
+            wallet,
+            SigningPolicy {
+                max_amount_sats: 0,
+                allowed_destinations: vec![],
+                require_biometric: false,
+                timelock_blocks: 0,
+            },
+        );
 
         let other_key_hex = "02".repeat(32);
         let other_wallet = Wallet::from_private_key_hex(&other_key_hex).unwrap();
