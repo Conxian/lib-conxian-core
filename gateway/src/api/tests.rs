@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod integration_tests {
     use crate::api;
     use crate::engine::mcp::McpManager;
     use crate::engine::{remediation, Engine, ProposalExecutionError};
@@ -96,6 +96,7 @@ mod tests {
     #[tokio::test]
     async fn test_settlement_proposal_approve_requires_validation_guard() {
         setup_test_env();
+        setup_test_env();
         let engine = Engine::new();
         ensure_stacks_service(&engine);
         let engine_data = web::Data::new(engine);
@@ -126,6 +127,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_settlement_proposal_execute_requires_validation_guard() {
+        setup_test_env();
         setup_test_env();
         let engine = Engine::new();
         ensure_stacks_service(&engine);

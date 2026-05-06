@@ -51,7 +51,7 @@ impl VaultSDK {
     /// Aggregates keys for MuSig2 Taproot multi-sig, a core SDK capability.
     /// This implementation includes the internal wallet key in the aggregation.
     pub fn aggregate_musig2_keys(&self, other_pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, String> {
-        let all_keys = vec![self.wallet.public_key_bytes()];
+        let all_keys = [self.wallet.public_key_bytes()];
         let mut pubkeys = Vec::new();
 
         // Convert internal key
