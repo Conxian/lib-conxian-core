@@ -31,9 +31,6 @@ pub async fn mcp_handler(
                 mcp.get_yield_oracle_tool(),
                 mcp.get_industrial_intents_tool(),
                 mcp.get_draft_intent_tool(),
-                mcp.get_list_proposals_tool(),
-                mcp.get_approve_proposal_tool(),
-                mcp.get_execute_proposal_tool(),
             ];
             HttpResponse::Ok().json(serde_json::json!({ "tools": tools }))
         }

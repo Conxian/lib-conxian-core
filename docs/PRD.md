@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): Conxian Gateway v0.2.4
+# Product Requirements Document (PRD): Conxian Gateway v0.2.3
 
 ## 1. Executive Summary
 Conxian builds native application infrastructure for Bitcoin. The Conxian Gateway is the core component for secure signing, policy enforcement, and transaction coordination on the existing Bitcoin stack. Version 2 introduces granular risk assessment and deeper protocol support.

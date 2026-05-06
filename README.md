@@ -54,7 +54,6 @@ The Conxian Gateway is a production-grade infrastructure component that enables 
 - [Architecture & Infrastructure](docs/architecture/GCP_INFRASTRUCTURE.md) - Deployment and topology details.
 - [BOS Ownership Map](docs/architecture/BOS_OWNERSHIP_MAP.md) - Canonical repo and runtime ownership.
 - [Portfolio Map](docs/architecture/PORTFOLIO_MAP.md) - Repository classification and review standards.
-- [Flagship Repositories](docs/architecture/FLAGSHIP_REPOS.md) - Pinned repo selection and narrative order.
 
 ### Getting Started
 
