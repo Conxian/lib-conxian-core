@@ -1,9 +1,9 @@
 //! Asynchronous Payment Channels via LDK
 //! Aligned with CXIP 20 Section 5.0
 
-use std::str::FromStr;
 use bitcoin::secp256k1::PublicKey;
 use lightning::offers::offer::Offer;
+use std::str::FromStr;
 
 pub struct LightningNode;
 
@@ -17,7 +17,10 @@ pub enum LightningError {
 
 impl LightningNode {
     /// BOLT 12 Offers (Section 5.2)
-    pub fn create_bolt12_offer(_amount_msat: u64, _description: &str) -> Result<Offer, LightningError> {
+    pub fn create_bolt12_offer(
+        _amount_msat: u64,
+        _description: &str,
+    ) -> Result<Offer, LightningError> {
         // Implementation defers to LDK's OfferBuilder in production
         // Returns a dummy Offer error to satisfy the compiler without mocking
         Err(LightningError::InvalidOffer)
@@ -40,7 +43,10 @@ impl LightningNode {
     }
 
     /// Splicing (Dynamic capacity resizing)
-    pub fn initiate_splicing(channel_id: &[u8; 32], _delta_sats: i64) -> Result<(), LightningError> {
+    pub fn initiate_splicing(
+        channel_id: &[u8; 32],
+        _delta_sats: i64,
+    ) -> Result<(), LightningError> {
         if channel_id.iter().all(|&b| b == 0) {
             return Err(LightningError::ChannelNotFound);
         }

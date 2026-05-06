@@ -647,7 +647,10 @@ impl Engine {
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
                 }
                 if name == "bitvm2" {
-                    metadata.insert("bitvm_challenge_status".to_string(), "NoActiveChallenges".to_string());
+                    metadata.insert(
+                        "bitvm_challenge_status".to_string(),
+                        "NoActiveChallenges".to_string(),
+                    );
                 }
                 if name == "lorenzo" {
                     metadata.insert("staked_btc".to_string(), "1250.5".to_string());
