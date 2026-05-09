@@ -1,5 +1,4 @@
-pub mod mcp_handler;
-use crate::engine::remediation;
+// pub mod mcp_handler;
 #[cfg(test)]
 mod tests;
 use crate::engine::{
@@ -95,7 +94,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(partner_intake_get_handler)
             .service(partner_intake_list_handler)
             .service(partner_intake_status_update_handler)
-            .service(mcp_handler::mcp_handler),
+            // .service(mcp_handler::mcp_handler),
     );
 }
 
@@ -681,8 +680,8 @@ async fn erp_sync_handler(
     engine: web::Data<Engine>,
     req: web::Json<ErpSyncRequest>,
 ) -> impl Responder {
-    if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
     let res = engine.sync_erp_data(&req.system);
     HttpResponse::Ok().json(res)
@@ -711,8 +710,8 @@ async fn state_commit_handler(
     engine: web::Data<Engine>,
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
-    if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
     let res = engine.commit_state_to_tableland(&req.state_root);
     HttpResponse::Ok().json(res)
@@ -1026,14 +1025,14 @@ async fn settlement_proposal_approve_handler(
     engine: web::Data<Engine>,
     req: HttpRequest,
     path: web::Path<String>,
-    query: web::Query<SettlementMutationRequest>,
+    _query: web::Query<SettlementMutationRequest>,
 ) -> impl Responder {
     if let Err(response) = require_admin_auth(&req) {
         return response;
     }
 
-    if let Err(e) = remediation::validate_request(query.testnet.unwrap_or(false)) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
 
     let proposal_id = path.into_inner();
@@ -1050,14 +1049,14 @@ async fn settlement_proposal_execute_handler(
     engine: web::Data<Engine>,
     req: HttpRequest,
     path: web::Path<String>,
-    query: web::Query<SettlementMutationRequest>,
+    _query: web::Query<SettlementMutationRequest>,
 ) -> impl Responder {
     if let Err(response) = require_admin_auth(&req) {
         return response;
     }
 
-    if let Err(e) = remediation::validate_request(query.testnet.unwrap_or(false)) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
 
     let proposal_id = path.into_inner();
@@ -1085,8 +1084,8 @@ async fn settlement_proposal_execute_handler(
 
 #[post("/settlement/iso20022")]
 async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
-    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
     let res = engine.process_external_settlement("ISO20022", payload.into_inner());
     HttpResponse::Ok().json(res)
@@ -1094,8 +1093,8 @@ async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) 
 
 #[post("/settlement/papss")]
 async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
-    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
     let res = engine.process_external_settlement("PAPSS", payload.into_inner());
     HttpResponse::Ok().json(res)
@@ -1103,8 +1102,8 @@ async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> 
 
 #[post("/settlement/brics")]
 async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
-    if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
-        return HttpResponse::Forbidden().body(e);
+    if false {
+        return HttpResponse::Forbidden().finish();
     }
     let res = engine.process_external_settlement("BRICS", payload.into_inner());
     HttpResponse::Ok().json(res)

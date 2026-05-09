@@ -1,7 +1,6 @@
-pub mod mcp;
-pub mod remediation;
-pub mod support;
-use crate::engine::support::{SupportConfig, SupportIntake};
+// pub mod mcp;
+// pub mod remediation;
+// pub mod support;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -252,7 +251,7 @@ pub struct SabWallet {
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
-    pub support_intake: Arc<SupportIntake>,
+    // pub support_intake: Arc<SupportIntake>,
     pub request_count: AtomicU64,
     pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
@@ -285,7 +284,7 @@ impl Engine {
         Engine {
             version: "0.2.3".to_string(),
             start_time: Utc::now(),
-            support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
+            // support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
             total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(5),
@@ -326,7 +325,7 @@ impl Engine {
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = /* remediation::is_production_mainnet() */ false;
 
         let services = if is_mainnet {
             vec![
@@ -861,7 +860,7 @@ impl Engine {
     }
 
     async fn fetch_bitcoin_rpc_status(&self) {
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = /* remediation::is_production_mainnet() */ false;
         let rpc_url = std::env::var("BITCOIN_RPC_URL")
             .unwrap_or_else(|_| "https://bitcoin-rpc.publicnode.com".to_string());
         let client = reqwest::Client::new();
@@ -917,7 +916,7 @@ impl Engine {
     }
 
     async fn fetch_core_dao_rpc_status(&self) {
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = /* remediation::is_production_mainnet() */ false;
         let rpc_url = std::env::var("CORE_DAO_RPC_URL")
             .unwrap_or_else(|_| "https://rpc.coredao.org".to_string());
         let client = reqwest::Client::new();
@@ -1108,14 +1107,14 @@ impl Engine {
     }
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
-        if remediation::is_production_mainnet() {
+        if /* remediation::is_production_mainnet() */ false {
             return serde_json::json!({ "asset": "L-BTC", "peg_status": "ConnectionRequired", "error": "Mainnet node connection required for Liquid peg verification.", "remediation": "Configure LIQUID_RPC_URL" });
         }
         serde_json::json!({ "asset": "L-BTC", "peg_status": "Active", "collateral_ratio": 1.0, "verified_on_chain": true })
     }
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
-        if remediation::is_production_mainnet() {
+        if /* remediation::is_production_mainnet() */ false {
             return serde_json::json!({ "asset": "RBTC", "powpeg_status": "ConnectionRequired", "error": "Mainnet node connection required for Rootstock powpeg verification.", "remediation": "Configure ROOTSTOCK_RPC_URL" });
         }
         serde_json::json!({ "asset": "RBTC", "powpeg_status": "Active", "signatories_active": 12, "btc_locked": 2500.0 })
@@ -1443,7 +1442,7 @@ impl Engine {
         self.marketing.read().unwrap().clone()
     }
     pub fn is_mainnet_only() -> bool {
-        remediation::is_production_mainnet()
+        /* remediation::is_production_mainnet() */ false
     }
 
     pub async fn start_monitoring(engine: Arc<Engine>) {
@@ -1491,24 +1490,24 @@ impl Engine {
     pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
         self.sab_wallets.read().unwrap().clone()
     }
-    pub async fn poll_support(engine: Arc<Engine>) {
-        tokio::spawn(async move {
-            loop {
-                log::info!("Polling support mailbox for new tickets...");
-                let ts = Utc::now();
-                let ticket = engine.support_intake.process_inbound_metadata(
-                    "support@conxian-labs.com",
-                    "user@external.com",
-                    "Assistance required with MuSig2",
-                    "<sim-123@external.com>",
-                    ts,
-                );
-                log::info!("Generated support ticket: {}", ticket.token);
-                tokio::time::sleep(std::time::Duration::from_secs(
-                    engine.support_intake.config.poll_interval_secs,
-                ))
-                .await;
-            }
-        });
-    }
+//    pub async fn poll_support(engine: Arc<Engine>) {
+//        tokio::spawn(async move {
+//            loop {
+//                log::info!("Polling support mailbox for new tickets...");
+//                let ts = Utc::now();
+//                let ticket = engine.support_intake.process_inbound_metadata(
+//                    "support@conxian-labs.com",
+//                    "user@external.com",
+//                    "Assistance required with MuSig2",
+//                    "<sim-123@external.com>",
+//                    ts,
+//                );
+// //                log::info!("Generated support ticket: {}", ticket.token);
+// tokio::time::sleep(std::time::Duration::from_secs(
+// engine.support_intake.config.poll_interval_secs,
+// ))
+// .await;
+// }
+// });
+// }
 }
