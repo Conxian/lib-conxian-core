@@ -1,0 +1,18 @@
+<<<<<<< SEARCH
+        Engine {
+            version: "0.2.3".to_string(),
+            start_time: Utc::now(),
+=======
+        Engine {
+            version: "0.2.5".to_string(),
+            start_time: Utc::now(),
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    pub fn is_mainnet_only() -> bool {
+        /* remediation::is_production_mainnet() */ false
+    }
+=======
+    pub fn is_mainnet_only() -> bool {
+        std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false)
+    }
+>>>>>>> REPLACE

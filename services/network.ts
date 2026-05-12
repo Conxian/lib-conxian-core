@@ -504,15 +504,21 @@ export const createPartnerLead = async (lead: Partial<PartnerLead>, idempotencyK
   return response.json();
 };
 
-export const approveSettlementProposal = async (id: string): Promise<{ status: string }> => {
+export const approveSettlementProposal = async (id: string, adminKey: string): Promise<{ status: string }> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/proposals/${id}/approve`;
-  const response = await fetch(url, { method: "POST" });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "X-Gateway-Admin-Key": adminKey }
+  });
   return response.json();
 };
 
-export const executeSettlementProposal = async (id: string): Promise<{ status: string }> => {
+export const executeSettlementProposal = async (id: string, adminKey: string): Promise<{ status: string }> => {
   const url = `${getGatewayUrl("settlement", currentEnv)}/proposals/${id}/execute`;
-  const response = await fetch(url, { method: "POST" });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "X-Gateway-Admin-Key": adminKey }
+  });
   return response.json();
 };
 
@@ -540,11 +546,14 @@ export const updatePartnerLeadStatus = async (id: string, update: PartnerLeadSta
 /**
  * MCP Interaction Helpers
  */
-export const callMcp = async (method: string, params: any = {}) => {
+export const callMcp = async (method: string, adminKey: string, params: any = {}) => {
   const url = getGatewayUrl("mcp", currentEnv);
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Gateway-Admin-Key": adminKey
+    },
     body: JSON.stringify({ method, params }),
   });
   return response.json();

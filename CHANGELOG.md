@@ -4,6 +4,9 @@ All notable changes to the lib-conxian-core project will be documented in this f
 
 ## [0.2.5] - 2026-05-06
 ### Added
+- Aligned Gateway REST API with documented PRD and TypeScript client requirements.
+- Enforced administrative authentication via GATEWAY_ADMIN_API_KEY for sensitive endpoints.
+- Implemented missing telemetry and financial intelligence handlers in the Gateway.
 - SAB Migration Timeline & Cutover Plan (CON-332): Established four-wave strategy for mainnet activation.
 - Flagship Repository Selection (CON-298): Standardized pinned repo ordering and narrative classification.
 - Supplier-State SLO (CON-542): Defined service level objectives for security and hygiene remediation.
