@@ -1,5 +1,8 @@
 // pub mod mcp_handler;
 
+use crate::engine::anchoring::{
+    AnchoringError, AnchoringRequest, AnchoringTarget, DEFAULT_MAX_RETRY_ATTEMPTS,
+};
 use crate::engine::{
     Engine, PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
     PartnerLeadTransitionError, ProposalExecutionError,
@@ -7,6 +10,7 @@ use crate::engine::{
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -376,12 +380,62 @@ struct StateCommitRequest {
     state_root: String,
     #[allow(dead_code)]
     testnet: Option<bool>,
+    target: Option<AnchoringTarget>,
+    idempotency_key: Option<String>,
+    max_retry_attempts: Option<u8>,
+    metadata: Option<HashMap<String, String>>,
+}
+
+fn anchoring_error_response(err: AnchoringError) -> HttpResponse {
+    let status = match &err {
+        AnchoringError::Validation { .. } => actix_web::http::StatusCode::BAD_REQUEST,
+        AnchoringError::IdempotencyConflict { .. } => actix_web::http::StatusCode::CONFLICT,
+        AnchoringError::RetryExhausted { .. } => actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+        AnchoringError::AdapterFailure { retryable, .. } => {
+            if *retryable {
+                actix_web::http::StatusCode::SERVICE_UNAVAILABLE
+            } else {
+                actix_web::http::StatusCode::BAD_GATEWAY
+            }
+        }
+    };
+
+    HttpResponse::build(status).json(serde_json::json!({
+        "error": err.code(),
+        "details": err,
+    }))
 }
 
 #[post("/state/commit")]
-async fn state_commit_handler(engine: web::Data<Engine>, payload: web::Json<StateCommitRequest>) -> impl Responder {
+async fn state_commit_handler(
+    engine: web::Data<Engine>,
+    req: web::Json<StateCommitRequest>,
+) -> impl Responder {
+    let is_testnet_request = req.testnet.unwrap_or(false);
+    if Engine::is_mainnet_only() {
+        if is_testnet_request {
+            return HttpResponse::Forbidden()
+                .body("Testnet bypass is strictly prohibited on production mainnet.");
+        }
+    } else if !is_testnet_request {
+        return HttpResponse::Forbidden()
+            .body("Non-production environment requires explicit testnet flag for validation.");
+    }
+
     engine.increment_requests();
-    HttpResponse::Ok().json(serde_json::json!({ "state_root": payload.state_root, "persistence": "Tableland" }))
+
+    let commit_request = AnchoringRequest {
+        state_root: req.state_root.clone(),
+        target: req.target.clone().unwrap_or_default(),
+        idempotency_key: req.idempotency_key.clone(),
+        metadata: req.metadata.clone().unwrap_or_default(),
+        max_retry_attempts: req.max_retry_attempts.unwrap_or(DEFAULT_MAX_RETRY_ATTEMPTS),
+    };
+
+    match engine.commit_state_checkpoint(commit_request) {
+        Ok(receipt) => HttpResponse::Ok().json(receipt),
+        Err(err) => anchoring_error_response(err),
+    }
 }
 
 const PARTNER_INTAKE_AUTH_HEADER: &str = "X-Partner-Intake-Key";
