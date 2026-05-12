@@ -1,4 +1,7 @@
 pub mod mcp_handler;
+use crate::engine::anchoring::{
+    AnchoringError, AnchoringRequest, AnchoringTarget, DEFAULT_MAX_RETRY_ATTEMPTS,
+};
 use crate::engine::remediation;
 #[cfg(test)]
 mod tests;
@@ -9,6 +12,7 @@ use crate::engine::{
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -704,6 +708,30 @@ async fn dlc_bond_handler(engine: web::Data<Engine>, path: web::Path<String>) ->
 struct StateCommitRequest {
     state_root: String,
     testnet: Option<bool>,
+    target: Option<AnchoringTarget>,
+    idempotency_key: Option<String>,
+    max_retry_attempts: Option<u8>,
+    metadata: Option<HashMap<String, String>>,
+}
+
+fn anchoring_error_response(err: AnchoringError) -> HttpResponse {
+    let status = match &err {
+        AnchoringError::Validation { .. } => actix_web::http::StatusCode::BAD_REQUEST,
+        AnchoringError::IdempotencyConflict { .. } => actix_web::http::StatusCode::CONFLICT,
+        AnchoringError::RetryExhausted { .. } => actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+        AnchoringError::AdapterFailure { retryable, .. } => {
+            if *retryable {
+                actix_web::http::StatusCode::SERVICE_UNAVAILABLE
+            } else {
+                actix_web::http::StatusCode::BAD_GATEWAY
+            }
+        }
+    };
+
+    HttpResponse::build(status).json(serde_json::json!({
+        "error": err.code(),
+        "details": err,
+    }))
 }
 
 #[post("/state/commit")]
@@ -714,8 +742,19 @@ async fn state_commit_handler(
     if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
         return HttpResponse::Forbidden().body(e);
     }
-    let res = engine.commit_state_to_tableland(&req.state_root);
-    HttpResponse::Ok().json(res)
+
+    let commit_request = AnchoringRequest {
+        state_root: req.state_root.clone(),
+        target: req.target.clone().unwrap_or_default(),
+        idempotency_key: req.idempotency_key.clone(),
+        metadata: req.metadata.clone().unwrap_or_default(),
+        max_retry_attempts: req.max_retry_attempts.unwrap_or(DEFAULT_MAX_RETRY_ATTEMPTS),
+    };
+
+    match engine.commit_state_checkpoint(commit_request) {
+        Ok(receipt) => HttpResponse::Ok().json(receipt),
+        Err(err) => anchoring_error_response(err),
+    }
 }
 
 /// Partner intake endpoints require this header and env var pairing:

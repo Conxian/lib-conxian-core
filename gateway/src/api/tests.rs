@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use crate::engine::anchoring::AnchoringError;
     use crate::engine::mcp::McpManager;
     use crate::engine::Engine;
+    use actix_web::http::StatusCode;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -141,5 +143,29 @@ mod tests {
             let status = engine.get_service_status(layer);
             assert_eq!(status.name, layer);
         }
+    }
+
+    #[test]
+    fn test_anchoring_error_mapping_retryable_adapter_failure() {
+        let response = super::super::anchoring_error_response(AnchoringError::AdapterFailure {
+            adapter: "on_chain".to_string(),
+            code: "rpc_unavailable".to_string(),
+            message: "upstream node unavailable".to_string(),
+            retryable: true,
+        });
+
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn test_anchoring_error_mapping_non_retryable_adapter_failure() {
+        let response = super::super::anchoring_error_response(AnchoringError::AdapterFailure {
+            adapter: "tableland".to_string(),
+            code: "schema_mismatch".to_string(),
+            message: "payload rejected".to_string(),
+            retryable: false,
+        });
+
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
     }
 }

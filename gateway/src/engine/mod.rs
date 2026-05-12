@@ -1,6 +1,11 @@
+pub mod anchoring;
 pub mod mcp;
 pub mod remediation;
 pub mod support;
+use crate::engine::anchoring::{
+    AnchoringError, AnchoringPublisher, AnchoringReceipt, AnchoringRequest, AnchoringTarget,
+    OnChainAnchoringPublisher, TablelandAnchoringPublisher,
+};
 use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -8,6 +13,12 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
+
+#[derive(Clone, Debug)]
+pub struct AnchoringReplayRecord {
+    pub request_fingerprint: String,
+    pub receipt: AnchoringReceipt,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RiskAssessment {
@@ -242,6 +253,10 @@ pub struct Engine {
     pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
     pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
     pub partner_lead_sequence: AtomicU64,
+    pub anchoring_idempotency: Arc<RwLock<HashMap<String, AnchoringReplayRecord>>>,
+    pub anchoring_sequence: AtomicU64,
+    pub tableland_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+    pub on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
     pub sab_wallets: Arc<RwLock<Vec<SabWallet>>>,
 }
 
@@ -253,6 +268,16 @@ impl Default for Engine {
 
 impl Engine {
     pub fn new() -> Self {
+        Self::new_with_anchoring_publishers(
+            Arc::new(TablelandAnchoringPublisher),
+            Arc::new(OnChainAnchoringPublisher),
+        )
+    }
+
+    pub(crate) fn new_with_anchoring_publishers(
+        tableland_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+        on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+    ) -> Self {
         Engine {
             version: "0.2.3".to_string(),
             start_time: Utc::now(),
@@ -287,6 +312,10 @@ impl Engine {
             partner_lead_events: Arc::new(RwLock::new(Vec::new())),
             partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
             partner_lead_sequence: AtomicU64::new(1),
+            anchoring_idempotency: Arc::new(RwLock::new(HashMap::new())),
+            anchoring_sequence: AtomicU64::new(1),
+            tableland_anchoring_publisher,
+            on_chain_anchoring_publisher,
             sab_wallets: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -618,7 +647,10 @@ impl Engine {
                     metadata.insert("hiro_api_connected".to_string(), "true".to_string());
                 }
                 if name == "bitvm2" {
-                    metadata.insert("bitvm_challenge_status".to_string(), "NoActiveChallenges".to_string());
+                    metadata.insert(
+                        "bitvm_challenge_status".to_string(),
+                        "NoActiveChallenges".to_string(),
+                    );
                 }
                 if name == "lorenzo" {
                     metadata.insert("staked_btc".to_string(), "1250.5".to_string());
@@ -1055,10 +1087,218 @@ impl Engine {
         let status = self.get_service_status("lorenzo");
         serde_json::json!({ "tvl_usd": status.tvl_usd, "staked_btc": status.metadata.get("staked_btc").cloned().unwrap_or_else(|| "1250.5".to_string()), "active_stakers": 850 })
     }
+
     pub fn commit_state_to_tableland(&self, state_root: &str) -> serde_json::Value {
-        self.increment_requests();
-        serde_json::json!({ "table_name": "conxian_state_shards", "state_root": state_root, "transaction_hash": "0xdef...456", "status": "Finalized", "persistence": "Decentralized (Tableland)" })
+        let request = AnchoringRequest {
+            state_root: state_root.to_string(),
+            target: AnchoringTarget::Tableland,
+            idempotency_key: None,
+            metadata: HashMap::new(),
+            max_retry_attempts: anchoring::DEFAULT_MAX_RETRY_ATTEMPTS,
+        };
+
+        match self.commit_state_checkpoint(request) {
+            Ok(receipt) => serde_json::to_value(receipt).unwrap_or_else(|_| {
+                serde_json::json!({
+                    "state_root": state_root,
+                    "status": "failed",
+                    "error": "serialization_error",
+                })
+            }),
+            Err(err) => serde_json::json!({
+                "state_root": state_root,
+                "status": "failed",
+                "error": err.code(),
+                "details": err,
+            }),
+        }
     }
+
+    pub fn commit_state_checkpoint(
+        &self,
+        request: AnchoringRequest,
+    ) -> Result<AnchoringReceipt, AnchoringError> {
+        self.increment_requests();
+
+        let normalized = request.normalized();
+
+        if normalized.state_root.is_empty() {
+            return Err(AnchoringError::Validation {
+                message: "state_root must not be empty".to_string(),
+            });
+        }
+
+        let idempotency_key = self.derive_anchoring_idempotency_key(&normalized);
+        let request_fingerprint = self.anchoring_request_fingerprint(&normalized);
+
+        if let Some(existing) = self
+            .anchoring_idempotency
+            .read()
+            .unwrap()
+            .get(&idempotency_key)
+            .cloned()
+        {
+            if existing.request_fingerprint != request_fingerprint {
+                return Err(AnchoringError::IdempotencyConflict {
+                    idempotency_key,
+                    existing_fingerprint: existing.request_fingerprint,
+                    incoming_fingerprint: request_fingerprint,
+                    existing_state_root: existing.receipt.state_root,
+                    incoming_state_root: normalized.state_root,
+                });
+            }
+
+            let mut replay_receipt = existing.receipt;
+            replay_receipt.idempotent_replay = true;
+            replay_receipt
+                .audit_metadata
+                .insert("idempotent_replay".to_string(), "true".to_string());
+            replay_receipt.audit_metadata.insert(
+                "replay_of_receipt_id".to_string(),
+                replay_receipt.receipt_id.clone(),
+            );
+
+            return Ok(replay_receipt);
+        }
+
+        let mut publications = Vec::new();
+        let mut total_attempts = 0u8;
+
+        for path in normalized.target.execution_paths() {
+            let publisher = self.publisher_for_path(path)?;
+            let (publication, attempts) = self.publish_with_retry(publisher, &normalized)?;
+            total_attempts = total_attempts.saturating_add(attempts);
+            publications.push(publication);
+        }
+
+        let mut audit_metadata = normalized.metadata.clone();
+        audit_metadata.insert(
+            "request_fingerprint".to_string(),
+            request_fingerprint.clone(),
+        );
+        audit_metadata.insert(
+            "targets_executed".to_string(),
+            normalized.target.execution_paths().join(","),
+        );
+        audit_metadata.insert(
+            "retry_budget".to_string(),
+            normalized.max_retry_attempts.to_string(),
+        );
+        audit_metadata.insert("idempotent_replay".to_string(), "false".to_string());
+
+        let (table_name, transaction_hash, persistence) = publications
+            .iter()
+            .find(|publication| publication.adapter == "tableland")
+            .map(|publication| {
+                (
+                    publication.metadata.get("table_name").cloned(),
+                    Some(publication.reference.clone()),
+                    Some(publication.persistence.clone()),
+                )
+            })
+            .unwrap_or((None, None, None));
+
+        let receipt = AnchoringReceipt {
+            receipt_id: self.next_anchoring_receipt_id(),
+            state_root: normalized.state_root,
+            target: normalized.target.clone(),
+            idempotency_key: idempotency_key.clone(),
+            idempotent_replay: false,
+            status: if normalized.target == AnchoringTarget::Tableland {
+                "Finalized".to_string()
+            } else {
+                "Committed".to_string()
+            },
+            published_at: Utc::now(),
+            total_attempts,
+            publications,
+            audit_metadata,
+            table_name,
+            transaction_hash,
+            persistence,
+        };
+
+        self.anchoring_idempotency.write().unwrap().insert(
+            idempotency_key,
+            AnchoringReplayRecord {
+                request_fingerprint,
+                receipt: receipt.clone(),
+            },
+        );
+
+        Ok(receipt)
+    }
+
+    fn next_anchoring_receipt_id(&self) -> String {
+        let seq = self.anchoring_sequence.fetch_add(1, Ordering::SeqCst);
+        format!("ANCHOR-{}-{seq}", Utc::now().timestamp_millis())
+    }
+
+    fn derive_anchoring_idempotency_key(&self, request: &AnchoringRequest) -> String {
+        request.idempotency_key.clone().unwrap_or_else(|| {
+            format!(
+                "state_commit:{}:{}",
+                request.target.as_str(),
+                request.state_root.to_ascii_lowercase()
+            )
+        })
+    }
+
+    fn anchoring_request_fingerprint(&self, request: &AnchoringRequest) -> String {
+        let mut metadata = request.metadata.iter().collect::<Vec<_>>();
+        metadata.sort_by(|(left, _), (right, _)| left.cmp(right));
+
+        let metadata_fingerprint = metadata
+            .into_iter()
+            .map(|(key, value)| format!("{key}={value}"))
+            .collect::<Vec<_>>()
+            .join("&");
+
+        format!(
+            "state_root={};target={};metadata={metadata_fingerprint}",
+            request.state_root.to_ascii_lowercase(),
+            request.target.as_str(),
+        )
+    }
+
+    fn publisher_for_path(
+        &self,
+        path: &str,
+    ) -> Result<Arc<dyn AnchoringPublisher>, AnchoringError> {
+        match path {
+            "tableland" => Ok(Arc::clone(&self.tableland_anchoring_publisher)),
+            "on_chain" => Ok(Arc::clone(&self.on_chain_anchoring_publisher)),
+            unsupported => Err(AnchoringError::Validation {
+                message: format!("unsupported anchoring path: {unsupported}"),
+            }),
+        }
+    }
+
+    fn publish_with_retry(
+        &self,
+        publisher: Arc<dyn AnchoringPublisher>,
+        request: &AnchoringRequest,
+    ) -> Result<(anchoring::AnchoringPublication, u8), AnchoringError> {
+        let max_attempts = request.max_retry_attempts.max(1);
+        let mut attempt = 0u8;
+
+        loop {
+            attempt = attempt.saturating_add(1);
+            match publisher.publish(request, attempt) {
+                Ok(publication) => return Ok((publication, attempt)),
+                Err(err) if err.is_retryable() && attempt < max_attempts => continue,
+                Err(err) if err.is_retryable() => {
+                    return Err(AnchoringError::RetryExhausted {
+                        adapter: publisher.name().to_string(),
+                        attempts: attempt,
+                        message: err.to_string(),
+                    })
+                }
+                Err(err) => return Err(err),
+            }
+        }
+    }
+
     pub fn get_status(&self) -> serde_json::Value {
         let uptime = (Utc::now() - self.start_time).num_seconds();
         serde_json::json!({ "version": self.version, "uptime_seconds": uptime, "status": "operational", "total_requests": self.request_count.load(Ordering::SeqCst), "total_tvl_usd": *self.total_tvl_usd.read().unwrap(), "active_nodes": self.active_sovereign_nodes.load(Ordering::SeqCst) })
@@ -1461,5 +1701,217 @@ impl Engine {
                 .await;
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::anchoring::AnchoringPublication;
+    use std::sync::atomic::AtomicUsize;
+
+    struct ScriptedPublisher {
+        name: &'static str,
+        fail_until_attempt: u8,
+        always_fail: bool,
+        retryable: bool,
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl AnchoringPublisher for ScriptedPublisher {
+        fn name(&self) -> &'static str {
+            self.name
+        }
+
+        fn publish(
+            &self,
+            request: &AnchoringRequest,
+            attempt: u8,
+        ) -> Result<AnchoringPublication, AnchoringError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+
+            if self.always_fail || attempt <= self.fail_until_attempt {
+                return Err(AnchoringError::AdapterFailure {
+                    adapter: self.name.to_string(),
+                    code: "simulated_failure".to_string(),
+                    message: format!("simulated failure on attempt {attempt}"),
+                    retryable: self.retryable,
+                });
+            }
+
+            let mut metadata = HashMap::new();
+            if self.name == "tableland" {
+                metadata.insert("table_name".to_string(), "conxian_state_shards".to_string());
+            }
+            metadata.insert("state_root".to_string(), request.state_root.clone());
+
+            Ok(AnchoringPublication {
+                adapter: self.name.to_string(),
+                status: if self.name == "tableland" {
+                    "Finalized".to_string()
+                } else {
+                    "Broadcasted".to_string()
+                },
+                reference: format!("0x{}{:02x}", self.name.replace('_', ""), attempt),
+                persistence: if self.name == "tableland" {
+                    "Decentralized (Tableland)".to_string()
+                } else {
+                    "L1 Commitment Registry".to_string()
+                },
+                attempts: attempt,
+                metadata,
+            })
+        }
+    }
+
+    fn scripted_engine(
+        tableland: Arc<dyn AnchoringPublisher>,
+        on_chain: Arc<dyn AnchoringPublisher>,
+    ) -> Engine {
+        Engine::new_with_anchoring_publishers(tableland, on_chain)
+    }
+
+    #[test]
+    fn commit_state_checkpoint_successful_publish_path() {
+        let engine = Engine::new();
+
+        let receipt = engine
+            .commit_state_checkpoint(AnchoringRequest {
+                state_root: "0xabc123".to_string(),
+                target: AnchoringTarget::Tableland,
+                idempotency_key: Some("issue-534-success".to_string()),
+                metadata: HashMap::new(),
+                max_retry_attempts: 3,
+            })
+            .expect("state commit should succeed");
+
+        assert_eq!(receipt.target, AnchoringTarget::Tableland);
+        assert_eq!(receipt.status, "Finalized");
+        assert_eq!(receipt.publications.len(), 1);
+        assert_eq!(receipt.publications[0].adapter, "tableland");
+        assert_eq!(receipt.table_name.as_deref(), Some("conxian_state_shards"));
+        assert!(receipt.transaction_hash.is_some());
+        assert!(!receipt.idempotent_replay);
+    }
+
+    #[test]
+    fn commit_state_checkpoint_returns_idempotent_replay_without_republish() {
+        let tableland_calls = Arc::new(AtomicUsize::new(0));
+        let on_chain_calls = Arc::new(AtomicUsize::new(0));
+
+        let tableland = Arc::new(ScriptedPublisher {
+            name: "tableland",
+            fail_until_attempt: 0,
+            always_fail: false,
+            retryable: false,
+            calls: Arc::clone(&tableland_calls),
+        });
+
+        let on_chain = Arc::new(ScriptedPublisher {
+            name: "on_chain",
+            fail_until_attempt: 0,
+            always_fail: false,
+            retryable: false,
+            calls: Arc::clone(&on_chain_calls),
+        });
+
+        let engine = scripted_engine(tableland, on_chain);
+
+        let request = AnchoringRequest {
+            state_root: "0xreplay123".to_string(),
+            target: AnchoringTarget::Tableland,
+            idempotency_key: Some("issue-534-replay".to_string()),
+            metadata: HashMap::new(),
+            max_retry_attempts: 3,
+        };
+
+        let first = engine
+            .commit_state_checkpoint(request.clone())
+            .expect("first publication should succeed");
+        let replay = engine
+            .commit_state_checkpoint(request)
+            .expect("replay should return cached receipt");
+
+        assert_eq!(first.receipt_id, replay.receipt_id);
+        assert!(replay.idempotent_replay);
+        assert_eq!(tableland_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(on_chain_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn commit_state_checkpoint_retries_retryable_adapter_errors() {
+        let tableland_calls = Arc::new(AtomicUsize::new(0));
+
+        let tableland = Arc::new(ScriptedPublisher {
+            name: "tableland",
+            fail_until_attempt: 2,
+            always_fail: false,
+            retryable: true,
+            calls: Arc::clone(&tableland_calls),
+        });
+
+        let on_chain = Arc::new(ScriptedPublisher {
+            name: "on_chain",
+            fail_until_attempt: 0,
+            always_fail: false,
+            retryable: false,
+            calls: Arc::new(AtomicUsize::new(0)),
+        });
+
+        let engine = scripted_engine(tableland, on_chain);
+
+        let receipt = engine
+            .commit_state_checkpoint(AnchoringRequest {
+                state_root: "0xretry123".to_string(),
+                target: AnchoringTarget::Tableland,
+                idempotency_key: Some("issue-534-retry".to_string()),
+                metadata: HashMap::new(),
+                max_retry_attempts: 3,
+            })
+            .expect("retry should eventually succeed");
+
+        assert_eq!(receipt.total_attempts, 3);
+        assert_eq!(receipt.publications[0].attempts, 3);
+        assert_eq!(tableland_calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn commit_state_checkpoint_returns_retry_exhausted_when_budget_consumed() {
+        let tableland = Arc::new(ScriptedPublisher {
+            name: "tableland",
+            fail_until_attempt: 0,
+            always_fail: true,
+            retryable: true,
+            calls: Arc::new(AtomicUsize::new(0)),
+        });
+
+        let on_chain = Arc::new(ScriptedPublisher {
+            name: "on_chain",
+            fail_until_attempt: 0,
+            always_fail: false,
+            retryable: false,
+            calls: Arc::new(AtomicUsize::new(0)),
+        });
+
+        let engine = scripted_engine(tableland, on_chain);
+
+        let err = engine
+            .commit_state_checkpoint(AnchoringRequest {
+                state_root: "0xretryexhausted".to_string(),
+                target: AnchoringTarget::Tableland,
+                idempotency_key: Some("issue-534-retry-exhausted".to_string()),
+                metadata: HashMap::new(),
+                max_retry_attempts: 2,
+            })
+            .expect_err("retry budget should be exhausted");
+
+        assert!(matches!(
+            err,
+            AnchoringError::RetryExhausted {
+                attempts: 2,
+                adapter,
+                ..
+            } if adapter == "tableland"
+        ));
     }
 }
