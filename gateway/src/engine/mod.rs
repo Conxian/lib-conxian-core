@@ -282,7 +282,7 @@ impl Default for Engine {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            version: "0.2.3".to_string(),
+            version: "0.2.5".to_string(),
             start_time: Utc::now(),
             // support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
@@ -325,7 +325,7 @@ impl Engine {
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
-        let is_mainnet = /* remediation::is_production_mainnet() */ false;
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
 
         let services = if is_mainnet {
             vec![
@@ -860,7 +860,7 @@ impl Engine {
     }
 
     async fn fetch_bitcoin_rpc_status(&self) {
-        let is_mainnet = /* remediation::is_production_mainnet() */ false;
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
         let rpc_url = std::env::var("BITCOIN_RPC_URL")
             .unwrap_or_else(|_| "https://bitcoin-rpc.publicnode.com".to_string());
         let client = reqwest::Client::new();
@@ -916,7 +916,7 @@ impl Engine {
     }
 
     async fn fetch_core_dao_rpc_status(&self) {
-        let is_mainnet = /* remediation::is_production_mainnet() */ false;
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
         let rpc_url = std::env::var("CORE_DAO_RPC_URL")
             .unwrap_or_else(|_| "https://rpc.coredao.org".to_string());
         let client = reqwest::Client::new();
@@ -1107,14 +1107,14 @@ impl Engine {
     }
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
-        if /* remediation::is_production_mainnet() */ false {
+        if std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false) {
             return serde_json::json!({ "asset": "L-BTC", "peg_status": "ConnectionRequired", "error": "Mainnet node connection required for Liquid peg verification.", "remediation": "Configure LIQUID_RPC_URL" });
         }
         serde_json::json!({ "asset": "L-BTC", "peg_status": "Active", "collateral_ratio": 1.0, "verified_on_chain": true })
     }
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
-        if /* remediation::is_production_mainnet() */ false {
+        if std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false) {
             return serde_json::json!({ "asset": "RBTC", "powpeg_status": "ConnectionRequired", "error": "Mainnet node connection required for Rootstock powpeg verification.", "remediation": "Configure ROOTSTOCK_RPC_URL" });
         }
         serde_json::json!({ "asset": "RBTC", "powpeg_status": "Active", "signatories_active": 12, "btc_locked": 2500.0 })
@@ -1442,7 +1442,7 @@ impl Engine {
         self.marketing.read().unwrap().clone()
     }
     pub fn is_mainnet_only() -> bool {
-        /* remediation::is_production_mainnet() */ false
+        std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false)
     }
 
     pub async fn start_monitoring(engine: Arc<Engine>) {

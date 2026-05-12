@@ -15,7 +15,7 @@ Returns the health status.
 
 ### GET /api/v1/status
 Returns general system information with high-precision metrics.
-- **Response:** `{ "version": "0.2.3", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
+- **Response:** `{ "version": "0.2.5", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
 
 ### GET /api/v1/financials
 Returns real-time financial intelligence metrics (MRR, ARR, Churn).
