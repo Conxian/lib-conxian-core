@@ -1,9 +1,12 @@
-# Conxian Gateway API Reference v0.2.3
+# Conxian Gateway API Reference v0.2.5
 
 ## 1. System Endpoints
 
 ### Production Branch Policy (CON-407)
 All production-facing endpoints (/api/v1/settlement/*, /api/v1/erp/*, /api/v1/state/*) enforce mainnet-only behavior. In production environments (CONXIAN_NETWORK=mainnet), testnet bypasses are strictly prohibited. Non-production environments MUST provide an explicit `testnet` flag in the JSON payload to acknowledge validation state.
+
+### Administrative Authentication Policy
+High-privilege endpoints (Proposal Approval, Execution, and the MCP surface) require administrative authentication via the `X-Gateway-Admin-Key` header. The expected value must be configured in the `GATEWAY_ADMIN_API_KEY` environment variable. If the environment variable is not set, these endpoints will return `503 Service Unavailable`.
 
 
 ### GET /api/v1/health
@@ -12,7 +15,7 @@ Returns the health status.
 
 ### GET /api/v1/status
 Returns general system information with high-precision metrics.
-- **Response:** `{ "version": "0.2.3", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
+- **Response:** `{ "version": "0.2.5", "uptime_seconds": 1234, "status": "operational", "total_requests": 5678, "total_tvl_usd": 1320000000.55 }`
 
 ### GET /api/v1/financials
 Returns real-time financial intelligence metrics (MRR, ARR, Churn).
@@ -47,7 +50,7 @@ Synchronizes institutional ERP data (SAP/Oracle) with the Conxian ledger (CON-63
 - **Request:** `{ "system": "SAP", "testnet": true }`
 
 ### GET /api/v1/spec/cjcs
-Returns the CJCS v0.2.3 JSON-LD machine-readable definition (CON-73).
+Returns the CJCS v0.2.5 JSON-LD machine-readable definition (CON-73).
 
 ### GET /api/v1/finance/bond/{id}
 Retrieves Bitcoin DLC Bond lifecycle information (CON-62, CON-72).
@@ -120,10 +123,10 @@ Lists all pending state proposals generated from external triggers.
 - **Response:** Array of StateProposal objects.
 
 ### POST /api/v1/settlement/proposals/{id}/approve
-Approves a pending state proposal. Transition status to "Approved".
+Approves a pending state proposal. Transition status to "Approved". Requires `X-Gateway-Admin-Key` authentication.
 
 ### POST /api/v1/settlement/proposals/{id}/execute
-Executes an approved state proposal. Transition status to "Executed".
+Executes an approved state proposal. Transition status to "Executed". Requires `X-Gateway-Admin-Key` authentication.
 
 ## 4. Data Models (Continued)
 
@@ -164,7 +167,7 @@ Returns the canonical wallet inventory for BOS and related system operations (CO
 The Gateway exposes a read-first Model Context Protocol (MCP) layer to enable programmatic trust for autonomous agents.
 
 ### POST /api/v1/mcp
-Unified entry point for MCP interactions (Tools, Resources, Prompts).
+Unified entry point for MCP interactions (Tools, Resources, Prompts). Requires `X-Gateway-Admin-Key` authentication.
 
 #### MCP Tools
 - **get_system_telemetry**: Retrieve real-time TVL and node status.

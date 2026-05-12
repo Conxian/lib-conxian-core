@@ -43,3 +43,18 @@ If a forbidden file is discovered in version control:
 2. **History Cleaning**: If sensitive data (secrets) was committed, use `git filter-repo` or BFG Repo-Cleaner to purge it from the entire history.
 3. **Credential Rotation**: Any exposed secrets must be rotated immediately.
 4. **ZSE Verification**: Perform a follow-up Zero Secret Egress (ZSE) check.
+
+## 5. Supplier-State SLO (CON-542)
+
+To maintain the integrity of the Conxian ecosystem, the following Service Level Objectives (SLOs) are enforced for repository hygiene and security:
+
+| Event Type | Triage Time | Closure/Remediation | Responsibility |
+| :--- | :--- | :--- | :--- |
+| **Security Regression (P0)** | < 4 Hours | < 24 Hours | Security Lead |
+| **Secret Exposure (P0)** | < 1 Hour | < 4 Hours (Rotation) | Account Owner |
+| **Hygiene CI Failure (P1)** | < 12 Hours | < 3 Business Days | PR Author |
+| **Governance Drift (P2)** | < 48 Hours | < 5 Business Days | Maintainer |
+| **Audit Exception Expiry** | 5 Days Before | On/Before Expiry | Exception Owner |
+
+### 5.1 Enforcement
+Failure to meet these SLOs triggers an automated escalation to the Office of the Founder (CON-286) and blocks further mainnet state transitions in the Gateway.

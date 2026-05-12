@@ -2,7 +2,7 @@
 //! Aligned with CXIP 20 Section 3.0
 
 use core::fmt;
-use secp256k1::{Secp256k1, SecretKey, Message};
+use secp256k1::{Message, Secp256k1, SecretKey};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,7 +27,9 @@ pub struct PVDE; // Practical Verifiable Delay Encryption
 impl PVDE {
     pub fn generate_puzzle(delay: u64, data: &[u8]) -> Result<String, CryptoStubError> {
         if data.is_empty() {
-            return Err(CryptoStubError::NotImplemented("PVDE::generate_puzzle_empty"));
+            return Err(CryptoStubError::NotImplemented(
+                "PVDE::generate_puzzle_empty",
+            ));
         }
 
         let mut hasher = Sha256::new();
@@ -100,8 +102,14 @@ impl AdaptorSignature {
         let secret_bytes = hex::decode(secret_hex).map_err(|_| CryptoStubError::InvalidKey)?;
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
 
-        let _secret_key = SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
-        let _message = Message::from_slice(&msg_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+        let _secret_key =
+            SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+
+        // Use from_digest to avoid deprecation warning for from_slice
+        let mut hasher = Sha256::new();
+        hasher.update(&msg_bytes);
+        let hash: [u8; 32] = hasher.finalize().into();
+        let _message = Message::from_digest(hash);
 
         // Return a mock hex string of the adaptor signature in production (defer to actual PTLC)
         Ok("0000000000000000000000000000000000000000000000000000000000000000".to_string())

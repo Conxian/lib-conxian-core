@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)
 
-This repository contains the core logic for the Conxian network, centered around the **Conxian Gateway**.
+Conxian builds native application infrastructure for Bitcoin. This repository provides the core primitives for secure signing, policy enforcement, and transaction coordination on the existing Bitcoin stack.
 
 ## Purpose
 
@@ -29,7 +29,7 @@ Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
 
 ## Conxian Gateway
 
-The Conxian Gateway is a unified, audit-ready Rust binary that serves as the single entry point for all sovereign services and Bitcoin/Stacks state logic. It provides a high-performance, secure bridge between sovereign services and various Bitcoin layers.
+The Conxian Gateway is a production-grade infrastructure component that enables secure transaction coordination and policy-aware routing for native Bitcoin applications. It provides a high-performance, secure bridge between sovereign services and various Bitcoin layers.
 
 ### Features
 

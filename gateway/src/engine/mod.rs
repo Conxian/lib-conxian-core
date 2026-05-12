@@ -1,12 +1,11 @@
 pub mod anchoring;
-pub mod mcp;
-pub mod remediation;
-pub mod support;
+// pub mod mcp;
+// pub mod remediation;
+// pub mod support;
 use crate::engine::anchoring::{
     AnchoringError, AnchoringPublisher, AnchoringReceipt, AnchoringRequest, AnchoringTarget,
     OnChainAnchoringPublisher, TablelandAnchoringPublisher,
 };
-use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -209,6 +208,35 @@ pub enum PartnerLeadTransitionError {
     EscalationReasonRequired,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProposalExecutionError {
+    NotFound,
+    NotApproved,
+    TimelockNotExpired {
+        current_block: u64,
+        timelock_end_block: u64,
+    },
+}
+
+impl ProposalExecutionError {
+    pub fn message(&self, proposal_id: &str) -> String {
+        match self {
+            ProposalExecutionError::NotFound => {
+                format!("Proposal {proposal_id} not found.")
+            }
+            ProposalExecutionError::NotApproved => {
+                format!("Proposal {proposal_id} is not in Approved status.")
+            }
+            ProposalExecutionError::TimelockNotExpired {
+                current_block,
+                timelock_end_block,
+            } => format!(
+                "Proposal {proposal_id} timelock not expired: current block {current_block}, required block {timelock_end_block}."
+            ),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -234,7 +262,7 @@ pub struct SabWallet {
 pub struct Engine {
     pub version: String,
     pub start_time: DateTime<Utc>,
-    pub support_intake: Arc<SupportIntake>,
+    // pub support_intake: Arc<SupportIntake>,
     pub request_count: AtomicU64,
     pub total_tvl_usd: Arc<RwLock<f64>>,
     pub active_sovereign_nodes: AtomicU64,
@@ -279,9 +307,9 @@ impl Engine {
         on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
     ) -> Self {
         Engine {
-            version: "0.2.3".to_string(),
+            version: "0.2.5".to_string(),
             start_time: Utc::now(),
-            support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
+            // support_intake: Arc::new(SupportIntake::new(SupportConfig::default())),
             request_count: AtomicU64::new(0),
             total_tvl_usd: Arc::new(RwLock::new(0.0)),
             active_sovereign_nodes: AtomicU64::new(5),
@@ -326,7 +354,7 @@ impl Engine {
 
     fn initialize_services(&self) {
         let mut statuses = self.service_statuses.write().unwrap();
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
 
         let services = if is_mainnet {
             vec![
@@ -861,7 +889,7 @@ impl Engine {
     }
 
     async fn fetch_bitcoin_rpc_status(&self) {
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
         let rpc_url = std::env::var("BITCOIN_RPC_URL")
             .unwrap_or_else(|_| "https://bitcoin-rpc.publicnode.com".to_string());
         let client = reqwest::Client::new();
@@ -917,7 +945,7 @@ impl Engine {
     }
 
     async fn fetch_core_dao_rpc_status(&self) {
-        let is_mainnet = remediation::is_production_mainnet();
+        let is_mainnet = std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false);
         let rpc_url = std::env::var("CORE_DAO_RPC_URL")
             .unwrap_or_else(|_| "https://rpc.coredao.org".to_string());
         let client = reqwest::Client::new();
@@ -1316,14 +1344,14 @@ impl Engine {
     }
     pub fn get_liquid_peg(&self) -> serde_json::Value {
         self.increment_requests();
-        if remediation::is_production_mainnet() {
+        if std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false) {
             return serde_json::json!({ "asset": "L-BTC", "peg_status": "ConnectionRequired", "error": "Mainnet node connection required for Liquid peg verification.", "remediation": "Configure LIQUID_RPC_URL" });
         }
         serde_json::json!({ "asset": "L-BTC", "peg_status": "Active", "collateral_ratio": 1.0, "verified_on_chain": true })
     }
     pub fn get_rootstock_powpeg(&self) -> serde_json::Value {
         self.increment_requests();
-        if remediation::is_production_mainnet() {
+        if std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false) {
             return serde_json::json!({ "asset": "RBTC", "powpeg_status": "ConnectionRequired", "error": "Mainnet node connection required for Rootstock powpeg verification.", "remediation": "Configure ROOTSTOCK_RPC_URL" });
         }
         serde_json::json!({ "asset": "RBTC", "powpeg_status": "Active", "signatories_active": 12, "btc_locked": 2500.0 })
@@ -1375,15 +1403,32 @@ impl Engine {
         }
         false
     }
-    pub fn execute_proposal(&self, proposal_id: &str) -> bool {
+    pub fn execute_proposal(&self, proposal_id: &str) -> Result<(), ProposalExecutionError> {
         let mut proposals = self.state_proposals.write().unwrap();
-        if let Some(proposal) = proposals.get_mut(proposal_id) {
-            if proposal.status == "Approved" {
-                proposal.status = "Executed".to_string();
-                return true;
-            }
+        let proposal = proposals
+            .get_mut(proposal_id)
+            .ok_or(ProposalExecutionError::NotFound)?;
+
+        if proposal.status != "Approved" {
+            return Err(ProposalExecutionError::NotApproved);
         }
-        false
+
+        let current_height: u64 = self
+            .get_service_status("stacks")
+            .metadata
+            .get("block_height")
+            .and_then(|h| h.parse().ok())
+            .unwrap_or(841500);
+
+        if current_height < proposal.timelock_end_block {
+            return Err(ProposalExecutionError::TimelockNotExpired {
+                current_block: current_height,
+                timelock_end_block: proposal.timelock_end_block,
+            });
+        }
+
+        proposal.status = "Executed".to_string();
+        Ok(())
     }
     pub fn get_reserves(&self) -> Vec<ReserveAsset> {
         self.reserves.read().unwrap().clone()
@@ -1634,7 +1679,7 @@ impl Engine {
         self.marketing.read().unwrap().clone()
     }
     pub fn is_mainnet_only() -> bool {
-        remediation::is_production_mainnet()
+        std::env::var("CONXIAN_NETWORK").map(|v| v == "mainnet").unwrap_or(false)
     }
 
     pub async fn start_monitoring(engine: Arc<Engine>) {
@@ -1682,26 +1727,26 @@ impl Engine {
     pub fn get_sab_wallets(&self) -> Vec<SabWallet> {
         self.sab_wallets.read().unwrap().clone()
     }
-    pub async fn poll_support(engine: Arc<Engine>) {
-        tokio::spawn(async move {
-            loop {
-                log::info!("Polling support mailbox for new tickets...");
-                let ts = Utc::now();
-                let ticket = engine.support_intake.process_inbound_metadata(
-                    "support@conxian-labs.com",
-                    "user@external.com",
-                    "Assistance required with MuSig2",
-                    "<sim-123@external.com>",
-                    ts,
-                );
-                log::info!("Generated support ticket: {}", ticket.token);
-                tokio::time::sleep(std::time::Duration::from_secs(
-                    engine.support_intake.config.poll_interval_secs,
-                ))
-                .await;
-            }
-        });
-    }
+//    pub async fn poll_support(engine: Arc<Engine>) {
+//        tokio::spawn(async move {
+//            loop {
+//                log::info!("Polling support mailbox for new tickets...");
+//                let ts = Utc::now();
+//                let ticket = engine.support_intake.process_inbound_metadata(
+//                    "support@conxian-labs.com",
+//                    "user@external.com",
+//                    "Assistance required with MuSig2",
+//                    "<sim-123@external.com>",
+//                    ts,
+//                );
+// //                log::info!("Generated support ticket: {}", ticket.token);
+// tokio::time::sleep(std::time::Duration::from_secs(
+// engine.support_intake.config.poll_interval_secs,
+// ))
+// .await;
+// }
+// });
+// }
 }
 
 #[cfg(test)]

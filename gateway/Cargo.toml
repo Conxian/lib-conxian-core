@@ -1,6 +1,6 @@
 [package]
 name = "conxian-gateway"
-version = "0.2.3"
+version = "0.2.5"
 edition = "2021"
 authors = ["Conxian Team"]
 description = "Unified Gateway for Conxian Network Sovereign Services and Bitcoin Layers"
@@ -11,7 +11,7 @@ mcp-sdk-rs = "0.3.4"
 actix-web = "4.13"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.50", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 env_logger = "0.11"
 log = "0.4"
@@ -22,9 +22,6 @@ async-imap = "0.11"
 anyhow = "1.0"
 mailparse = "0.16"
 
-[[bin]]
-name = "mcp-server"
-path = "src/mcp_server.rs"
 
 [lib]
 name = "conxian_gateway"
