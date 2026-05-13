@@ -92,6 +92,11 @@ The system is organized into a unified modular Rust architecture (internal/gatew
 
 For detailed infrastructure information, see [docs/architecture/GCP_INFRASTRUCTURE.md](docs/architecture/GCP_INFRASTRUCTURE.md).
 
+## Governance & Strategic Tracking
+
+- [Risk Register](docs/governance/RISK_REGISTER.md) - Phase 5/6 risk monitoring and mitigation backlog (CON-675).
+- [KPI Scorecard](docs/governance/KPI_SCORECARD.md) - Root-to-Leaf performance metrics and governance cadence (CON-674).
+
 ## Security & Mainnet Readiness (CON-145)
 
 This repository is classified as a **P0 Mainnet Blocker**. The following security and readiness standards are enforced:
