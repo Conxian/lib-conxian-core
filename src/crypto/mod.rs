@@ -103,7 +103,7 @@ impl AdaptorSignature {
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoStubError::InvalidKey)?;
 
         let _secret_key =
-            SecretKey::from_slice(&secret_bytes).map_err(|_| CryptoStubError::InvalidKey)?;
+            SecretKey::from_byte_array(secret_bytes.try_into().map_err(|_| CryptoStubError::InvalidKey)?).map_err(|_| CryptoStubError::InvalidKey)?;
 
         // Use from_digest to avoid deprecation warning for from_slice
         let mut hasher = Sha256::new();

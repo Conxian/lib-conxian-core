@@ -1,4 +1,4 @@
-use secp256k1::rand::rngs::OsRng;
+use secp256k1::rand;
 use secp256k1::{Keypair, PublicKey, Scalar, Secp256k1, XOnlyPublicKey};
 use sha2::{Digest, Sha256};
 
@@ -10,7 +10,7 @@ pub struct Musig2Participant {
 impl Musig2Participant {
     pub fn new() -> Self {
         let secp = Secp256k1::new();
-        let (secret_key, _public_key) = secp.generate_keypair(&mut OsRng);
+        let (secret_key, _public_key) = secp.generate_keypair(&mut rand::rng());
         let keypair = Keypair::from_secret_key(&secp, &secret_key);
         Self { keypair }
     }
