@@ -12,8 +12,16 @@
 /CONTRIBUTING.md @botshelomokoka @admin-conxian-labs
 /LICENSE-MIT @botshelomokoka @admin-conxian-labs
 /LICENSE-APACHE @botshelomokoka @admin-conxian-labs
+/CHANGELOG.md @botshelomokoka @admin-conxian-labs
 
 # Component-specific ownership
-/docs/ @Conxian/mobile
+# Vault SDK (Core Protocol)
+/src/ @Conxian/mobile @botshelomokoka
+/Cargo.toml @Conxian/mobile @botshelomokoka
+
+# Supporting Infrastructure (Gateway)
 /gateway/ @Conxian/mobile
 /services/ @Conxian/mobile
+
+# Documentation
+/docs/ @Conxian/mobile @botshelomokoka

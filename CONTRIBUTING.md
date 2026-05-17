@@ -12,7 +12,7 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [Node.js](https://nodejs.org/) (for TypeScript client changes)
+- [Node.js](https://nodejs.org/) (for TypeScript client changes in `services/`)
 
 ### Local Setup
 
@@ -23,7 +23,7 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
    ```
 3. Run tests:
    ```bash
-   cargo test
+   cargo test --workspace
    ```
 
 ## Development Standards
@@ -34,7 +34,7 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
   - Run `cargo clippy` to check for common mistakes and improvements.
 - **TypeScript**:
   - Ensure all types are properly defined.
-  - Use `npm run lint` if applicable.
+  - Use `npm run lint` if applicable in the `services/` directory.
 
 ## Development Workflow
 
@@ -48,8 +48,8 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 
 1. Create a new branch for your feature or bug fix.
 2. Commit your changes with descriptive commit messages.
-3. Ensure all tests pass.
-4. Update relevant documentation.
+3. Ensure all tests pass (`cargo test --workspace`).
+4. Update relevant documentation (e.g., root `README.md` for SDK changes, `gateway/README.md` for gateway changes).
 5. Submit a pull request to the `main` branch.
 
 All PRs require review from at least one core maintainer before merging.
@@ -65,6 +65,6 @@ If you discover a security vulnerability, please refer to our [Security Policy](
   - `MINOR` version for functionality in a backwards compatible manner.
   - `PATCH` version for backwards compatible bug fixes.
 - **Changelog**: All changes must be recorded in `CHANGELOG.md`.
-- **Tags**: Releases must be tagged in Git (e.g., `v0.2.0`).
+- **Tags**: Releases must be tagged in Git (e.g., `v0.2.5`).
 - **Licensing**: This project is dual-licensed under MIT and Apache 2.0. By contributing, you agree that your contributions will be licensed under these terms.
 - **Mainnet Safety**: Code promoted to the `main` branch must be mainnet-ready. Non-production behavior (stubs, mocks) is restricted to `dev` or `staged` branches.
