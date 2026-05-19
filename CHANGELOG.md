@@ -2,6 +2,17 @@
 
 All notable changes to the lib-conxian-core project will be documented in this file.
 
+## [Unreleased]
+### Added
+- Enforced mandatory administrative authentication via `X-Gateway-Admin-Key` for high-privilege endpoints: State Commit, ERP Sync, and Lightning Payments.
+
+### Changed
+- Improved repository hygiene by removing `gateway/Cargo.lock` from version control, preventing lockfile divergence within the workspace.
+- Updated `docs/API.md` and `docs/architecture/SECURITY_BOUNDARY_AUDIT.md` to reflect hardened security boundaries.
+
+### Fixed
+- Purged legacy commented-out code in `gateway/src/lib.rs` and `gateway/src/api/mod.rs` to maintain internal codebase cleanliness.
+
 ## [0.2.5] - 2026-05-06
 ### Added
 - Established Phase 5/6 governance framework: Created Risk Register (CON-675) and KPI Scorecard (CON-674).
