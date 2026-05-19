@@ -23,4 +23,4 @@
 - **2026-05-05 Update:** Implemented mandatory administrative authentication for high-privilege endpoints (Proposal Approval/Execution, MCP) via `X-Gateway-Admin-Key` requirement (CON-420).
 
 ## 4. Conclusion
-The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards. High-privilege state transition endpoints are now protected by mandatory administrative authentication.
+The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards. High-privilege state transition endpoints (Settlement, MCP, State Commit, ERP Sync, and Lightning Payments) are now protected by mandatory administrative authentication.

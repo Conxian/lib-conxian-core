@@ -1,5 +1,3 @@
-// pub mod mcp_handler;
-
 use crate::engine::anchoring::{
     AnchoringError, AnchoringRequest, AnchoringTarget, DEFAULT_MAX_RETRY_ATTEMPTS,
 };
@@ -345,7 +343,13 @@ async fn identity_resolve_handler(engine: web::Data<Engine>) -> impl Responder {
 }
 
 #[post("/lightning/pay")]
-async fn lightning_pay_handler(engine: web::Data<Engine>) -> impl Responder {
+async fn lightning_pay_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+) -> impl Responder {
+    if let Err(response) = require_admin_auth(&req) {
+        return response;
+    }
     engine.increment_requests();
     HttpResponse::Ok().json(serde_json::json!({ "status": "Paid", "fee_sats": 10 }))
 }
@@ -358,7 +362,14 @@ struct ErpSyncRequest {
 }
 
 #[post("/erp/sync")]
-async fn erp_sync_handler(engine: web::Data<Engine>, payload: web::Json<ErpSyncRequest>) -> impl Responder {
+async fn erp_sync_handler(
+    engine: web::Data<Engine>,
+    req: HttpRequest,
+    payload: web::Json<ErpSyncRequest>,
+) -> impl Responder {
+    if let Err(response) = require_admin_auth(&req) {
+        return response;
+    }
     engine.increment_requests();
     HttpResponse::Ok().json(serde_json::json!({ "system": payload.system, "sync_status": "Complete" }))
 }
@@ -409,8 +420,12 @@ fn anchoring_error_response(err: AnchoringError) -> HttpResponse {
 #[post("/state/commit")]
 async fn state_commit_handler(
     engine: web::Data<Engine>,
+    http_req: HttpRequest,
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
+    if let Err(response) = require_admin_auth(&http_req) {
+        return response;
+    }
     let is_testnet_request = req.testnet.unwrap_or(false);
     if Engine::is_mainnet_only() {
         if is_testnet_request {
