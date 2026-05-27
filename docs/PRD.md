@@ -8,9 +8,9 @@ Conxian builds native application infrastructure for Bitcoin. The Conxian Gatewa
 The Gateway exposes a RESTful API under the `/api/v1` prefix. All external service requests are routed through this gateway to ensure consistent authentication, logging, and monitoring.
 
 ### 2.2. Core Components
-- **API Layer (`gateway/src/api`):** Actix-web based handlers for service routing, health checks, compliance, affiliate management, risk assessment, and metrics. Includes ZKML verification for Guardian attestation.
-- **Engine Layer (`gateway/src/engine`):** Core logic for managing service states, request tracking, Bitcoin/Stacks integration, and ecosystem metrics. Includes a multi-factor risk engine and real-time protocol monitoring.
-- **Infrastructure:** Managed via GCP using modular configurations in `gateway/infrastructure/gcp/`.
+- **API Layer:** (Extracted) Actix-web based handlers for service routing, compliance, and metrics.
+- **Engine Layer:** (Extracted) Core logic for managing service states and protocol monitoring.
+- **Infrastructure:** Managed via GCP using modular configurations in `extracted/conxian-gateway/infrastructure/gcp/`.
 
 ## 3. Supported Services
 The Gateway supports both sovereign services and Bitcoin Layer 2/sidechain integrations, with metadata aligned with research from **bitcoinlayers.org**:

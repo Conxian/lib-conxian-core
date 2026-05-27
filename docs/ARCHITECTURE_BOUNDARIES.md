@@ -6,7 +6,7 @@ This document clarifies the ownership and responsibility boundaries between the 
 
 **Role**: Root dependency for all protocol-bearing components.
 
-**Responsibilities**:
+**Responsibilities (Managed in independent repository)**:
 - Canonical data models (e.g., `StateProposal`, `PartnerLead`).
 - Low-level cryptographic primitives (MuSig2, BitVM2 proof verification).
 - Shared financial and yield metrics logic.
@@ -21,7 +21,7 @@ This document clarifies the ownership and responsibility boundaries between the 
 
 **Role**: Implementation layer for secure execution environments and trusted hardware.
 
-**Responsibilities**:
+**Responsibilities (Managed in independent repository)**:
 - TEE (Trusted Execution Environment) integration logic (e.g., StrongBox).
 - Remote attestation verification and proof generation.
 - Secure key management and enclave-bound signing.
@@ -31,11 +31,11 @@ This document clarifies the ownership and responsibility boundaries between the 
 - Depends on `lib-conxian-core` for data models and protocol rules.
 - Contains the "How" of secure execution, while Core contains the "What".
 
-## 3. Unified Gateway (`conxian-gateway`)
+## 3. Unified Gateway (`conxian-gateway (Extracted)`)
 
 **Role**: Single entry point for all sovereign services and protocol routing.
 
-**Responsibilities**:
+**Responsibilities (Managed in independent repository)**:
 - Unified REST API and MCP server.
 - Protocol monitoring and TVL aggregation.
 - Compliance and risk assessment engine.

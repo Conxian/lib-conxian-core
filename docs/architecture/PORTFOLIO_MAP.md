@@ -7,7 +7,7 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 | Layer | Repository | Role | Evaluation Standard |
 | :--- | :--- | :--- | :--- |
 | **SDK & Core** | `lib-conxian-core` | Vault SDK & Protocol Primitives | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
-| **Supporting Infra** | `conxian-gateway` | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
+| **Supporting Infra** | `conxian-gateway` (Extracted) | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
 | **User & Application** | `conxius-wallet` | Reference Asset Management Client | **P1 - Standard**: StrongBox/TEE signing, Passkey auth, zero-PII persistence. |
 | **User & Application** | `Conxian_UI` | Product Dashboards & Landing | **P1 - Standard**: High-contrast theme, responsive, type-safe, CI-badge mandatory. |
 | **Shared Runtime** | `conxius-platform` | Workflow Orchestration | **P1 - Standard**: Fail-closed orchestrations, mainnet-only release paths. |
