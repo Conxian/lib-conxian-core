@@ -7,10 +7,13 @@ All notable changes to the lib-conxian-core project will be documented in this f
 ### Added
 - Restored Unified Theory of Sovereign Enterprise v2.0 (CON-684).
 - Established execution-ready metric specifications and data contracts for CR, OC, VX, AS, and NE (CON-682).
+- Established formal lib-conxian-core release process (CON-218).
 
 ### Changed
 - Aligned repository documentation (README, PRD, Architecture) to reflect gateway extraction.
-- Refactored workspace configuration to remove legacy gateway member.
+- Refactored workspace configuration and src/gateway.rs to enforce core/gateway boundaries.
+- Relocated services/network.ts to the consumer layer (CON-661).
+
 
 ## [0.2.5] - 2026-05-06
 ### Added
