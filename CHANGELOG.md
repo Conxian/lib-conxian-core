@@ -2,6 +2,16 @@
 
 All notable changes to the lib-conxian-core project will be documented in this file.
 
+
+## [0.2.5] - 2026-05-27
+### Added
+- Restored Unified Theory of Sovereign Enterprise v2.0 (CON-684).
+- Established execution-ready metric specifications and data contracts for CR, OC, VX, AS, and NE (CON-682).
+
+### Changed
+- Aligned repository documentation (README, PRD, Architecture) to reflect gateway extraction.
+- Refactored workspace configuration to remove legacy gateway member.
+
 ## [0.2.5] - 2026-05-06
 ### Added
 - Established Phase 5/6 governance framework: Created Risk Register (CON-675) and KPI Scorecard (CON-674).

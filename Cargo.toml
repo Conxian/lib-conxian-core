@@ -31,4 +31,4 @@ rgb-std = "0.12.0-rc.3"
 aluvm = "0.12.0"
 
 [workspace]
-members = ["gateway"]
+members = []
