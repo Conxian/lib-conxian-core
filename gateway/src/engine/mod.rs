@@ -32,6 +32,51 @@ pub struct RiskAssessment {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailTrustAssumptions {
+    pub security_anchor: String,
+    pub operator_dependency: String,
+    pub liveness_assumption: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailFinalitySemantics {
+    pub confirmation_model: String,
+    pub settlement_layer: String,
+    pub typical_finality_window: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailCustodyModel {
+    pub asset_control_model: String,
+    pub signer_architecture: String,
+    pub redemption_path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailComplianceConstraints {
+    pub baseline_controls: Vec<String>,
+    pub jurisdictional_scope: String,
+    pub monitoring_requirements: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailOperationalCapabilities {
+    pub supported_flows: Vec<String>,
+    pub integration_modes: Vec<String>,
+    pub resilience_features: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RailMetadata {
+    pub rail_family: String,
+    pub trust_assumptions: RailTrustAssumptions,
+    pub finality_semantics: RailFinalitySemantics,
+    pub custody_model: RailCustodyModel,
+    pub compliance_constraints: RailComplianceConstraints,
+    pub operational_capabilities: RailOperationalCapabilities,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServiceStatus {
     pub name: String,
     pub status: String,
@@ -46,6 +91,7 @@ pub struct ServiceStatus {
     pub tvl_usd: f64,
     pub version: Option<String>,
     pub metadata: HashMap<String, String>,
+    pub rail_metadata: RailMetadata,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -322,6 +368,333 @@ impl Engine {
 
     pub fn initialize(&self) {
         self.initialize_services();
+    }
+
+    fn infer_rail_family(name: &str) -> &'static str {
+        match name {
+            "stacks" => "anchored_l2",
+            "lightning" | "bisq" => "lightning_p2p",
+            "liquid" | "rootstock" | "core-dao" | "botanix" => "federated_sidechain",
+            "bitvm" | "bitvm2" | "bitlayer" | "bob" => "optimistic_rollup",
+            "hemi" | "merlin" | "bison" | "alpen" | "b2network" => "zk_rollup",
+            "babylon" | "lorenzo" => "staking_coordination",
+            "rgb" | "taproot-assets" => "client_side_assets",
+            "nubit" => "data_availability_layer",
+            "mezo" | "zulu" => "partner_backed_hybrid",
+            _ => "unknown",
+        }
+    }
+
+    fn to_owned_vec(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_string()).collect()
+    }
+
+    fn build_rail_metadata(
+        name: &str,
+        trust: &str,
+        data_availability: &str,
+        settlement: &str,
+        bridge: &str,
+    ) -> RailMetadata {
+        let family = Self::infer_rail_family(name);
+        let (
+            confirmation_model,
+            finality_window,
+            custody_model,
+            redemption_path,
+            jurisdictional_scope,
+            baseline_controls,
+            monitoring_requirements,
+            supported_flows,
+            integration_modes,
+            resilience_features,
+        ): (
+            &str,
+            &str,
+            &str,
+            &str,
+            &str,
+            &[&str],
+            &[&str],
+            &[&str],
+            &[&str],
+            &[&str],
+        ) = match family {
+            "anchored_l2" => (
+                "anchored_state_finality",
+                "10-60m",
+                "hybrid_bridge_custody",
+                "bridge_redemption_to_bitcoin",
+                "gateway_policy_controls",
+                &["kyc_for_managed_entrypoints", "sanctions_screening"],
+                &["anchor_finality_checks", "bridge_health_monitoring"],
+                &[
+                    "btc_bridging",
+                    "smart_contract_execution",
+                    "token_transfers",
+                ],
+                &["bridge_api", "gateway_service_status"],
+                &["checkpoint_reconciliation", "bridge_failover_runbooks"],
+            ),
+            "lightning_p2p" => (
+                "offchain_instant_with_l1_close",
+                "seconds_to_1_block",
+                "self_custodial_channels",
+                "cooperative_or_unilateral_close",
+                "p2p_with_gateway_overlays",
+                &[
+                    "risk_scoring_for_fiat_edges",
+                    "sanctions_screening_on_managed_nodes",
+                ],
+                &["channel_liquidity_monitoring", "routing_uptime_alerts"],
+                &["micropayments", "streaming_payments", "atomic_swaps"],
+                &["invoice_and_keysend", "p2p_settlement"],
+                &["watchtower_recovery", "multi_path_payment_routing"],
+            ),
+            "federated_sidechain" => (
+                "sidechain_block_finality",
+                "1-12_confs_plus_peg_batching",
+                "federated_peg_custody",
+                "peg_out_with_quorum",
+                "federation_and_operator_licensing",
+                &[
+                    "kyb_for_federation_participants",
+                    "sanctions_screening",
+                    "counterparty_due_diligence",
+                ],
+                &["quorum_health_checks", "peg_in_peg_out_audits"],
+                &[
+                    "bridged_btc_transfers",
+                    "sidechain_settlement",
+                    "policy_managed_redemptions",
+                ],
+                &["bridge_api", "operator_node_rpc"],
+                &["quorum_rotation", "delayed_exit_controls"],
+            ),
+            "optimistic_rollup" => (
+                "soft_finality_then_challenge_window",
+                "minutes_to_days",
+                "bridge_escrow_with_delayed_exits",
+                "forced_withdrawal_after_challenge",
+                "managed_entry_exit_regional_controls",
+                &[
+                    "kyc_for_managed_offramps",
+                    "sanctions_screening",
+                    "transaction_risk_scoring",
+                ],
+                &[
+                    "challenge_window_monitoring",
+                    "sequencer_uptime_alerts",
+                    "bridge_liquidity_checks",
+                ],
+                &[
+                    "high_throughput_transfers",
+                    "rollup_vm_execution",
+                    "cross_chain_withdrawals",
+                ],
+                &["rollup_rpc", "bridge_contract_calls"],
+                &["fault_proof_challenges", "forced_exit_paths"],
+            ),
+            "zk_rollup" => (
+                "validity_proof_finality",
+                "minutes_after_proof_submission",
+                "proof_verified_bridge_escrow",
+                "proof_backed_withdrawal",
+                "gateway_policy_with_jurisdiction_overrides",
+                &[
+                    "kyc_for_managed_gateways",
+                    "sanctions_screening",
+                    "proof_audit_logging",
+                ],
+                &[
+                    "proof_submission_latency",
+                    "bridge_contract_health",
+                    "sequencer_backlog_monitoring",
+                ],
+                &[
+                    "zk_verified_transfers",
+                    "rollup_contract_execution",
+                    "batched_btc_settlement",
+                ],
+                &["proof_relay", "rollup_api", "bridge_indexing"],
+                &["state_root_audits", "proof_verifier_redundancy"],
+            ),
+            "client_side_assets" => (
+                "proof_validated_utxo_finality",
+                "1-6_bitcoin_confirmations",
+                "self_custodial_asset_proofs",
+                "direct_utxo_redemption",
+                "issuer_defined_restrictions",
+                &[
+                    "issuer_kyc_policies",
+                    "sanctions_screening_on_managed_gateways",
+                ],
+                &["schema_validation_checks", "proof_consistency_audits"],
+                &[
+                    "asset_issuance",
+                    "client_side_transfers",
+                    "taproot_commitment_anchor",
+                ],
+                &["wallet_sdk", "psbt_workflows"],
+                &["local_proof_backups", "utxo_reconciliation"],
+            ),
+            "staking_coordination" => (
+                "epoch_based_finality",
+                "epoch_plus_unlock_delay",
+                "delegated_staking_lockups",
+                "unbonding_queue_release",
+                "institutional_staking_policy_constraints",
+                &[
+                    "validator_kyb",
+                    "sanctions_screening_for_reward_payouts",
+                    "counterparty_due_diligence",
+                ],
+                &[
+                    "slashing_event_alerts",
+                    "validator_performance_tracking",
+                    "unlock_queue_monitoring",
+                ],
+                &[
+                    "btc_staking",
+                    "reward_distribution",
+                    "restaking_coordination",
+                ],
+                &["staking_api", "validator_telemetry"],
+                &["operator_rotation", "checkpoint_reconciliation"],
+            ),
+            "data_availability_layer" => (
+                "availability_attestations_before_settlement",
+                "minutes_plus_downstream_settlement",
+                "custody_delegated_to_connected_bridges",
+                "exit_via_connected_settlement_rail",
+                "inherited_from_connected_execution_rails",
+                &[
+                    "data_retention_policies",
+                    "sanctions_screening_on_settlement_edges",
+                ],
+                &[
+                    "data_sampling_audits",
+                    "blob_retention_checks",
+                    "bridge_dependency_health",
+                ],
+                &[
+                    "data_blob_publication",
+                    "proof_data_serving",
+                    "cross_rail_data_feeds",
+                ],
+                &["da_api", "light_client_sampling"],
+                &["erasure_coding_redundancy", "archive_node_failover"],
+            ),
+            "partner_backed_hybrid" => (
+                "operational_soft_then_bitcoin_settlement",
+                "minutes_to_1-6_bitcoin_confs",
+                "partner_treasury_and_bridge_escrow",
+                "policy_governed_partner_redemption",
+                "partner_licensing_perimeter",
+                &[
+                    "institutional_kyc_kyb",
+                    "sanctions_screening",
+                    "transaction_limit_enforcement",
+                ],
+                &[
+                    "liquidity_buffer_tracking",
+                    "operator_sla_monitoring",
+                    "treasury_reconciliation",
+                ],
+                &[
+                    "partner_liquidity_routing",
+                    "yield_and_staking_products",
+                    "btc_settlement_redemptions",
+                ],
+                &[
+                    "partner_api_connectors",
+                    "custody_hooks",
+                    "policy_engine_controls",
+                ],
+                &["liquidity_circuit_breakers", "manual_override_runbooks"],
+            ),
+            _ => (
+                "undocumented",
+                "unknown",
+                "undocumented",
+                "manual_triage_required",
+                "unspecified",
+                &["manual_review_required"],
+                &["manual_monitoring"],
+                &["status_visibility_only"],
+                &["service_registry_lookup"],
+                &["fallback_to_manual_triage"],
+            ),
+        };
+
+        let signer_architecture = if bridge == "N/A" {
+            "native_or_not_applicable".to_string()
+        } else {
+            bridge.to_string()
+        };
+
+        RailMetadata {
+            rail_family: family.to_string(),
+            trust_assumptions: RailTrustAssumptions {
+                security_anchor: format!("{} assumptions with {} DA", trust, data_availability),
+                operator_dependency: format!("{} operator and verifier set", family),
+                liveness_assumption: format!(
+                    "{} settlement path and {} bridge path remain available",
+                    settlement, bridge
+                ),
+            },
+            finality_semantics: RailFinalitySemantics {
+                confirmation_model: confirmation_model.to_string(),
+                settlement_layer: settlement.to_string(),
+                typical_finality_window: finality_window.to_string(),
+            },
+            custody_model: RailCustodyModel {
+                asset_control_model: custody_model.to_string(),
+                signer_architecture,
+                redemption_path: redemption_path.to_string(),
+            },
+            compliance_constraints: RailComplianceConstraints {
+                baseline_controls: Self::to_owned_vec(baseline_controls),
+                jurisdictional_scope: jurisdictional_scope.to_string(),
+                monitoring_requirements: Self::to_owned_vec(monitoring_requirements),
+            },
+            operational_capabilities: RailOperationalCapabilities {
+                supported_flows: Self::to_owned_vec(supported_flows),
+                integration_modes: Self::to_owned_vec(integration_modes),
+                resilience_features: Self::to_owned_vec(resilience_features),
+            },
+        }
+    }
+
+    fn unknown_rail_metadata(name: &str) -> RailMetadata {
+        RailMetadata {
+            rail_family: "unknown".to_string(),
+            trust_assumptions: RailTrustAssumptions {
+                security_anchor: "Not registered in rail metadata catalog".to_string(),
+                operator_dependency: "Manual review required".to_string(),
+                liveness_assumption: format!("No modeled assumptions for service '{}'.", name),
+            },
+            finality_semantics: RailFinalitySemantics {
+                confirmation_model: "Undocumented".to_string(),
+                settlement_layer: "Unknown".to_string(),
+                typical_finality_window: "Unknown".to_string(),
+            },
+            custody_model: RailCustodyModel {
+                asset_control_model: "Undocumented".to_string(),
+                signer_architecture: "Undocumented".to_string(),
+                redemption_path: "Manual triage required".to_string(),
+            },
+            compliance_constraints: RailComplianceConstraints {
+                baseline_controls: vec!["manual_review_required".to_string()],
+                jurisdictional_scope: "Unspecified".to_string(),
+                monitoring_requirements: vec!["manual_monitoring".to_string()],
+            },
+            operational_capabilities: RailOperationalCapabilities {
+                supported_flows: vec!["status_visibility_only".to_string()],
+                integration_modes: vec!["service_registry_lookup".to_string()],
+                resilience_features: vec!["fallback_to_manual_triage".to_string()],
+            },
+        }
     }
 
     fn initialize_services(&self) {
@@ -662,6 +1035,7 @@ impl Engine {
 
             let assessment = self.calculate_risk_assessment(trust, da, settlement, bridge);
             let risk_level = assessment.overall_level.clone();
+            let rail_metadata = Self::build_rail_metadata(name, trust, da, settlement, bridge);
 
             statuses.insert(
                 name.to_string(),
@@ -679,6 +1053,7 @@ impl Engine {
                     tvl_usd: tvl,
                     version: Some("1.2.0".to_string()),
                     metadata,
+                    rail_metadata,
                 },
             );
         }
@@ -801,6 +1176,7 @@ impl Engine {
                 tvl_usd: 0.0,
                 version: None,
                 metadata: HashMap::new(),
+                rail_metadata: Self::unknown_rail_metadata(name),
             })
     }
 

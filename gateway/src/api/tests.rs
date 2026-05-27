@@ -126,8 +126,20 @@ mod tests {
         engine.initialize();
         let status = engine.get_service_status("stacks");
         assert!(status.metadata.contains_key("version"));
+        assert_eq!(status.rail_metadata.rail_family, "anchored_l2");
+        assert!(!status
+            .rail_metadata
+            .trust_assumptions
+            .security_anchor
+            .is_empty());
         let bitvm_status = engine.get_service_status("bitvm2");
         assert!(bitvm_status.metadata.contains_key("bitvm_challenge_status"));
+        assert_eq!(bitvm_status.rail_metadata.rail_family, "optimistic_rollup");
+        assert!(!bitvm_status
+            .rail_metadata
+            .operational_capabilities
+            .supported_flows
+            .is_empty());
     }
 
     #[tokio::test]
@@ -135,14 +147,54 @@ mod tests {
         let engine = Engine::new();
         std::env::set_var("CONXIAN_NETWORK", "testnet");
         engine.initialize();
-        let layers = vec![
-            "bitvm2", "bob", "merlin", "botanix", "hemi", "alpen", "bison",
-        ];
+        let statuses = engine.get_all_service_statuses();
 
-        for layer in layers {
-            let status = engine.get_service_status(layer);
-            assert_eq!(status.name, layer);
+        assert!(!statuses.is_empty());
+
+        for status in statuses {
+            assert!(!status.rail_metadata.rail_family.is_empty());
+            assert!(!status
+                .rail_metadata
+                .trust_assumptions
+                .operator_dependency
+                .is_empty());
+            assert!(!status
+                .rail_metadata
+                .finality_semantics
+                .confirmation_model
+                .is_empty());
+            assert!(!status
+                .rail_metadata
+                .custody_model
+                .asset_control_model
+                .is_empty());
+            assert!(!status
+                .rail_metadata
+                .compliance_constraints
+                .baseline_controls
+                .is_empty());
+            assert!(!status
+                .rail_metadata
+                .operational_capabilities
+                .supported_flows
+                .is_empty());
         }
+    }
+
+    #[tokio::test]
+    async fn test_unknown_service_metadata_is_explicit() {
+        let engine = Engine::new();
+        let status = engine.get_service_status("unregistered-rail");
+
+        assert_eq!(status.status, "unknown");
+        assert_eq!(status.rail_metadata.rail_family, "unknown");
+        assert_eq!(
+            status
+                .rail_metadata
+                .operational_capabilities
+                .supported_flows,
+            vec!["status_visibility_only".to_string()]
+        );
     }
 
     #[test]

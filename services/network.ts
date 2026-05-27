@@ -3,6 +3,55 @@ import fetch from 'node-fetch';
 /**
  * Service and System Models
  */
+export interface RiskAssessment {
+  overall_level: string;
+  da_score: number;
+  settlement_score: number;
+  bridge_score: number;
+  exit_mechanism_score: number;
+  operators_score: number;
+  decentralization_score: number;
+}
+
+export interface RailTrustAssumptions {
+  security_anchor: string;
+  operator_dependency: string;
+  liveness_assumption: string;
+}
+
+export interface RailFinalitySemantics {
+  confirmation_model: string;
+  settlement_layer: string;
+  typical_finality_window: string;
+}
+
+export interface RailCustodyModel {
+  asset_control_model: string;
+  signer_architecture: string;
+  redemption_path: string;
+}
+
+export interface RailComplianceConstraints {
+  baseline_controls: string[];
+  jurisdictional_scope: string;
+  monitoring_requirements: string[];
+}
+
+export interface RailOperationalCapabilities {
+  supported_flows: string[];
+  integration_modes: string[];
+  resilience_features: string[];
+}
+
+export interface RailMetadata {
+  rail_family: string;
+  trust_assumptions: RailTrustAssumptions;
+  finality_semantics: RailFinalitySemantics;
+  custody_model: RailCustodyModel;
+  compliance_constraints: RailComplianceConstraints;
+  operational_capabilities: RailOperationalCapabilities;
+}
+
 export interface ServiceStatus {
   name: string;
   status: string;
@@ -10,11 +59,14 @@ export interface ServiceStatus {
   latency_ms: number;
   trust_model: string;
   risk_level: string;
+  risk_assessment?: RiskAssessment | null;
   data_availability: string;
   settlement: string;
   bridge_security: string;
   tvl_usd: number;
+  version?: string | null;
   metadata: Record<string, string>;
+  rail_metadata: RailMetadata;
 }
 
 export interface FinancialMetrics {
@@ -391,7 +443,7 @@ export const getServiceStatus = async (service: string): Promise<ServiceStatus> 
   return response.json();
 };
 
-export const getLayers = async (): Promise<Record<string, ServiceStatus>> => {
+export const getLayers = async (): Promise<ServiceStatus[]> => {
   const url = getGatewayUrl("layers", currentEnv);
   const response = await fetch(url);
   return response.json();
