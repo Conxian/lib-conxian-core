@@ -257,7 +257,22 @@ pub enum PartnerLeadTransitionError {
 
 pub const CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_ENABLED";
 pub const CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE";
+pub const CONXIAN_BTC_FEE_BUMP_MAX_ATTEMPTS_ENV: &str = "CONXIAN_BTC_FEE_BUMP_MAX_ATTEMPTS";
+pub const CONXIAN_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB_ENV: &str =
+    "CONXIAN_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB";
+pub const CONXIAN_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB_ENV: &str =
+    "CONXIAN_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB";
+pub const CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS_ENV: &str =
+    "CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS";
+pub const CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS_ENV: &str =
+    "CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS";
+
 const DEFAULT_REQUIRED_CONFIRMATIONS: u32 = 6;
+const DEFAULT_BTC_FEE_BUMP_MAX_ATTEMPTS: u8 = 3;
+const DEFAULT_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB: u64 = 150;
+const DEFAULT_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB: u64 = 2;
+const DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS: u32 = 3;
+const DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS: u64 = 900;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -349,6 +364,215 @@ impl BitcoinTxLifecycleConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinFeeBumpPolicy {
+    pub max_attempts: u8,
+    pub max_fee_rate_sats_vb: u64,
+    pub min_bump_increment_sats_vb: u64,
+    pub stuck_threshold_blocks: u32,
+    pub stuck_threshold_seconds: u64,
+}
+
+impl Default for BitcoinFeeBumpPolicy {
+    fn default() -> Self {
+        Self {
+            max_attempts: DEFAULT_BTC_FEE_BUMP_MAX_ATTEMPTS,
+            max_fee_rate_sats_vb: DEFAULT_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB,
+            min_bump_increment_sats_vb: DEFAULT_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB,
+            stuck_threshold_blocks: DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS,
+            stuck_threshold_seconds: DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS,
+        }
+    }
+}
+
+impl BitcoinFeeBumpPolicy {
+    pub fn from_env() -> Self {
+        Self {
+            max_attempts: parse_env_u8(
+                CONXIAN_BTC_FEE_BUMP_MAX_ATTEMPTS_ENV,
+                DEFAULT_BTC_FEE_BUMP_MAX_ATTEMPTS,
+            )
+            .max(1),
+            max_fee_rate_sats_vb: parse_env_u64(
+                CONXIAN_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB_ENV,
+                DEFAULT_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB,
+            )
+            .max(1),
+            min_bump_increment_sats_vb: parse_env_u64(
+                CONXIAN_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB_ENV,
+                DEFAULT_BTC_FEE_BUMP_MIN_INCREMENT_SATS_VB,
+            )
+            .max(1),
+            stuck_threshold_blocks: parse_env_u32(
+                CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS_ENV,
+                DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_BLOCKS,
+            )
+            .max(1),
+            stuck_threshold_seconds: parse_env_u64(
+                CONXIAN_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS_ENV,
+                DEFAULT_BTC_FEE_BUMP_STUCK_THRESHOLD_SECONDS,
+            )
+            .max(1),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinFeeBumpAction {
+    Rbf,
+    Cpfp,
+    Noop,
+    Reject,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinFeeBumpReason {
+    StuckByBlockThreshold,
+    StuckByTimeThreshold,
+    StuckThresholdNotMet,
+    MissingStuckObservation,
+    MaxAttemptsReached,
+    FeeCapExceeded,
+    RbfPreferred,
+    CpfpFallback,
+    NoAvailableBumpPath,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BitcoinTxStuckClassification {
+    pub is_stuck: bool,
+    pub reason: BitcoinFeeBumpReason,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinFeeBumpDecisionInput {
+    pub attempts_used: u8,
+    pub current_fee_rate_sats_vb: u64,
+    pub network_target_fee_rate_sats_vb: u64,
+    pub replaceable: bool,
+    pub cpfp_available: bool,
+    pub blocks_since_broadcast: Option<u32>,
+    pub seconds_since_broadcast: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct BitcoinFeeBumpDecision {
+    pub action: BitcoinFeeBumpAction,
+    pub reason: BitcoinFeeBumpReason,
+    pub next_fee_rate_sats_vb: Option<u64>,
+    pub next_attempt: Option<u8>,
+}
+
+pub fn classify_bitcoin_tx_stuck(
+    policy: &BitcoinFeeBumpPolicy,
+    blocks_since_broadcast: Option<u32>,
+    seconds_since_broadcast: Option<u64>,
+) -> BitcoinTxStuckClassification {
+    if blocks_since_broadcast
+        .map(|blocks| blocks >= policy.stuck_threshold_blocks)
+        .unwrap_or(false)
+    {
+        return BitcoinTxStuckClassification {
+            is_stuck: true,
+            reason: BitcoinFeeBumpReason::StuckByBlockThreshold,
+        };
+    }
+
+    if seconds_since_broadcast
+        .map(|seconds| seconds >= policy.stuck_threshold_seconds)
+        .unwrap_or(false)
+    {
+        return BitcoinTxStuckClassification {
+            is_stuck: true,
+            reason: BitcoinFeeBumpReason::StuckByTimeThreshold,
+        };
+    }
+
+    if blocks_since_broadcast.is_none() && seconds_since_broadcast.is_none() {
+        return BitcoinTxStuckClassification {
+            is_stuck: false,
+            reason: BitcoinFeeBumpReason::MissingStuckObservation,
+        };
+    }
+
+    BitcoinTxStuckClassification {
+        is_stuck: false,
+        reason: BitcoinFeeBumpReason::StuckThresholdNotMet,
+    }
+}
+
+pub fn evaluate_bitcoin_fee_bump_decision(
+    policy: &BitcoinFeeBumpPolicy,
+    input: &BitcoinFeeBumpDecisionInput,
+) -> BitcoinFeeBumpDecision {
+    let stuck = classify_bitcoin_tx_stuck(
+        policy,
+        input.blocks_since_broadcast,
+        input.seconds_since_broadcast,
+    );
+
+    if !stuck.is_stuck {
+        return BitcoinFeeBumpDecision {
+            action: BitcoinFeeBumpAction::Noop,
+            reason: stuck.reason,
+            next_fee_rate_sats_vb: None,
+            next_attempt: None,
+        };
+    }
+
+    if input.attempts_used >= policy.max_attempts {
+        return BitcoinFeeBumpDecision {
+            action: BitcoinFeeBumpAction::Reject,
+            reason: BitcoinFeeBumpReason::MaxAttemptsReached,
+            next_fee_rate_sats_vb: None,
+            next_attempt: None,
+        };
+    }
+
+    let minimum_bump_rate = input
+        .current_fee_rate_sats_vb
+        .saturating_add(policy.min_bump_increment_sats_vb);
+    let next_fee_rate = minimum_bump_rate.max(input.network_target_fee_rate_sats_vb);
+
+    if next_fee_rate > policy.max_fee_rate_sats_vb {
+        return BitcoinFeeBumpDecision {
+            action: BitcoinFeeBumpAction::Reject,
+            reason: BitcoinFeeBumpReason::FeeCapExceeded,
+            next_fee_rate_sats_vb: None,
+            next_attempt: None,
+        };
+    }
+
+    let next_attempt = Some(input.attempts_used.saturating_add(1));
+
+    if input.replaceable {
+        return BitcoinFeeBumpDecision {
+            action: BitcoinFeeBumpAction::Rbf,
+            reason: BitcoinFeeBumpReason::RbfPreferred,
+            next_fee_rate_sats_vb: Some(next_fee_rate),
+            next_attempt,
+        };
+    }
+
+    if input.cpfp_available {
+        return BitcoinFeeBumpDecision {
+            action: BitcoinFeeBumpAction::Cpfp,
+            reason: BitcoinFeeBumpReason::CpfpFallback,
+            next_fee_rate_sats_vb: Some(next_fee_rate),
+            next_attempt,
+        };
+    }
+
+    BitcoinFeeBumpDecision {
+        action: BitcoinFeeBumpAction::Reject,
+        reason: BitcoinFeeBumpReason::NoAvailableBumpPath,
+        next_fee_rate_sats_vb: None,
+        next_attempt: None,
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BitcoinTxLifecycleRecord {
     pub tx_id: String,
     pub state: BitcoinTxLifecycleState,
@@ -432,6 +656,27 @@ fn parse_env_bool(name: &str, default: bool) -> bool {
         .unwrap_or(default)
 }
 
+fn parse_env_u8(name: &str, default: u8) -> u8 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.trim().parse::<u8>().ok())
+        .unwrap_or(default)
+}
+
+fn parse_env_u32(name: &str, default: u32) -> u32 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .unwrap_or(default)
+}
+
+fn parse_env_u64(name: &str, default: u64) -> u64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .unwrap_or(default)
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -473,6 +718,7 @@ pub struct Engine {
     pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
     pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
     pub bitcoin_tx_lifecycle_config: BitcoinTxLifecycleConfig,
+    pub bitcoin_fee_bump_policy: BitcoinFeeBumpPolicy,
     pub bitcoin_tx_lifecycle: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_shadow: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_telemetry: Arc<RwLock<Vec<BitcoinTxTransitionOutcome>>>,
@@ -548,6 +794,7 @@ impl Engine {
             settlement_log: Arc::new(RwLock::new(Vec::new())),
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_config,
+            bitcoin_fee_bump_policy: BitcoinFeeBumpPolicy::from_env(),
             bitcoin_tx_lifecycle: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_shadow: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_telemetry: Arc::new(RwLock::new(Vec::new())),
@@ -2141,6 +2388,17 @@ impl Engine {
         self.bitcoin_tx_lifecycle_config.clone()
     }
 
+    pub fn get_bitcoin_fee_bump_policy(&self) -> BitcoinFeeBumpPolicy {
+        self.bitcoin_fee_bump_policy.clone()
+    }
+
+    pub fn evaluate_bitcoin_fee_bump(
+        &self,
+        input: BitcoinFeeBumpDecisionInput,
+    ) -> BitcoinFeeBumpDecision {
+        evaluate_bitcoin_fee_bump_decision(&self.bitcoin_fee_bump_policy, &input)
+    }
+
     pub fn get_bitcoin_tx_lifecycle_record(&self, tx_id: &str) -> BitcoinTxLifecycleRecord {
         self.bitcoin_tx_lifecycle
             .read()
@@ -2635,6 +2893,108 @@ mod tests {
             Arc::new(OnChainAnchoringPublisher),
             config,
         )
+    }
+
+    fn fee_bump_policy() -> BitcoinFeeBumpPolicy {
+        BitcoinFeeBumpPolicy {
+            max_attempts: 3,
+            max_fee_rate_sats_vb: 150,
+            min_bump_increment_sats_vb: 2,
+            stuck_threshold_blocks: 3,
+            stuck_threshold_seconds: 900,
+        }
+    }
+
+    #[test]
+    fn bitcoin_fee_bump_prefers_rbf_when_replaceable_and_guardrails_pass() {
+        let decision = evaluate_bitcoin_fee_bump_decision(
+            &fee_bump_policy(),
+            &BitcoinFeeBumpDecisionInput {
+                attempts_used: 0,
+                current_fee_rate_sats_vb: 10,
+                network_target_fee_rate_sats_vb: 11,
+                replaceable: true,
+                cpfp_available: true,
+                blocks_since_broadcast: Some(4),
+                seconds_since_broadcast: Some(120),
+            },
+        );
+
+        assert_eq!(decision.action, BitcoinFeeBumpAction::Rbf);
+        assert_eq!(decision.reason, BitcoinFeeBumpReason::RbfPreferred);
+        assert_eq!(decision.next_fee_rate_sats_vb, Some(12));
+        assert_eq!(decision.next_attempt, Some(1));
+    }
+
+    #[test]
+    fn bitcoin_fee_bump_falls_back_to_cpfp_when_rbf_not_available() {
+        let decision = evaluate_bitcoin_fee_bump_decision(
+            &fee_bump_policy(),
+            &BitcoinFeeBumpDecisionInput {
+                attempts_used: 1,
+                current_fee_rate_sats_vb: 18,
+                network_target_fee_rate_sats_vb: 19,
+                replaceable: false,
+                cpfp_available: true,
+                blocks_since_broadcast: Some(4),
+                seconds_since_broadcast: Some(1800),
+            },
+        );
+
+        assert_eq!(decision.action, BitcoinFeeBumpAction::Cpfp);
+        assert_eq!(decision.reason, BitcoinFeeBumpReason::CpfpFallback);
+        assert_eq!(decision.next_fee_rate_sats_vb, Some(20));
+        assert_eq!(decision.next_attempt, Some(2));
+    }
+
+    #[test]
+    fn bitcoin_fee_bump_rejects_when_max_attempts_exhausted() {
+        let decision = evaluate_bitcoin_fee_bump_decision(
+            &fee_bump_policy(),
+            &BitcoinFeeBumpDecisionInput {
+                attempts_used: 3,
+                current_fee_rate_sats_vb: 20,
+                network_target_fee_rate_sats_vb: 24,
+                replaceable: true,
+                cpfp_available: true,
+                blocks_since_broadcast: Some(5),
+                seconds_since_broadcast: Some(2000),
+            },
+        );
+
+        assert_eq!(decision.action, BitcoinFeeBumpAction::Reject);
+        assert_eq!(decision.reason, BitcoinFeeBumpReason::MaxAttemptsReached);
+        assert_eq!(decision.next_fee_rate_sats_vb, None);
+        assert_eq!(decision.next_attempt, None);
+    }
+
+    #[test]
+    fn bitcoin_fee_bump_rejects_when_fee_cap_would_be_exceeded() {
+        let policy = BitcoinFeeBumpPolicy {
+            max_attempts: 3,
+            max_fee_rate_sats_vb: 21,
+            min_bump_increment_sats_vb: 3,
+            stuck_threshold_blocks: 2,
+            stuck_threshold_seconds: 600,
+        };
+
+        let decision = evaluate_bitcoin_fee_bump_decision(
+            &policy,
+            &BitcoinFeeBumpDecisionInput {
+                attempts_used: 1,
+                current_fee_rate_sats_vb: 20,
+                network_target_fee_rate_sats_vb: 20,
+                replaceable: true,
+                cpfp_available: true,
+                blocks_since_broadcast: Some(3),
+                seconds_since_broadcast: Some(700),
+            },
+        );
+
+        assert_eq!(decision.action, BitcoinFeeBumpAction::Reject);
+        assert_eq!(decision.reason, BitcoinFeeBumpReason::FeeCapExceeded);
+        assert_eq!(decision.next_fee_rate_sats_vb, None);
+        assert_eq!(decision.next_attempt, None);
     }
 
     #[test]
