@@ -832,11 +832,25 @@ fn trim_optional(input: Option<String>) -> Option<String> {
 
 #[derive(Deserialize)]
 struct BitcoinTxTransitionRequest {
+    #[serde(alias = "bitcoin_tx_id", alias = "orchestration_id")]
     tx_id: Option<String>,
+    #[serde(alias = "lifecycle_event", alias = "transition")]
     event: Option<BitcoinTxLifecycleEvent>,
+    #[serde(default, alias = "request_id", alias = "idempotency")]
+    idempotency_key: Option<String>,
+    #[serde(default, alias = "decision_rationale", alias = "reason")]
+    rationale: Option<String>,
+    #[serde(default, alias = "fee_rate", alias = "sat_per_vbyte")]
+    fee_rate_sat_vb: Option<u64>,
+    #[serde(default, alias = "broadcast_attempt")]
+    attempt: Option<u32>,
+    #[serde(default, alias = "confirmations")]
     confirmations_observed: Option<u32>,
+    #[serde(default)]
     required_confirmations: Option<u32>,
+    #[serde(default)]
     reorg_depth: Option<u32>,
+    #[serde(default)]
     dead_letter_reason: Option<String>,
 }
 
@@ -864,6 +878,10 @@ impl BitcoinTxTransitionRequest {
         Ok(BitcoinTxTransitionInput {
             tx_id,
             event,
+            idempotency_key: trim_optional(self.idempotency_key),
+            rationale: trim_optional(self.rationale),
+            fee_rate_sat_vb: self.fee_rate_sat_vb,
+            attempt: self.attempt,
             confirmations_observed: self.confirmations_observed,
             required_confirmations: self.required_confirmations,
             reorg_depth: self.reorg_depth,
@@ -912,6 +930,23 @@ fn map_bitcoin_transition_error(err: BitcoinTxTransitionError) -> HttpResponse {
                     "Transaction is in terminal state {} and cannot transition",
                     state.as_str()
                 ),
+            }))
+        }
+        BitcoinTxTransitionError::IdempotencyConflict {
+            tx_id,
+            idempotency_key,
+            ..
+        } => HttpResponse::Conflict().json(serde_json::json!({
+            "error": "idempotency_conflict",
+            "tx_id": tx_id,
+            "idempotency_key": idempotency_key,
+        })),
+        BitcoinTxTransitionError::UnknownPersistedState(value)
+        | BitcoinTxTransitionError::UnknownPersistedEvent(value)
+        | BitcoinTxTransitionError::Persistence(value) => {
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "persistence_error",
+                "message": value,
             }))
         }
     }

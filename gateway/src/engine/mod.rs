@@ -1,18 +1,25 @@
 pub mod anchoring;
 pub mod mcp;
+pub mod persistence;
 pub mod remediation;
 pub mod support;
 use crate::engine::anchoring::{
     AnchoringError, AnchoringPublisher, AnchoringReceipt, AnchoringRequest, AnchoringTarget,
     OnChainAnchoringPublisher, TablelandAnchoringPublisher,
 };
+use crate::engine::persistence::{
+    AppendEventOutcome, BitcoinTxPersistence, BtcTxEventRecord, BtcTxOrchestrationRecord,
+    InMemoryBitcoinTxPersistence, PersistenceError,
+};
 use crate::engine::support::{SupportConfig, SupportIntake};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
 pub struct AnchoringReplayRecord {
@@ -304,6 +311,25 @@ impl BitcoinTxLifecycleState {
     }
 }
 
+impl FromStr for BitcoinTxLifecycleState {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "draft" => Ok(BitcoinTxLifecycleState::Draft),
+            "signed" => Ok(BitcoinTxLifecycleState::Signed),
+            "broadcast_pending" => Ok(BitcoinTxLifecycleState::BroadcastPending),
+            "in_mempool" => Ok(BitcoinTxLifecycleState::InMempool),
+            "pending_confirmations" => Ok(BitcoinTxLifecycleState::PendingConfirmations),
+            "confirmed" => Ok(BitcoinTxLifecycleState::Confirmed),
+            "finalized" => Ok(BitcoinTxLifecycleState::Finalized),
+            "reorged" => Ok(BitcoinTxLifecycleState::Reorged),
+            "dead_letter" => Ok(BitcoinTxLifecycleState::DeadLetter),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum BitcoinTxLifecycleEvent {
@@ -326,6 +352,23 @@ impl BitcoinTxLifecycleEvent {
             BitcoinTxLifecycleEvent::Finalize => "finalize",
             BitcoinTxLifecycleEvent::ReorgDetected => "reorg_detected",
             BitcoinTxLifecycleEvent::MarkDeadLetter => "mark_dead_letter",
+        }
+    }
+}
+
+impl FromStr for BitcoinTxLifecycleEvent {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "sign" => Ok(BitcoinTxLifecycleEvent::Sign),
+            "queue_broadcast" => Ok(BitcoinTxLifecycleEvent::QueueBroadcast),
+            "mempool_observed" => Ok(BitcoinTxLifecycleEvent::MempoolObserved),
+            "confirmations_observed" => Ok(BitcoinTxLifecycleEvent::ConfirmationsObserved),
+            "finalize" => Ok(BitcoinTxLifecycleEvent::Finalize),
+            "reorg_detected" => Ok(BitcoinTxLifecycleEvent::ReorgDetected),
+            "mark_dead_letter" => Ok(BitcoinTxLifecycleEvent::MarkDeadLetter),
+            _ => Err(()),
         }
     }
 }
@@ -576,22 +619,33 @@ pub fn evaluate_bitcoin_fee_bump_decision(
 pub struct BitcoinTxLifecycleRecord {
     pub tx_id: String,
     pub state: BitcoinTxLifecycleState,
+    pub latest_transition: Option<BitcoinTxLifecycleEvent>,
+    pub latest_event_id: Option<String>,
+    pub fee_rate_sat_vb: Option<u64>,
+    pub attempt: u32,
     pub confirmations_observed: u32,
     pub required_confirmations: u32,
     pub reorg_depth: Option<u32>,
     pub dead_letter_reason: Option<String>,
+    pub recovery_cursor: u64,
     pub updated_at: DateTime<Utc>,
 }
 
 impl BitcoinTxLifecycleRecord {
     fn draft(tx_id: &str) -> Self {
+        let now = now_epoch_ms();
         Self {
             tx_id: tx_id.to_string(),
             state: BitcoinTxLifecycleState::Draft,
+            latest_transition: None,
+            latest_event_id: None,
+            fee_rate_sat_vb: None,
+            attempt: 0,
             confirmations_observed: 0,
             required_confirmations: DEFAULT_REQUIRED_CONFIRMATIONS,
             reorg_depth: None,
             dead_letter_reason: None,
+            recovery_cursor: now,
             updated_at: Utc::now(),
         }
     }
@@ -608,23 +662,68 @@ pub struct BitcoinTxLifecycleView {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BitcoinTxTransitionInput {
     pub tx_id: String,
+    #[serde(alias = "transition")]
     pub event: BitcoinTxLifecycleEvent,
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
+    #[serde(default)]
+    pub rationale: Option<String>,
+    #[serde(default)]
+    pub fee_rate_sat_vb: Option<u64>,
+    #[serde(default)]
+    pub attempt: Option<u32>,
+    #[serde(default)]
     pub confirmations_observed: Option<u32>,
+    #[serde(default)]
     pub required_confirmations: Option<u32>,
+    #[serde(default)]
     pub reorg_depth: Option<u32>,
+    #[serde(default)]
     pub dead_letter_reason: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BitcoinTxTransitionOutcome {
     pub tx_id: String,
+    pub event_id: String,
+    pub idempotency_key: String,
     pub event: BitcoinTxLifecycleEvent,
     pub from_state: BitcoinTxLifecycleState,
     pub to_state: BitcoinTxLifecycleState,
     pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub idempotent_replay: bool,
     pub state_mutated: bool,
     pub telemetry_recorded: bool,
     pub transitioned_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BitcoinTxOrchestration {
+    pub tx_id: String,
+    pub state: BitcoinTxLifecycleState,
+    pub latest_transition: Option<BitcoinTxLifecycleEvent>,
+    pub latest_event_id: Option<String>,
+    pub fee_rate_sat_vb: Option<u64>,
+    pub attempt: u32,
+    pub observed_confirmations: Option<u32>,
+    pub recovery_cursor: u64,
+    pub updated_at_epoch_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BitcoinTxEvent {
+    pub event_id: String,
+    pub tx_id: String,
+    pub idempotency_key: String,
+    pub event: BitcoinTxLifecycleEvent,
+    pub from_state: BitcoinTxLifecycleState,
+    pub to_state: BitcoinTxLifecycleState,
+    pub attempt: u32,
+    pub fee_rate_sat_vb: Option<u64>,
+    pub observed_confirmations: Option<u32>,
+    pub rationale: Option<String>,
+    pub fingerprint: String,
+    pub created_at_epoch_ms: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -643,6 +742,15 @@ pub enum BitcoinTxTransitionError {
     TerminalState {
         state: BitcoinTxLifecycleState,
     },
+    UnknownPersistedState(String),
+    UnknownPersistedEvent(String),
+    IdempotencyConflict {
+        tx_id: String,
+        idempotency_key: String,
+        existing_fingerprint: String,
+        incoming_fingerprint: String,
+    },
+    Persistence(String),
 }
 
 fn parse_env_bool(name: &str, default: bool) -> bool {
@@ -722,6 +830,8 @@ pub struct Engine {
     pub bitcoin_tx_lifecycle: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_shadow: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_telemetry: Arc<RwLock<Vec<BitcoinTxTransitionOutcome>>>,
+    pub bitcoin_tx_persistence: Arc<dyn BitcoinTxPersistence>,
+    pub bitcoin_tx_event_sequence: AtomicU64,
     pub partner_leads: Arc<RwLock<HashMap<String, PartnerLead>>>,
     pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
     pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
@@ -763,6 +873,29 @@ impl Engine {
         on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
         bitcoin_tx_lifecycle_config: BitcoinTxLifecycleConfig,
     ) -> Self {
+        Self::new_with_anchoring_publishers_tx_lifecycle_config_and_persistence(
+            tableland_anchoring_publisher,
+            on_chain_anchoring_publisher,
+            bitcoin_tx_lifecycle_config,
+            Arc::new(InMemoryBitcoinTxPersistence::default()),
+        )
+    }
+
+    pub(crate) fn new_with_anchoring_publishers_tx_lifecycle_config_and_persistence(
+        tableland_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+        on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+        bitcoin_tx_lifecycle_config: BitcoinTxLifecycleConfig,
+        bitcoin_tx_persistence: Arc<dyn BitcoinTxPersistence>,
+    ) -> Self {
+        let bitcoin_tx_lifecycle_projection = bitcoin_tx_persistence
+            .list_orchestrations()
+            .ok()
+            .into_iter()
+            .flatten()
+            .filter_map(|record| lifecycle_record_from_orchestration_record(record).ok())
+            .map(|record| (record.tx_id.clone(), record))
+            .collect::<HashMap<_, _>>();
+
         Engine {
             version: "0.2.3".to_string(),
             start_time: Utc::now(),
@@ -795,9 +928,11 @@ impl Engine {
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_config,
             bitcoin_fee_bump_policy: BitcoinFeeBumpPolicy::from_env(),
-            bitcoin_tx_lifecycle: Arc::new(RwLock::new(HashMap::new())),
+            bitcoin_tx_lifecycle: Arc::new(RwLock::new(bitcoin_tx_lifecycle_projection)),
             bitcoin_tx_lifecycle_shadow: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_telemetry: Arc::new(RwLock::new(Vec::new())),
+            bitcoin_tx_persistence,
+            bitcoin_tx_event_sequence: AtomicU64::new(now_epoch_ms()),
             partner_leads: Arc::new(RwLock::new(HashMap::new())),
             partner_lead_events: Arc::new(RwLock::new(Vec::new())),
             partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
@@ -2400,12 +2535,46 @@ impl Engine {
     }
 
     pub fn get_bitcoin_tx_lifecycle_record(&self, tx_id: &str) -> BitcoinTxLifecycleRecord {
-        self.bitcoin_tx_lifecycle
-            .read()
-            .unwrap()
-            .get(tx_id)
-            .cloned()
-            .unwrap_or_else(|| BitcoinTxLifecycleRecord::draft(tx_id))
+        if let Some(record) = self.read_orchestration_projection(tx_id) {
+            return record;
+        }
+
+        BitcoinTxLifecycleRecord::draft(tx_id)
+    }
+
+    pub fn get_bitcoin_tx_orchestration(
+        &self,
+        tx_id: &str,
+    ) -> Result<Option<BitcoinTxOrchestration>, BitcoinTxTransitionError> {
+        if tx_id.trim().is_empty() {
+            return Err(BitcoinTxTransitionError::TxIdRequired);
+        }
+
+        let Some(record) = self
+            .bitcoin_tx_persistence
+            .get_orchestration(tx_id)
+            .map_err(map_persistence_error)?
+        else {
+            return Ok(None);
+        };
+
+        orchestration_from_record(record).map(Some)
+    }
+
+    pub fn list_bitcoin_tx_events(
+        &self,
+        tx_id: &str,
+    ) -> Result<Vec<BitcoinTxEvent>, BitcoinTxTransitionError> {
+        if tx_id.trim().is_empty() {
+            return Err(BitcoinTxTransitionError::TxIdRequired);
+        }
+
+        self.bitcoin_tx_persistence
+            .list_events(tx_id)
+            .map_err(map_persistence_error)?
+            .into_iter()
+            .map(event_from_record)
+            .collect()
     }
 
     pub fn get_bitcoin_tx_lifecycle_view(&self, tx_id: &str) -> BitcoinTxLifecycleView {
@@ -2434,7 +2603,8 @@ impl Engine {
         input: BitcoinTxTransitionInput,
     ) -> Result<BitcoinTxTransitionOutcome, BitcoinTxTransitionError> {
         self.increment_requests();
-        let tx_id = input.tx_id.trim();
+
+        let tx_id = input.tx_id.trim().to_string();
         if tx_id.is_empty() {
             return Err(BitcoinTxTransitionError::TxIdRequired);
         }
@@ -2444,35 +2614,121 @@ impl Engine {
             return Err(BitcoinTxTransitionError::FeatureDisabled);
         }
 
-        let current = self.bitcoin_tx_record_for_transition(tx_id, &execution_mode);
+        let mut input = input;
+        input.tx_id = tx_id.clone();
+        input.idempotency_key = trim_optional_string(input.idempotency_key);
+        input.rationale = trim_optional_string(input.rationale);
+        input.dead_letter_reason = trim_optional_string(input.dead_letter_reason);
+
+        let current = self.bitcoin_tx_record_for_transition(&tx_id, &execution_mode);
+
+        let idempotency_key = input.idempotency_key.clone().unwrap_or_else(|| {
+            derive_idempotency_key(&input, current.attempt, current.fee_rate_sat_vb)
+        });
+
+        let fingerprint = build_fingerprint(
+            &tx_id,
+            &input.event,
+            input.attempt.unwrap_or(current.attempt),
+            input.fee_rate_sat_vb.or(current.fee_rate_sat_vb),
+            input.confirmations_observed,
+            input.required_confirmations,
+            input.reorg_depth,
+            input
+                .dead_letter_reason
+                .as_deref()
+                .or(input.rationale.as_deref()),
+        );
+
+        if execution_mode == BitcoinTxLifecycleExecutionMode::Active {
+            if let Some(existing) = self.find_existing_tx_event(&tx_id, &idempotency_key)? {
+                if existing.fingerprint == fingerprint {
+                    return self.duplicate_outcome_from_record(existing, execution_mode);
+                }
+
+                return Err(BitcoinTxTransitionError::IdempotencyConflict {
+                    tx_id,
+                    idempotency_key,
+                    existing_fingerprint: existing.fingerprint,
+                    incoming_fingerprint: fingerprint,
+                });
+            }
+        }
+
         let next = Self::next_bitcoin_tx_record(&current, &input)?;
 
-        let state_mutated = execution_mode == BitcoinTxLifecycleExecutionMode::Active;
-        let telemetry_recorded = execution_mode == BitcoinTxLifecycleExecutionMode::Shadow;
+        let event_id = format!(
+            "evt-{}-{}",
+            sanitize_id(&tx_id),
+            self.bitcoin_tx_event_sequence
+                .fetch_add(1, Ordering::SeqCst)
+        );
+
+        let projected_next =
+            Self::apply_transition_projection_metadata(&current, &next, &input, &event_id);
 
         let outcome = BitcoinTxTransitionOutcome {
-            tx_id: tx_id.to_string(),
+            tx_id: tx_id.clone(),
+            event_id: event_id.clone(),
+            idempotency_key: idempotency_key.clone(),
             event: input.event.clone(),
-            from_state: current.state,
-            to_state: next.state.clone(),
+            from_state: current.state.clone(),
+            to_state: projected_next.state.clone(),
             execution_mode: execution_mode.clone(),
-            state_mutated,
-            telemetry_recorded,
-            transitioned_at: next.updated_at,
+            idempotent_replay: false,
+            state_mutated: execution_mode == BitcoinTxLifecycleExecutionMode::Active,
+            telemetry_recorded: execution_mode == BitcoinTxLifecycleExecutionMode::Shadow,
+            transitioned_at: projected_next.updated_at,
         };
 
         match execution_mode {
             BitcoinTxLifecycleExecutionMode::Active => {
+                let event_record = BtcTxEventRecord {
+                    event_id: event_id.clone(),
+                    tx_id: tx_id.clone(),
+                    idempotency_key: idempotency_key.clone(),
+                    transition: input.event.as_str().to_string(),
+                    from_state: current.state.as_str().to_string(),
+                    to_state: projected_next.state.as_str().to_string(),
+                    attempt: projected_next.attempt,
+                    fee_rate_sat_vb: projected_next.fee_rate_sat_vb,
+                    observed_confirmations: observed_confirmations_from_record(&projected_next),
+                    rationale: input
+                        .dead_letter_reason
+                        .clone()
+                        .or_else(|| input.rationale.clone()),
+                    fingerprint,
+                    created_at_epoch_ms: projected_next.recovery_cursor,
+                };
+
+                match self
+                    .bitcoin_tx_persistence
+                    .append_event(event_record)
+                    .map_err(map_persistence_error)?
+                {
+                    AppendEventOutcome::Inserted => {}
+                    AppendEventOutcome::Duplicate(existing) => {
+                        return self.duplicate_outcome_from_record(
+                            existing,
+                            BitcoinTxLifecycleExecutionMode::Active,
+                        )
+                    }
+                }
+
+                self.bitcoin_tx_persistence
+                    .upsert_orchestration(lifecycle_record_to_orchestration_record(&projected_next))
+                    .map_err(map_persistence_error)?;
+
                 self.bitcoin_tx_lifecycle
                     .write()
                     .unwrap()
-                    .insert(tx_id.to_string(), next);
+                    .insert(tx_id, projected_next);
             }
             BitcoinTxLifecycleExecutionMode::Shadow => {
                 self.bitcoin_tx_lifecycle_shadow
                     .write()
                     .unwrap()
-                    .insert(tx_id.to_string(), next);
+                    .insert(tx_id, projected_next);
                 self.bitcoin_tx_lifecycle_telemetry
                     .write()
                     .unwrap()
@@ -2482,6 +2738,91 @@ impl Engine {
         }
 
         Ok(outcome)
+    }
+
+    fn read_orchestration_projection(&self, tx_id: &str) -> Option<BitcoinTxLifecycleRecord> {
+        let tx_id = tx_id.trim();
+        if tx_id.is_empty() {
+            return None;
+        }
+
+        if let Some(record) = self
+            .bitcoin_tx_lifecycle
+            .read()
+            .unwrap()
+            .get(tx_id)
+            .cloned()
+        {
+            return Some(record);
+        }
+
+        let persisted = self
+            .bitcoin_tx_persistence
+            .get_orchestration(tx_id)
+            .ok()
+            .flatten()?;
+        let hydrated = lifecycle_record_from_orchestration_record(persisted).ok()?;
+
+        self.bitcoin_tx_lifecycle
+            .write()
+            .unwrap()
+            .insert(tx_id.to_string(), hydrated.clone());
+
+        Some(hydrated)
+    }
+
+    fn find_existing_tx_event(
+        &self,
+        tx_id: &str,
+        idempotency_key: &str,
+    ) -> Result<Option<BtcTxEventRecord>, BitcoinTxTransitionError> {
+        let events = self
+            .bitcoin_tx_persistence
+            .list_events(tx_id)
+            .map_err(map_persistence_error)?;
+
+        Ok(events
+            .into_iter()
+            .find(|event| event.idempotency_key == idempotency_key))
+    }
+
+    fn duplicate_outcome_from_record(
+        &self,
+        existing: BtcTxEventRecord,
+        execution_mode: BitcoinTxLifecycleExecutionMode,
+    ) -> Result<BitcoinTxTransitionOutcome, BitcoinTxTransitionError> {
+        let from_state = parse_persisted_state(&existing.from_state)?;
+        let to_state = parse_persisted_state(&existing.to_state)?;
+        let event = parse_persisted_event(&existing.transition)?;
+
+        Ok(BitcoinTxTransitionOutcome {
+            tx_id: existing.tx_id,
+            event_id: existing.event_id,
+            idempotency_key: existing.idempotency_key,
+            event,
+            from_state,
+            to_state,
+            execution_mode,
+            idempotent_replay: true,
+            state_mutated: false,
+            telemetry_recorded: false,
+            transitioned_at: epoch_ms_to_datetime(existing.created_at_epoch_ms),
+        })
+    }
+
+    fn apply_transition_projection_metadata(
+        current: &BitcoinTxLifecycleRecord,
+        next: &BitcoinTxLifecycleRecord,
+        input: &BitcoinTxTransitionInput,
+        event_id: &str,
+    ) -> BitcoinTxLifecycleRecord {
+        let mut projected = next.clone();
+        projected.latest_transition = Some(input.event.clone());
+        projected.latest_event_id = Some(event_id.to_string());
+        projected.fee_rate_sat_vb = input.fee_rate_sat_vb.or(current.fee_rate_sat_vb);
+        projected.attempt = update_attempt(current.attempt, input, current, &projected);
+        projected.recovery_cursor = now_epoch_ms();
+        projected
     }
 
     fn bitcoin_tx_record_for_transition(
@@ -2501,11 +2842,7 @@ impl Engine {
             }
         }
 
-        self.bitcoin_tx_lifecycle
-            .read()
-            .unwrap()
-            .get(tx_id)
-            .cloned()
+        self.read_orchestration_projection(tx_id)
             .unwrap_or_else(|| BitcoinTxLifecycleRecord::draft(tx_id))
     }
 
@@ -2820,6 +3157,228 @@ impl Engine {
     }
 }
 
+fn trim_optional_string(input: Option<String>) -> Option<String> {
+    input
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn parse_persisted_state(value: &str) -> Result<BitcoinTxLifecycleState, BitcoinTxTransitionError> {
+    BitcoinTxLifecycleState::from_str(value)
+        .map_err(|_| BitcoinTxTransitionError::UnknownPersistedState(value.to_string()))
+}
+
+fn parse_persisted_event(value: &str) -> Result<BitcoinTxLifecycleEvent, BitcoinTxTransitionError> {
+    BitcoinTxLifecycleEvent::from_str(value)
+        .map_err(|_| BitcoinTxTransitionError::UnknownPersistedEvent(value.to_string()))
+}
+
+fn orchestration_from_record(
+    record: BtcTxOrchestrationRecord,
+) -> Result<BitcoinTxOrchestration, BitcoinTxTransitionError> {
+    Ok(BitcoinTxOrchestration {
+        tx_id: record.tx_id,
+        state: parse_persisted_state(&record.state)?,
+        latest_transition: record
+            .latest_transition
+            .as_deref()
+            .map(parse_persisted_event)
+            .transpose()?,
+        latest_event_id: record.latest_event_id,
+        fee_rate_sat_vb: record.fee_rate_sat_vb,
+        attempt: record.attempt,
+        observed_confirmations: record.observed_confirmations,
+        recovery_cursor: record.recovery_cursor,
+        updated_at_epoch_ms: record.updated_at_epoch_ms,
+    })
+}
+
+fn event_from_record(record: BtcTxEventRecord) -> Result<BitcoinTxEvent, BitcoinTxTransitionError> {
+    Ok(BitcoinTxEvent {
+        event_id: record.event_id,
+        tx_id: record.tx_id,
+        idempotency_key: record.idempotency_key,
+        event: parse_persisted_event(&record.transition)?,
+        from_state: parse_persisted_state(&record.from_state)?,
+        to_state: parse_persisted_state(&record.to_state)?,
+        attempt: record.attempt,
+        fee_rate_sat_vb: record.fee_rate_sat_vb,
+        observed_confirmations: record.observed_confirmations,
+        rationale: record.rationale,
+        fingerprint: record.fingerprint,
+        created_at_epoch_ms: record.created_at_epoch_ms,
+    })
+}
+
+fn lifecycle_record_from_orchestration_record(
+    record: BtcTxOrchestrationRecord,
+) -> Result<BitcoinTxLifecycleRecord, BitcoinTxTransitionError> {
+    Ok(BitcoinTxLifecycleRecord {
+        tx_id: record.tx_id,
+        state: parse_persisted_state(&record.state)?,
+        latest_transition: record
+            .latest_transition
+            .as_deref()
+            .map(parse_persisted_event)
+            .transpose()?,
+        latest_event_id: record.latest_event_id,
+        fee_rate_sat_vb: record.fee_rate_sat_vb,
+        attempt: record.attempt,
+        confirmations_observed: record.observed_confirmations.unwrap_or(0),
+        required_confirmations: DEFAULT_REQUIRED_CONFIRMATIONS,
+        reorg_depth: None,
+        dead_letter_reason: None,
+        recovery_cursor: record.recovery_cursor,
+        updated_at: epoch_ms_to_datetime(record.updated_at_epoch_ms),
+    })
+}
+
+fn lifecycle_record_to_orchestration_record(
+    record: &BitcoinTxLifecycleRecord,
+) -> BtcTxOrchestrationRecord {
+    BtcTxOrchestrationRecord {
+        tx_id: record.tx_id.clone(),
+        state: record.state.as_str().to_string(),
+        latest_transition: record
+            .latest_transition
+            .as_ref()
+            .map(|event| event.as_str().to_string()),
+        latest_event_id: record.latest_event_id.clone(),
+        fee_rate_sat_vb: record.fee_rate_sat_vb,
+        attempt: record.attempt,
+        observed_confirmations: observed_confirmations_from_record(record),
+        recovery_cursor: record.recovery_cursor,
+        updated_at_epoch_ms: record.updated_at.timestamp_millis().max(0) as u64,
+    }
+}
+
+fn observed_confirmations_from_record(record: &BitcoinTxLifecycleRecord) -> Option<u32> {
+    (record.confirmations_observed > 0).then_some(record.confirmations_observed)
+}
+
+fn map_persistence_error(error: PersistenceError) -> BitcoinTxTransitionError {
+    match error {
+        PersistenceError::IdempotencyConflict {
+            tx_id,
+            idempotency_key,
+            existing_fingerprint,
+            incoming_fingerprint,
+        } => BitcoinTxTransitionError::IdempotencyConflict {
+            tx_id,
+            idempotency_key,
+            existing_fingerprint,
+            incoming_fingerprint,
+        },
+        other => BitcoinTxTransitionError::Persistence(other.to_string()),
+    }
+}
+
+fn derive_idempotency_key(
+    input: &BitcoinTxTransitionInput,
+    current_attempt: u32,
+    current_fee_rate: Option<u64>,
+) -> String {
+    let attempt = input.attempt.unwrap_or(current_attempt);
+    let fee_rate = input
+        .fee_rate_sat_vb
+        .or(current_fee_rate)
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let confirmations = input
+        .confirmations_observed
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+
+    format!(
+        "{}:{}:{}:{}:{}",
+        input.tx_id,
+        input.event.as_str(),
+        attempt,
+        fee_rate,
+        confirmations
+    )
+}
+
+fn build_fingerprint(
+    tx_id: &str,
+    event: &BitcoinTxLifecycleEvent,
+    attempt: u32,
+    fee_rate_sat_vb: Option<u64>,
+    observed_confirmations: Option<u32>,
+    required_confirmations: Option<u32>,
+    reorg_depth: Option<u32>,
+    rationale: Option<&str>,
+) -> String {
+    let fee = fee_rate_sat_vb
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let confirmations = observed_confirmations
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let required = required_confirmations
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let reorg_depth = reorg_depth
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_string());
+    let rationale = rationale.unwrap_or("-");
+
+    format!(
+        "{}|{}|{}|{}|{}|{}|{}|{}",
+        tx_id,
+        event.as_str(),
+        attempt,
+        fee,
+        confirmations,
+        required,
+        reorg_depth,
+        rationale,
+    )
+}
+
+fn update_attempt(
+    current_attempt: u32,
+    input: &BitcoinTxTransitionInput,
+    from_state: &BitcoinTxLifecycleRecord,
+    to_state: &BitcoinTxLifecycleRecord,
+) -> u32 {
+    if let Some(explicit) = input.attempt {
+        return explicit;
+    }
+
+    if input.event == BitcoinTxLifecycleEvent::QueueBroadcast
+        && from_state.state != BitcoinTxLifecycleState::BroadcastPending
+        && to_state.state == BitcoinTxLifecycleState::BroadcastPending
+    {
+        return current_attempt.saturating_add(1);
+    }
+
+    current_attempt
+}
+
+fn sanitize_id(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| match character {
+            'a'..='z' | 'A'..='Z' | '0'..='9' => character,
+            _ => '-',
+        })
+        .collect()
+}
+
+fn now_epoch_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|value| value.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn epoch_ms_to_datetime(epoch_ms: u64) -> DateTime<Utc> {
+    DateTime::<Utc>::from_timestamp_millis(epoch_ms as i64).unwrap_or_else(Utc::now)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2892,6 +3451,18 @@ mod tests {
             Arc::new(TablelandAnchoringPublisher),
             Arc::new(OnChainAnchoringPublisher),
             config,
+        )
+    }
+
+    fn lifecycle_engine_with_persistence(
+        config: BitcoinTxLifecycleConfig,
+        persistence: Arc<dyn BitcoinTxPersistence>,
+    ) -> Engine {
+        Engine::new_with_anchoring_publishers_tx_lifecycle_config_and_persistence(
+            Arc::new(TablelandAnchoringPublisher),
+            Arc::new(OnChainAnchoringPublisher),
+            config,
+            persistence,
         )
     }
 
@@ -3154,6 +3725,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3165,6 +3740,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3176,6 +3755,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::MempoolObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3187,6 +3770,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: Some(2),
                 required_confirmations: Some(6),
                 reorg_depth: None,
@@ -3198,6 +3785,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: Some(6),
                 required_confirmations: Some(6),
                 reorg_depth: None,
@@ -3209,6 +3800,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::Finalize,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3244,6 +3839,10 @@ mod tests {
                 .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                     tx_id: tx_id.to_string(),
                     event,
+                    idempotency_key: None,
+                    rationale: None,
+                    fee_rate_sat_vb: None,
+                    attempt: None,
                     confirmations_observed: None,
                     required_confirmations: None,
                     reorg_depth: None,
@@ -3256,6 +3855,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: Some(6),
                 required_confirmations: Some(6),
                 reorg_depth: None,
@@ -3267,6 +3870,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::ReorgDetected,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: Some(2),
@@ -3279,6 +3886,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3290,6 +3901,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::MempoolObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3301,6 +3916,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: Some(6),
                 required_confirmations: Some(6),
                 reorg_depth: None,
@@ -3322,6 +3941,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::MarkDeadLetter,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3333,6 +3956,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3359,6 +3986,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: "btc-tx-invalid".to_string(),
                 event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3388,6 +4019,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: tx_id.to_string(),
                 event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,
@@ -3419,6 +4054,128 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_transition_is_idempotent_and_does_not_append_event_twice() {
+        let engine = lifecycle_engine_with_persistence(
+            BitcoinTxLifecycleConfig {
+                enabled: true,
+                shadow_mode: false,
+            },
+            Arc::new(InMemoryBitcoinTxPersistence::default()),
+        );
+
+        let first = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-1".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: Some("request-1".to_string()),
+                rationale: Some("signature complete".to_string()),
+                fee_rate_sat_vb: Some(12),
+                attempt: Some(0),
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("first transition should apply");
+
+        let second = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-1".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: Some("request-1".to_string()),
+                rationale: Some("signature complete".to_string()),
+                fee_rate_sat_vb: Some(12),
+                attempt: Some(0),
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("duplicate transition should be idempotent");
+
+        assert!(!first.idempotent_replay);
+        assert!(second.idempotent_replay);
+        assert_eq!(first.event_id, second.event_id);
+
+        let events = engine
+            .list_bitcoin_tx_events("btc-tx-1")
+            .expect("events should load");
+        assert_eq!(events.len(), 1);
+
+        let orchestration = engine
+            .get_bitcoin_tx_orchestration("btc-tx-1")
+            .expect("orchestration lookup should succeed")
+            .expect("orchestration should exist");
+        assert_eq!(orchestration.state, BitcoinTxLifecycleState::Signed);
+    }
+
+    #[test]
+    fn restart_recovery_rehydrates_orchestration_state_from_persistence() {
+        let storage_path =
+            std::env::temp_dir().join(format!("con717-recovery-{}.json", now_epoch_ms()));
+
+        let persistence = Arc::new(persistence::JsonFileBitcoinTxPersistence::new(
+            storage_path.clone(),
+        ));
+        let config = BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+        };
+
+        let engine = lifecycle_engine_with_persistence(config.clone(), persistence.clone());
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-2".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: Some("req-sign".to_string()),
+                rationale: None,
+                fee_rate_sat_vb: Some(10),
+                attempt: Some(0),
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("sign transition should persist");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-2".to_string(),
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                idempotency_key: Some("req-queue".to_string()),
+                rationale: Some("ready for mempool".to_string()),
+                fee_rate_sat_vb: Some(15),
+                attempt: Some(1),
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("queue transition should persist");
+
+        drop(engine);
+
+        let restarted = lifecycle_engine_with_persistence(config, persistence);
+
+        let recovered = restarted
+            .get_bitcoin_tx_orchestration("btc-tx-2")
+            .expect("recovered state should be readable")
+            .expect("orchestration should be recovered");
+
+        assert_eq!(recovered.state, BitcoinTxLifecycleState::BroadcastPending);
+        assert_eq!(recovered.attempt, 1);
+        assert_eq!(recovered.fee_rate_sat_vb, Some(15));
+
+        let recovered_events = restarted
+            .list_bitcoin_tx_events("btc-tx-2")
+            .expect("recovered events should be readable");
+        assert_eq!(recovered_events.len(), 2);
+
+        let _ = std::fs::remove_file(storage_path);
+    }
+
+    #[test]
     fn bitcoin_tx_lifecycle_feature_flag_blocks_orchestration_when_disabled() {
         let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
             enabled: false,
@@ -3429,6 +4186,10 @@ mod tests {
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
                 tx_id: "btc-tx-disabled".to_string(),
                 event: BitcoinTxLifecycleEvent::Sign,
+                idempotency_key: None,
+                rationale: None,
+                fee_rate_sat_vb: None,
+                attempt: None,
                 confirmations_observed: None,
                 required_confirmations: None,
                 reorg_depth: None,

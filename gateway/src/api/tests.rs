@@ -246,6 +246,10 @@ mod tests {
         let validation = super::super::BitcoinTxTransitionRequest {
             tx_id: None,
             event: None,
+            idempotency_key: None,
+            rationale: None,
+            fee_rate_sat_vb: None,
+            attempt: None,
             confirmations_observed: None,
             required_confirmations: None,
             reorg_depth: None,
@@ -264,6 +268,10 @@ mod tests {
         let validation = super::super::BitcoinTxTransitionRequest {
             tx_id: Some(" tx-abc ".to_string()),
             event: Some(BitcoinTxLifecycleEvent::ConfirmationsObserved),
+            idempotency_key: Some(" req-1 ".to_string()),
+            rationale: Some(" lifecycle update ".to_string()),
+            fee_rate_sat_vb: Some(14),
+            attempt: Some(2),
             confirmations_observed: Some(3),
             required_confirmations: Some(6),
             reorg_depth: None,
@@ -277,6 +285,10 @@ mod tests {
             validation.event,
             BitcoinTxLifecycleEvent::ConfirmationsObserved
         );
+        assert_eq!(validation.idempotency_key, Some("req-1".to_string()));
+        assert_eq!(validation.rationale, Some("lifecycle update".to_string()));
+        assert_eq!(validation.fee_rate_sat_vb, Some(14));
+        assert_eq!(validation.attempt, Some(2));
         assert_eq!(validation.confirmations_observed, Some(3));
         assert_eq!(validation.required_confirmations, Some(6));
         assert_eq!(
