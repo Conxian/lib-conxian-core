@@ -1,9 +1,23 @@
+//! # lib-conxian-core / Vault SDK
+//!
+//! This library provides the production-grade primitives for native Bitcoin applications.
+//! It is divided into two primary areas:
+//!
+//! 1. **Vault SDK (Public Boundary)**: The `sdk_primitive` and `wallet` modules provide
+//!    hardware-backed signing and policy enforcement for third-party integrators.
+//! 2. **Protocol Primitives (Internal Core)**: Modules like `musig2`, `bitvm2`, and chain adapters
+//!    provide the low-level logic required for Bitcoin-anchored orchestration.
+
+mod audit_fail_safe;
+mod audit_sdk_extraction;
 pub mod bitvm2;
 pub mod cjcs;
 pub mod contract_bridge;
+pub mod control_model;
 pub mod deployment;
 pub mod gateway;
 pub mod musig2;
+pub mod sdk_primitive;
 pub mod wallet;
 
 // CXIP 20 Modular Architecture
@@ -17,6 +31,7 @@ pub mod stacks;
 mod tests;
 
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
+pub use sdk_primitive::{SigningPolicy, VaultSDK};
 pub use wallet::{sign_transaction, Wallet};
 
 #[cfg(test)]

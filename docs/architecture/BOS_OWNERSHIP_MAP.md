@@ -2,35 +2,36 @@
 
 This document defines the canonical repository and runtime ownership for the Conxian Business Operating System (BOS). It ensures that every component has an explicit owner and that production paths remain mainnet-only and audit-ready.
 
-## 1. Portfolio Taxonomy
+## 1. Portfolio Taxonomy (May 2026 SDK-First GTM)
 
 | Layer | Primary Responsibility | Representative Repositories |
 | :--- | :--- | :--- |
-| **Protocol & Core** | Cryptographic primitives, shared models, state transitions. | `lib-conxian-core` |
-| **Gateway & Routing** | Unified API, protocol monitoring, compliance, service ingress. | `conxian-gateway` |
+| **Vault SDK & Core** | Signing primitives, policy enforcement, shared models. | `lib-conxian-core` |
+| **Gateway & Routing** | Protocol monitoring, compliance, service ingress. | `conxian-gateway (Extracted)` |
 | **Orchestration** | Automation, cross-service workflows, platform logic. | `conxius-platform` |
-| **Application** | User interface, biometric auth, sovereign wallet custody. | `conxius-wallet`, `Conxian_UI` |
+| **Reference Client** | User interface, biometric proof, reference signing. | `conxius-wallet`, `Conxian_UI` |
 | **Governance & Ops** | Strategic specs, institutional alignment, business rules. | `conxian-business` |
 
 ## 2. Component Ownership Detail
 
-### 2.1 Core Protocol Logic (`lib-conxian-core`)
+### 2.1 Vault SDK (`lib-conxian-core`)
+- **Vault SDK Primitive**: `src/sdk_primitive.rs` (Primary sellable primitive)
 - **MuSig2 Key Aggregation**: `src/musig2.rs`
 - **BitVM2 Proof Verification**: `src/bitvm2.rs`
 - **Job Card Schema (CJCS)**: `src/cjcs.rs`
 - **Shared Financial Models**: `src/lib.rs`
 
-### 2.2 Gateway Services (`conxian-gateway`)
-- **Sovereign Service Integration**: `gateway/src/engine/mod.rs` (Bisq, RGB, Changelly)
-- **Bitcoin Layer Status**: `gateway/src/engine/mod.rs` (Stacks, Liquid, Rootstock, etc.)
-- **Compliance & Risk**: `gateway/src/engine/remediation.rs`
-- **MCP Integration**: `gateway/src/api/mcp_handler.rs`
+### 2.2 Supporting Services (`conxian-gateway (Extracted)`)
+- **Sovereign Service Integration**: `extracted/conxian-gateway/src/engine/mod.rs` (Bisq, RGB, Changelly)
+- **Bitcoin Layer Status**: `extracted/conxian-gateway/src/engine/mod.rs` (Stacks, Liquid, Rootstock, etc.)
+- **Compliance & Risk**: `extracted/conxian-gateway/src/engine/remediation.rs`
+- **MCP Integration**: `extracted/conxian-gateway/src/api/mcp_handler.rs`
 
 ### 2.3 External Platform Logic (`conxius-platform`)
 - **Workflow Orchestration**: Cross-service state machine management.
 - **Institutional Egress**: PAPSS, BRICS, and ISO 20022 signal normalization.
 
-### 2.4 Mobile & Application (`conxius-wallet`)
+### 2.4 Reference Application (`conxius-wallet`)
 - **Secure Signing**: StrongBox TEE integration.
 - **Account Abstraction**: ERC-4337 biometric passkey flows.
 
