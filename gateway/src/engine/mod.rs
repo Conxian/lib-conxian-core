@@ -257,6 +257,9 @@ pub enum PartnerLeadTransitionError {
 
 pub const CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_ENABLED";
 pub const CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE";
+pub const CONXIAN_BTC_TX_LIFECYCLE_ROLLOUT_MODE_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_ROLLOUT_MODE";
+pub const CONXIAN_BTC_TX_LIFECYCLE_LIMITED_TX_ALLOWLIST_ENV: &str =
+    "CONXIAN_BTC_TX_LIFECYCLE_LIMITED_TX_ALLOWLIST";
 pub const CONXIAN_BTC_FEE_BUMP_MAX_ATTEMPTS_ENV: &str = "CONXIAN_BTC_FEE_BUMP_MAX_ATTEMPTS";
 pub const CONXIAN_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB_ENV: &str =
     "CONXIAN_BTC_FEE_BUMP_MAX_FEE_RATE_SATS_VB";
@@ -338,28 +341,118 @@ pub enum BitcoinTxLifecycleExecutionMode {
     Active,
 }
 
+impl BitcoinTxLifecycleExecutionMode {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinTxLifecycleExecutionMode::Disabled => "disabled",
+            BitcoinTxLifecycleExecutionMode::Shadow => "shadow",
+            BitcoinTxLifecycleExecutionMode::Active => "active",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinTxLifecycleRolloutMode {
+    Shadow,
+    Limited,
+    Full,
+}
+
+impl BitcoinTxLifecycleRolloutMode {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinTxLifecycleRolloutMode::Shadow => "shadow",
+            BitcoinTxLifecycleRolloutMode::Limited => "limited",
+            BitcoinTxLifecycleRolloutMode::Full => "full",
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "shadow" => Some(Self::Shadow),
+            "limited" => Some(Self::Limited),
+            "full" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BitcoinTxLifecycleConfig {
     pub enabled: bool,
     pub shadow_mode: bool,
+    pub rollout_mode: BitcoinTxLifecycleRolloutMode,
+    pub limited_tx_allowlist: Vec<String>,
 }
 
 impl BitcoinTxLifecycleConfig {
     pub fn from_env() -> Self {
+        let enabled = parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV, false);
+        let legacy_shadow_mode = parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV, false);
+        let rollout_mode = std::env::var(CONXIAN_BTC_TX_LIFECYCLE_ROLLOUT_MODE_ENV)
+            .ok()
+            .and_then(|value| BitcoinTxLifecycleRolloutMode::parse(&value))
+            .unwrap_or_else(|| {
+                if legacy_shadow_mode {
+                    BitcoinTxLifecycleRolloutMode::Shadow
+                } else {
+                    BitcoinTxLifecycleRolloutMode::Full
+                }
+            });
+
         Self {
-            enabled: parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV, false),
-            shadow_mode: parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV, false),
+            enabled,
+            shadow_mode: rollout_mode == BitcoinTxLifecycleRolloutMode::Shadow,
+            rollout_mode,
+            limited_tx_allowlist: parse_env_csv(CONXIAN_BTC_TX_LIFECYCLE_LIMITED_TX_ALLOWLIST_ENV),
         }
     }
 
     pub fn execution_mode(&self) -> BitcoinTxLifecycleExecutionMode {
         if !self.enabled {
             BitcoinTxLifecycleExecutionMode::Disabled
-        } else if self.shadow_mode {
-            BitcoinTxLifecycleExecutionMode::Shadow
         } else {
-            BitcoinTxLifecycleExecutionMode::Active
+            match self.rollout_mode {
+                BitcoinTxLifecycleRolloutMode::Shadow => BitcoinTxLifecycleExecutionMode::Shadow,
+                BitcoinTxLifecycleRolloutMode::Limited => BitcoinTxLifecycleExecutionMode::Shadow,
+                BitcoinTxLifecycleRolloutMode::Full => BitcoinTxLifecycleExecutionMode::Active,
+            }
         }
+    }
+
+    pub fn execution_mode_for_tx(&self, tx_id: &str) -> BitcoinTxLifecycleExecutionMode {
+        if !self.enabled {
+            return BitcoinTxLifecycleExecutionMode::Disabled;
+        }
+
+        match self.rollout_mode {
+            BitcoinTxLifecycleRolloutMode::Shadow => BitcoinTxLifecycleExecutionMode::Shadow,
+            BitcoinTxLifecycleRolloutMode::Limited => {
+                if self.is_tx_allowed_in_limited_mode(tx_id) {
+                    BitcoinTxLifecycleExecutionMode::Active
+                } else {
+                    BitcoinTxLifecycleExecutionMode::Shadow
+                }
+            }
+            BitcoinTxLifecycleRolloutMode::Full => BitcoinTxLifecycleExecutionMode::Active,
+        }
+    }
+
+    pub fn is_tx_allowed_in_limited_mode(&self, tx_id: &str) -> bool {
+        if self.rollout_mode != BitcoinTxLifecycleRolloutMode::Limited {
+            return true;
+        }
+
+        self.limited_tx_allowlist
+            .iter()
+            .any(|allowed| allowed == tx_id)
+    }
+
+    pub fn limited_rollout_guardrail_applied(&self, tx_id: &str) -> bool {
+        self.enabled
+            && self.rollout_mode == BitcoinTxLifecycleRolloutMode::Limited
+            && !self.is_tx_allowed_in_limited_mode(tx_id)
     }
 }
 
@@ -425,6 +518,17 @@ pub enum BitcoinFeeBumpAction {
     Reject,
 }
 
+impl BitcoinFeeBumpAction {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinFeeBumpAction::Rbf => "rbf",
+            BitcoinFeeBumpAction::Cpfp => "cpfp",
+            BitcoinFeeBumpAction::Noop => "noop",
+            BitcoinFeeBumpAction::Reject => "reject",
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum BitcoinFeeBumpReason {
@@ -437,6 +541,22 @@ pub enum BitcoinFeeBumpReason {
     RbfPreferred,
     CpfpFallback,
     NoAvailableBumpPath,
+}
+
+impl BitcoinFeeBumpReason {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinFeeBumpReason::StuckByBlockThreshold => "stuck_by_block_threshold",
+            BitcoinFeeBumpReason::StuckByTimeThreshold => "stuck_by_time_threshold",
+            BitcoinFeeBumpReason::StuckThresholdNotMet => "stuck_threshold_not_met",
+            BitcoinFeeBumpReason::MissingStuckObservation => "missing_stuck_observation",
+            BitcoinFeeBumpReason::MaxAttemptsReached => "max_attempts_reached",
+            BitcoinFeeBumpReason::FeeCapExceeded => "fee_cap_exceeded",
+            BitcoinFeeBumpReason::RbfPreferred => "rbf_preferred",
+            BitcoinFeeBumpReason::CpfpFallback => "cpfp_fallback",
+            BitcoinFeeBumpReason::NoAvailableBumpPath => "no_available_bump_path",
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -601,6 +721,9 @@ impl BitcoinTxLifecycleRecord {
 pub struct BitcoinTxLifecycleView {
     pub tx_id: String,
     pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub rollout_mode: BitcoinTxLifecycleRolloutMode,
+    pub state_mutation_allowed: bool,
+    pub limited_rollout_guardrail_applied: bool,
     pub production: BitcoinTxLifecycleRecord,
     pub shadow: Option<BitcoinTxLifecycleRecord>,
 }
@@ -622,9 +745,56 @@ pub struct BitcoinTxTransitionOutcome {
     pub from_state: BitcoinTxLifecycleState,
     pub to_state: BitcoinTxLifecycleState,
     pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub rollout_mode: BitcoinTxLifecycleRolloutMode,
+    pub limited_rollout_guardrail_applied: bool,
     pub state_mutated: bool,
     pub telemetry_recorded: bool,
     pub transitioned_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinManualFeeBumpInput {
+    pub tx_id: String,
+    pub decision_input: BitcoinFeeBumpDecisionInput,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinManualFeeBumpOutcome {
+    pub tx_id: String,
+    pub decision: BitcoinFeeBumpDecision,
+    pub tx_state: BitcoinTxLifecycleState,
+    pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub rollout_mode: BitcoinTxLifecycleRolloutMode,
+    pub limited_rollout_guardrail_applied: bool,
+    pub stuck_duration_seconds: Option<u64>,
+    pub bump_attempt_recorded: bool,
+    pub evaluated_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinFeeBumpTelemetryRecord {
+    pub tx_id: String,
+    pub tx_state: BitcoinTxLifecycleState,
+    pub decision_action: BitcoinFeeBumpAction,
+    pub decision_reason: BitcoinFeeBumpReason,
+    pub decision_next_fee_rate_sats_vb: Option<u64>,
+    pub decision_next_attempt: Option<u8>,
+    pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub rollout_mode: BitcoinTxLifecycleRolloutMode,
+    pub limited_rollout_guardrail_applied: bool,
+    pub stuck_duration_seconds: Option<u64>,
+    pub recorded_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxLifecycleObservability {
+    pub state_counts: HashMap<String, u64>,
+    pub shadow_state_counts: HashMap<String, u64>,
+    pub stuck_count: u64,
+    pub max_stuck_duration_seconds: u64,
+    pub fee_bump_attempts_total: u64,
+    pub fee_bump_outcomes_total: HashMap<String, u64>,
+    pub reorg_rollback_events_total: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -642,6 +812,19 @@ pub enum BitcoinTxTransitionError {
     },
     TerminalState {
         state: BitcoinTxLifecycleState,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum BitcoinManualFeeBumpError {
+    FeatureDisabled,
+    TxIdRequired,
+    LimitedRolloutGuardrail {
+        tx_id: String,
+    },
+    InvalidState {
+        state: BitcoinTxLifecycleState,
+        reason: &'static str,
     },
 }
 
@@ -675,6 +858,20 @@ fn parse_env_u64(name: &str, default: u64) -> u64 {
         .ok()
         .and_then(|value| value.trim().parse::<u64>().ok())
         .unwrap_or(default)
+}
+
+fn parse_env_csv(name: &str) -> Vec<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|entry| !entry.is_empty())
+                .map(ToOwned::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -722,6 +919,7 @@ pub struct Engine {
     pub bitcoin_tx_lifecycle: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_shadow: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
     pub bitcoin_tx_lifecycle_telemetry: Arc<RwLock<Vec<BitcoinTxTransitionOutcome>>>,
+    pub bitcoin_fee_bump_telemetry: Arc<RwLock<Vec<BitcoinFeeBumpTelemetryRecord>>>,
     pub partner_leads: Arc<RwLock<HashMap<String, PartnerLead>>>,
     pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
     pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
@@ -798,6 +996,7 @@ impl Engine {
             bitcoin_tx_lifecycle: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_shadow: Arc::new(RwLock::new(HashMap::new())),
             bitcoin_tx_lifecycle_telemetry: Arc::new(RwLock::new(Vec::new())),
+            bitcoin_fee_bump_telemetry: Arc::new(RwLock::new(Vec::new())),
             partner_leads: Arc::new(RwLock::new(HashMap::new())),
             partner_lead_events: Arc::new(RwLock::new(Vec::new())),
             partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
@@ -2409,6 +2608,10 @@ impl Engine {
     }
 
     pub fn get_bitcoin_tx_lifecycle_view(&self, tx_id: &str) -> BitcoinTxLifecycleView {
+        let execution_mode = self
+            .bitcoin_tx_lifecycle_config
+            .execution_mode_for_tx(tx_id);
+        let state_mutation_allowed = execution_mode == BitcoinTxLifecycleExecutionMode::Active;
         let production = self.get_bitcoin_tx_lifecycle_record(tx_id);
         let shadow = self
             .bitcoin_tx_lifecycle_shadow
@@ -2419,7 +2622,12 @@ impl Engine {
 
         BitcoinTxLifecycleView {
             tx_id: tx_id.to_string(),
-            execution_mode: self.bitcoin_tx_lifecycle_config.execution_mode(),
+            execution_mode,
+            rollout_mode: self.bitcoin_tx_lifecycle_config.rollout_mode.clone(),
+            state_mutation_allowed,
+            limited_rollout_guardrail_applied: self
+                .bitcoin_tx_lifecycle_config
+                .limited_rollout_guardrail_applied(tx_id),
             production,
             shadow,
         }
@@ -2427,6 +2635,64 @@ impl Engine {
 
     pub fn get_bitcoin_tx_lifecycle_telemetry(&self) -> Vec<BitcoinTxTransitionOutcome> {
         self.bitcoin_tx_lifecycle_telemetry.read().unwrap().clone()
+    }
+
+    pub fn get_bitcoin_fee_bump_telemetry(&self) -> Vec<BitcoinFeeBumpTelemetryRecord> {
+        self.bitcoin_fee_bump_telemetry.read().unwrap().clone()
+    }
+
+    pub fn get_bitcoin_tx_lifecycle_observability(&self) -> BitcoinTxLifecycleObservability {
+        let now = Utc::now();
+        let state_counts = Self::lifecycle_state_counts(&self.bitcoin_tx_lifecycle.read().unwrap());
+        let shadow_state_counts =
+            Self::lifecycle_state_counts(&self.bitcoin_tx_lifecycle_shadow.read().unwrap());
+
+        let mut stuck_count: u64 = 0;
+        let mut max_stuck_duration_seconds: u64 = 0;
+        let stuck_threshold_seconds = self.bitcoin_fee_bump_policy.stuck_threshold_seconds;
+
+        let production_records = self.bitcoin_tx_lifecycle.read().unwrap();
+        let shadow_records = self.bitcoin_tx_lifecycle_shadow.read().unwrap();
+
+        for record in production_records.values().chain(shadow_records.values()) {
+            if record.state == BitcoinTxLifecycleState::InMempool
+                || record.state == BitcoinTxLifecycleState::PendingConfirmations
+            {
+                let age_seconds = (now - record.updated_at).num_seconds().max(0) as u64;
+                if age_seconds >= stuck_threshold_seconds {
+                    stuck_count = stuck_count.saturating_add(1);
+                }
+                if age_seconds > max_stuck_duration_seconds {
+                    max_stuck_duration_seconds = age_seconds;
+                }
+            }
+        }
+
+        let fee_bump_telemetry = self.bitcoin_fee_bump_telemetry.read().unwrap();
+        let mut fee_bump_outcomes_total: HashMap<String, u64> = HashMap::new();
+        for record in fee_bump_telemetry.iter() {
+            let action = record.decision_action.as_str().to_string();
+            let entry = fee_bump_outcomes_total.entry(action).or_insert(0);
+            *entry = entry.saturating_add(1);
+        }
+
+        let reorg_rollback_events_total = self
+            .bitcoin_tx_lifecycle_telemetry
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry.event == BitcoinTxLifecycleEvent::ReorgDetected)
+            .count() as u64;
+
+        BitcoinTxLifecycleObservability {
+            state_counts,
+            shadow_state_counts,
+            stuck_count,
+            max_stuck_duration_seconds,
+            fee_bump_attempts_total: fee_bump_telemetry.len() as u64,
+            fee_bump_outcomes_total,
+            reorg_rollback_events_total,
+        }
     }
 
     pub fn apply_bitcoin_tx_transition(
@@ -2439,16 +2705,22 @@ impl Engine {
             return Err(BitcoinTxTransitionError::TxIdRequired);
         }
 
-        let execution_mode = self.bitcoin_tx_lifecycle_config.execution_mode();
+        let execution_mode = self
+            .bitcoin_tx_lifecycle_config
+            .execution_mode_for_tx(tx_id);
         if execution_mode == BitcoinTxLifecycleExecutionMode::Disabled {
             return Err(BitcoinTxTransitionError::FeatureDisabled);
         }
+
+        let limited_rollout_guardrail_applied = self
+            .bitcoin_tx_lifecycle_config
+            .limited_rollout_guardrail_applied(tx_id);
 
         let current = self.bitcoin_tx_record_for_transition(tx_id, &execution_mode);
         let next = Self::next_bitcoin_tx_record(&current, &input)?;
 
         let state_mutated = execution_mode == BitcoinTxLifecycleExecutionMode::Active;
-        let telemetry_recorded = execution_mode == BitcoinTxLifecycleExecutionMode::Shadow;
+        let telemetry_recorded = true;
 
         let outcome = BitcoinTxTransitionOutcome {
             tx_id: tx_id.to_string(),
@@ -2456,10 +2728,35 @@ impl Engine {
             from_state: current.state,
             to_state: next.state.clone(),
             execution_mode: execution_mode.clone(),
+            rollout_mode: self.bitcoin_tx_lifecycle_config.rollout_mode.clone(),
+            limited_rollout_guardrail_applied,
             state_mutated,
             telemetry_recorded,
             transitioned_at: next.updated_at,
         };
+
+        log::info!(
+            "bitcoin_tx_transition tx_id={} event={} from={} to={} execution_mode={} rollout_mode={} state_mutated={} guardrail_applied={}",
+            outcome.tx_id,
+            outcome.event.as_str(),
+            outcome.from_state.as_str(),
+            outcome.to_state.as_str(),
+            outcome.execution_mode.as_str(),
+            outcome.rollout_mode.as_str(),
+            outcome.state_mutated,
+            outcome.limited_rollout_guardrail_applied,
+        );
+
+        if outcome.event == BitcoinTxLifecycleEvent::ReorgDetected {
+            log::warn!(
+                "bitcoin_tx_reorg_rollback tx_id={} from={} to={} execution_mode={} rollout_mode={}",
+                outcome.tx_id,
+                outcome.from_state.as_str(),
+                outcome.to_state.as_str(),
+                outcome.execution_mode.as_str(),
+                outcome.rollout_mode.as_str(),
+            );
+        }
 
         match execution_mode {
             BitcoinTxLifecycleExecutionMode::Active => {
@@ -2473,15 +2770,137 @@ impl Engine {
                     .write()
                     .unwrap()
                     .insert(tx_id.to_string(), next);
-                self.bitcoin_tx_lifecycle_telemetry
-                    .write()
-                    .unwrap()
-                    .push(outcome.clone());
             }
             BitcoinTxLifecycleExecutionMode::Disabled => {}
         }
 
+        self.bitcoin_tx_lifecycle_telemetry
+            .write()
+            .unwrap()
+            .push(outcome.clone());
+
         Ok(outcome)
+    }
+
+    pub fn apply_manual_bitcoin_fee_bump(
+        &self,
+        input: BitcoinManualFeeBumpInput,
+    ) -> Result<BitcoinManualFeeBumpOutcome, BitcoinManualFeeBumpError> {
+        self.increment_requests();
+        let tx_id = input.tx_id.trim();
+        if tx_id.is_empty() {
+            return Err(BitcoinManualFeeBumpError::TxIdRequired);
+        }
+
+        let execution_mode = self
+            .bitcoin_tx_lifecycle_config
+            .execution_mode_for_tx(tx_id);
+        if execution_mode == BitcoinTxLifecycleExecutionMode::Disabled {
+            return Err(BitcoinManualFeeBumpError::FeatureDisabled);
+        }
+
+        let limited_rollout_guardrail_applied = self
+            .bitcoin_tx_lifecycle_config
+            .limited_rollout_guardrail_applied(tx_id);
+
+        if self.bitcoin_tx_lifecycle_config.rollout_mode == BitcoinTxLifecycleRolloutMode::Limited
+            && limited_rollout_guardrail_applied
+        {
+            return Err(BitcoinManualFeeBumpError::LimitedRolloutGuardrail {
+                tx_id: tx_id.to_string(),
+            });
+        }
+
+        let current = self.bitcoin_tx_record_for_transition(tx_id, &execution_mode);
+        if current.state != BitcoinTxLifecycleState::InMempool
+            && current.state != BitcoinTxLifecycleState::PendingConfirmations
+            && current.state != BitcoinTxLifecycleState::Reorged
+        {
+            return Err(BitcoinManualFeeBumpError::InvalidState {
+                state: current.state,
+                reason:
+                    "manual fee bump requires in_mempool, pending_confirmations, or reorged state",
+            });
+        }
+
+        let decision = self.evaluate_bitcoin_fee_bump(input.decision_input.clone());
+        let evaluated_at = Utc::now();
+        let stuck_duration_seconds = input
+            .decision_input
+            .seconds_since_broadcast
+            .or_else(|| Some((evaluated_at - current.updated_at).num_seconds().max(0) as u64));
+
+        let telemetry_record = BitcoinFeeBumpTelemetryRecord {
+            tx_id: tx_id.to_string(),
+            tx_state: current.state.clone(),
+            decision_action: decision.action.clone(),
+            decision_reason: decision.reason.clone(),
+            decision_next_fee_rate_sats_vb: decision.next_fee_rate_sats_vb,
+            decision_next_attempt: decision.next_attempt,
+            execution_mode: execution_mode.clone(),
+            rollout_mode: self.bitcoin_tx_lifecycle_config.rollout_mode.clone(),
+            limited_rollout_guardrail_applied,
+            stuck_duration_seconds,
+            recorded_at: evaluated_at,
+        };
+
+        self.bitcoin_fee_bump_telemetry
+            .write()
+            .unwrap()
+            .push(telemetry_record.clone());
+
+        log::info!(
+            "bitcoin_fee_bump_attempt tx_id={} state={} action={} reason={} execution_mode={} rollout_mode={} guardrail_applied={}",
+            telemetry_record.tx_id,
+            telemetry_record.tx_state.as_str(),
+            telemetry_record.decision_action.as_str(),
+            telemetry_record.decision_reason.as_str(),
+            telemetry_record.execution_mode.as_str(),
+            telemetry_record.rollout_mode.as_str(),
+            telemetry_record.limited_rollout_guardrail_applied,
+        );
+
+        Ok(BitcoinManualFeeBumpOutcome {
+            tx_id: tx_id.to_string(),
+            decision,
+            tx_state: current.state,
+            execution_mode,
+            rollout_mode: self.bitcoin_tx_lifecycle_config.rollout_mode.clone(),
+            limited_rollout_guardrail_applied,
+            stuck_duration_seconds,
+            bump_attempt_recorded: true,
+            evaluated_at,
+        })
+    }
+
+    fn lifecycle_state_counts(
+        records: &HashMap<String, BitcoinTxLifecycleRecord>,
+    ) -> HashMap<String, u64> {
+        let mut counts: HashMap<String, u64> = HashMap::new();
+        for state in Self::all_lifecycle_states() {
+            counts.insert(state.as_str().to_string(), 0);
+        }
+
+        for record in records.values() {
+            let entry = counts.entry(record.state.as_str().to_string()).or_insert(0);
+            *entry = entry.saturating_add(1);
+        }
+
+        counts
+    }
+
+    fn all_lifecycle_states() -> [BitcoinTxLifecycleState; 9] {
+        [
+            BitcoinTxLifecycleState::Draft,
+            BitcoinTxLifecycleState::Signed,
+            BitcoinTxLifecycleState::BroadcastPending,
+            BitcoinTxLifecycleState::InMempool,
+            BitcoinTxLifecycleState::PendingConfirmations,
+            BitcoinTxLifecycleState::Confirmed,
+            BitcoinTxLifecycleState::Finalized,
+            BitcoinTxLifecycleState::Reorged,
+            BitcoinTxLifecycleState::DeadLetter,
+        ]
     }
 
     fn bitcoin_tx_record_for_transition(
@@ -2905,6 +3324,42 @@ mod tests {
         }
     }
 
+    fn full_rollout_config() -> BitcoinTxLifecycleConfig {
+        BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+            rollout_mode: BitcoinTxLifecycleRolloutMode::Full,
+            limited_tx_allowlist: Vec::new(),
+        }
+    }
+
+    fn shadow_rollout_config() -> BitcoinTxLifecycleConfig {
+        BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: true,
+            rollout_mode: BitcoinTxLifecycleRolloutMode::Shadow,
+            limited_tx_allowlist: Vec::new(),
+        }
+    }
+
+    fn disabled_rollout_config() -> BitcoinTxLifecycleConfig {
+        BitcoinTxLifecycleConfig {
+            enabled: false,
+            shadow_mode: false,
+            rollout_mode: BitcoinTxLifecycleRolloutMode::Shadow,
+            limited_tx_allowlist: Vec::new(),
+        }
+    }
+
+    fn limited_rollout_config(allowlist: &[&str]) -> BitcoinTxLifecycleConfig {
+        BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+            rollout_mode: BitcoinTxLifecycleRolloutMode::Limited,
+            limited_tx_allowlist: allowlist.iter().map(|tx_id| (*tx_id).to_string()).collect(),
+        }
+    }
+
     #[test]
     fn bitcoin_fee_bump_prefers_rbf_when_replaceable_and_guardrails_pass() {
         let decision = evaluate_bitcoin_fee_bump_decision(
@@ -3143,10 +3598,7 @@ mod tests {
 
     #[test]
     fn bitcoin_tx_lifecycle_happy_path_reaches_finalized() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: true,
-            shadow_mode: false,
-        });
+        let engine = lifecycle_engine(full_rollout_config());
 
         let tx_id = "btc-tx-happy-path";
 
@@ -3229,10 +3681,7 @@ mod tests {
 
     #[test]
     fn bitcoin_tx_lifecycle_reorg_rollback_branch_recovers() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: true,
-            shadow_mode: false,
-        });
+        let engine = lifecycle_engine(full_rollout_config());
         let tx_id = "btc-tx-reorg";
 
         for event in [
@@ -3308,14 +3757,14 @@ mod tests {
             })
             .expect("reorged tx should be recoverable to confirmed");
         assert_eq!(recovered.to_state, BitcoinTxLifecycleState::Confirmed);
+
+        let observability = engine.get_bitcoin_tx_lifecycle_observability();
+        assert_eq!(observability.reorg_rollback_events_total, 1);
     }
 
     #[test]
     fn bitcoin_tx_lifecycle_dead_letter_is_terminal() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: true,
-            shadow_mode: false,
-        });
+        let engine = lifecycle_engine(full_rollout_config());
         let tx_id = "btc-tx-dead-letter";
 
         engine
@@ -3350,10 +3799,7 @@ mod tests {
 
     #[test]
     fn bitcoin_tx_lifecycle_rejects_invalid_transitions() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: true,
-            shadow_mode: false,
-        });
+        let engine = lifecycle_engine(full_rollout_config());
 
         let err = engine
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
@@ -3378,10 +3824,7 @@ mod tests {
 
     #[test]
     fn bitcoin_tx_lifecycle_shadow_mode_is_telemetry_only() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: true,
-            shadow_mode: true,
-        });
+        let engine = lifecycle_engine(shadow_rollout_config());
         let tx_id = "btc-tx-shadow";
 
         let outcome = engine
@@ -3419,11 +3862,138 @@ mod tests {
     }
 
     #[test]
+    fn bitcoin_tx_lifecycle_limited_rollout_enforces_allowlist_guardrail() {
+        let engine = lifecycle_engine(limited_rollout_config(&["btc-allowlisted"]));
+
+        let allowlisted = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-allowlisted".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("allowlisted tx should mutate state in limited rollout mode");
+        assert!(allowlisted.state_mutated);
+        assert_eq!(
+            allowlisted.execution_mode,
+            BitcoinTxLifecycleExecutionMode::Active
+        );
+        assert!(!allowlisted.limited_rollout_guardrail_applied);
+
+        let blocked = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-blocked".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("non-allowlisted tx should be shadowed in limited rollout mode");
+        assert!(!blocked.state_mutated);
+        assert_eq!(
+            blocked.execution_mode,
+            BitcoinTxLifecycleExecutionMode::Shadow
+        );
+        assert!(blocked.limited_rollout_guardrail_applied);
+
+        let blocked_view = engine.get_bitcoin_tx_lifecycle_view("btc-blocked");
+        assert!(!blocked_view.state_mutation_allowed);
+        assert!(blocked_view.limited_rollout_guardrail_applied);
+        assert_eq!(
+            blocked_view.production.state,
+            BitcoinTxLifecycleState::Draft
+        );
+        assert_eq!(
+            blocked_view
+                .shadow
+                .expect("shadow projection should be available")
+                .state,
+            BitcoinTxLifecycleState::Signed
+        );
+    }
+
+    #[test]
+    fn bitcoin_manual_fee_bump_records_telemetry_outcomes() {
+        let engine = lifecycle_engine(full_rollout_config());
+        let tx_id = "btc-manual-bump";
+
+        for event in [
+            BitcoinTxLifecycleEvent::Sign,
+            BitcoinTxLifecycleEvent::QueueBroadcast,
+            BitcoinTxLifecycleEvent::MempoolObserved,
+        ] {
+            engine
+                .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                    tx_id: tx_id.to_string(),
+                    event,
+                    confirmations_observed: None,
+                    required_confirmations: None,
+                    reorg_depth: None,
+                    dead_letter_reason: None,
+                })
+                .expect("expected setup transition for manual bump");
+        }
+
+        let outcome = engine
+            .apply_manual_bitcoin_fee_bump(BitcoinManualFeeBumpInput {
+                tx_id: tx_id.to_string(),
+                decision_input: BitcoinFeeBumpDecisionInput {
+                    attempts_used: 0,
+                    current_fee_rate_sats_vb: 10,
+                    network_target_fee_rate_sats_vb: 11,
+                    replaceable: true,
+                    cpfp_available: true,
+                    blocks_since_broadcast: Some(4),
+                    seconds_since_broadcast: Some(1200),
+                },
+            })
+            .expect("manual bump should produce fee bump decision");
+
+        assert_eq!(outcome.decision.action, BitcoinFeeBumpAction::Rbf);
+        assert!(outcome.bump_attempt_recorded);
+
+        let observability = engine.get_bitcoin_tx_lifecycle_observability();
+        assert_eq!(observability.fee_bump_attempts_total, 1);
+        assert_eq!(
+            observability
+                .fee_bump_outcomes_total
+                .get(BitcoinFeeBumpAction::Rbf.as_str())
+                .copied(),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn bitcoin_manual_fee_bump_respects_limited_rollout_guardrail() {
+        let engine = lifecycle_engine(limited_rollout_config(&[]));
+
+        let err = engine
+            .apply_manual_bitcoin_fee_bump(BitcoinManualFeeBumpInput {
+                tx_id: "btc-blocked-bump".to_string(),
+                decision_input: BitcoinFeeBumpDecisionInput {
+                    attempts_used: 0,
+                    current_fee_rate_sats_vb: 10,
+                    network_target_fee_rate_sats_vb: 12,
+                    replaceable: true,
+                    cpfp_available: true,
+                    blocks_since_broadcast: Some(5),
+                    seconds_since_broadcast: Some(1500),
+                },
+            })
+            .expect_err("manual bump should be blocked when tx is not allowlisted in limited mode");
+
+        assert!(matches!(
+            err,
+            BitcoinManualFeeBumpError::LimitedRolloutGuardrail { .. }
+        ));
+    }
+
+    #[test]
     fn bitcoin_tx_lifecycle_feature_flag_blocks_orchestration_when_disabled() {
-        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
-            enabled: false,
-            shadow_mode: false,
-        });
+        let engine = lifecycle_engine(disabled_rollout_config());
 
         let err = engine
             .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {

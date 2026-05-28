@@ -6,6 +6,7 @@ use crate::engine::remediation;
 #[cfg(test)]
 mod tests;
 use crate::engine::{
+    BitcoinFeeBumpDecisionInput, BitcoinManualFeeBumpError, BitcoinManualFeeBumpInput,
     BitcoinTxLifecycleEvent, BitcoinTxTransitionError, BitcoinTxTransitionInput, Engine,
     PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
     PartnerLeadTransitionError,
@@ -98,6 +99,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(bitcoin_tx_lifecycle_config_handler)
             .service(bitcoin_tx_lifecycle_status_handler)
             .service(bitcoin_tx_lifecycle_transition_handler)
+            .service(bitcoin_tx_lifecycle_manual_fee_bump_handler)
             .service(sab_wallets_handler)
             .service(partner_intake_create_handler)
             .service(partner_intake_get_handler)
@@ -291,6 +293,7 @@ async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
         .load(std::sync::atomic::Ordering::SeqCst);
     let tvl = *engine.total_tvl_usd.read().unwrap();
     let uptime = (chrono::Utc::now() - engine.start_time).num_seconds();
+    let observability = engine.get_bitcoin_tx_lifecycle_observability();
 
     let mut metrics = format!(
         "# HELP gateway_requests_total Total number of requests processed\n# TYPE gateway_requests_total counter\ngateway_requests_total {}\n",
@@ -303,6 +306,58 @@ async fn metrics_handler(engine: web::Data<Engine>) -> impl Responder {
     metrics.push_str(&format!(
         "# HELP gateway_uptime_seconds System uptime in seconds\n# TYPE gateway_uptime_seconds gauge\ngateway_uptime_seconds {}\n",
         uptime
+    ));
+
+    metrics.push_str(
+        "# HELP gateway_bitcoin_tx_lifecycle_state_count Bitcoin transaction lifecycle state counts by projection\n# TYPE gateway_bitcoin_tx_lifecycle_state_count gauge\n",
+    );
+    let mut production_states: Vec<_> = observability.state_counts.iter().collect();
+    production_states.sort_by(|a, b| a.0.cmp(b.0));
+    for (state, count) in production_states {
+        metrics.push_str(&format!(
+            "gateway_bitcoin_tx_lifecycle_state_count{{projection=\"production\",state=\"{}\"}} {}\n",
+            state, count
+        ));
+    }
+
+    let mut shadow_states: Vec<_> = observability.shadow_state_counts.iter().collect();
+    shadow_states.sort_by(|a, b| a.0.cmp(b.0));
+    for (state, count) in shadow_states {
+        metrics.push_str(&format!(
+            "gateway_bitcoin_tx_lifecycle_state_count{{projection=\"shadow\",state=\"{}\"}} {}\n",
+            state, count
+        ));
+    }
+
+    metrics.push_str(&format!(
+        "# HELP gateway_bitcoin_tx_lifecycle_stuck_count Number of transactions currently above stuck threshold\n# TYPE gateway_bitcoin_tx_lifecycle_stuck_count gauge\ngateway_bitcoin_tx_lifecycle_stuck_count {}\n",
+        observability.stuck_count
+    ));
+    metrics.push_str(&format!(
+        "# HELP gateway_bitcoin_tx_lifecycle_stuck_max_duration_seconds Maximum observed stuck duration in seconds\n# TYPE gateway_bitcoin_tx_lifecycle_stuck_max_duration_seconds gauge\ngateway_bitcoin_tx_lifecycle_stuck_max_duration_seconds {}\n",
+        observability.max_stuck_duration_seconds
+    ));
+
+    metrics.push_str(&format!(
+        "# HELP gateway_bitcoin_tx_fee_bump_attempts_total Total manual fee bump attempts\n# TYPE gateway_bitcoin_tx_fee_bump_attempts_total counter\ngateway_bitcoin_tx_fee_bump_attempts_total {}\n",
+        observability.fee_bump_attempts_total
+    ));
+
+    metrics.push_str(
+        "# HELP gateway_bitcoin_tx_fee_bump_outcomes_total Manual fee bump outcomes by action\n# TYPE gateway_bitcoin_tx_fee_bump_outcomes_total counter\n",
+    );
+    let mut bump_outcomes: Vec<_> = observability.fee_bump_outcomes_total.iter().collect();
+    bump_outcomes.sort_by(|a, b| a.0.cmp(b.0));
+    for (action, count) in bump_outcomes {
+        metrics.push_str(&format!(
+            "gateway_bitcoin_tx_fee_bump_outcomes_total{{action=\"{}\"}} {}\n",
+            action, count
+        ));
+    }
+
+    metrics.push_str(&format!(
+        "# HELP gateway_bitcoin_tx_reorg_rollback_events_total Total reorg rollback events observed\n# TYPE gateway_bitcoin_tx_reorg_rollback_events_total counter\ngateway_bitcoin_tx_reorg_rollback_events_total {}\n",
+        observability.reorg_rollback_events_total
     ));
 
     HttpResponse::Ok().content_type("text/plain").body(metrics)
@@ -872,6 +927,92 @@ impl BitcoinTxTransitionRequest {
     }
 }
 
+#[derive(Deserialize)]
+struct BitcoinManualFeeBumpRequest {
+    tx_id: Option<String>,
+    attempts_used: Option<u8>,
+    current_fee_rate_sats_vb: Option<u64>,
+    network_target_fee_rate_sats_vb: Option<u64>,
+    replaceable: Option<bool>,
+    cpfp_available: Option<bool>,
+    blocks_since_broadcast: Option<u32>,
+    seconds_since_broadcast: Option<u64>,
+}
+
+impl BitcoinManualFeeBumpRequest {
+    fn validate(self) -> Result<BitcoinManualFeeBumpInput, Vec<String>> {
+        let mut errors = Vec::new();
+
+        let tx_id = trim_optional(self.tx_id).unwrap_or_else(|| {
+            errors.push("tx_id is required".to_string());
+            String::new()
+        });
+
+        let current_fee_rate_sats_vb = match self.current_fee_rate_sats_vb {
+            Some(value) if value > 0 => value,
+            Some(_) => {
+                errors.push("current_fee_rate_sats_vb must be greater than zero".to_string());
+                0
+            }
+            None => {
+                errors.push("current_fee_rate_sats_vb is required".to_string());
+                0
+            }
+        };
+
+        let network_target_fee_rate_sats_vb = match self.network_target_fee_rate_sats_vb {
+            Some(value) if value > 0 => value,
+            Some(_) => {
+                errors
+                    .push("network_target_fee_rate_sats_vb must be greater than zero".to_string());
+                0
+            }
+            None => {
+                errors.push("network_target_fee_rate_sats_vb is required".to_string());
+                0
+            }
+        };
+
+        let replaceable = match self.replaceable {
+            Some(value) => value,
+            None => {
+                errors.push("replaceable is required".to_string());
+                false
+            }
+        };
+
+        let cpfp_available = match self.cpfp_available {
+            Some(value) => value,
+            None => {
+                errors.push("cpfp_available is required".to_string());
+                false
+            }
+        };
+
+        if self.blocks_since_broadcast.is_none() && self.seconds_since_broadcast.is_none() {
+            errors
+                .push("blocks_since_broadcast or seconds_since_broadcast is required".to_string());
+        }
+
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(BitcoinManualFeeBumpInput {
+            tx_id,
+            decision_input: BitcoinFeeBumpDecisionInput {
+                attempts_used: self.attempts_used.unwrap_or(0),
+                current_fee_rate_sats_vb,
+                network_target_fee_rate_sats_vb,
+                replaceable,
+                cpfp_available,
+                blocks_since_broadcast: self.blocks_since_broadcast,
+                seconds_since_broadcast: self.seconds_since_broadcast,
+            },
+        })
+    }
+}
+
 fn map_bitcoin_transition_error(err: BitcoinTxTransitionError) -> HttpResponse {
     match err {
         BitcoinTxTransitionError::FeatureDisabled => {
@@ -917,6 +1058,43 @@ fn map_bitcoin_transition_error(err: BitcoinTxTransitionError) -> HttpResponse {
     }
 }
 
+fn map_bitcoin_manual_fee_bump_error(err: BitcoinManualFeeBumpError) -> HttpResponse {
+    match err {
+        BitcoinManualFeeBumpError::FeatureDisabled => {
+            HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "error": "bitcoin_tx_lifecycle_disabled",
+                "message": format!(
+                    "Enable {} to activate bitcoin transaction lifecycle orchestration",
+                    crate::engine::CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV
+                ),
+            }))
+        }
+        BitcoinManualFeeBumpError::TxIdRequired => {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "message": "tx_id is required",
+            }))
+        }
+        BitcoinManualFeeBumpError::LimitedRolloutGuardrail { tx_id } => {
+            HttpResponse::Forbidden().json(serde_json::json!({
+                "error": "rollout_guardrail_blocked",
+                "tx_id": tx_id,
+                "message": format!(
+                    "manual fee bump is blocked in limited rollout mode unless tx_id is allowlisted via {}",
+                    crate::engine::CONXIAN_BTC_TX_LIFECYCLE_LIMITED_TX_ALLOWLIST_ENV
+                ),
+            }))
+        }
+        BitcoinManualFeeBumpError::InvalidState { state, reason } => {
+            HttpResponse::Conflict().json(serde_json::json!({
+                "error": "invalid_transition",
+                "state": state.as_str(),
+                "message": reason,
+            }))
+        }
+    }
+}
+
 #[get("/bitcoin/tx-lifecycle/config")]
 async fn bitcoin_tx_lifecycle_config_handler(engine: web::Data<Engine>) -> impl Responder {
     engine.increment_requests();
@@ -951,6 +1129,27 @@ async fn bitcoin_tx_lifecycle_transition_handler(
     match engine.apply_bitcoin_tx_transition(input) {
         Ok(outcome) => HttpResponse::Ok().json(outcome),
         Err(err) => map_bitcoin_transition_error(err),
+    }
+}
+
+#[post("/bitcoin/tx-lifecycle/manual-fee-bump")]
+async fn bitcoin_tx_lifecycle_manual_fee_bump_handler(
+    engine: web::Data<Engine>,
+    payload: web::Json<BitcoinManualFeeBumpRequest>,
+) -> impl Responder {
+    let input = match payload.into_inner().validate() {
+        Ok(input) => input,
+        Err(errors) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "details": errors,
+            }))
+        }
+    };
+
+    match engine.apply_manual_bitcoin_fee_bump(input) {
+        Ok(outcome) => HttpResponse::Ok().json(outcome),
+        Err(err) => map_bitcoin_manual_fee_bump_error(err),
     }
 }
 

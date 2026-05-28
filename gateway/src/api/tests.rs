@@ -2,7 +2,9 @@
 mod tests {
     use crate::engine::anchoring::AnchoringError;
     use crate::engine::mcp::McpManager;
-    use crate::engine::{BitcoinTxLifecycleEvent, BitcoinTxTransitionError, Engine};
+    use crate::engine::{
+        BitcoinManualFeeBumpError, BitcoinTxLifecycleEvent, BitcoinTxTransitionError, Engine,
+    };
     use actix_web::http::StatusCode;
     use std::sync::Arc;
 
@@ -283,5 +285,77 @@ mod tests {
             validation.dead_letter_reason,
             Some("confirmation update".to_string())
         );
+    }
+
+    #[test]
+    fn test_manual_fee_bump_request_validation_requires_critical_fields() {
+        let validation = super::super::BitcoinManualFeeBumpRequest {
+            tx_id: None,
+            attempts_used: None,
+            current_fee_rate_sats_vb: None,
+            network_target_fee_rate_sats_vb: None,
+            replaceable: None,
+            cpfp_available: None,
+            blocks_since_broadcast: None,
+            seconds_since_broadcast: None,
+        }
+        .validate();
+
+        assert!(validation.is_err());
+        let errors = validation.expect_err("manual bump validation should fail");
+        assert!(errors.iter().any(|err| err == "tx_id is required"));
+        assert!(errors
+            .iter()
+            .any(|err| err == "current_fee_rate_sats_vb is required"));
+        assert!(errors
+            .iter()
+            .any(|err| err == "network_target_fee_rate_sats_vb is required"));
+        assert!(errors.iter().any(|err| err == "replaceable is required"));
+        assert!(errors.iter().any(|err| err == "cpfp_available is required"));
+        assert!(errors
+            .iter()
+            .any(|err| err == "blocks_since_broadcast or seconds_since_broadcast is required"));
+    }
+
+    #[test]
+    fn test_manual_fee_bump_request_validation_builds_engine_input() {
+        let validation = super::super::BitcoinManualFeeBumpRequest {
+            tx_id: Some(" btc-manual ".to_string()),
+            attempts_used: Some(2),
+            current_fee_rate_sats_vb: Some(18),
+            network_target_fee_rate_sats_vb: Some(20),
+            replaceable: Some(true),
+            cpfp_available: Some(false),
+            blocks_since_broadcast: Some(5),
+            seconds_since_broadcast: Some(1500),
+        }
+        .validate()
+        .expect("manual bump validation should succeed");
+
+        assert_eq!(validation.tx_id, "btc-manual");
+        assert_eq!(validation.decision_input.attempts_used, 2);
+        assert_eq!(validation.decision_input.current_fee_rate_sats_vb, 18);
+        assert_eq!(
+            validation.decision_input.network_target_fee_rate_sats_vb,
+            20
+        );
+        assert!(validation.decision_input.replaceable);
+        assert!(!validation.decision_input.cpfp_available);
+        assert_eq!(validation.decision_input.blocks_since_broadcast, Some(5));
+        assert_eq!(
+            validation.decision_input.seconds_since_broadcast,
+            Some(1500)
+        );
+    }
+
+    #[test]
+    fn test_manual_fee_bump_error_mapping_limited_rollout_guardrail() {
+        let response = super::super::map_bitcoin_manual_fee_bump_error(
+            BitcoinManualFeeBumpError::LimitedRolloutGuardrail {
+                tx_id: "btc-blocked".to_string(),
+            },
+        );
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 }
