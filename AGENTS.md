@@ -2,7 +2,7 @@
 
 ## Conxian Gateway Architecture
 
-The Conxian Gateway consolidates core Bitcoin/Stacks state logic (internal/engine) and API/Auth layers (internal/api) into a singular, audit-ready Rust binary.
+Conxian builds native application infrastructure for Bitcoin. The Gateway provides the core primitives for secure signing and policy-aware transaction coordination.
 
 ### Key Documents
 
