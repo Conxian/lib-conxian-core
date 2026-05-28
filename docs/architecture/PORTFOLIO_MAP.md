@@ -2,15 +2,15 @@
 
 This document classifies every repository in the Conxian-Labs stack by layer, role, and evaluation standard, ensuring a consistent security and quality posture across the full Bitcoin-native system.
 
-## 1. Portfolio Classification
+## 1. Portfolio Classification (May 2026 SDK Pivot)
 
 | Layer | Repository | Role | Evaluation Standard |
 | :--- | :--- | :--- | :--- |
-| **Decentralization-Critical** | `lib-conxian-core` | Cryptographic & Protocol Primitives | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
-| **Decentralization-Critical** | `conxian-gateway` | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
-| **User & Application Surface** | `conxius-wallet` | Sovereign Asset Management | **P0 - Hardened**: StrongBox/TEE signing, Passkey auth, zero-PII persistence. |
-| **User & Application Surface** | `Conxian_UI` | Product Dashboards & Landing | **P1 - Standard**: High-contrast theme, responsive, type-safe, CI-badge mandatory. |
-| **Shared Runtime & Infra** | `conxius-platform` | Workflow Orchestration | **P1 - Standard**: Fail-closed orchestrations, mainnet-only release paths. |
+| **SDK & Core** | `lib-conxian-core` | Vault SDK & Protocol Primitives | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
+| **Supporting Infra** | `conxian-gateway` (Extracted) | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
+| **User & Application** | `conxius-wallet` | Reference Asset Management Client | **P1 - Standard**: StrongBox/TEE signing, Passkey auth, zero-PII persistence. |
+| **User & Application** | `Conxian_UI` | Product Dashboards & Landing | **P1 - Standard**: High-contrast theme, responsive, type-safe, CI-badge mandatory. |
+| **Shared Runtime** | `conxius-platform` | Workflow Orchestration | **P1 - Standard**: Fail-closed orchestrations, mainnet-only release paths. |
 | **Governance & OS** | `conxian-business` | Institutional Strategy & Rules | **P2 - Strategic**: ZSE compliant, ZK-Data Room integration, Linear-native strategy. |
 
 ## 2. Review Standards
@@ -33,9 +33,9 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 - **Sanitization**: Regular audits to move strategic detail to Linear Virtual Office.
 
 ## 3. Dependency Relationships
-- **lib-conxian-core** is the root dependency for all protocol-bearing repos.
-- **conxian-gateway** serves as the source of truth for protocol state to **conxius-platform**.
-- **conxius-wallet** provides the execution authority for all user-initiated intents.
+- **lib-conxian-core (Vault SDK)** is the primary commercial primitive for all integrators.
+- **conxian-gateway** serves as a downstream consumer of the SDK, providing protocol routing.
+- **conxius-wallet** serves as the reference application proving SDK and security model.
 
 ## 4. Maintenance
 This map is reviewed during the Weekly Launch Review (CON-229). Any repo addition or role shift requires an update here.
