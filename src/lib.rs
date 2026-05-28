@@ -13,6 +13,7 @@ mod audit_sdk_extraction;
 pub mod bitvm2;
 pub mod cjcs;
 pub mod contract_bridge;
+pub mod control_model;
 pub mod deployment;
 pub mod gateway;
 pub mod musig2;
