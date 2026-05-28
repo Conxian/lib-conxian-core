@@ -6,7 +6,8 @@ use crate::engine::remediation;
 #[cfg(test)]
 mod tests;
 use crate::engine::{
-    Engine, PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
+    BitcoinTxLifecycleEvent, BitcoinTxTransitionError, BitcoinTxTransitionInput, Engine,
+    PartnerLeadCreateInput, PartnerLeadStatus, PartnerLeadStatusUpdateInput,
     PartnerLeadTransitionError,
 };
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
@@ -94,6 +95,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(cjcs_spec_handler)
             .service(dlc_bond_handler)
             .service(state_commit_handler)
+            .service(bitcoin_tx_lifecycle_config_handler)
+            .service(bitcoin_tx_lifecycle_status_handler)
+            .service(bitcoin_tx_lifecycle_transition_handler)
             .service(sab_wallets_handler)
             .service(partner_intake_create_handler)
             .service(partner_intake_get_handler)
@@ -824,6 +828,130 @@ fn trim_optional(input: Option<String>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
+}
+
+#[derive(Deserialize)]
+struct BitcoinTxTransitionRequest {
+    tx_id: Option<String>,
+    event: Option<BitcoinTxLifecycleEvent>,
+    confirmations_observed: Option<u32>,
+    required_confirmations: Option<u32>,
+    reorg_depth: Option<u32>,
+    dead_letter_reason: Option<String>,
+}
+
+impl BitcoinTxTransitionRequest {
+    fn validate(self) -> Result<BitcoinTxTransitionInput, Vec<String>> {
+        let mut errors = Vec::new();
+
+        let tx_id = trim_optional(self.tx_id).unwrap_or_else(|| {
+            errors.push("tx_id is required".to_string());
+            String::new()
+        });
+
+        let event = match self.event {
+            Some(event) => event,
+            None => {
+                errors.push("event is required".to_string());
+                BitcoinTxLifecycleEvent::Sign
+            }
+        };
+
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(BitcoinTxTransitionInput {
+            tx_id,
+            event,
+            confirmations_observed: self.confirmations_observed,
+            required_confirmations: self.required_confirmations,
+            reorg_depth: self.reorg_depth,
+            dead_letter_reason: trim_optional(self.dead_letter_reason),
+        })
+    }
+}
+
+fn map_bitcoin_transition_error(err: BitcoinTxTransitionError) -> HttpResponse {
+    match err {
+        BitcoinTxTransitionError::FeatureDisabled => {
+            HttpResponse::ServiceUnavailable().json(serde_json::json!({
+                "error": "bitcoin_tx_lifecycle_disabled",
+                "message": format!(
+                    "Enable {} to activate bitcoin transaction lifecycle orchestration",
+                    crate::engine::CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV
+                ),
+            }))
+        }
+        BitcoinTxTransitionError::TxIdRequired => {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "message": "tx_id is required",
+            }))
+        }
+        BitcoinTxTransitionError::MissingField { field, event } => {
+            HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "message": format!("{field} is required for {}", event.as_str()),
+            }))
+        }
+        BitcoinTxTransitionError::InvalidTransition {
+            from,
+            event,
+            reason,
+        } => HttpResponse::Conflict().json(serde_json::json!({
+            "error": "invalid_transition",
+            "from": from.as_str(),
+            "event": event.as_str(),
+            "message": reason,
+        })),
+        BitcoinTxTransitionError::TerminalState { state } => {
+            HttpResponse::Conflict().json(serde_json::json!({
+                "error": "terminal_state",
+                "message": format!(
+                    "Transaction is in terminal state {} and cannot transition",
+                    state.as_str()
+                ),
+            }))
+        }
+    }
+}
+
+#[get("/bitcoin/tx-lifecycle/config")]
+async fn bitcoin_tx_lifecycle_config_handler(engine: web::Data<Engine>) -> impl Responder {
+    engine.increment_requests();
+    HttpResponse::Ok().json(engine.get_bitcoin_tx_lifecycle_config())
+}
+
+#[get("/bitcoin/tx-lifecycle/{tx_id}")]
+async fn bitcoin_tx_lifecycle_status_handler(
+    engine: web::Data<Engine>,
+    path: web::Path<String>,
+) -> impl Responder {
+    engine.increment_requests();
+    let tx_id = path.into_inner();
+    HttpResponse::Ok().json(engine.get_bitcoin_tx_lifecycle_view(&tx_id))
+}
+
+#[post("/bitcoin/tx-lifecycle/transition")]
+async fn bitcoin_tx_lifecycle_transition_handler(
+    engine: web::Data<Engine>,
+    payload: web::Json<BitcoinTxTransitionRequest>,
+) -> impl Responder {
+    let input = match payload.into_inner().validate() {
+        Ok(input) => input,
+        Err(errors) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "validation_failed",
+                "details": errors,
+            }))
+        }
+    };
+
+    match engine.apply_bitcoin_tx_transition(input) {
+        Ok(outcome) => HttpResponse::Ok().json(outcome),
+        Err(err) => map_bitcoin_transition_error(err),
+    }
 }
 
 #[derive(Deserialize)]

@@ -2,7 +2,7 @@
 mod tests {
     use crate::engine::anchoring::AnchoringError;
     use crate::engine::mcp::McpManager;
-    use crate::engine::Engine;
+    use crate::engine::{BitcoinTxLifecycleEvent, BitcoinTxTransitionError, Engine};
     use actix_web::http::StatusCode;
     use std::sync::Arc;
 
@@ -219,5 +219,69 @@ mod tests {
         });
 
         assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+    }
+
+    #[test]
+    fn test_bitcoin_transition_error_mapping_feature_disabled() {
+        let response =
+            super::super::map_bitcoin_transition_error(BitcoinTxTransitionError::FeatureDisabled);
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn test_bitcoin_transition_error_mapping_invalid_transition() {
+        let response = super::super::map_bitcoin_transition_error(
+            BitcoinTxTransitionError::InvalidTransition {
+                from: crate::engine::BitcoinTxLifecycleState::Draft,
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                reason: "queue_broadcast requires signed or reorged state".to_string(),
+            },
+        );
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn test_bitcoin_transition_request_validation_requires_tx_id_and_event() {
+        let validation = super::super::BitcoinTxTransitionRequest {
+            tx_id: None,
+            event: None,
+            confirmations_observed: None,
+            required_confirmations: None,
+            reorg_depth: None,
+            dead_letter_reason: None,
+        }
+        .validate();
+
+        assert!(validation.is_err());
+        let errors = validation.expect_err("validation should fail");
+        assert!(errors.iter().any(|err| err == "tx_id is required"));
+        assert!(errors.iter().any(|err| err == "event is required"));
+    }
+
+    #[test]
+    fn test_bitcoin_transition_request_validation_builds_engine_input() {
+        let validation = super::super::BitcoinTxTransitionRequest {
+            tx_id: Some(" tx-abc ".to_string()),
+            event: Some(BitcoinTxLifecycleEvent::ConfirmationsObserved),
+            confirmations_observed: Some(3),
+            required_confirmations: Some(6),
+            reorg_depth: None,
+            dead_letter_reason: Some(" confirmation update ".to_string()),
+        }
+        .validate()
+        .expect("validation should succeed");
+
+        assert_eq!(validation.tx_id, "tx-abc");
+        assert_eq!(
+            validation.event,
+            BitcoinTxLifecycleEvent::ConfirmationsObserved
+        );
+        assert_eq!(validation.confirmations_observed, Some(3));
+        assert_eq!(validation.required_confirmations, Some(6));
+        assert_eq!(
+            validation.dead_letter_reason,
+            Some("confirmation update".to_string())
+        );
     }
 }

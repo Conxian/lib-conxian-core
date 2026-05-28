@@ -255,6 +255,183 @@ pub enum PartnerLeadTransitionError {
     EscalationReasonRequired,
 }
 
+pub const CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_ENABLED";
+pub const CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV: &str = "CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE";
+const DEFAULT_REQUIRED_CONFIRMATIONS: u32 = 6;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinTxLifecycleState {
+    Draft,
+    Signed,
+    BroadcastPending,
+    InMempool,
+    PendingConfirmations,
+    Confirmed,
+    Finalized,
+    Reorged,
+    DeadLetter,
+}
+
+impl BitcoinTxLifecycleState {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinTxLifecycleState::Draft => "draft",
+            BitcoinTxLifecycleState::Signed => "signed",
+            BitcoinTxLifecycleState::BroadcastPending => "broadcast_pending",
+            BitcoinTxLifecycleState::InMempool => "in_mempool",
+            BitcoinTxLifecycleState::PendingConfirmations => "pending_confirmations",
+            BitcoinTxLifecycleState::Confirmed => "confirmed",
+            BitcoinTxLifecycleState::Finalized => "finalized",
+            BitcoinTxLifecycleState::Reorged => "reorged",
+            BitcoinTxLifecycleState::DeadLetter => "dead_letter",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinTxLifecycleEvent {
+    Sign,
+    QueueBroadcast,
+    MempoolObserved,
+    ConfirmationsObserved,
+    Finalize,
+    ReorgDetected,
+    MarkDeadLetter,
+}
+
+impl BitcoinTxLifecycleEvent {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BitcoinTxLifecycleEvent::Sign => "sign",
+            BitcoinTxLifecycleEvent::QueueBroadcast => "queue_broadcast",
+            BitcoinTxLifecycleEvent::MempoolObserved => "mempool_observed",
+            BitcoinTxLifecycleEvent::ConfirmationsObserved => "confirmations_observed",
+            BitcoinTxLifecycleEvent::Finalize => "finalize",
+            BitcoinTxLifecycleEvent::ReorgDetected => "reorg_detected",
+            BitcoinTxLifecycleEvent::MarkDeadLetter => "mark_dead_letter",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BitcoinTxLifecycleExecutionMode {
+    Disabled,
+    Shadow,
+    Active,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxLifecycleConfig {
+    pub enabled: bool,
+    pub shadow_mode: bool,
+}
+
+impl BitcoinTxLifecycleConfig {
+    pub fn from_env() -> Self {
+        Self {
+            enabled: parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_ENABLED_ENV, false),
+            shadow_mode: parse_env_bool(CONXIAN_BTC_TX_LIFECYCLE_SHADOW_MODE_ENV, false),
+        }
+    }
+
+    pub fn execution_mode(&self) -> BitcoinTxLifecycleExecutionMode {
+        if !self.enabled {
+            BitcoinTxLifecycleExecutionMode::Disabled
+        } else if self.shadow_mode {
+            BitcoinTxLifecycleExecutionMode::Shadow
+        } else {
+            BitcoinTxLifecycleExecutionMode::Active
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxLifecycleRecord {
+    pub tx_id: String,
+    pub state: BitcoinTxLifecycleState,
+    pub confirmations_observed: u32,
+    pub required_confirmations: u32,
+    pub reorg_depth: Option<u32>,
+    pub dead_letter_reason: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl BitcoinTxLifecycleRecord {
+    fn draft(tx_id: &str) -> Self {
+        Self {
+            tx_id: tx_id.to_string(),
+            state: BitcoinTxLifecycleState::Draft,
+            confirmations_observed: 0,
+            required_confirmations: DEFAULT_REQUIRED_CONFIRMATIONS,
+            reorg_depth: None,
+            dead_letter_reason: None,
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxLifecycleView {
+    pub tx_id: String,
+    pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub production: BitcoinTxLifecycleRecord,
+    pub shadow: Option<BitcoinTxLifecycleRecord>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxTransitionInput {
+    pub tx_id: String,
+    pub event: BitcoinTxLifecycleEvent,
+    pub confirmations_observed: Option<u32>,
+    pub required_confirmations: Option<u32>,
+    pub reorg_depth: Option<u32>,
+    pub dead_letter_reason: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BitcoinTxTransitionOutcome {
+    pub tx_id: String,
+    pub event: BitcoinTxLifecycleEvent,
+    pub from_state: BitcoinTxLifecycleState,
+    pub to_state: BitcoinTxLifecycleState,
+    pub execution_mode: BitcoinTxLifecycleExecutionMode,
+    pub state_mutated: bool,
+    pub telemetry_recorded: bool,
+    pub transitioned_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug)]
+pub enum BitcoinTxTransitionError {
+    FeatureDisabled,
+    TxIdRequired,
+    MissingField {
+        field: &'static str,
+        event: BitcoinTxLifecycleEvent,
+    },
+    InvalidTransition {
+        from: BitcoinTxLifecycleState,
+        event: BitcoinTxLifecycleEvent,
+        reason: String,
+    },
+    TerminalState {
+        state: BitcoinTxLifecycleState,
+    },
+}
+
+fn parse_env_bool(name: &str, default: bool) -> bool {
+    std::env::var(name)
+        .ok()
+        .map(|value| match value.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" => true,
+            "0" | "false" | "no" | "off" => false,
+            _ => default,
+        })
+        .unwrap_or(default)
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StateProposal {
     pub proposal_id: String,
@@ -295,6 +472,10 @@ pub struct Engine {
     pub erp_sync_status: Arc<RwLock<HashMap<String, ErpSyncRecord>>>,
     pub settlement_log: Arc<RwLock<Vec<SettlementEnvelope>>>,
     pub state_proposals: Arc<RwLock<HashMap<String, StateProposal>>>,
+    pub bitcoin_tx_lifecycle_config: BitcoinTxLifecycleConfig,
+    pub bitcoin_tx_lifecycle: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
+    pub bitcoin_tx_lifecycle_shadow: Arc<RwLock<HashMap<String, BitcoinTxLifecycleRecord>>>,
+    pub bitcoin_tx_lifecycle_telemetry: Arc<RwLock<Vec<BitcoinTxTransitionOutcome>>>,
     pub partner_leads: Arc<RwLock<HashMap<String, PartnerLead>>>,
     pub partner_lead_events: Arc<RwLock<Vec<PartnerLeadEvent>>>,
     pub partner_lead_idempotency: Arc<RwLock<HashMap<String, String>>>,
@@ -323,6 +504,18 @@ impl Engine {
     pub(crate) fn new_with_anchoring_publishers(
         tableland_anchoring_publisher: Arc<dyn AnchoringPublisher>,
         on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+    ) -> Self {
+        Self::new_with_anchoring_publishers_and_tx_lifecycle_config(
+            tableland_anchoring_publisher,
+            on_chain_anchoring_publisher,
+            BitcoinTxLifecycleConfig::from_env(),
+        )
+    }
+
+    pub(crate) fn new_with_anchoring_publishers_and_tx_lifecycle_config(
+        tableland_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+        on_chain_anchoring_publisher: Arc<dyn AnchoringPublisher>,
+        bitcoin_tx_lifecycle_config: BitcoinTxLifecycleConfig,
     ) -> Self {
         Engine {
             version: "0.2.3".to_string(),
@@ -354,6 +547,10 @@ impl Engine {
             erp_sync_status: Arc::new(RwLock::new(HashMap::new())),
             settlement_log: Arc::new(RwLock::new(Vec::new())),
             state_proposals: Arc::new(RwLock::new(HashMap::new())),
+            bitcoin_tx_lifecycle_config,
+            bitcoin_tx_lifecycle: Arc::new(RwLock::new(HashMap::new())),
+            bitcoin_tx_lifecycle_shadow: Arc::new(RwLock::new(HashMap::new())),
+            bitcoin_tx_lifecycle_telemetry: Arc::new(RwLock::new(Vec::new())),
             partner_leads: Arc::new(RwLock::new(HashMap::new())),
             partner_lead_events: Arc::new(RwLock::new(Vec::new())),
             partner_lead_idempotency: Arc::new(RwLock::new(HashMap::new())),
@@ -1940,6 +2137,291 @@ impl Engine {
         Ok(())
     }
 
+    pub fn get_bitcoin_tx_lifecycle_config(&self) -> BitcoinTxLifecycleConfig {
+        self.bitcoin_tx_lifecycle_config.clone()
+    }
+
+    pub fn get_bitcoin_tx_lifecycle_record(&self, tx_id: &str) -> BitcoinTxLifecycleRecord {
+        self.bitcoin_tx_lifecycle
+            .read()
+            .unwrap()
+            .get(tx_id)
+            .cloned()
+            .unwrap_or_else(|| BitcoinTxLifecycleRecord::draft(tx_id))
+    }
+
+    pub fn get_bitcoin_tx_lifecycle_view(&self, tx_id: &str) -> BitcoinTxLifecycleView {
+        let production = self.get_bitcoin_tx_lifecycle_record(tx_id);
+        let shadow = self
+            .bitcoin_tx_lifecycle_shadow
+            .read()
+            .unwrap()
+            .get(tx_id)
+            .cloned();
+
+        BitcoinTxLifecycleView {
+            tx_id: tx_id.to_string(),
+            execution_mode: self.bitcoin_tx_lifecycle_config.execution_mode(),
+            production,
+            shadow,
+        }
+    }
+
+    pub fn get_bitcoin_tx_lifecycle_telemetry(&self) -> Vec<BitcoinTxTransitionOutcome> {
+        self.bitcoin_tx_lifecycle_telemetry.read().unwrap().clone()
+    }
+
+    pub fn apply_bitcoin_tx_transition(
+        &self,
+        input: BitcoinTxTransitionInput,
+    ) -> Result<BitcoinTxTransitionOutcome, BitcoinTxTransitionError> {
+        self.increment_requests();
+        let tx_id = input.tx_id.trim();
+        if tx_id.is_empty() {
+            return Err(BitcoinTxTransitionError::TxIdRequired);
+        }
+
+        let execution_mode = self.bitcoin_tx_lifecycle_config.execution_mode();
+        if execution_mode == BitcoinTxLifecycleExecutionMode::Disabled {
+            return Err(BitcoinTxTransitionError::FeatureDisabled);
+        }
+
+        let current = self.bitcoin_tx_record_for_transition(tx_id, &execution_mode);
+        let next = Self::next_bitcoin_tx_record(&current, &input)?;
+
+        let state_mutated = execution_mode == BitcoinTxLifecycleExecutionMode::Active;
+        let telemetry_recorded = execution_mode == BitcoinTxLifecycleExecutionMode::Shadow;
+
+        let outcome = BitcoinTxTransitionOutcome {
+            tx_id: tx_id.to_string(),
+            event: input.event.clone(),
+            from_state: current.state,
+            to_state: next.state.clone(),
+            execution_mode: execution_mode.clone(),
+            state_mutated,
+            telemetry_recorded,
+            transitioned_at: next.updated_at,
+        };
+
+        match execution_mode {
+            BitcoinTxLifecycleExecutionMode::Active => {
+                self.bitcoin_tx_lifecycle
+                    .write()
+                    .unwrap()
+                    .insert(tx_id.to_string(), next);
+            }
+            BitcoinTxLifecycleExecutionMode::Shadow => {
+                self.bitcoin_tx_lifecycle_shadow
+                    .write()
+                    .unwrap()
+                    .insert(tx_id.to_string(), next);
+                self.bitcoin_tx_lifecycle_telemetry
+                    .write()
+                    .unwrap()
+                    .push(outcome.clone());
+            }
+            BitcoinTxLifecycleExecutionMode::Disabled => {}
+        }
+
+        Ok(outcome)
+    }
+
+    fn bitcoin_tx_record_for_transition(
+        &self,
+        tx_id: &str,
+        execution_mode: &BitcoinTxLifecycleExecutionMode,
+    ) -> BitcoinTxLifecycleRecord {
+        if *execution_mode == BitcoinTxLifecycleExecutionMode::Shadow {
+            if let Some(shadow_record) = self
+                .bitcoin_tx_lifecycle_shadow
+                .read()
+                .unwrap()
+                .get(tx_id)
+                .cloned()
+            {
+                return shadow_record;
+            }
+        }
+
+        self.bitcoin_tx_lifecycle
+            .read()
+            .unwrap()
+            .get(tx_id)
+            .cloned()
+            .unwrap_or_else(|| BitcoinTxLifecycleRecord::draft(tx_id))
+    }
+
+    fn invalid_bitcoin_transition(
+        from: &BitcoinTxLifecycleState,
+        event: &BitcoinTxLifecycleEvent,
+        reason: impl Into<String>,
+    ) -> BitcoinTxTransitionError {
+        BitcoinTxTransitionError::InvalidTransition {
+            from: from.clone(),
+            event: event.clone(),
+            reason: reason.into(),
+        }
+    }
+
+    fn next_bitcoin_tx_record(
+        current: &BitcoinTxLifecycleRecord,
+        input: &BitcoinTxTransitionInput,
+    ) -> Result<BitcoinTxLifecycleRecord, BitcoinTxTransitionError> {
+        if current.state == BitcoinTxLifecycleState::DeadLetter {
+            return Err(BitcoinTxTransitionError::TerminalState {
+                state: BitcoinTxLifecycleState::DeadLetter,
+            });
+        }
+
+        let mut next = current.clone();
+        next.updated_at = Utc::now();
+
+        match input.event {
+            BitcoinTxLifecycleEvent::Sign => {
+                if current.state != BitcoinTxLifecycleState::Draft {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "only draft transactions can be signed",
+                    ));
+                }
+                next.state = BitcoinTxLifecycleState::Signed;
+                next.confirmations_observed = 0;
+                next.reorg_depth = None;
+                next.dead_letter_reason = None;
+            }
+            BitcoinTxLifecycleEvent::QueueBroadcast => {
+                if current.state != BitcoinTxLifecycleState::Signed
+                    && current.state != BitcoinTxLifecycleState::Reorged
+                {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "queue_broadcast requires signed or reorged state",
+                    ));
+                }
+                next.state = BitcoinTxLifecycleState::BroadcastPending;
+                next.confirmations_observed = 0;
+                next.reorg_depth = None;
+            }
+            BitcoinTxLifecycleEvent::MempoolObserved => {
+                if current.state != BitcoinTxLifecycleState::BroadcastPending
+                    && current.state != BitcoinTxLifecycleState::Reorged
+                {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "mempool_observed requires broadcast_pending or reorged state",
+                    ));
+                }
+                next.state = BitcoinTxLifecycleState::InMempool;
+                next.confirmations_observed = 0;
+                next.reorg_depth = None;
+            }
+            BitcoinTxLifecycleEvent::ConfirmationsObserved => {
+                if current.state != BitcoinTxLifecycleState::InMempool
+                    && current.state != BitcoinTxLifecycleState::PendingConfirmations
+                    && current.state != BitcoinTxLifecycleState::Confirmed
+                    && current.state != BitcoinTxLifecycleState::Reorged
+                {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "confirmations can only update mempool/pending/confirmed/reorged states",
+                    ));
+                }
+
+                let confirmations =
+                    input
+                        .confirmations_observed
+                        .ok_or(BitcoinTxTransitionError::MissingField {
+                            field: "confirmations_observed",
+                            event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                        })?;
+
+                let required = input
+                    .required_confirmations
+                    .unwrap_or(current.required_confirmations);
+                if required == 0 {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "required_confirmations must be greater than zero",
+                    ));
+                }
+                if confirmations == 0 {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "confirmations_observed must be greater than zero",
+                    ));
+                }
+
+                next.state = if confirmations >= required {
+                    BitcoinTxLifecycleState::Confirmed
+                } else {
+                    BitcoinTxLifecycleState::PendingConfirmations
+                };
+                next.confirmations_observed = confirmations;
+                next.required_confirmations = required;
+                next.reorg_depth = None;
+            }
+            BitcoinTxLifecycleEvent::Finalize => {
+                if current.state != BitcoinTxLifecycleState::Confirmed {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "only confirmed transactions can be finalized",
+                    ));
+                }
+                next.state = BitcoinTxLifecycleState::Finalized;
+            }
+            BitcoinTxLifecycleEvent::ReorgDetected => {
+                if current.state != BitcoinTxLifecycleState::PendingConfirmations
+                    && current.state != BitcoinTxLifecycleState::Confirmed
+                    && current.state != BitcoinTxLifecycleState::Finalized
+                {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "reorg rollback requires pending_confirmations, confirmed, or finalized state",
+                    ));
+                }
+
+                let depth = input.reorg_depth.unwrap_or(1);
+                if depth == 0 {
+                    return Err(Self::invalid_bitcoin_transition(
+                        &current.state,
+                        &input.event,
+                        "reorg_depth must be greater than zero",
+                    ));
+                }
+
+                next.state = BitcoinTxLifecycleState::Reorged;
+                next.confirmations_observed = 0;
+                next.reorg_depth = Some(depth);
+            }
+            BitcoinTxLifecycleEvent::MarkDeadLetter => {
+                let reason = input
+                    .dead_letter_reason
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|reason| !reason.is_empty())
+                    .ok_or(BitcoinTxTransitionError::MissingField {
+                        field: "dead_letter_reason",
+                        event: BitcoinTxLifecycleEvent::MarkDeadLetter,
+                    })?
+                    .to_string();
+                next.state = BitcoinTxLifecycleState::DeadLetter;
+                next.confirmations_observed = 0;
+                next.reorg_depth = None;
+                next.dead_letter_reason = Some(reason);
+            }
+        }
+
+        Ok(next)
+    }
+
     pub fn get_compliance_status(&self) -> ComplianceStatus {
         self.compliance.read().unwrap().clone()
     }
@@ -2147,6 +2629,14 @@ mod tests {
         Engine::new_with_anchoring_publishers(tableland, on_chain)
     }
 
+    fn lifecycle_engine(config: BitcoinTxLifecycleConfig) -> Engine {
+        Engine::new_with_anchoring_publishers_and_tx_lifecycle_config(
+            Arc::new(TablelandAnchoringPublisher),
+            Arc::new(OnChainAnchoringPublisher),
+            config,
+        )
+    }
+
     #[test]
     fn commit_state_checkpoint_successful_publish_path() {
         let engine = Engine::new();
@@ -2289,5 +2779,303 @@ mod tests {
                 ..
             } if adapter == "tableland"
         ));
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_happy_path_reaches_finalized() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+        });
+
+        let tx_id = "btc-tx-happy-path";
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("draft should transition to signed");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("signed should transition to broadcast_pending");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::MempoolObserved,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("broadcast_pending should transition to in_mempool");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                confirmations_observed: Some(2),
+                required_confirmations: Some(6),
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("in_mempool should transition to pending_confirmations");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                confirmations_observed: Some(6),
+                required_confirmations: Some(6),
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("pending_confirmations should transition to confirmed");
+
+        let finalized = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::Finalize,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("confirmed should transition to finalized");
+
+        assert_eq!(
+            finalized.to_state,
+            BitcoinTxLifecycleState::Finalized,
+            "expected finalized terminal on normal path"
+        );
+        assert!(finalized.state_mutated);
+
+        let current = engine.get_bitcoin_tx_lifecycle_record(tx_id);
+        assert_eq!(current.state, BitcoinTxLifecycleState::Finalized);
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_reorg_rollback_branch_recovers() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+        });
+        let tx_id = "btc-tx-reorg";
+
+        for event in [
+            BitcoinTxLifecycleEvent::Sign,
+            BitcoinTxLifecycleEvent::QueueBroadcast,
+            BitcoinTxLifecycleEvent::MempoolObserved,
+        ] {
+            engine
+                .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                    tx_id: tx_id.to_string(),
+                    event,
+                    confirmations_observed: None,
+                    required_confirmations: None,
+                    reorg_depth: None,
+                    dead_letter_reason: None,
+                })
+                .expect("expected pre-reorg transition");
+        }
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                confirmations_observed: Some(6),
+                required_confirmations: Some(6),
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("transaction should be confirmed");
+
+        let reorged = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::ReorgDetected,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: Some(2),
+                dead_letter_reason: None,
+            })
+            .expect("confirmed transaction should support reorg rollback");
+        assert_eq!(reorged.to_state, BitcoinTxLifecycleState::Reorged);
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("reorged tx should re-enter broadcast queue");
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::MempoolObserved,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("reorged tx should return to mempool");
+
+        let recovered = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::ConfirmationsObserved,
+                confirmations_observed: Some(6),
+                required_confirmations: Some(6),
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("reorged tx should be recoverable to confirmed");
+        assert_eq!(recovered.to_state, BitcoinTxLifecycleState::Confirmed);
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_dead_letter_is_terminal() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+        });
+        let tx_id = "btc-tx-dead-letter";
+
+        engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::MarkDeadLetter,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: Some("max_fee_policy_exceeded".to_string()),
+            })
+            .expect("dead_letter transition should be accepted with reason");
+
+        let err = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect_err("dead_letter must remain terminal");
+
+        assert!(matches!(
+            err,
+            BitcoinTxTransitionError::TerminalState {
+                state: BitcoinTxLifecycleState::DeadLetter
+            }
+        ));
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_rejects_invalid_transitions() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: false,
+        });
+
+        let err = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-invalid".to_string(),
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect_err("draft -> queue_broadcast should be invalid");
+
+        assert!(matches!(
+            err,
+            BitcoinTxTransitionError::InvalidTransition {
+                from: BitcoinTxLifecycleState::Draft,
+                event: BitcoinTxLifecycleEvent::QueueBroadcast,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_shadow_mode_is_telemetry_only() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: true,
+            shadow_mode: true,
+        });
+        let tx_id = "btc-tx-shadow";
+
+        let outcome = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: tx_id.to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect("shadow mode should evaluate transition");
+
+        assert!(!outcome.state_mutated);
+        assert!(outcome.telemetry_recorded);
+        assert_eq!(
+            outcome.execution_mode,
+            BitcoinTxLifecycleExecutionMode::Shadow
+        );
+
+        let production = engine.get_bitcoin_tx_lifecycle_record(tx_id);
+        assert_eq!(
+            production.state,
+            BitcoinTxLifecycleState::Draft,
+            "production state must not mutate in shadow mode"
+        );
+
+        let shadow_view = engine.get_bitcoin_tx_lifecycle_view(tx_id);
+        let shadow_state = shadow_view
+            .shadow
+            .expect("shadow projection should be tracked for telemetry");
+        assert_eq!(shadow_state.state, BitcoinTxLifecycleState::Signed);
+
+        assert_eq!(engine.get_bitcoin_tx_lifecycle_telemetry().len(), 1);
+    }
+
+    #[test]
+    fn bitcoin_tx_lifecycle_feature_flag_blocks_orchestration_when_disabled() {
+        let engine = lifecycle_engine(BitcoinTxLifecycleConfig {
+            enabled: false,
+            shadow_mode: false,
+        });
+
+        let err = engine
+            .apply_bitcoin_tx_transition(BitcoinTxTransitionInput {
+                tx_id: "btc-tx-disabled".to_string(),
+                event: BitcoinTxLifecycleEvent::Sign,
+                confirmations_observed: None,
+                required_confirmations: None,
+                reorg_depth: None,
+                dead_letter_reason: None,
+            })
+            .expect_err("disabled feature flag should reject orchestration");
+
+        assert!(matches!(err, BitcoinTxTransitionError::FeatureDisabled));
     }
 }
