@@ -1,34 +1,25 @@
-## Description
-<!-- Provide a brief summary of the changes and the Linear issue being addressed. -->
+## Summary
 
-## Linked Issues
-- Fixes [CON-XXX]
+<!-- What changed and why? -->
 
-## Type of Change
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Security hardening / alignment
+## Security and Governance Checklist
 
-## BOS Classification (CON-412)
-- [ ] **Docs-only**: Documentation, README, or strategic spec changes.
-- [ ] **Stub-isolation**: Refactoring to move mocks/stubs out of production paths.
-- [ ] **Dev-only implementation**: Feature work targeting the `dev` branch only.
-- [ ] **Production implementation**: Core logic targeting `main` (must be mainnet-ready).
+- [ ] I assessed whether this change affects security posture, threat model, or governance controls.
+- [ ] I verified no secrets, tokens, private keys, or sensitive internal data were introduced.
+- [ ] I updated documentation/policies (`SECURITY.md`, `SUPPORT.md`, `CONTRIBUTING.md`, templates, workflows, `release.yml`) where required.
+- [ ] If sensitive files changed, I requested and obtained required CODEOWNERS review.
+- [ ] I linked the tracking issue (for example, `CON-176`).
 
-## Mandatory Checklist
-- [ ] My code follows the style guidelines of this project (cargo fmt).
-- [ ] I have performed a self-review of my own code.
-- [ ] I have commented my code, particularly in hard-to-understand areas.
-- [ ] I have made corresponding changes to the documentation.
-- [ ] My changes generate no new warnings (cargo clippy).
-- [ ] I have added tests that prove my fix is effective or that my feature works.
-- [ ] New and existing unit tests pass locally with my changes.
-- [ ] Any public/private boundaries are respected (ZSE compliant).
+## Sensitive Files (CODEOWNERS-enforced)
 
-## Mainnet Safety & Release Operations
-- [ ] This PR contains NO mocks, stubs, or testnet-only logic for the `main` branch.
-- [ ] Intent-based actions follow the StateProposal/Timelock flow (CON-162).
-- [ ] Verified that UI, docs, and config match actual runtime behavior.
-- [ ] Required status checks and linting have passed.
+- `CODEOWNERS`
+- `SECURITY.md`
+- `SUPPORT.md`
+- `.github/ISSUE_TEMPLATE/**`
+- `.github/PULL_REQUEST_TEMPLATE*`
+- `.github/workflows/**`
+- `.github/release.yml`
+
+## Linked issue
+
+Closes #

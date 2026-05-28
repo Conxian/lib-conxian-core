@@ -54,6 +54,24 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 
 All PRs require review from at least one core maintainer before merging.
 
+
+## Governance Support Routing
+
+- For support and issue-routing guidance, use [SUPPORT.md](SUPPORT.md).
+- For vulnerability handling, follow [SECURITY.md](SECURITY.md) and avoid public disclosure.
+
+## Sensitive File Changes
+
+Changes to governance-sensitive files require CODEOWNERS review:
+
+- `CODEOWNERS`
+- `SECURITY.md`
+- `SUPPORT.md`
+- `.github/ISSUE_TEMPLATE/**`
+- `.github/PULL_REQUEST_TEMPLATE*`
+- `.github/workflows/**`
+- `.github/release.yml`
+
 ## Security
 
 If you discover a security vulnerability, please refer to our [Security Policy](SECURITY.md) for reporting instructions.
