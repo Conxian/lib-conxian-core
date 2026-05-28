@@ -24,6 +24,9 @@ Returns real-time financial intelligence metrics (MRR, ARR, Churn).
 ### GET /api/v1/risk-assessment
 Returns a detailed multi-factor risk assessment (DA, Settlement, Bridge, Exit Mechanism, Operators) for all layers.
 
+### GET /api/v1/layers
+Returns an array of `ServiceStatus` objects for all registered rails.
+
 ### GET /api/v1/metrics
 Prometheus-compatible metrics including service latency and granular risk scores.
 
@@ -75,10 +78,13 @@ Commits state shards to Tableland for decentralized persistence (CON-69).
 ## 3. Data Models
 
 ### ServiceStatus
+`ServiceStatus` now includes typed `rail_metadata` for per-rail trust/finality/custody/compliance/capability context.
+
 ```json
 {
   "name": "stacks",
   "status": "active",
+  "last_checked": "2026-05-27T22:00:00Z",
   "latency_ms": 65,
   "trust_model": "PoX",
   "risk_level": "Medium",
@@ -99,6 +105,50 @@ Commits state shards to Tableland for decentralized persistence (CON-69).
   "metadata": {
     "block_height": "841234",
     "hiro_api_connected": "true"
+  },
+  "rail_metadata": {
+    "rail_family": "anchored_l2",
+    "trust_assumptions": {
+      "security_anchor": "PoX consensus anchored to Bitcoin checkpointing",
+      "operator_dependency": "Validator set and bridge operators maintain canonical state",
+      "liveness_assumption": "Anchor publication and validator participation remain online"
+    },
+    "finality_semantics": {
+      "confirmation_model": "Economic finality on L2, hardened by Bitcoin anchoring",
+      "settlement_layer": "Bitcoin",
+      "typical_finality_window": "~10-60 minutes depending on anchor cadence"
+    },
+    "custody_model": {
+      "asset_control_model": "Hybrid self-custody with bridge-locked representations",
+      "signer_architecture": "sBTC Bridge",
+      "redemption_path": "Bridge redemption back to native Bitcoin"
+    },
+    "compliance_constraints": {
+      "baseline_controls": [
+        "kyc_for_managed_entrypoints",
+        "sanctions_screening"
+      ],
+      "jurisdictional_scope": "Gateway policy controls by operating jurisdiction",
+      "monitoring_requirements": [
+        "bridge_health_monitoring",
+        "anchor_finality_checks"
+      ]
+    },
+    "operational_capabilities": {
+      "supported_flows": [
+        "btc_bridging",
+        "smart_contract_execution",
+        "token_transfers"
+      ],
+      "integration_modes": [
+        "gateway_service_status",
+        "bridge_api"
+      ],
+      "resilience_features": [
+        "checkpoint_reconciliation",
+        "bridge_failover_runbooks"
+      ]
+    }
   }
 }
 ```
