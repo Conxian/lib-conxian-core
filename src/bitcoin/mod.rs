@@ -5,6 +5,7 @@ use base64::engine::general_purpose::{
     STANDARD as BASE64_STANDARD, STANDARD_NO_PAD as BASE64_STANDARD_NO_PAD,
 };
 use base64::Engine;
+use bdk::bitcoin::psbt::PartiallySignedTransaction as BdkPsbt;
 use bdk::database::MemoryDatabase;
 use bdk::{SignOptions, Wallet};
 use bitcoin::consensus::deserialize;
@@ -60,10 +61,23 @@ impl BitcoinOrchestrator {
     pub fn wallet_from_descriptors(
         descriptor_set: &WalletDescriptorSet,
     ) -> anyhow::Result<Wallet<MemoryDatabase>> {
+        let bdk_network = match descriptor_set.network {
+            Network::Bitcoin => bdk::bitcoin::Network::Bitcoin,
+            Network::Testnet => bdk::bitcoin::Network::Testnet,
+            Network::Signet => bdk::bitcoin::Network::Signet,
+            Network::Regtest => bdk::bitcoin::Network::Regtest,
+            other => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported network for BDK wallet: {:?}",
+                    other
+                ));
+            }
+        };
+
         Wallet::new(
             descriptor_set.external.as_str(),
             descriptor_set.change.as_deref(),
-            descriptor_set.network,
+            bdk_network,
             MemoryDatabase::new(),
         )
         .map_err(|e| anyhow::anyhow!("Descriptor validation failed: {:?}", e))
@@ -125,7 +139,7 @@ impl BitcoinOrchestrator {
     }
 
     /// Signs a PSBT without attempting finalization.
-    pub fn sign_psbt(wallet: &Wallet<MemoryDatabase>, psbt: &mut Psbt) -> anyhow::Result<bool> {
+    pub fn sign_psbt(wallet: &Wallet<MemoryDatabase>, psbt: &mut BdkPsbt) -> anyhow::Result<bool> {
         let sign_opts = SignOptions {
             try_finalize: false,
             ..SignOptions::default()
@@ -137,7 +151,10 @@ impl BitcoinOrchestrator {
     }
 
     /// Finalizes a PSBT using wallet policy/signers.
-    pub fn finalize_psbt(wallet: &Wallet<MemoryDatabase>, psbt: &mut Psbt) -> anyhow::Result<bool> {
+    pub fn finalize_psbt(
+        wallet: &Wallet<MemoryDatabase>,
+        psbt: &mut BdkPsbt,
+    ) -> anyhow::Result<bool> {
         let sign_opts = SignOptions {
             try_finalize: true,
             ..SignOptions::default()
@@ -208,19 +225,19 @@ mod tests {
     use super::{BitcoinOrchestrator, PsbtEncoding, WalletDescriptorSet};
     use bitcoin::absolute::LockTime;
     use bitcoin::{
-        consensus::serialize, psbt::Psbt, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,
+        consensus::serialize, psbt::Psbt, Amount, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,
     };
 
     fn sample_unsigned_tx(output_value: u64) -> Transaction {
         Transaction {
-            version: 2,
+            version: bitcoin::transaction::Version::TWO,
             lock_time: LockTime::ZERO,
             input: vec![TxIn {
                 previous_output: OutPoint::null(),
                 ..TxIn::default()
             }],
             output: vec![TxOut {
-                value: output_value,
+                value: Amount::from_sat(output_value),
                 script_pubkey: ScriptBuf::new(),
             }],
         }
