@@ -2,57 +2,47 @@
 
 ![CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)
 
-Conxian builds native application infrastructure for Bitcoin. This repository provides the core primitives for secure signing, policy enforcement, and transaction coordination on the existing Bitcoin stack.
+Shared core libraries and reusable primitives for the Conxian ecosystem.
 
 ## Purpose
 
-Centralize shared models, APIs, and core logic used by Conxian Gateway and downstream consumers (platform services, wallet integrations, and tooling).
+Centralize shared models, APIs, and core logic used by Conxian Gateway and downstream consumers such as platform services, wallet integrations, and tooling.
 
 ## Status
 
-Active development. Expect iteration as new layers, metadata, and compliance primitives are integrated.
+Active development.
 
-## Ownership
+## Scope
 
-Ownership and review requirements are defined in [`CODEOWNERS`](./CODEOWNERS).
+This repository contains shared technical primitives and common logic. It should not contain company administrative systems, private strategic records, or unrelated product-specific UX logic.
+
+## Governance relation
+
+This repository is maintained by Conxian Labs as shared infrastructure supporting public Conxian services and applications.
 
 ## Audience
 
-- Gateway engineers extending engine, API, and persistence logic.
-- Platform developers building shared clients and service integrations.
-- Contributors working on layer metadata, risk transparency, and observability.
+- gateway engineers
+- platform developers
+- wallet and integration contributors
+- maintainers working on shared models and observability
 
 ## Relationship to the Conxian stack
 
-- Serves as the shared core for Conxian Gateway and related services.
-- Consumed by orchestration and product layers like [`conxius-platform`](https://github.com/Conxian/conxius-platform) and [Conxius Wallet](https://github.com/Conxian/conxius-wallet).
+- consumed by `conxian-gateway`
+- used by platform services and integrations
+- shared across multiple public repositories where logic should not be duplicated
 
-## Architecture
+## Security
 
-The system is organized into a unified modular Rust architecture (internal/gateway) to maintain security boundaries and audit-readiness:
+This repository is security-sensitive shared infrastructure. Use [SECURITY.md](SECURITY.md) for reporting guidance.
 
-- `services/`: Client-side TypeScript library for interacting with the Gateway.
+## Release hygiene
 
-For detailed infrastructure information, see [docs/architecture/GCP_INFRASTRUCTURE.md](docs/architecture/GCP_INFRASTRUCTURE.md).
+- semantic versioning
+- changelog-based releases
+- dual licensing under MIT and Apache 2.0
 
-## Governance & Strategic Tracking
+## License
 
-- [Risk Register](docs/governance/RISK_REGISTER.md) - Phase 5/6 risk monitoring and mitigation backlog (CON-675).
-- [KPI Scorecard](docs/governance/KPI_SCORECARD.md) - Root-to-Leaf performance metrics and governance cadence (CON-674).
-
-## Security & Mainnet Readiness (CON-145)
-
-This repository is classified as a **P0 Mainnet Blocker**. The following security and readiness standards are enforced:
-
-- **Fail-Closed Logic**: All cryptographic and protocol operations must fail closed.
-- **No Mocks in Production**: Implementation stubs or simulated behaviors are strictly prohibited on the `main` branch.
-- **Dependency Integrity**: Only audited or standard industry-vetted dependencies are permitted for core protocol logic.
-- **MuSig2 Compliance**: Key aggregation follows the BIP327 standard for deterministic Taproot compatibility.
-- **BitVM2 Verification**: Groth16 proof verification is performed using standard ark-works curves and verifiers.
-
-## Release Hygiene (CON-218)
-
-- **Versioning**: Adheres to Semantic Versioning (SemVer).
-- **Changelog**: All changes are documented in [`CHANGELOG.md`](./CHANGELOG.md).
-- **Licensing**: Dual-licensed under [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE).
-- **Audit Trails**: Security assessments and audit reports are preserved in `docs/architecture/`.
+Dual-licensed under [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE)
