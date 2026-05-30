@@ -2,22 +2,23 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 0.2.x | ✅ |
+| < 0.2 | ❌ |
 
 ## Reporting a Vulnerability
 
-We take the security of our services seriously. If you believe you've found a security vulnerability in Conxian core libraries or the Gateway, please report it to us as soon as possible.
+Do **not** report vulnerabilities through public GitHub issues.
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+Report privately using one of these channels:
 
-Instead, please send an email to [security@conxian-labs.com](mailto:security@conxian-labs.com).
+1. GitHub private vulnerability reporting for this repository.
+2. Email [security@conxian-labs.com](mailto:security@conxian-labs.com).
 
 Please include:
-- A description of the issue.
-- Steps to reproduce the issue.
-- Potential impact if exploited.
+- a description of the issue
+- reproduction steps or proof of concept
+- likely impact
 
-We will acknowledge receipt of your report within 48 hours and provide a timeline for remediation.
+We aim to acknowledge reports within 48 hours.
