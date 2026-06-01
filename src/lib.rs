@@ -16,10 +16,6 @@ pub mod contract_bridge;
 pub mod control_model;
 pub mod deployment;
 pub mod gateway;
-#[path = "../gateway/src/api/mod.rs"]
-pub mod gateway_api;
-#[path = "../gateway/src/engine/mod.rs"]
-pub mod gateway_engine;
 pub mod musig2;
 pub mod sdk_primitive;
 pub mod wallet;

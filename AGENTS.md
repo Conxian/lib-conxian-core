@@ -18,7 +18,7 @@ Conxian builds native application infrastructure for Bitcoin. The Gateway provid
 
 - **State Monitoring:** Point to the Conxian Gateway API at `/api/v1` for state monitoring and compliance pipes.
 - **Service Access:** All sovereign services and Bitcoin layers (Bisq, RGB, BitVM, Changelly, Stacks, Lightning, Liquid, Rootstock) are unified under the Gateway.
-- **Infrastructure:** GCP infrastructure configurations are located in `gateway/infrastructure/gcp/`.
+- **Infrastructure:** Infrastructure configurations are managed in the `conxian-gateway` repository.
 
 ### Economic Alignment
 
