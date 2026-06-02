@@ -1,48 +1,55 @@
 # lib-conxian-core
 
-![CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)
-
-Shared core libraries and reusable primitives for the Conxian ecosystem.
+Shared protocol primitives and reusable core libraries for the Conxian ecosystem.
 
 ## Purpose
 
-Centralize shared models, APIs, and core logic used by Conxian Gateway and downstream consumers such as platform services, wallet integrations, and tooling.
+Provide shared models, protocol primitives, and reusable core logic consumed by multiple Conxian services and public application surfaces.
 
 ## Status
 
-Active development.
+**Active development (v0.1.0 baseline released).** This repository is a shared library layer and should be treated as reusable infrastructure rather than a top-level product surface.
 
 ## Scope
 
-This repository contains shared technical primitives and common logic. It should not contain company administrative systems, private strategic records, or unrelated product-specific UX logic.
+This repository contains shared core libraries and reusable primitives. It does not own public application UX, company administration, or private operational workflows.
 
 ## Governance relation
 
-This repository is maintained by Conxian Labs as shared infrastructure supporting public Conxian services and applications.
-
-## Audience
-
-- gateway engineers
-- platform developers
-- wallet and integration contributors
-- maintainers working on shared models and observability
+This repository is maintained by Conxian Labs as part of the public Conxian stack. It supports protocol and application layers while governance of the broader protocol evolves toward greater decentralization after mainnet.
 
 ## Relationship to the Conxian stack
 
-- consumed by `conxian-gateway`
-- used by platform services and integrations
-- shared across multiple public repositories where logic should not be duplicated
+- `Conxian` is the protocol core.
+- `conxian-gateway` and `conxian-nexus` consume or align with shared infrastructure concerns.
+- `conxius-wallet` and `conxian_ui` should rely on shared primitives here where cross-repo behavior belongs below the client layer.
+
+## Development
+
+```bash
+cargo build
+cargo test
+```
 
 ## Security
 
-This repository is security-sensitive shared infrastructure. Use [SECURITY.md](SECURITY.md) for reporting guidance.
+Do not disclose vulnerabilities publicly. Use [SECURITY.md](./SECURITY.md) or `security@conxian-labs.com`.
 
-## Release hygiene
+## Policies
 
-- semantic versioning
-- changelog-based releases
-- dual licensing under MIT and Apache 2.0
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [SECURITY.md](./SECURITY.md)
+- [CODEOWNERS](./CODEOWNERS)
+- [CHANGELOG.md](./CHANGELOG.md)
+- [REPO_OWNERSHIP.md](./REPO_OWNERSHIP.md)
+- [LICENSE](./LICENSE)
+
+## Contact
+
+- General: [info@conxian-labs.com](mailto:info@conxian-labs.com)
+- Support: [support@conxian-labs.com](mailto:support@conxian-labs.com)
+- Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
 
 ## License
 
-Dual-licensed under [MIT](./LICENSE-MIT) and [Apache 2.0](./LICENSE-APACHE)
+See [LICENSE](./LICENSE).
