@@ -464,13 +464,12 @@ dependencies = [
 
 [[package]]
 name = "bitcoin"
-version = "0.32.9"
+version = "0.32.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cf93e61f2dbc3e3c41234ca26a65e2c0b0975c52e0f069ab9893ebbede584d3"
+checksum = "39581299241111285f3268ba75ddf372746fd041620918b145c1af9d75e91b6c"
 dependencies = [
  "base58ck",
  "bech32 0.11.1",
- "bitcoin-internals",
  "bitcoin-io",
  "bitcoin-units",
  "bitcoin_hashes 0.14.1",
@@ -485,9 +484,6 @@ name = "bitcoin-internals"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30bdbe14aa07b06e6cfeffc529a1f099e5fbe249524f8125358604df99a4bed2"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bitcoin-io"
@@ -1329,7 +1325,7 @@ dependencies = [
  "ark-serialize",
  "base64 0.22.1",
  "bdk",
- "bitcoin 0.32.9",
+ "bitcoin 0.32.100",
  "getrandom 0.2.17",
  "hex",
  "k256",
@@ -1364,7 +1360,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c90397b635e3ece6b9a723fb470a46cb9b3592f217d72e40540a5fada00289d"
 dependencies = [
  "bech32 0.11.1",
- "bitcoin 0.32.9",
+ "bitcoin 0.32.100",
  "dnssec-prover",
  "hashbrown 0.13.2",
  "libm",
@@ -1381,7 +1377,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b85e5e14bcdb30d746e9785b04f27938292e8944f78f26517e01e91691f6b3f2"
 dependencies = [
  "bech32 0.11.1",
- "bitcoin 0.32.9",
+ "bitcoin 0.32.100",
  "lightning-types",
 ]
 
@@ -1402,7 +1398,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb1aac93f22f2c2eac8a0ee83bb1a1ea58673caa2c82847302710b83364d04e6"
 dependencies = [
- "bitcoin 0.32.9",
+ "bitcoin 0.32.100",
 ]
 
 [[package]]
@@ -1968,9 +1964,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "itoa",
  "memchr",
