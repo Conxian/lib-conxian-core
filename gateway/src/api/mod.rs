@@ -460,12 +460,8 @@ struct PayRequest {
 #[post("/lightning/pay")]
 async fn lightning_pay_handler(
     engine: web::Data<Engine>,
-    http_req: HttpRequest,
     req: web::Json<PayRequest>,
 ) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
     if !Engine::is_mainnet_only() && req.testnet.is_none() {
         return HttpResponse::Forbidden()
             .body("Mainnet-only endpoint. Use testnet flag for non-production validation.");
@@ -746,12 +742,8 @@ struct ErpSyncRequest {
 #[post("/erp/sync")]
 async fn erp_sync_handler(
     engine: web::Data<Engine>,
-    http_req: HttpRequest,
     req: web::Json<ErpSyncRequest>,
 ) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
     if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
         return HttpResponse::Forbidden().body(e);
     }
@@ -804,12 +796,8 @@ fn anchoring_error_response(err: AnchoringError) -> HttpResponse {
 #[post("/state/commit")]
 async fn state_commit_handler(
     engine: web::Data<Engine>,
-    http_req: HttpRequest,
     req: web::Json<StateCommitRequest>,
 ) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
     if let Err(e) = remediation::validate_request(req.testnet.unwrap_or(false)) {
         return HttpResponse::Forbidden().body(e);
     }
@@ -825,60 +813,6 @@ async fn state_commit_handler(
     match engine.commit_state_checkpoint(commit_request) {
         Ok(receipt) => HttpResponse::Ok().json(receipt),
         Err(err) => anchoring_error_response(err),
-    }
-}
-
-/// High-privilege endpoints require this header and env var pairing:
-/// - Header: `X-Gateway-Admin-Key`
-/// - Env var: `GATEWAY_ADMIN_API_KEY`
-///
-/// If the env var is absent/empty, handlers return `503 Service Unavailable`.
-/// If the header is missing or mismatched, handlers return `401 Unauthorized`.
-const GATEWAY_ADMIN_API_KEY_ENV: &str = "GATEWAY_ADMIN_API_KEY";
-const GATEWAY_ADMIN_API_KEY_HEADER: &str = "X-Gateway-Admin-Key";
-
-fn require_admin_auth(req: &HttpRequest) -> Result<(), HttpResponse> {
-    let expected = match std::env::var(GATEWAY_ADMIN_API_KEY_ENV) {
-        Ok(value) => {
-            let trimmed = value.trim();
-            if trimmed.is_empty() {
-                return Err(HttpResponse::ServiceUnavailable().json(serde_json::json!({
-                    "error": "gateway_admin_not_configured",
-                    "message": format!(
-                        "{} must be set to enable administrative APIs",
-                        GATEWAY_ADMIN_API_KEY_ENV
-                    ),
-                })));
-            }
-            trimmed.to_string()
-        }
-        _ => {
-            return Err(HttpResponse::ServiceUnavailable().json(serde_json::json!({
-                "error": "gateway_admin_not_configured",
-                "message": format!(
-                    "{} must be set to enable administrative APIs",
-                    GATEWAY_ADMIN_API_KEY_ENV
-                ),
-            })))
-        }
-    };
-
-    let provided = req
-        .headers()
-        .get(GATEWAY_ADMIN_API_KEY_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .map(str::trim)
-        .filter(|value| !value.is_empty());
-
-    match provided {
-        Some(value) if value == expected => Ok(()),
-        _ => Err(HttpResponse::Unauthorized().json(serde_json::json!({
-            "error": "unauthorized",
-            "message": format!(
-                "Provide {} header matching configured admin key",
-                GATEWAY_ADMIN_API_KEY_HEADER
-            ),
-        }))),
     }
 }
 
@@ -1415,12 +1349,8 @@ async fn settlement_proposals_handler(engine: web::Data<Engine>) -> impl Respond
 #[post("/settlement/proposals/{id}/approve")]
 async fn settlement_proposal_approve_handler(
     engine: web::Data<Engine>,
-    http_req: HttpRequest,
     path: web::Path<String>,
 ) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
     let proposal_id = path.into_inner();
     if engine.approve_proposal(&proposal_id) {
         HttpResponse::Ok().json(serde_json::json!({"status": "Approved"}))
@@ -1433,12 +1363,8 @@ async fn settlement_proposal_approve_handler(
 #[post("/settlement/proposals/{id}/execute")]
 async fn settlement_proposal_execute_handler(
     engine: web::Data<Engine>,
-    http_req: HttpRequest,
     path: web::Path<String>,
 ) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
     let proposal_id = path.into_inner();
     if engine.execute_proposal(&proposal_id) {
         HttpResponse::Ok().json(serde_json::json!({"status": "Executed"}))
@@ -1449,14 +1375,7 @@ async fn settlement_proposal_execute_handler(
 }
 
 #[post("/settlement/iso20022")]
-async fn iso20022_handler(
-    engine: web::Data<Engine>,
-    http_req: HttpRequest,
-    payload: web::Json<Value>,
-) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
+async fn iso20022_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
     if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
         return HttpResponse::Forbidden().body(e);
     }
@@ -1465,14 +1384,7 @@ async fn iso20022_handler(
 }
 
 #[post("/settlement/papss")]
-async fn papss_handler(
-    engine: web::Data<Engine>,
-    http_req: HttpRequest,
-    payload: web::Json<Value>,
-) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
+async fn papss_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
     if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
         return HttpResponse::Forbidden().body(e);
     }
@@ -1481,14 +1393,7 @@ async fn papss_handler(
 }
 
 #[post("/settlement/brics")]
-async fn brics_handler(
-    engine: web::Data<Engine>,
-    http_req: HttpRequest,
-    payload: web::Json<Value>,
-) -> impl Responder {
-    if let Err(auth_err) = require_admin_auth(&http_req) {
-        return auth_err;
-    }
+async fn brics_handler(engine: web::Data<Engine>, payload: web::Json<Value>) -> impl Responder {
     if let Err(e) = remediation::validate_request(payload.get("testnet").is_some()) {
         return HttpResponse::Forbidden().body(e);
     }

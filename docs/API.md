@@ -6,7 +6,7 @@
 All production-facing endpoints (/api/v1/settlement/*, /api/v1/erp/*, /api/v1/state/*) enforce mainnet-only behavior. In production environments (CONXIAN_NETWORK=mainnet), testnet bypasses are strictly prohibited. Non-production environments MUST provide an explicit `testnet` flag in the JSON payload to acknowledge validation state.
 
 ### Administrative Authentication Policy
-High-privilege endpoints (Proposal Approval, Execution, ERP Sync, State Commit, Lightning Payments, and the MCP surface) require administrative authentication via the `X-Gateway-Admin-Key` header. The expected value must be configured in the `GATEWAY_ADMIN_API_KEY` environment variable. If the environment variable is not set, these endpoints will return `503 Service Unavailable`.
+High-privilege endpoints (Proposal Approval, Execution, and the MCP surface) require administrative authentication via the `X-Gateway-Admin-Key` header. The expected value must be configured in the `GATEWAY_ADMIN_API_KEY` environment variable. If the environment variable is not set, these endpoints will return `503 Service Unavailable`.
 
 
 ### GET /api/v1/health

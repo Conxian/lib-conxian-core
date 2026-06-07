@@ -21,7 +21,6 @@
 - Verified `.gitignore` hardening to prevent future leakage of `*.key`, `*.keystore`, and `.env*` files.
 - Version bumped to 0.2.2 to reflect the alignment sweep completion.
 - **2026-05-05 Update:** Implemented mandatory administrative authentication for high-privilege endpoints (Proposal Approval/Execution, MCP) via `X-Gateway-Admin-Key` requirement (CON-420).
-- **2026-06-05 Update:** Explicitly enforced `require_admin_auth` guard in `gateway/src/api/mod.rs` for `settlement_proposal_approve_handler`, `settlement_proposal_execute_handler`, `erp_sync_handler`, `state_commit_handler`, `lightning_pay_handler`, and external settlement handlers (`iso20022`, `papss`, `brics`).
 
 ## 4. Conclusion
 The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards. High-privilege state transition endpoints are now protected by mandatory administrative authentication.
