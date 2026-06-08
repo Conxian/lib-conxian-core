@@ -1,28 +1,30 @@
-# lib-conxian-core
+# lib-conxian-core / Vault SDK
 
-Shared protocol primitives and reusable core libraries for the Conxian ecosystem.
+[![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
+[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](CHANGELOG.md)
+
+Shared protocol primitives and foundational library for the Conxian ecosystem.
 
 ## Purpose
 
-Provide shared models, protocol primitives, and reusable core logic consumed by multiple Conxian services and public application surfaces.
+Provide the **Vault SDK** and reusable protocol primitives for native Bitcoin applications. This library is the primary commercial primitive for the Conxian platform.
+
+## Core Capabilities
+
+- **Vault SDK:** Hardware-backed signing and policy-aware transaction coordination.
+- **Advanced Crypto:** BIP327 MuSig2 key aggregation and BitVM2 proof verification.
+- **Trust Policy:** Explicit enforcement of approved bridge/messaging trust tiers (CON-791).
+- **Control Models:** Canonical data structures for state proposals and ecosystem intake.
 
 ## Status
 
-**Active development (v0.1.0 baseline released).** This repository is a shared library layer and should be treated as reusable infrastructure rather than a top-level product surface.
+**v0.2.5 Stable.** This repository is the strategic core of the Conxian protocol. Runtime implementation for the Unified API and protocol routing has been extracted to the [conxian-gateway](https://github.com/Conxian/conxian-gateway) repository.
 
-## Scope
+## Documentation
 
-This repository contains shared core libraries and reusable primitives. It does not own public application UX, company administration, or private operational workflows.
-
-## Governance relation
-
-This repository is maintained by Conxian Labs as part of the public Conxian stack. It supports protocol and application layers while governance of the broader protocol evolves toward greater decentralization after mainnet.
-
-## Relationship to the Conxian stack
-
-- `Conxian` is the protocol core.
-- `conxian-gateway` and `conxian-nexus` consume or align with shared infrastructure concerns.
-- `conxius-wallet` and `conxian_ui` should rely on shared primitives here where cross-repo behavior belongs below the client layer.
+- **PRD:** [docs/PRD.md](docs/PRD.md)
+- **API Reference:** [docs/API.md](docs/API.md)
+- **Boundaries:** [docs/ARCHITECTURE_BOUNDARIES.md](docs/ARCHITECTURE_BOUNDARIES.md)
 
 ## Development
 
@@ -31,24 +33,13 @@ cargo build
 cargo test
 ```
 
+## Governance
+
+This repository is maintained by Conxian Labs. It provides the public-facing primitives for the Conxian protocol stack.
+
 ## Security
 
-Do not disclose vulnerabilities publicly. Use [SECURITY.md](./SECURITY.md) or `security@conxian-labs.com`.
-
-## Policies
-
-- [CONTRIBUTING.md](./CONTRIBUTING.md)
-- [SECURITY.md](./SECURITY.md)
-- [CODEOWNERS](./CODEOWNERS)
-- [CHANGELOG.md](./CHANGELOG.md)
-- [REPO_OWNERSHIP.md](./REPO_OWNERSHIP.md)
-- [LICENSE](./LICENSE)
-
-## Contact
-
-- General: [info@conxian-labs.com](mailto:info@conxian-labs.com)
-- Support: [support@conxian-labs.com](mailto:support@conxian-labs.com)
-- Security: [security@conxian-labs.com](mailto:security@conxian-labs.com)
+Vulnerability disclosure: [SECURITY.md](./SECURITY.md) or `security@conxian-labs.com`.
 
 ## License
 

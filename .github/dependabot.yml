@@ -9,7 +9,6 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "cargo"
-    directory: "/gateway"
     schedule:
       interval: "weekly"
   - package-ecosystem: "github-actions"

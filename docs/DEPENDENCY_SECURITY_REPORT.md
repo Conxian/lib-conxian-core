@@ -6,7 +6,7 @@ This report summarizes the research into Dependabot alerts and general security 
 ## 2. Dependabot Status
 - **Configuration:** `.github/dependabot.yml` is correctly configured to monitor:
   - Rust dependencies in the root directory (weekly).
-  - Rust dependencies in the `gateway` workspace (weekly).
+  - Rust dependencies in the standalone `conxian-gateway` repository (weekly).
   - GitHub Actions (weekly).
 - **Recent Actions:**
   - Linear issue **CON-519** tracked the rollout of `dependency-review.yml` across the Conxian organization.

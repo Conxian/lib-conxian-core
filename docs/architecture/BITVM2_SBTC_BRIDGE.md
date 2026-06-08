@@ -32,7 +32,7 @@ sBTC provides a decentralized peg for Bitcoin on the Stacks layer, utilizing a 7
 5. Status is updated to **CONFIRMED**.
 
 ## 4. Bridge Orchestration Logic
-The Conxian Gateway acts as the primary orchestrator for these flows, monitoring both Bitcoin and Stacks chains.
+The Conxian Gateway (standalone) acts as the primary orchestrator for these flows, monitoring both Bitcoin and Stacks chains.
 
 ### 4.1. Intent Alignment
 External settlement triggers (ISO 20022, etc.) generate state proposals that are subject to a 144-block timelock, matching the BitVM2 challenge period and sBTC finality requirements.

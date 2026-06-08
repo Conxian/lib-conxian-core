@@ -7,7 +7,7 @@ This document defines the minimum feature set for the reference wallet, designed
 - **Hardware-Backed Signing**: Direct integration with StrongBox TEE for secp256k1 and BIP327 MuSig2.
 - **Policy Enforcement**: Local UI-level validation and display of enforced policies (Allowlists, Max Amount, Timelocks).
 - **Mempool Integration**: Displaying current Bitcoin fee rates and congestion status for transaction planning.
-- **L2 Telemetry**: Simple auditing of L2 block heights and finality status from the Gateway.
+- **L2 Telemetry**: Simple auditing of L2 block heights and finality status from the standalone Gateway.
 
 ## 2. Technical Boundary
 - **Zero-PII Persistence**: No personal information, analytics, or IP addresses are stored.

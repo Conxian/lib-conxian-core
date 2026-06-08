@@ -12,7 +12,7 @@ The Conxian economy is a creator-first, sovereign ecosystem designed to preserve
 
 ### 2.2. Users (Consumers, Spaza shops, Institutional)
 - **Role:** Utilize Conxian services for settlement, payments, and decentralized finance.
-- **Participation:** Using the Gateway to access sovereign services and Bitcoin layers.
+- **Participation:** Using the standalone Conxian Gateway to access sovereign services and Bitcoin layers.
 - **Value Creation:** Providing liquidity, generating transaction fees, and expanding the network effect.
 
 ### 2.3. Agents (AI Agents, Automated Systems)
@@ -29,7 +29,7 @@ The Conxian economy is a creator-first, sovereign ecosystem designed to preserve
 
 ### 3.1. Contribution Paths
 - **Bounties:** Explicit tasks defined by the community or core team with fixed rewards.
-- **Core Development:** Ongoing maintenance and enhancement of the Gateway and protocol libraries.
+- **Core Development:** Ongoing maintenance and enhancement of the protocol and protocol libraries.
 - **Ecosystem Growth:** Creating new sovereign services or integrating additional Bitcoin layers.
 - **Security & Auditing:** Identifying vulnerabilities and providing remediation artifacts.
 

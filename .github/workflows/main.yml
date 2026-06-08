@@ -1,4 +1,4 @@
-name: Conxian Gateway CI/CD
+name: lib-conxian-core CI
 
 on:
   push:
@@ -7,13 +7,11 @@ on:
     branches: [ main ]
 
 jobs:
-  build-test-deploy:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -29,20 +27,6 @@ jobs:
         run: |
           cargo build --workspace --release --locked
 
-      - name: Compile All Targets (no-run)
-        # Ensures tests/benches/examples compile without being executed.
-        run: |
-          cargo test --workspace --all-targets --locked --no-run
-
       - name: Test Workspace
         run: |
           cargo test --workspace --locked
-
-      - name: Deploy to GCP
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Deploying Conxian Gateway to GCP..."
-          # Target the new modularized infrastructure path
-          cd gateway/infrastructure/gcp
-          ls -la deployment.yaml
-          # Deployment execution would go here

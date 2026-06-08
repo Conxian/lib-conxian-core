@@ -1,7 +1,7 @@
-# Enhancement Roadmap: Conxian Gateway Alignment
+# Enhancement Roadmap: lib-conxian-core / Vault SDK Alignment
 
 ## 1. Overview
-The Conxian Gateway provides deep protocol integration and transparent risk metrics aligned with sovereign-first standards.
+The standalone Conxian Gateway provides deep protocol integration and transparent risk metrics aligned with sovereign-first standards.
 
 ## 2. Phase 7: Advanced Risk Metrics & Expanded Layer Support (Audit Complete)
 - **Achievements:**

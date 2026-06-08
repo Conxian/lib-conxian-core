@@ -7,7 +7,7 @@ This document defines the canonical repository and runtime ownership for the Con
 | Layer | Primary Responsibility | Representative Repositories |
 | :--- | :--- | :--- |
 | **Vault SDK & Core** | Signing primitives, policy enforcement, shared models. | `lib-conxian-core` |
-| **Gateway & Routing** | Protocol monitoring, compliance, service ingress. | `conxian-gateway (Extracted)` |
+| **Gateway & Routing** | Protocol monitoring, compliance, service ingress. | `conxian-gateway ` |
 | **Orchestration** | Automation, cross-service workflows, platform logic. | `conxius-platform` |
 | **Reference Client** | User interface, biometric proof, reference signing. | `conxius-wallet`, `Conxian_UI` |
 | **Governance & Ops** | Strategic specs, institutional alignment, business rules. | `conxian-business` |
@@ -21,11 +21,11 @@ This document defines the canonical repository and runtime ownership for the Con
 - **Job Card Schema (CJCS)**: `src/cjcs.rs`
 - **Shared Financial Models**: `src/lib.rs`
 
-### 2.2 Supporting Services (`conxian-gateway (Extracted)`)
-- **Sovereign Service Integration**: `extracted/conxian-gateway/src/engine/mod.rs` (Bisq, RGB, Changelly)
-- **Bitcoin Layer Status**: `extracted/conxian-gateway/src/engine/mod.rs` (Stacks, Liquid, Rootstock, etc.)
-- **Compliance & Risk**: `extracted/conxian-gateway/src/engine/remediation.rs`
-- **MCP Integration**: `extracted/conxian-gateway/src/api/mcp_handler.rs`
+### 2.2 Supporting Services (`conxian-gateway `)
+- **Sovereign Service Integration**: `conxian-gateway repo: src/engine/mod.rs` (Bisq, RGB, Changelly)
+- **Bitcoin Layer Status**: `conxian-gateway repo: src/engine/mod.rs` (Stacks, Liquid, Rootstock, etc.)
+- **Compliance & Risk**: `conxian-gateway repo: src/engine/remediation.rs`
+- **MCP Integration**: `conxian-gateway repo: src/api/mcp_handler.rs`
 
 ### 2.3 External Platform Logic (`conxius-platform`)
 - **Workflow Orchestration**: Cross-service state machine management.

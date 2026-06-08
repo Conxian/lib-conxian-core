@@ -1,6 +1,6 @@
 # Contributing to Conxian
 
-Thank you for your interest in contributing to Conxian! We welcome contributions from the community to help make the Conxian network and its Gateway more secure, efficient, and user-friendly.
+Thank you for your interest in contributing to Conxian! We welcome contributions from the community to help make the Conxian network more secure, efficient, and user-friendly.
 
 ## Code of Conduct
 
@@ -12,7 +12,6 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [Node.js](https://nodejs.org/) (for TypeScript client changes)
 
 ### Local Setup
 
