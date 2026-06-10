@@ -29,6 +29,7 @@ getrandom = { version = "0.2", features = ["js"] }
 rgb-core = "0.12.0"
 rgb-std = "0.12.0-rc.3"
 aluvm = "0.12.0"
+chrono = { version = "0.4.45", features = ["serde"] }
 
 [workspace]
 members = []

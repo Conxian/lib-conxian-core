@@ -8,7 +8,7 @@ This document defines the Service Level Objectives (SLOs) and telemetry standard
 | :--- | :--- | :--- | :--- |
 | **Build Success Rate** | > 99% | 30 Days | Percentage of successful CI builds on `main` and `staged`. |
 | **Test Pass Rate** | 100% | Per Commit | No code is merged with failing unit or integration tests. |
-| **API Availability** | 99.9% | Monthly | Uptime for the Conxian Gateway production endpoints. |
+| **API Availability** | 99.9% | Monthly | Uptime for the Conxian Gateway (standalone) production endpoints. |
 | **Audit Readiness** | 100% | Continuous | All P0 code must have a corresponding audit trail or PR review. |
 
 ## 2. Delivery SLOs
@@ -22,7 +22,7 @@ This document defines the Service Level Objectives (SLOs) and telemetry standard
 ## 3. Telemetry Baseline
 
 ### 3.1 Metrics (Prometheus/OpenTelemetry)
-- **Gateway Health**: `/api/v1/health` (Liveness/Readiness).
+- **standalone Gateway Health**: `/api/v1/health` (Liveness/Readiness).
 - **Latency**: Per-service request latency (Bisq, RGB, Stacks, etc.).
 - **Throughput**: Requests per second (RPS) per endpoint.
 - **Risk Gauges**: Real-time evaluation of protocol bridge health.
@@ -33,5 +33,5 @@ This document defines the Service Level Objectives (SLOs) and telemetry standard
 - **Audit Logs**: TEE-verified state changes and financial intents.
 
 ### 3.3 Alerting
-- **Critical**: Gateway unreachable, MuSig2 aggregation failure, BitVM2 fraud proof detected.
+- **Critical**: standalone Gateway unreachable, MuSig2 aggregation failure, BitVM2 fraud proof detected.
 - **Warning**: TVL drift, high latency (> 500ms), Hiro API connectivity issues.

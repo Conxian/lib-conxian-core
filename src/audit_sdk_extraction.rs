@@ -17,10 +17,10 @@
 //!
 //! ### 2.3 Chain Adapters
 //! Chain-specific logic is isolated in `src/bitcoin/`, `src/stacks/`, and `src/lightning/`.
-//! - **Viability:** MEDIUM. Some coupling exists in `gateway/src/engine/mod.rs` which should be moved to the SDK core if it's to be reusable.
+//! - **Viability:** MEDIUM. Some coupling exists in `core primitives` which should be moved to the SDK core if it's to be reusable.
 //!
 //! ## 3. Risks & Recommendations
-//! - **Risk:** UI/UX logic is currently out of scope for this repository, which is good. However, the Gateway Engine (`gateway/src/engine/mod.rs`) contains significant orchestration logic that should be partially moved to the SDK to allow third-party integrators to use the same "Sovereign Handshake" flows.
+//! - **Risk:** UI/UX logic is currently out of scope for this repository, which is good. However, the Gateway Engine (`core primitives`) contains significant orchestration logic that should be partially moved to the SDK to allow third-party integrators to use the same "Sovereign Handshake" flows.
 //! - **Recommendation:** Formalize the `VaultSDK` as the primary entry point for all library consumers, deprecating direct use of `Wallet` where policy enforcement is required.
 //!
 //! ## 4. Conclusion

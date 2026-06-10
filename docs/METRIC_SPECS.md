@@ -27,7 +27,7 @@
 - **Formula:** $A_S = \frac{\text{Automated Events}}{\text{Total Operational Events}}$
 - **Goal:** Maximize programmatic independence.
 - **Owner:** Infrastructure / SRE
-- **Data Source:** Gateway Telemetry + BOS logs
+- **Data Source:** standalone Gateway Telemetry + BOS logs
 - **Refresh Cadence:** Monthly
 
 ### $N_E$ (Network Effects)
@@ -39,7 +39,7 @@
 
 ## 2. Data Contracts & Dependencies
 
-- **Contract CX-001:** All operational data for $A_S$ must be exposed via the Gateway `/api/v1/metrics` endpoint in Prometheus-compatible format.
+- **Contract CX-001:** All operational data for $A_S$ must be exposed via the standalone Gateway `/api/v1/metrics` endpoint in Prometheus-compatible format.
 - **Contract CX-002:** Velocity tracking requires all development tasks to be tagged with `AI-Assisted` or `Manual` in Linear for $V_X$ calculation.
 - **Dependency D-001:** $N_E$ reporting depends on successful ERP sync completion as defined in the Institutional Alignment row.
 

@@ -1,21 +1,11 @@
 # GCP Infrastructure Documentation
 
-## Deployment Topology
-The Conxian network infrastructure has been migrated to a modular submodule architecture centered around the **Conxian Gateway**.
+## Strategic Extraction
+The Conxian network infrastructure and deployment logic have been fully extracted to the standalone **conxian-gateway** repository. This repository (`lib-conxian-core`) no longer contains infrastructure or deployment artifacts.
 
-### Unified Entry Point
-The Gateway serves as the single unified network entry point for all sovereign services and Bitcoin Layer 2s:
-- **Sovereign Services:** Bisq, RGB, BitVM, Changelly
-- **Bitcoin Layers:** Stacks, Lightning Network, Liquid, Rootstock
+### Repository Reference
+All GCP infrastructure code, Kubernetes manifests, and deployment pipelines are now managed at:
+[https://github.com/Conxian/conxian-gateway](https://github.com/Conxian/conxian-gateway)
 
-### Modular Infrastructure
-GCP infrastructure code is no longer located at the root level. It is now modularized within the `gateway/` submodule to ensure audit-readiness and centralized logic.
-
-**Path**: `gateway/infrastructure/gcp/`
-
-### Network Routing
-All service requests are routed through `/api/v1/...` endpoints managed by the Gateway binary. The infrastructure supports high availability with multiple replicas and automated health monitoring via Kubernetes probes.
-
-### Monitoring & Metrics
-- **Health Probes:** Liveness and readiness probes are configured at `/api/v1/health`.
-- **Metrics:** Prometheus-compatible metrics are exposed at `/api/v1/metrics`.
+### Legacy Path
+The previous path `gateway/infrastructure/gcp/` has been removed from this repository to enforce architectural boundaries (CON-700).

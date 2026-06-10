@@ -57,4 +57,4 @@ To maintain the integrity of the Conxian ecosystem, the following Service Level 
 | **Audit Exception Expiry** | 5 Days Before | On/Before Expiry | Exception Owner |
 
 ### 5.1 Enforcement
-Failure to meet these SLOs triggers an automated escalation to the Office of the Founder (CON-286) and blocks further mainnet state transitions in the Gateway.
+Failure to meet these SLOs triggers an automated escalation to the Office of the Founder (CON-286) and blocks further mainnet state transitions in the standalone Gateway.

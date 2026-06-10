@@ -16,8 +16,8 @@
 //! ### 2.3 BitVM2 (`src/bitvm2.rs`)
 //! - **Segment Script Hashes**: Uses `sha256:hash-{}-{}` format as placeholders for on-chain scripts. These must be replaced with actual script hashes once the BitVM2 circuit is finalized. **STATUS: PENDING CIRCUIT FINALIZATION**.
 //!
-//! ### 2.4 Gateway Engine (`gateway/src/engine/mod.rs`)
-//! - **Mainnet Guards**: The `remediation::is_production_mainnet()` guard correctly blocks simulated TVL, block heights, and prices in production.
+//! ### 2.4 Extracted Gateway
+//! - **Mainnet Guards**: The standalone Gateway correctly blocks simulated TVL, block heights, and prices in production.
 //! - **Connection Required**: Endpoints for Liquid and Rootstock enforce `ConnectionRequired` status if RPC is not available in mainnet mode. **STATUS: FAIL-CLOSED (SAFE)**.
 //!
 //! ## 3. Recommendations

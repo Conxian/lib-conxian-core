@@ -23,10 +23,10 @@ This document clarifies ownership and responsibility boundaries between core lib
 
 **Constraints**:
 - Must NOT contain hardware-specific or enclave-specific implementation logic.
-- Must NOT contain provider-specific gateway runtime logic, transport clients, or persistence adapters.
+- Must NOT contain provider-specific standalone gateway runtime logic, transport clients, or persistence adapters.
 - May define interfaces/traits for integration points, but runtime implementations stay outside core.
 - Must remain platform-agnostic and audit-ready.
-- Must avoid "dumping ground" growth: if behavior depends on environment, tenancy, provider APIs, or workflow orchestration, it belongs to Gateway/Platform.
+- Must avoid "dumping ground" growth: if behavior depends on environment, tenancy, provider APIs, or workflow orchestration, it belongs to standalone Conxian Gateway/Platform.
 
 ## 2. Secure Enclave SDK (`lib-conclave-sdk`)
 
@@ -42,7 +42,7 @@ This document clarifies ownership and responsibility boundaries between core lib
 - Depends on `lib-conxian-core` for data models and protocol rules.
 - Contains the "How" of secure execution, while Core contains the "What".
 
-## 3. Unified Gateway (`conxian-gateway`)
+## 3. Unified standalone Conxian Gateway (`conxian-gateway`)
 
 **Role**: Single entry point for sovereign services and protocol routing.
 
@@ -55,16 +55,16 @@ This document clarifies ownership and responsibility boundaries between core lib
 
 ## 4. Interaction Map
 
-1. **Gateway** uses **lib-conxian-core** for state and control-model types.
-2. **Gateway** implements runtime adapters and provider workflows against core traits.
+1. **standalone Conxian Gateway** uses **lib-conxian-core** for state and control-model types.
+2. **standalone Conxian Gateway** implements runtime adapters and provider workflows against core traits.
 3. **Wallet** uses **lib-conclave-sdk** for enclave-anchored signing.
 4. **lib-conclave-sdk** uses **lib-conxian-core** to ensure signed intents align with protocol rules.
 
-## 5. Core-vs-Gateway guardrail (CON-700)
+## 5. Core-vs-standalone Conxian Gateway guardrail (CON-700)
 
 Use this decision rule when adding new capability:
 
 - **Core (`lib-conxian-core`)**: canonical types, state machines, invariant validation, and interface contracts.
-- **Gateway (`conxian-gateway`)**: runtime orchestration, persistence, provider integrations, retries, observability, and external side effects.
+- **standalone Conxian Gateway (`conxian-gateway`)**: runtime orchestration, persistence, provider integrations, retries, observability, and external side effects.
 
 If a change needs network IO, database access, deployment/environment configuration, or provider-specific branching, it should not land in core.
