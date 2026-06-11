@@ -25,6 +25,7 @@ pub mod bitcoin;
 pub mod crypto;
 pub mod enclave;
 pub mod lightning;
+pub mod audit_lightning;
 pub mod rgb;
 pub mod stacks;
 #[cfg(test)]
