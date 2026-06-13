@@ -879,7 +879,7 @@ mod universal_chain_tests {
 
     #[test]
     fn test_chain_family_variants() {
-        let families = vec![
+        let families = [
             ChainFamily::BitcoinUtxo,
             ChainFamily::Evm,
             ChainFamily::CosmosIbc,
@@ -892,7 +892,7 @@ mod universal_chain_tests {
 
     #[test]
     fn test_bridge_system_expansion() {
-        let systems = vec![
+        let systems = [
             BridgeSystem::ChainlinkCcip,
             BridgeSystem::NearChainSignatures,
             BridgeSystem::CircleCctp,
@@ -903,7 +903,7 @@ mod universal_chain_tests {
 
     #[test]
     fn test_chain_enum_variants() {
-        let chains = vec![
+        let chains = [
             Chain::Babylon,
             Chain::Bob,
             Chain::Mezo,
