@@ -510,7 +510,7 @@ pub struct RailOperationalCapabilities {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RailMetadata {
-    pub rail_family: String,
+    pub rail_family: ChainFamily,
     pub trust_assumptions: RailTrustAssumptions,
     pub finality_semantics: RailFinalitySemantics,
     pub custody_model: RailCustodyModel,
@@ -623,11 +623,47 @@ pub enum BitcoinFeeBumpAction {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Chain {
+    Bitcoin,
+    Stacks,
+    Liquid,
+    Lightning,
+    Babylon,
+    Bob,
+    Mezo,
+    Citrea,
+    Botanix,
+    Ethereum,
+    Base,
+    Arbitrum,
+    Optimism,
+    Polygon,
+}
+
 pub enum BitcoinFeeBumpReason {
     PolicyAged,
     PolicyStuck,
     ManualIntervention,
     NetworkCongestion,
+}
+
+/// Tier 1, 2, and 3 chain families for universal support (ADR-006).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ChainFamily {
+    /// Bitcoin/UTXO: Native, Stacks, Liquid, Babylon, BOB, Mezo.
+    BitcoinUtxo,
+    /// EVM: Ethereum, Base, Arbitrum, Optimism, Polygon, Botanix.
+    Evm,
+    /// Cosmos/IBC: Cosmos Hub, Osmosis, Celestia.
+    CosmosIbc,
+    /// Solana/SVM: Solana, Eclipse.
+    SolanaSvm,
+    /// Move: Sui, Aptos.
+    Move,
+    /// Substrate: Polkadot, Kusama.
+    Substrate,
 }
 
 /// Approved bridge and messaging trust tiers (CON-791).
@@ -663,6 +699,7 @@ pub enum VerificationClass {
     AppDefinedMultiVerifier,
     SharedPos,
     NativeObservation,
+    ZkVerified,
 }
 
 /// Finality guarantees for cross-chain messages.
@@ -692,6 +729,10 @@ pub enum BridgeSystem {
     Hyperlane,
     LayerZeroV2,
     Axelar,
+    ChainlinkCcip,
+    NearChainSignatures,
+    CircleCctp,
+    NexusZkVM,
 }
 
 /// Canonical proof envelope for cross-chain operations (CON-791/CON-799).
@@ -811,4 +852,47 @@ pub struct FinancialMetrics {
     pub churn_rate_pct: f64,
     pub protocol_fees_collected_usd: f64,
     pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+#[cfg(test)]
+mod universal_chain_tests {
+    use super::*;
+
+    #[test]
+    fn test_chain_family_variants() {
+        let families = vec![
+            ChainFamily::BitcoinUtxo,
+            ChainFamily::Evm,
+            ChainFamily::CosmosIbc,
+            ChainFamily::SolanaSvm,
+            ChainFamily::Move,
+            ChainFamily::Substrate,
+        ];
+        assert_eq!(families.len(), 6);
+    }
+
+    #[test]
+    fn test_bridge_system_expansion() {
+        let systems = vec![
+            BridgeSystem::ChainlinkCcip,
+            BridgeSystem::NearChainSignatures,
+            BridgeSystem::CircleCctp,
+            BridgeSystem::NexusZkVM,
+        ];
+        assert_eq!(systems.len(), 4);
+    }
+
+    #[test]
+    fn test_chain_enum_variants() {
+        let chains = vec![
+            Chain::Babylon,
+            Chain::Bob,
+            Chain::Mezo,
+            Chain::Citrea,
+            Chain::Botanix,
+            Chain::Ethereum,
+            Chain::Base,
+        ];
+        assert!(chains.len() >= 7);
+    }
 }
