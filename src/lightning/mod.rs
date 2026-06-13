@@ -127,10 +127,7 @@ impl LightningNode {
 }
 
 /// Validates whether a Lightning payment state transition is allowed (SRL-1).
-pub fn is_valid_payment_transition(
-    from: LightningPaymentState,
-    to: LightningPaymentState,
-) -> bool {
+pub fn is_valid_payment_transition(from: LightningPaymentState, to: LightningPaymentState) -> bool {
     use LightningPaymentState::*;
     match (from, to) {
         (IntentAccepted, PolicyValidated) => true,
@@ -250,7 +247,13 @@ mod additional_tests {
 
     #[test]
     fn test_failure_taxonomy() {
-        assert_eq!(LightningFailureClass::Permanent.clone(), LightningFailureClass::Permanent);
-        assert_ne!(LightningFailureClass::Transient, LightningFailureClass::Indeterminate);
+        assert_eq!(
+            LightningFailureClass::Permanent.clone(),
+            LightningFailureClass::Permanent
+        );
+        assert_ne!(
+            LightningFailureClass::Transient,
+            LightningFailureClass::Indeterminate
+        );
     }
 }

@@ -510,7 +510,7 @@ pub struct RailOperationalCapabilities {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RailMetadata {
-    pub rail_family: String,
+    pub rail_family: ChainFamily,
     pub trust_assumptions: RailTrustAssumptions,
     pub finality_semantics: RailFinalitySemantics,
     pub custody_model: RailCustodyModel,
@@ -623,11 +623,47 @@ pub enum BitcoinFeeBumpAction {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Chain {
+    Bitcoin,
+    Stacks,
+    Liquid,
+    Lightning,
+    Babylon,
+    Bob,
+    Mezo,
+    Citrea,
+    Botanix,
+    Ethereum,
+    Base,
+    Arbitrum,
+    Optimism,
+    Polygon,
+}
+
 pub enum BitcoinFeeBumpReason {
     PolicyAged,
     PolicyStuck,
     ManualIntervention,
     NetworkCongestion,
+}
+
+/// Tier 1, 2, and 3 chain families for universal support (ADR-006).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ChainFamily {
+    /// Bitcoin/UTXO: Native, Stacks, Liquid, Babylon, BOB, Mezo.
+    BitcoinUtxo,
+    /// EVM: Ethereum, Base, Arbitrum, Optimism, Polygon, Botanix.
+    Evm,
+    /// Cosmos/IBC: Cosmos Hub, Osmosis, Celestia.
+    CosmosIbc,
+    /// Solana/SVM: Solana, Eclipse.
+    SolanaSvm,
+    /// Move: Sui, Aptos.
+    Move,
+    /// Substrate: Polkadot, Kusama.
+    Substrate,
 }
 
 /// Approved bridge and messaging trust tiers (CON-791).
@@ -646,7 +682,10 @@ pub enum TrustTier {
 
 impl TrustTier {
     pub fn is_production_allowed(&self) -> bool {
-        matches!(self, TrustTier::Strict | TrustTier::Managed | TrustTier::Expedient)
+        matches!(
+            self,
+            TrustTier::Strict | TrustTier::Managed | TrustTier::Expedient
+        )
     }
 
     pub fn requires_light_client(&self) -> bool {
@@ -663,6 +702,7 @@ pub enum VerificationClass {
     AppDefinedMultiVerifier,
     SharedPos,
     NativeObservation,
+    ZkVerified,
 }
 
 /// Finality guarantees for cross-chain messages.
@@ -692,6 +732,10 @@ pub enum BridgeSystem {
     Hyperlane,
     LayerZeroV2,
     Axelar,
+    ChainlinkCcip,
+    NearChainSignatures,
+    CircleCctp,
+    NexusZkVM,
 }
 
 /// Canonical proof envelope for cross-chain operations (CON-791/CON-799).
@@ -721,7 +765,10 @@ pub fn validate_trust_tier_policy(
     verification: VerificationClass,
 ) -> Result<(), String> {
     if !tier.is_production_allowed() {
-        return Err(format!("Trust tier {:?} is not allowed in production", tier));
+        return Err(format!(
+            "Trust tier {:?} is not allowed in production",
+            tier
+        ));
     }
 
     if tier.requires_light_client() && verification != VerificationClass::LightClient {
@@ -748,10 +795,22 @@ mod trust_policy_tests {
 
     #[test]
     fn test_validate_trust_tier_policy() {
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum).is_err());
-        assert!(validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::ObserverOnly, VerificationClass::NativeObservation).is_err());
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum)
+                .is_err()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum)
+                .is_ok()
+        );
+        assert!(validate_trust_tier_policy(
+            TrustTier::ObserverOnly,
+            VerificationClass::NativeObservation
+        )
+        .is_err());
     }
 }
 
@@ -788,7 +847,8 @@ pub struct ReserveAsset {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PriceInfo { // f64 does not implement Eq
+pub struct PriceInfo {
+    // f64 does not implement Eq
     pub asset: String,
     pub price_usd: f64,
     pub last_updated: chrono::DateTime<chrono::Utc>,
@@ -811,4 +871,47 @@ pub struct FinancialMetrics {
     pub churn_rate_pct: f64,
     pub protocol_fees_collected_usd: f64,
     pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+#[cfg(test)]
+mod universal_chain_tests {
+    use super::*;
+
+    #[test]
+    fn test_chain_family_variants() {
+        let families = [
+            ChainFamily::BitcoinUtxo,
+            ChainFamily::Evm,
+            ChainFamily::CosmosIbc,
+            ChainFamily::SolanaSvm,
+            ChainFamily::Move,
+            ChainFamily::Substrate,
+        ];
+        assert_eq!(families.len(), 6);
+    }
+
+    #[test]
+    fn test_bridge_system_expansion() {
+        let systems = [
+            BridgeSystem::ChainlinkCcip,
+            BridgeSystem::NearChainSignatures,
+            BridgeSystem::CircleCctp,
+            BridgeSystem::NexusZkVM,
+        ];
+        assert_eq!(systems.len(), 4);
+    }
+
+    #[test]
+    fn test_chain_enum_variants() {
+        let chains = [
+            Chain::Babylon,
+            Chain::Bob,
+            Chain::Mezo,
+            Chain::Citrea,
+            Chain::Botanix,
+            Chain::Ethereum,
+            Chain::Base,
+        ];
+        assert!(chains.len() >= 7);
+    }
 }

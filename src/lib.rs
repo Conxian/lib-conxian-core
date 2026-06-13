@@ -8,24 +8,24 @@
 //! 2. **Protocol Primitives (Internal Core)**: Modules like `musig2`, `bitvm2`, and chain adapters
 //!    provide the low-level logic required for Bitcoin-anchored orchestration.
 
+pub mod anchoring;
 mod audit_fail_safe;
 mod audit_sdk_extraction;
 pub mod bitvm2;
 pub mod cjcs;
 pub mod contract_bridge;
 pub mod control_model;
-pub mod anchoring;
 pub mod deployment;
 pub mod musig2;
 pub mod sdk_primitive;
 pub mod wallet;
 
 // CXIP 20 Modular Architecture
+pub mod audit_lightning;
 pub mod bitcoin;
 pub mod crypto;
 pub mod enclave;
 pub mod lightning;
-pub mod audit_lightning;
 pub mod rgb;
 pub mod stacks;
 #[cfg(test)]
