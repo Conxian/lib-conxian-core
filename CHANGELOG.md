@@ -4,6 +4,7 @@ All notable changes to the lib-conxian-core project will be documented in this f
 
 
 ## [0.2.5] - 2026-05-27
+- Defined SDK ownership and version policy (CON-1178).
 ### Added
 - Restored Unified Theory of Sovereign Enterprise v2.0 (CON-684).
 - Established execution-ready metric specifications and data contracts for CR, OC, VX, AS, and NE (CON-682).
