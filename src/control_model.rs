@@ -916,7 +916,7 @@ mod universal_chain_tests {
     }
 }
 
-/// --- Control Plane Modules (CON-773) ---
+// --- Control Plane Modules (CON-773) ---
 
 /// Release governance models for tracking and approving protocol releases.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1028,36 +1028,52 @@ pub struct ConfigRegistryEntry {
 pub fn validate_release_transition(from: &ReleaseStatus, to: &ReleaseStatus) -> Result<(), String> {
     let valid = matches!(
         (from, to),
-        (ReleaseStatus::Proposed, ReleaseStatus::InReview) |
-        (ReleaseStatus::Proposed, ReleaseStatus::Revoked) |
-        (ReleaseStatus::InReview, ReleaseStatus::Approved) |
-        (ReleaseStatus::InReview, ReleaseStatus::Rejected) |
-        (ReleaseStatus::InReview, ReleaseStatus::Revoked) |
-        (ReleaseStatus::Approved, ReleaseStatus::Released) |
-        (ReleaseStatus::Approved, ReleaseStatus::Revoked) |
-        (ReleaseStatus::Released, ReleaseStatus::Deprecated) |
-        (ReleaseStatus::Released, ReleaseStatus::Revoked)
+        (ReleaseStatus::Proposed, ReleaseStatus::InReview)
+            | (ReleaseStatus::Proposed, ReleaseStatus::Revoked)
+            | (ReleaseStatus::InReview, ReleaseStatus::Approved)
+            | (ReleaseStatus::InReview, ReleaseStatus::Rejected)
+            | (ReleaseStatus::InReview, ReleaseStatus::Revoked)
+            | (ReleaseStatus::Approved, ReleaseStatus::Released)
+            | (ReleaseStatus::Approved, ReleaseStatus::Revoked)
+            | (ReleaseStatus::Released, ReleaseStatus::Deprecated)
+            | (ReleaseStatus::Released, ReleaseStatus::Revoked)
     );
 
     if valid {
         Ok(())
     } else {
-        Err(format!("Invalid release transition: {:?} -> {:?}", from, to))
+        Err(format!(
+            "Invalid release transition: {:?} -> {:?}",
+            from, to
+        ))
     }
 }
 
-pub fn validate_policy_approval_transition(from: &PolicyApprovalStatus, to: &PolicyApprovalStatus) -> Result<(), String> {
+pub fn validate_policy_approval_transition(
+    from: &PolicyApprovalStatus,
+    to: &PolicyApprovalStatus,
+) -> Result<(), String> {
     let valid = matches!(
         (from, to),
-        (PolicyApprovalStatus::Pending, PolicyApprovalStatus::Approved) |
-        (PolicyApprovalStatus::Pending, PolicyApprovalStatus::Rejected) |
-        (PolicyApprovalStatus::Approved, PolicyApprovalStatus::Implemented)
+        (
+            PolicyApprovalStatus::Pending,
+            PolicyApprovalStatus::Approved
+        ) | (
+            PolicyApprovalStatus::Pending,
+            PolicyApprovalStatus::Rejected
+        ) | (
+            PolicyApprovalStatus::Approved,
+            PolicyApprovalStatus::Implemented
+        )
     );
 
     if valid {
         Ok(())
     } else {
-        Err(format!("Invalid policy approval transition: {:?} -> {:?}", from, to))
+        Err(format!(
+            "Invalid policy approval transition: {:?} -> {:?}",
+            from, to
+        ))
     }
 }
 
@@ -1067,16 +1083,36 @@ mod control_plane_tests {
 
     #[test]
     fn test_release_status_transitions() {
-        assert!(validate_release_transition(&ReleaseStatus::Proposed, &ReleaseStatus::InReview).is_ok());
-        assert!(validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Deprecated).is_ok());
-        assert!(validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Approved).is_err());
+        assert!(
+            validate_release_transition(&ReleaseStatus::Proposed, &ReleaseStatus::InReview).is_ok()
+        );
+        assert!(
+            validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Deprecated)
+                .is_ok()
+        );
+        assert!(
+            validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Approved)
+                .is_err()
+        );
     }
 
     #[test]
     fn test_policy_approval_transitions() {
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Pending, &PolicyApprovalStatus::Approved).is_ok());
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Approved, &PolicyApprovalStatus::Implemented).is_ok());
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Implemented, &PolicyApprovalStatus::Pending).is_err());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Pending,
+            &PolicyApprovalStatus::Approved
+        )
+        .is_ok());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Approved,
+            &PolicyApprovalStatus::Implemented
+        )
+        .is_ok());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Implemented,
+            &PolicyApprovalStatus::Pending
+        )
+        .is_err());
     }
 
     #[test]
