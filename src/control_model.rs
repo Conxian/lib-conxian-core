@@ -682,7 +682,10 @@ pub enum TrustTier {
 
 impl TrustTier {
     pub fn is_production_allowed(&self) -> bool {
-        matches!(self, TrustTier::Strict | TrustTier::Managed | TrustTier::Expedient)
+        matches!(
+            self,
+            TrustTier::Strict | TrustTier::Managed | TrustTier::Expedient
+        )
     }
 
     pub fn requires_light_client(&self) -> bool {
@@ -762,7 +765,10 @@ pub fn validate_trust_tier_policy(
     verification: VerificationClass,
 ) -> Result<(), String> {
     if !tier.is_production_allowed() {
-        return Err(format!("Trust tier {:?} is not allowed in production", tier));
+        return Err(format!(
+            "Trust tier {:?} is not allowed in production",
+            tier
+        ));
     }
 
     if tier.requires_light_client() && verification != VerificationClass::LightClient {
@@ -789,10 +795,22 @@ mod trust_policy_tests {
 
     #[test]
     fn test_validate_trust_tier_policy() {
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum).is_err());
-        assert!(validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::ObserverOnly, VerificationClass::NativeObservation).is_err());
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum)
+                .is_err()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum)
+                .is_ok()
+        );
+        assert!(validate_trust_tier_policy(
+            TrustTier::ObserverOnly,
+            VerificationClass::NativeObservation
+        )
+        .is_err());
     }
 }
 
@@ -829,7 +847,8 @@ pub struct ReserveAsset {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PriceInfo { // f64 does not implement Eq
+pub struct PriceInfo {
+    // f64 does not implement Eq
     pub asset: String,
     pub price_usd: f64,
     pub last_updated: chrono::DateTime<chrono::Utc>,
