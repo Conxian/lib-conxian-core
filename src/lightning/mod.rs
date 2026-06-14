@@ -105,7 +105,10 @@ pub struct LightningMetrics {
 /// This trait defines the expected behavior for any production-grade Lightning backend.
 pub trait LightningAdapter {
     /// Dispatches a payment intent to the Lightning network.
-    fn dispatch_payment(&self, intent: LightningPaymentIntent) -> Result<LightningPaymentEvent, LightningError>;
+    fn dispatch_payment(
+        &self,
+        intent: LightningPaymentIntent,
+    ) -> Result<LightningPaymentEvent, LightningError>;
 
     /// Reconciles the state of a payment that was previously Indeterminate.
     fn reconcile_payment(&self, payment_id: &str) -> Result<LightningPaymentState, LightningError>;
