@@ -70,7 +70,9 @@ mod cxip20_architecture_tests {
     #[test]
     fn test_stacks_nakamoto_sbtc() {
         assert!(StacksNakamoto::verify_bitcoin_finality(1));
-        let bridge = SBTCBridge::new(); use crate::stacks::StacksAdapter; assert!(bridge.initiate_peg_in(100000, "btc_txid").is_ok());
+        let bridge = SBTCBridge::new();
+        use crate::stacks::StacksAdapter;
+        assert!(bridge.initiate_peg_in(100000, "btc_txid").is_ok());
         assert!(bridge.initiate_peg_out(100000, "ST...").is_ok());
     }
 

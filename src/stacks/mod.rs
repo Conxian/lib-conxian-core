@@ -66,7 +66,11 @@ pub trait StacksAdapter {
     fn initiate_peg_in(&self, amount_sats: u64, btc_txid: &str) -> Result<SBTCIntent, StacksError>;
 
     /// Initiates a peg-out (sBTC -> BTC)
-    fn initiate_peg_out(&self, amount_sats: u64, stacks_address: &str) -> Result<SBTCIntent, StacksError>;
+    fn initiate_peg_out(
+        &self,
+        amount_sats: u64,
+        stacks_address: &str,
+    ) -> Result<SBTCIntent, StacksError>;
 
     /// Verifies the status of an ongoing peg-in/out
     fn get_status(&self, intent_id: &str) -> Result<SBTCState, StacksError>;
@@ -96,7 +100,11 @@ impl StacksAdapter for SBTCBridge {
         })
     }
 
-    fn initiate_peg_out(&self, amount_sats: u64, stacks_address: &str) -> Result<SBTCIntent, StacksError> {
+    fn initiate_peg_out(
+        &self,
+        amount_sats: u64,
+        stacks_address: &str,
+    ) -> Result<SBTCIntent, StacksError> {
         if stacks_address.is_empty() {
             return Err(StacksError::InvalidAddress);
         }
