@@ -89,6 +89,31 @@ pub struct LightningPaymentEvent {
     pub occurred_at_epoch_ms: u64,
 }
 
+/// Observability metrics for Lightning operations (SRL-9).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LightningMetrics {
+    pub channel_count: u32,
+    pub total_capacity_msat: u64,
+    pub local_balance_msat: u64,
+    pub pending_inbound_msat: u64,
+    pub pending_outbound_msat: u64,
+    pub payment_success_rate: f32,
+    pub avg_routing_fee_msat: u64,
+}
+
+/// Core interface for the Lightning Adapter (SRL-10).
+/// This trait defines the expected behavior for any production-grade Lightning backend.
+pub trait LightningAdapter {
+    /// Dispatches a payment intent to the Lightning network.
+    fn dispatch_payment(&self, intent: LightningPaymentIntent) -> Result<LightningPaymentEvent, LightningError>;
+
+    /// Reconciles the state of a payment that was previously Indeterminate.
+    fn reconcile_payment(&self, payment_id: &str) -> Result<LightningPaymentState, LightningError>;
+
+    /// Returns current health and liquidity metrics for the node.
+    fn get_metrics(&self) -> Result<LightningMetrics, LightningError>;
+}
+
 impl LightningNode {
     /// BOLT 12 Offers (Section 5.2)
     pub fn create_bolt12_offer(
@@ -255,5 +280,21 @@ mod additional_tests {
             LightningFailureClass::Transient,
             LightningFailureClass::Indeterminate
         );
+    }
+
+    #[test]
+    fn test_metrics_serialization() {
+        let metrics = LightningMetrics {
+            channel_count: 5,
+            total_capacity_msat: 100000000,
+            local_balance_msat: 50000000,
+            pending_inbound_msat: 1000000,
+            pending_outbound_msat: 2000000,
+            payment_success_rate: 0.98,
+            avg_routing_fee_msat: 150,
+        };
+        let json = serde_json::to_string(&metrics).unwrap();
+        assert!(json.contains("channel_count"));
+        assert!(json.contains("0.98"));
     }
 }

@@ -1,7 +1,7 @@
 # lib-conxian-core / Vault SDK
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](docs/governance/CHANGELOG.md)
 
 Shared protocol primitives and foundational library for the Conxian ecosystem.
 
@@ -39,7 +39,7 @@ This repository is maintained by Conxian Labs. It provides the public-facing pri
 
 ## Security
 
-Vulnerability disclosure: [SECURITY.md](./SECURITY.md) or `security@conxian-labs.com`.
+Vulnerability disclosure: [SECURITY.md](docs/governance/SECURITY.md) or `security@conxian-labs.com`.
 
 ## License
 

@@ -7,8 +7,15 @@ This library provides the Rust-native API for Conxian protocol primitives. It is
 
 ### Vault SDK (`sdk_primitive`)
 The primary interface for hardware-anchored signing and policy enforcement.
-- `VaultSDK::new(policy: SigningPolicy)`: Initializes a new SDK instance.
-- `VaultSDK::sign_intent(intent: FinancialIntent)`: Validates and signs a cross-chain intent.
+- `VaultSDK::new(wallet: Wallet, policy: SigningPolicy)`: Initializes a new SDK instance.
+- `VaultSDK::sign_with_policy(tx_id: &str, amount_sats: u64, destination: &str)`: Validates and signs a transaction after policy verification.
+
+### Lightning (`lightning`)
+Resilience and recovery models for Lightning operations.
+- `LightningPaymentState`: Canonical payment lifecycle states (SRL-1).
+- `LightningFailureClass`: Taxonomy for failure handling and retries (SRL-7).
+- `LightningMetrics`: Observability data for node health and liquidity (SRL-9).
+- `LightningAdapter`: Core interface for production-grade backends (SRL-10).
 
 ### Control Model (`control_model`)
 Canonical types for protocol orchestration and trust.
