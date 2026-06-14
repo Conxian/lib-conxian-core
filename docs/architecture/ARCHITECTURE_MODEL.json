@@ -1,0 +1,75 @@
+{
+  "stack_name": "Conxian",
+  "version": "1.0.0",
+  "layers": [
+    {
+      "id": "protocol-core",
+      "name": "lib-conxian-core (Vault SDK)",
+      "role": "Canonical primitives and shared protocol logic",
+      "visibility": "Public",
+      "ownership": "Protocol Team",
+      "trust_boundary": "L0 (Root of Trust)",
+      "contracts": [
+        "VaultSDK",
+        "ControlModel",
+        "MuSig2",
+        "BitVM2"
+      ],
+      "repository": "https://github.com/Conxian/lib-conxian-core"
+    },
+    {
+      "id": "enclave-sdk",
+      "name": "lib-conclave-sdk",
+      "role": "TEE implementation and hardware-bound signing",
+      "visibility": "Public",
+      "ownership": "Security Team",
+      "trust_boundary": "L1 (Hardware Isolated)",
+      "dependencies": ["protocol-core"],
+      "repository": "https://github.com/Conxian/lib-conclave-sdk"
+    },
+    {
+      "id": "gateway",
+      "name": "conxian-gateway",
+      "role": "Runtime orchestration and protocol routing",
+      "visibility": "Public",
+      "ownership": "Infrastructure Team",
+      "trust_boundary": "L2 (Network Orchestration)",
+      "dependencies": ["protocol-core"],
+      "repository": "https://github.com/Conxian/conxian-gateway"
+    },
+    {
+      "id": "nexus",
+      "name": "conxian-nexus",
+      "role": "State settlement and ecosystem coordination",
+      "visibility": "Public",
+      "ownership": "Protocol Team",
+      "trust_boundary": "L1 (State Finality)",
+      "repository": "https://github.com/Conxian/conxian-nexus"
+    },
+    {
+      "id": "wallet",
+      "name": "conxius-wallet",
+      "role": "Non-custodial user interface for signing and assets",
+      "visibility": "Public",
+      "ownership": "Product Team",
+      "trust_boundary": "L3 (User Managed)",
+      "dependencies": ["enclave-sdk", "protocol-core"],
+      "repository": "https://github.com/Conxian/conxius-wallet"
+    },
+    {
+      "id": "ui",
+      "name": "conxian_ui",
+      "role": "Product dashboard and DeFi interface",
+      "visibility": "Public",
+      "ownership": "Product Team",
+      "trust_boundary": "L3 (User Managed)",
+      "dependencies": ["gateway"],
+      "repository": "https://github.com/Conxian/conxian_ui"
+    }
+  ],
+  "integration_contracts": {
+    "signing": "VaultSDK interface for MuSig2 and policy enforcement",
+    "routing": "Gateway MCP/REST API for protocol adapters",
+    "settlement": "Nexus state proposals and anchors"
+  }
+}
