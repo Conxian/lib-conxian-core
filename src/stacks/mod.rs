@@ -78,6 +78,12 @@ pub trait StacksAdapter {
 
 pub struct SBTCBridge;
 
+impl Default for SBTCBridge {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SBTCBridge {
     pub fn new() -> Self {
         Self
