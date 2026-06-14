@@ -5,7 +5,7 @@ mod cxip20_architecture_tests {
     };
     use crate::enclave::ZKCompliance;
     use crate::lightning::LightningNode;
-    use crate::rgb::RGBRuntime;
+    use crate::rgb::{RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
     use crate::stacks::{SBTCBridge, StacksNakamoto};
 
     #[test]
@@ -78,7 +78,8 @@ mod cxip20_architecture_tests {
 
     #[test]
     fn test_rgb_csv_logic() {
-        assert!(RGBRuntime::validate_transition("state_transition"));
-        assert!(RGBRuntime::verify_seal("utxo:0", "comm"));
+        let runtime = RGBRuntime::new(RGBExecutionMode::Active, RGBSkeletonAdapter);
+        assert!(runtime.validate_transition("state_transition").is_ok());
+        assert!(runtime.verify_seal("utxo:0", "comm").is_ok());
     }
 }
