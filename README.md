@@ -20,6 +20,27 @@ Provide the **Vault SDK** and reusable protocol primitives for native Bitcoin ap
 
 **v0.2.5 Stable.** This repository is the strategic core of the Conxian protocol. Runtime implementation for the Unified API and protocol routing has been extracted to the [conxian-gateway](https://github.com/Conxian/conxian-gateway) repository.
 
+## Usage
+
+Add `lib-conxian-core` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", tag = "v0.2.5" }
+```
+
+### Quick Start (Vault SDK)
+
+```rust
+use lib_conxian_core::{VaultSDK, SigningPolicy, Wallet};
+
+// Initialize the SDK
+let sdk = VaultSDK::new(wallet, SigningPolicy::default());
+
+// Sign a transaction after policy verification
+let result = sdk.sign_with_policy("tx_id_123", 100_000, "destination_address");
+```
+
 ## Documentation
 
 - **PRD:** [docs/PRD.md](docs/PRD.md)
@@ -37,9 +58,11 @@ cargo test
 
 This repository is maintained by Conxian Labs. It provides the public-facing primitives for the Conxian protocol stack.
 
-## Security
-
-Vulnerability disclosure: [SECURITY.md](docs/governance/SECURITY.md) or `security@conxian-labs.com`.
+- **Contributing:** [docs/governance/CONTRIBUTING.md](docs/governance/CONTRIBUTING.md)
+- **Code of Conduct:** [docs/governance/CODE_OF_CONDUCT.md](docs/governance/CODE_OF_CONDUCT.md)
+- **Support:** [docs/governance/SUPPORT.md](docs/governance/SUPPORT.md)
+- **Security:** [docs/governance/SECURITY.md](docs/governance/SECURITY.md)
+- **Changelog:** [docs/governance/CHANGELOG.md](docs/governance/CHANGELOG.md)
 
 ## License
 

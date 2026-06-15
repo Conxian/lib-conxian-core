@@ -29,11 +29,9 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 
 - **Rust**:
   - Follow standard Rust naming conventions.
-  - Run `cargo fmt` before submitting a PR.
-  - Run `cargo clippy` to check for common mistakes and improvements.
-- **TypeScript**:
-  - Ensure all types are properly defined.
-  - Use `npm run lint` if applicable.
+  - Run `cargo fmt --all --check` before submitting a PR.
+  - Run `cargo clippy --all-targets --all-features -- -D warnings` to check for common mistakes and improvements.
+  - Ensure all new public APIs are documented with doc comments.
 
 ## Development Workflow
 
@@ -64,8 +62,8 @@ All PRs require review from at least one core maintainer before merging.
 Changes to governance-sensitive files require CODEOWNERS review:
 
 - `.github/CODEOWNERS`
-- `SECURITY.md`
-- `SUPPORT.md`
+- `docs/governance/SECURITY.md`
+- `docs/governance/SUPPORT.md`
 - `.github/ISSUE_TEMPLATE/**`
 - `.github/PULL_REQUEST_TEMPLATE*`
 - `.github/workflows/**`
