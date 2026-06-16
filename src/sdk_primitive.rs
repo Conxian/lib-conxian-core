@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// The first commercial SDK primitive: Hardware-backed Bitcoin signing plus policy enforcement.
 /// This defines the core capabilities for target integrators.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SigningPolicy {
     pub max_amount_sats: u64,
     pub allowed_destinations: Vec<String>,
