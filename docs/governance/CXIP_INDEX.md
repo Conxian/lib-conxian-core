@@ -7,7 +7,7 @@ This index tracks the formal improvement proposals for the Conxian protocol and 
 | ID | Title | Status | Summary |
 | :--- | :--- | :--- | :--- |
 | **CXIP-20** | **Modular Protocol Architecture** | **Implemented** | Defines the separation of Vault SDK, Gateway, and Enclave surfaces. |
-| **CXIP-21** | **Universal Chain Adapter Standard** | **Draft** | Standardizes the interface for multi-chain (EVM, Bitcoin, Cosmos) support. |
+| **CXIP-21** | **Universal Chain Adapter Standard** | **Approved** | Standardizes the interface for multi-chain (EVM, Bitcoin, Cosmos) support. |
 | **CXIP-22** | **Trust-Tier Policy Enforcement** | **Implemented** | Formalizes T1-T4 trust classification for bridge and messaging lanes. |
 | **CXIP-23** | **Agentic MCP Surface** | **Implemented** | Defines the Model Context Protocol (MCP) toolset for autonomous interaction. |
 

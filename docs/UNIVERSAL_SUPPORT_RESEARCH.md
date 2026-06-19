@@ -37,3 +37,9 @@ The `AssetRegistry` (managed in standalone Gateway) is expanded to support regio
 ## 6. Implementation Guardrails
 - **Fail-Closed**: All cross-chain operations must fail closed on missing or invalid trust metadata.
 - **Non-Custodial**: Conxian does not take possession of customer funds. All signing occurs in sovereign hardware via the Vault SDK.
+
+## 7. Nexus zkVM Integration Research
+The Nexus zkVM is a modular, extensible, and performant zkVM. It allows us to:
+- **Verifiable Maneuvers**: Execute complex financial logic off-chain and provide a zero-knowledge proof of correct execution to the on-chain vault.
+- **State Aggregation**: Prove the state of multiple chains simultaneously, enabling atomic-like cross-chain operations without a trusted intermediary.
+- **Proof Aggregation**: Use Nexus to aggregate proofs from different L2s (BitVM2, Stacks, EVM Rollups) into a single succinct proof for the mainnet vault.
