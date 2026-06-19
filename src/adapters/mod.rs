@@ -100,9 +100,13 @@ mod tests {
 
     #[test]
     fn test_evm_adapter() {
-        let adapter = EvmAdapter { chain: Chain::Ethereum };
+        let adapter = EvmAdapter {
+            chain: Chain::Ethereum,
+        };
         assert_eq!(adapter.family(), ChainFamily::Evm);
-        assert!(adapter.validate_address("0x71C7656EC7ab88b098defB751B7401B5f6d8976F").is_ok());
+        assert!(adapter
+            .validate_address("0x71C7656EC7ab88b098defB751B7401B5f6d8976F")
+            .is_ok());
         assert!(adapter.validate_address("bc1q").is_err());
     }
 }
