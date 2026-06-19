@@ -8,6 +8,7 @@
 //! 2. **Protocol Primitives (Internal Core)**: Modules like `musig2`, `bitvm2`, and chain adapters
 //!    provide the low-level logic required for Bitcoin-anchored orchestration.
 
+pub mod adapters;
 pub mod anchoring;
 pub mod bitvm2;
 pub mod cjcs;

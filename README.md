@@ -6,6 +6,10 @@
 
 Shared protocol primitives and foundational library for the broader Conxian ecosystem.
 
+## Sovereign First
+
+Conxian is built on the principle of individual and enterprise sovereignty. The Vault SDK ensures that keys never leave the hardware boundary and all operations are verified against immutable protocol rules.
+
 ## Purpose
 
 Provide the **Vault SDK** and reusable protocol-support primitives for Bitcoin-native and Conxian-aligned applications. This repository is a **flagship credibility surface** for Conxian's core protocol logic.
