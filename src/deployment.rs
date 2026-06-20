@@ -160,7 +160,9 @@ mod tests {
         let mut manifest = DeploymentManifest::new("proj-123", "deploy-456", "production");
         manifest.status = DeploymentStatus::Completed;
         manifest.add_contract("vault-core", "SP123...ABC", "0xabc...def");
-        manifest.metadata.insert("triggered_by".to_string(), "jules-agent".to_string());
+        manifest
+            .metadata
+            .insert("triggered_by".to_string(), "jules-agent".to_string());
 
         let json = serde_json::to_string(&manifest).unwrap();
         let decoded: DeploymentManifest = serde_json::from_str(&json).unwrap();
@@ -176,7 +178,11 @@ mod tests {
     fn test_verification_result_serialization() {
         let mut result = VerificationResult::new("verify-789", "deploy-456");
         result.outcome = VerificationOutcome::Pass;
-        result.add_evidence("nexus-zkvm", "state-proof", Some("sha256:proof123".to_string()));
+        result.add_evidence(
+            "nexus-zkvm",
+            "state-proof",
+            Some("sha256:proof123".to_string()),
+        );
         result.errors.push("None".to_string());
 
         let json = serde_json::to_string(&result).unwrap();
