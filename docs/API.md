@@ -1,4 +1,4 @@
-# lib-conxian-core / Vault SDK API Reference v0.2.5
+# lib-conxian-core / Vault SDK API Reference v0.2.6
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
@@ -9,6 +9,11 @@ This library provides the Rust-native API for Conxian protocol primitives. It is
 The primary interface for hardware-anchored signing and policy enforcement.
 - `VaultSDK::new(wallet: Wallet, policy: SigningPolicy)`: Initializes a new SDK instance.
 - `VaultSDK::sign_with_policy(tx_id: &str, amount_sats: u64, destination: &str)`: Validates and signs a transaction after policy verification.
+
+### Deployment & Artifacts (`deployment`)
+Shared schemas for machine-readable execution records (CON-1237).
+- `DeploymentManifest`: Canonical record of a completed or failed deployment.
+- `VerificationResult`: The result of a post-deployment verification check with evidence.
 
 ### Lightning (`lightning`)
 Resilience and recovery models for Lightning operations.
@@ -22,6 +27,7 @@ Canonical types for protocol orchestration and trust.
 - `StateProposal`: Unified model for external settlement triggers (CON-162).
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
+- `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 
 ### Anchoring (`anchoring`)
 Models for decentralized state persistence.

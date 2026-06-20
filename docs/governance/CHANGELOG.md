@@ -2,6 +2,17 @@
 
 All notable changes to the lib-conxian-core project will be documented in this file.
 
+## [0.2.7] - 2026-06-19
+### Added
+- Implemented shared schemas for `DeploymentManifest` and `VerificationResult` in `src/deployment.rs` (CON-1237).
+- Expanded `control_model.rs` with additional chain support: CosmosHub, Osmosis, Celestia, Solana, and Eclipse (CON-810).
+- Added `BridgeSystem::Bitvm2` variant to support optimistic bridge logic.
+- Comprehensive unit tests for new shared schemas and universal chain support.
+
+### Changed
+- Updated `docs/API.md` to reflect v0.2.7 updates and new schema definitions.
+- Hardened GitHub Action workflows with pinned SHAs and verified repo hygiene.
+
 ## [0.2.6] - 2026-06-14
 ### Changed
 - Hardened `Cargo.toml` with comprehensive package metadata (description, repository, keywords, etc.).
