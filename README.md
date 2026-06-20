@@ -23,7 +23,7 @@ Provide the **Vault SDK** and reusable protocol-support primitives for Bitcoin-n
 
 ## Status
 
-**v0.2.5 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.2.7 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -39,7 +39,7 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", tag = "v0.2.5" }
+lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", tag = "v0.2.7" }
 ```
 
 ### Quick Start (Vault SDK)

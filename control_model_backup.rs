@@ -644,6 +644,16 @@ pub enum Chain {
     Celestia,
     Solana,
     Eclipse,
+    CosmosHub,
+    Osmosis,
+    Celestia,
+    Solana,
+    Eclipse,
+    CosmosHub,
+    Osmosis,
+    Celestia,
+    Solana,
+    Eclipse,
 }
 
 pub enum BitcoinFeeBumpReason {
@@ -659,7 +669,12 @@ pub enum BitcoinFeeBumpReason {
 pub enum ChainFamily {
     /// Bitcoin/UTXO: Native, Stacks, Liquid, Babylon, BOB, Mezo.
     BitcoinUtxo,
-    /// EVM: Ethereum, Base, Arbitrum, Optimism, Polygon, Botanix.
+    /// EVM: Ethereum, Base, Arbitrum, Optimism, Polygon,
+    CosmosHub,
+    Osmosis,
+    Celestia,
+    Solana,
+    Eclipse, Botanix.
     Evm,
     /// Cosmos/IBC: Cosmos Hub, Osmosis, Celestia.
     CosmosIbc,
@@ -741,6 +756,8 @@ pub enum BridgeSystem {
     NearChainSignatures,
     CircleCctp,
     NexusZkVM,
+    Bitvm2,
+    Bitvm2,
     Bitvm2,
 }
 
@@ -904,6 +921,8 @@ mod universal_chain_tests {
             BridgeSystem::CircleCctp,
             BridgeSystem::NexusZkVM,
             BridgeSystem::Bitvm2,
+            BridgeSystem::Bitvm2,
+    Bitvm2,
         ];
         assert_eq!(systems.len(), 5);
     }
