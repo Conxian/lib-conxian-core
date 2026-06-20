@@ -27,6 +27,7 @@ pub trait UniversalChainAdapter {
     fn trust_tier(&self) -> TrustTier;
 }
 
+/// Adapter for the Bitcoin network, providing native UTXO-based support.
 pub struct BitcoinAdapter;
 
 impl UniversalChainAdapter for BitcoinAdapter {
@@ -56,7 +57,9 @@ impl UniversalChainAdapter for BitcoinAdapter {
     }
 }
 
+/// Adapter for EVM-compatible networks (Ethereum, Base, etc.).
 pub struct EvmAdapter {
+    /// The specific EVM chain this adapter instance represents.
     pub chain: Chain,
 }
 

@@ -1,8 +1,14 @@
 [package]
 name = "lib-conxian-core"
-version = "0.2.5"
+version = "0.2.6"
+description = "Foundational library and Vault SDK for the Conxian protocol ecosystem."
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/Conxian/lib-conxian-core"
+homepage = "https://github.com/Conxian/lib-conxian-core"
+readme = "README.md"
+keywords = ["bitcoin", "sdk", "musig2", "taproot", "conxian"]
+categories = ["cryptography::cryptocurrencies", "sdk"]
 
 [dependencies]
 anyhow = "1.0"

@@ -2,6 +2,11 @@
 
 All notable changes to the lib-conxian-core project will be documented in this file.
 
+## [0.2.6] - 2026-06-14
+### Changed
+- Hardened `Cargo.toml` with comprehensive package metadata (description, repository, keywords, etc.).
+- Improved API documentation for universal chain adapters.
+
 ## [0.2.5] - 2026-06-13
 - Defined SDK ownership and version policy (CON-1178).
 
