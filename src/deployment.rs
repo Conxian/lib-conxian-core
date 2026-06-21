@@ -80,6 +80,7 @@ pub struct ContractDeploymentRecord {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum VerificationOutcome {
+    Pending,
     Pass,
     Fail,
     Warning,
@@ -134,7 +135,7 @@ impl VerificationResult {
         Self {
             verification_id: verification_id.to_string(),
             deployment_id: deployment_id.to_string(),
-            outcome: VerificationOutcome::Pass,
+            outcome: VerificationOutcome::Pending,
             timestamp: chrono::Utc::now(),
             evidence: vec![],
             errors: vec![],
@@ -177,6 +178,7 @@ mod tests {
     #[test]
     fn test_verification_result_serialization() {
         let mut result = VerificationResult::new("verify-789", "deploy-456");
+        assert_eq!(result.outcome, VerificationOutcome::Pending);
         result.outcome = VerificationOutcome::Pass;
         result.add_evidence(
             "nexus-zkvm",

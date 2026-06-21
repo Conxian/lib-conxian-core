@@ -1,4 +1,4 @@
-# lib-conxian-core / Vault SDK API Reference v0.2.6
+# lib-conxian-core / Vault SDK API Reference v0.2.7
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
