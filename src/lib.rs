@@ -10,11 +10,13 @@
 
 pub mod adapters;
 pub mod anchoring;
+pub mod babylon;
 pub mod bitvm2;
 pub mod cjcs;
 pub mod contract_bridge;
 pub mod control_model;
 pub mod deployment;
+pub mod fedimint;
 pub mod musig2;
 pub mod sdk_primitive;
 pub mod wallet;

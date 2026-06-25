@@ -89,6 +89,130 @@ impl UniversalChainAdapter for EvmAdapter {
     }
 }
 
+/// Adapter for Cosmos-based networks using IBC for trust-minimized communication.
+pub struct CosmosAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for CosmosAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::CosmosIbc
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("cosmos") && address.len() > 6 {
+            Ok(())
+        } else {
+            Err("Invalid Cosmos address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(500) // IBC-specific dummy fee
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+}
+
+/// Adapter for Solana and SVM-compatible networks.
+pub struct SolanaAdapter;
+
+impl UniversalChainAdapter for SolanaAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::SolanaSvm
+    }
+
+    fn chain(&self) -> Chain {
+        Chain::Solana
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        // Solana addresses are base58 and usually 32-44 chars
+        if address.len() >= 32 && address.len() <= 44 {
+            Ok(())
+        } else {
+            Err("Invalid Solana address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(5000) // Lamports dummy fee
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Managed
+    }
+}
+
+/// Adapter for Move-based networks (Aptos, Sui).
+pub struct MoveAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for MoveAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Move
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 66 {
+            Ok(())
+        } else {
+            Err("Invalid Move address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(1000) // Gas units dummy
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Managed
+    }
+}
+
+/// Adapter for Substrate-based networks (Polkadot, Kusama).
+pub struct SubstrateAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for SubstrateAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Substrate
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        // SS58 addresses usually start with a specific prefix
+        if address.len() >= 47 {
+            Ok(())
+        } else {
+            Err("Invalid Substrate address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(100) // Weight-based dummy
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +235,43 @@ mod tests {
             .validate_address("0x71C7656EC7ab88b098defB751B7401B5f6d8976F")
             .is_ok());
         assert!(adapter.validate_address("bc1q").is_err());
+    }
+
+    #[test]
+    fn test_cosmos_adapter() {
+        let adapter = CosmosAdapter {
+            chain: Chain::CosmosHub,
+        };
+        assert_eq!(adapter.family(), ChainFamily::CosmosIbc);
+        assert!(adapter.validate_address("cosmos1abc").is_ok());
+        assert!(adapter.validate_address("0x123").is_err());
+    }
+
+    #[test]
+    fn test_solana_adapter() {
+        let adapter = SolanaAdapter;
+        assert_eq!(adapter.family(), ChainFamily::SolanaSvm);
+        assert!(adapter
+            .validate_address("vines19999999999999999999999999999999999")
+            .is_ok());
+        assert!(adapter.validate_address("bc1q").is_err());
+    }
+
+    #[test]
+    fn test_move_adapter() {
+        let adapter = MoveAdapter { chain: Chain::Base }; // Using Base as placeholder
+        assert_eq!(adapter.family(), ChainFamily::Move);
+        assert!(adapter
+            .validate_address("0x0000000000000000000000000000000000000000000000000000000000000001")
+            .is_ok());
+    }
+
+    #[test]
+    fn test_substrate_adapter() {
+        let adapter = SubstrateAdapter { chain: Chain::Base }; // Using Base as placeholder
+        assert_eq!(adapter.family(), ChainFamily::Substrate);
+        assert!(adapter
+            .validate_address("5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY")
+            .is_ok());
     }
 }
