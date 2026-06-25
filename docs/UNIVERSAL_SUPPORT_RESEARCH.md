@@ -43,3 +43,17 @@ The Nexus zkVM is a modular, extensible, and performant zkVM. It allows us to:
 - **Verifiable Maneuvers**: Execute complex financial logic off-chain and provide a zero-knowledge proof of correct execution to the on-chain vault.
 - **State Aggregation**: Prove the state of multiple chains simultaneously, enabling atomic-like cross-chain operations without a trusted intermediary.
 - **Proof Aggregation**: Use Nexus to aggregate proofs from different L2s (BitVM2, Stacks, EVM Rollups) into a single succinct proof for the mainnet vault.
+
+## 8. Advanced Protocol Research: BitVMX & BitVM3
+
+### BitVMX: High-Efficiency Adaptive Proofs (G-44)
+BitVMX represents a significant optimization over BitVM2 by introducing **Adaptive Proofs**.
+- **Reduced On-chain Footprint**: Unlike BitVM2 which requires large pre-signed Taproot trees, BitVMX uses a challenge-response mechanism that only reveals the necessary execution segments.
+- **Dynamic Commitment**: Enables committing to larger computations with fewer UTXOs.
+- **Integration Path**: The `UniversalChainAdapter` will be extended to support BitVMX-specific verification triggers in the Vault SDK.
+
+### BitVM3: Optimized Settlement Floor (G-20)
+BitVM3 is the directional target for Conxian's sovereign settlement floor.
+- **Prover-Efficiency**: Focuses on minimizing the computational burden on the prover during the challenge period.
+- **Recursive Verification**: Enables proof aggregation within the challenge tree, further reducing settlement latency.
+- **Migration Plan**: The current `Bitvm2Orchestrator` in `src/bitvm2.rs` is designed to be backwards compatible with the BitVM3 verification interface.

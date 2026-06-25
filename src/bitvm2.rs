@@ -234,3 +234,37 @@ impl Bitvm2Orchestrator {
         !proof.is_empty() && segment.status == "Pending"
     }
 }
+
+/// Multi-party verification logic for BitVM2 (CON-1306).
+pub struct Bitvm2MultiPartyAggregation {
+    pub participants: u32,
+}
+
+impl Bitvm2MultiPartyAggregation {
+    pub fn new(participants: u32) -> Self {
+        Self { participants }
+    }
+
+    /// Aggregates Taproot trees for 364-tap verification flow.
+    /// Placeholder for MuSig2-based aggregation logic.
+    pub fn aggregate_taproot_trees(&self, _participant_trees: &[String]) -> Result<String, String> {
+        if self.participants < 1 {
+            return Err("At least one participant required".to_string());
+        }
+        // Placeholder for Taproot tree root hash
+        Ok("sha256:aggregated-taproot-root".to_string())
+    }
+}
+
+#[cfg(test)]
+mod multiparty_tests {
+    use super::*;
+
+    #[test]
+    fn test_taproot_tree_aggregation_stub() {
+        let agg = Bitvm2MultiPartyAggregation::new(3);
+        let result = agg.aggregate_taproot_trees(&["tree1".to_string(), "tree2".to_string()]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "sha256:aggregated-taproot-root");
+    }
+}

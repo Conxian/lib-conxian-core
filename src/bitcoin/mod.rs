@@ -318,3 +318,4 @@ mod tests {
         assert!(invalid.is_err());
     }
 }
+pub mod bip322;
