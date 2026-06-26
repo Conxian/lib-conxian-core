@@ -1,4 +1,4 @@
-# lib-conxian-core / Vault SDK API Reference v0.2.7
+# lib-conxian-core / Vault SDK API Reference v0.2.9
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
@@ -48,3 +48,9 @@ The library enforces explicit trust-tier metadata for all cross-domain operation
 
 ## 4. Integration Guidelines
 Implementation details for runtime orchestration, network IO, and database persistence live in the standalone `conxian-gateway` repository. This library focuses exclusively on stable interfaces and protocol-bearing logic.
+
+### Protocol Primitives (`protocol`)
+Advanced protocol support for multi-party and cross-chain coordination.
+- `IntentManager::rank_bids(bids: &[Bid])`: Ranks ERC-7683 intent solver bids.
+- `FrostManager::generate_shares(threshold: u32, total: u32)`: Generates FROST key shares.
+- `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.

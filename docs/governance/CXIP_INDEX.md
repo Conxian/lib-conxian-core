@@ -26,3 +26,6 @@ Proposals move through the following lifecycle:
 5. **Deprecated**: Superseded by a newer proposal.
 
 Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to submit a new CXIP.
+| **CXIP-26** | **Cross-Chain Intent Solving (ERC-7683)** | **Draft** | Implements the competitive solver selection and bidding algorithm. |
+| **CXIP-27** | **Threshold Signature Infrastructure (FROST)** | **Draft** | Implements the FROST TSS manager for multi-party signing. |
+| **CXIP-28** | **Bitcoin Recursive Covenants (OP_CAT)** | **Draft** | Defines the template library for OP_CAT-based vault covenants. |
