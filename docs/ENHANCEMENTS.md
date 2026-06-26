@@ -36,3 +36,10 @@ The standalone Conxian Gateway provides deep protocol integration and transparen
 - **Next Steps:**
   - Integration with `lib-conclave-sdk` for hardware-anchored execution of approved intents.
   - Expansion of MCP resources for real-time mempool and bridge auditing.
+
+## 2026-06-26 Hardening Pass (Jules)
+
+- Aligned all documentation and code versioning to **v0.2.10**.
+- Verified all core protocol stubs and identified integration paths for **BitVMX**, **BitVM3**, and **ZKCP**.
+- Updated Executive and Readiness scorecards to reflect current protocol stability.
+- Hardened CI/CD workflow pins and verified hygiene standards.

@@ -8,7 +8,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 | :--- | :--- | :--- | :--- |
 | **Launch** | 🟡 | Commercial Claim Review | Approve G-50 implementation floor |
 | **Repo/Gov** | 🟢 | None | Finalize CXIP-21 approval |
-| **Release** | 🟢 | None | Confirm v0.2.9 stability |
+| **Release** | 🟢 | None | Confirm v0.2.10 stability |
 | **Growth** | 🟡 | Partner Onboarding | Select primary Babylon Finality Provider |
 
 ## 2. Key Metrics
