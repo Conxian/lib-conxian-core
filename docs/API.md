@@ -54,3 +54,12 @@ Advanced protocol support for multi-party and cross-chain coordination.
 - `IntentManager::rank_bids(bids: &[Bid])`: Ranks ERC-7683 intent solver bids.
 - `FrostManager::generate_shares(threshold: u32, total: u32)`: Generates FROST key shares.
 - `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.
+
+### Universal Chain Adapters (`adapters`)
+CXIP-21 interface for cross-chain orchestration.
+- `UniversalChainAdapter`: Trait for uniform multi-chain support.
+- `BitcoinAdapter`: Native UTXO support.
+- `EvmAdapter`: Ethereum, Base, etc.
+- `CosmosAdapter`: IBC-enabled networks.
+- `SolanaAdapter`: SVM support.
+- `BabylonAdapter`: Institutional Bitcoin staking (G-43).
