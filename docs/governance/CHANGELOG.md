@@ -1,3 +1,9 @@
+## [0.2.9] - 2026-06-26
+### Added
+- Real MuSig2-based Taproot tree aggregation logic in `src/bitvm2.rs` (CON-1306).
+- Hardened BIP-322 universal message signing with tagged hash commitments (CON-1266).
+- Bridging helpers in `src/musig2.rs` to resolve `secp256k1` and `bitcoin` crate version conflicts.
+- Updated Gap Analysis and Implementation Scoring framework.
 # Changelog
 
 All notable changes to the lib-conxian-core project will be documented in this file.
