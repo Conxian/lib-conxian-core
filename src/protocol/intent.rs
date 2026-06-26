@@ -34,7 +34,9 @@ impl IntentManager {
             let score_b = (b.amount_sats as f64 * 0.4)
                 - (b.fee_sats as f64 * 0.2)
                 - (b.estimated_latency_blocks as f64 * 50_000.0 * 0.4);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         sorted_bids
     }

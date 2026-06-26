@@ -17,8 +17,8 @@ pub mod contract_bridge;
 pub mod control_model;
 pub mod deployment;
 pub mod fedimint;
-pub mod protocol;
 pub mod musig2;
+pub mod protocol;
 pub mod sdk_primitive;
 pub mod wallet;
 

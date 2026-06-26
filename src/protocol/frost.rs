@@ -15,11 +15,13 @@ pub struct FrostManager;
 impl FrostManager {
     pub fn generate_shares(_threshold: u32, total: u32) -> Vec<FrostKeyShare> {
         // Implementation would use frost-dalek in production
-        (1..=total).map(|i| FrostKeyShare {
-            index: i,
-            share: vec![0u8; 32], // Stub
-            public_key: vec![0u8; 33], // Stub
-        }).collect()
+        (1..=total)
+            .map(|i| FrostKeyShare {
+                index: i,
+                share: vec![0u8; 32],      // Stub
+                public_key: vec![0u8; 33], // Stub
+            })
+            .collect()
     }
 
     pub fn aggregate_signature(_shares: &[Vec<u8>]) -> Vec<u8> {

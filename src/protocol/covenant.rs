@@ -10,7 +10,7 @@ impl CovenantManager {
         let mut script = Vec::new();
         script.extend_from_slice(pubkey);
         script.push(0xad); // OP_CHECKSIGVERIFY
-        // ... build the rest of the script
+                           // ... build the rest of the script
         script.extend_from_slice(target_hash);
         script.push(0x87); // OP_EQUAL
         script
