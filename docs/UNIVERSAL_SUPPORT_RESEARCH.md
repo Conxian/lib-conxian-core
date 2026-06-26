@@ -62,3 +62,22 @@ BitVM3 is the directional target for Conxian's sovereign settlement floor.
 - **ZKCP (G-50)**: Implementation requires the core library to provide `verify_zk_contingent_payment` primitives. The BFF in `conxian-nexus` has simulated logic that must be replaced with the Rust-Wasm implementation.
 - **BitVM2 Multi-Party**: Moved from stub to real implementation. MuSig2 key aggregation is now integrated with `TaprootBuilder` to generate the 364-tap verification trees.
 - **BIP-322**: Universal message signing logic hardened to include tagged hash commitment and transaction template validation.
+
+## 9. Advanced Protocol Implementation Paths (2026-06-26)
+
+### ERC-7683 Solver Selection (G-12)
+- **Standard**: Cross-chain intent standard co-authored by Uniswap Labs and Across.
+- **Selection Algorithm**: Competitive bidding process where solvers submit signed `Bid` packets containing execution promises (latency, fee, slippage).
+- **Ranking Formula**: Score = (v * YieldWeight) - (c * CostWeight) - (t * TimeWeight).
+- **Enforcement**: RailProxy in the Gateway verifies the winning solver's signature against the intent's execution proof.
+
+### FROST Threshold Signatures (G-14)
+- **Standard**: Flexible Round-Optimized Schnorr Threshold Signatures (IETF Draft).
+- **Implementation**: Pure-Rust `frost-dalek` or `roast` (Robust Asynchronous Schnorr Threshold).
+- **Key Features**: Produces standard Schnorr signatures compatible with Taproot (BIP-341). Only requires two rounds of communication.
+- **Role in Conxian**: Institutional-grade multi-sig where the signer set is hidden on-chain.
+
+### OP_CAT Recursive Covenants (G-15)
+- **Standard**: BIP-347 (Restore OP_CAT).
+- **Mechanism**: Concatenates two stack elements. When combined with `CHECKSIGFROMSTACK` (CSFS) or `OP_CHECKSIG`, it allows a script to verify a transaction's own preimage.
+- **Recursive Pattern**: Enable \"Vaults\" where funds can only move to specific pre-approved addresses or with a timelock, verified recursively by the script.

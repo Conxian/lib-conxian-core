@@ -1,7 +1,7 @@
 # lib-conxian-core / Vault SDK
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.2.8-blue.svg)](docs/governance/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.9-blue.svg)](docs/governance/CHANGELOG.md)
 [![Governance](https://img.shields.io/badge/governance-standard-green.svg)](docs/governance/)
 
 Shared protocol primitives and foundational library for the broader Conxian ecosystem.
@@ -23,7 +23,7 @@ Provide the **Vault SDK** and reusable protocol-support primitives for Bitcoin-n
 
 ## Status
 
-**v0.2.8 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.2.9 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -39,7 +39,7 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", tag = "v0.2.8" }
+lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", tag = "v0.2.9" }
 ```
 
 ### Quick Start (Vault SDK)
