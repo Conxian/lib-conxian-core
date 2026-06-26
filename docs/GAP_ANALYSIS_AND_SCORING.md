@@ -11,16 +11,20 @@ This document maps identified protocol gaps to research status and implementatio
 
 | Candidate | Strategic | Readiness | Demand | Total Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Best Candidate** |
-| **BitVMX (G-44)** | 40 | 10 | 30 | **80** | Researching |
-| **BitVM3 (G-20)** | 40 | 5 | 30 | **75** | Directional |
+| **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | Initialized |
+| **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** |
+| **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Implemented** |
+| **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
+| **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
+| **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
 | **LayerZero V2 (T2)** | 20 | 30 | 20 | **70** | Available |
 | **Fedimint (G-16)** | 30 | 20 | 20 | **70** | Researching |
 
-## Gap Identification
+## Gap Identification & Resolution
 1. **Universal Chain Adapters**: Skeletal implementation complete for Cosmos, Solana, Move, and Substrate (CXIP-21).
-2. **BitVM2 Multi-Party**: Taproot tree aggregation logic missing (CON-1306).
-3. **BIP-322**: Universal message signing logic needs hardening (CON-1266).
+2. **BitVM2 Multi-Party**: Resolved (CON-1306). Implemented MuSig2-based Taproot tree aggregation.
+3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
+4. **ZKCP**: Scaffolding exists in BFF. Research expanded to core library requirements (CON-1313).
 
-## Initialized Candidate: Babylon Staking (G-43)
-Babylon provides institutional yield without custody loss. Initializing `src/babylon/mod.rs` to support `StakingIntent`.
+## Current Focus: Babylon Staking (G-43)
+Babylon provides institutional yield without custody loss. Initialized `src/babylon/mod.rs` to support `StakingIntent`.

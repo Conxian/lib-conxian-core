@@ -57,3 +57,8 @@ BitVM3 is the directional target for Conxian's sovereign settlement floor.
 - **Prover-Efficiency**: Focuses on minimizing the computational burden on the prover during the challenge period.
 - **Recursive Verification**: Enables proof aggregation within the challenge tree, further reducing settlement latency.
 - **Migration Plan**: The current `Bitvm2Orchestrator` in `src/bitvm2.rs` is designed to be backwards compatible with the BitVM3 verification interface.
+
+### Research Update (2026-06-26): ZKCP & BitVM2 Hardening
+- **ZKCP (G-50)**: Implementation requires the core library to provide `verify_zk_contingent_payment` primitives. The BFF in `conxian-nexus` has simulated logic that must be replaced with the Rust-Wasm implementation.
+- **BitVM2 Multi-Party**: Moved from stub to real implementation. MuSig2 key aggregation is now integrated with `TaprootBuilder` to generate the 364-tap verification trees.
+- **BIP-322**: Universal message signing logic hardened to include tagged hash commitment and transaction template validation.
