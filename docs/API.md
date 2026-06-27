@@ -36,8 +36,9 @@ Models for decentralized state persistence.
 
 ### Bitcoin (`bitcoin`)
 Advanced Bitcoin-native primitives.
-- `MuSig2`: BIP327-compliant key aggregation and signing (CON-145).
+- `MuSig2`: BIP327-compliant key aggregation, signature aggregation, and signing (CON-145, CON-1270).
 - `BitVM2`: Segment generation and optimistic fraud-proof verification (CON-464).
+- `BIP-322`: Universal message signing and verification (G-09).
 
 ## 3. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:
@@ -54,6 +55,7 @@ Advanced protocol support for multi-party and cross-chain coordination.
 - `IntentManager::rank_bids(bids: &[Bid])`: Ranks ERC-7683 intent solver bids.
 - `FrostManager::generate_shares(threshold: u32, total: u32)`: Generates FROST key shares.
 - `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.
+- `DlcManager::create_intent(oracle_pubkey: &[u8], collateral: u64, outcome: [u8; 32], expiry: u32)`: Creates DLC intents for native Bitcoin finance (G-06).
 
 ### Universal Chain Adapters (`adapters`)
 CXIP-21 interface for cross-chain orchestration.

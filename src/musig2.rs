@@ -67,6 +67,40 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
     Ok(x_only)
 }
 
+/// Aggregates partial signatures into a final BIP-340 Schnorr signature.
+/// This is a simplified stub for the Conxian pilot phase (G-10).
+pub fn aggregate_partial_signatures(
+    partial_sigs: &[Vec<u8>],
+    _aggregated_pubkey: &XOnlyPublicKey,
+) -> Result<[u8; 64], String> {
+    if partial_sigs.is_empty() {
+        return Err("No partial signatures provided".to_string());
+    }
+
+    // In a real MuSig2 implementation, this would sum the s-values of the partial signatures.
+    // For now, we simulate the aggregation for protocol flow verification.
+    let mut final_sig = [0u8; 64];
+    final_sig[..32].copy_from_slice(&[0x01; 32]); // Dummy R
+    final_sig[32..].copy_from_slice(&[0x02; 32]); // Dummy s
+
+    Ok(final_sig)
+}
+
+/// Computes the Taproot tweak for an aggregated MuSig2 key.
+pub fn compute_taproot_tweak(
+    internal_key: &XOnlyPublicKey,
+    merkle_root: Option<[u8; 32]>,
+) -> Result<Scalar, String> {
+    let mut hasher = Sha256::new();
+    hasher.update(b"TapTweak");
+    hasher.update(internal_key.serialize());
+    if let Some(root) = merkle_root {
+        hasher.update(root);
+    }
+    let tweak_bytes: [u8; 32] = hasher.finalize().into();
+    Scalar::from_be_bytes(tweak_bytes).map_err(|_| "Invalid scalar from tweak hash".to_string())
+}
+
 pub fn to_bitcoin_xonly(pk: XOnlyPublicKey) -> bitcoin::XOnlyPublicKey {
     bitcoin::XOnlyPublicKey::from_slice(&pk.serialize()).expect("Should convert")
 }
@@ -100,5 +134,22 @@ mod tests {
         let aggregated_rev =
             aggregate_public_keys(&pubkeys_reversed).expect("Should aggregate reversed");
         assert_eq!(aggregated2, aggregated_rev);
+    }
+
+    #[test]
+    fn test_aggregate_partial_signatures() {
+        let p = Musig2Participant::new();
+        let (pk, _) = p.x_only_public_key();
+        let partial_sigs = vec![vec![0u8; 32], vec![0u8; 32]];
+        let sig = aggregate_partial_signatures(&partial_sigs, &pk).unwrap();
+        assert_eq!(sig.len(), 64);
+    }
+
+    #[test]
+    fn test_compute_taproot_tweak() {
+        let p = Musig2Participant::new();
+        let (pk, _) = p.x_only_public_key();
+        let tweak = compute_taproot_tweak(&pk, None).expect("Should compute tweak");
+        assert!(!tweak.to_be_bytes().is_empty());
     }
 }

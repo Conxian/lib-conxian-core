@@ -13,11 +13,14 @@ This index tracks the formal improvement proposals for the Conxian protocol and 
 | **CXIP-26** | **Cross-Chain Intent Solving (ERC-7683)** | **Implemented** | Implements the competitive solver selection and bidding algorithm. |
 | **CXIP-27** | **Threshold Signature Infrastructure (FROST)** | **Implemented** | Implements the FROST TSS manager for multi-party signing. |
 | **CXIP-28** | **Bitcoin Recursive Covenants (OP_CAT)** | **Implemented** | Defines the template library for OP_CAT-based vault covenants. |
+| **CXIP-29** | **MuSig2 Signature Aggregation** | **In Review** | Formalizes BIP-327 signature aggregation for efficient multi-sig. |
+| **CXIP-30** | **DLC Native Finance Primitives** | **In Review** | Maps Discreet Log Contracts (DLC) to the Universal Settlement Interface. |
 
 ## Research & Exploration
 
 - **CXIP-24**: Verifiable Intent Discovery (Researching)
 - **CXIP-25**: BitVM2 Optimistic Bridge Finality (Researching)
+- **CXIP-31**: BitVMX Adaptive Proofs (Researching)
 
 ## Governance Process
 

@@ -50,7 +50,7 @@ The Nexus zkVM is a modular, extensible, and performant zkVM. It allows us to:
 BitVMX represents a significant optimization over BitVM2 by introducing **Adaptive Proofs**.
 - **Reduced On-chain Footprint**: Unlike BitVM2 which requires large pre-signed Taproot trees, BitVMX uses a challenge-response mechanism that only reveals the necessary execution segments.
 - **Dynamic Commitment**: Enables committing to larger computations with fewer UTXOs.
-- **Integration Path**: The `UniversalChainAdapter` will be extended to support BitVMX-specific verification triggers in the Vault SDK.
+- **Implementation Path**: Requires `src/protocol/bitvmx.rs` with support for challenge-response state machines.
 
 ### BitVM3: Optimized Settlement Floor (G-20)
 BitVM3 is the directional target for Conxian's sovereign settlement floor.
@@ -59,7 +59,7 @@ BitVM3 is the directional target for Conxian's sovereign settlement floor.
 - **Migration Plan**: The current `Bitvm2Orchestrator` in `src/bitvm2.rs` is designed to be backwards compatible with the BitVM3 verification interface.
 
 ### Research Update (2026-06-26): ZKCP & BitVM2 Hardening
-- **ZKCP (G-50)**: Implementation requires the core library to provide `verify_zk_contingent_payment` primitives. The BFF in `conxian-nexus` has simulated logic that must be replaced with the Rust-Wasm implementation.
+- **ZKCP (G-50)**: Implementation requires the core library to provide `verify_zk_contingent_payment` primitives based on SHA256-preimage verification and homomorphic commitments.
 - **BitVM2 Multi-Party**: Moved from stub to real implementation. MuSig2 key aggregation is now integrated with `TaprootBuilder` to generate the 364-tap verification trees.
 - **BIP-322**: Universal message signing logic hardened to include tagged hash commitment and transaction template validation.
 
@@ -73,7 +73,7 @@ BitVM3 is the directional target for Conxian's sovereign settlement floor.
 
 ### FROST Threshold Signatures (G-14)
 - **Standard**: Flexible Round-Optimized Schnorr Threshold Signatures (IETF Draft).
-- **Implementation**: Pure-Rust `frost-dalek` or `roast` (Robust Asynchronous Schnorr Threshold).
+- **Implementation**: Leveraging `frost-dalek` or `roast` primitives in `src/protocol/frost.rs`.
 - **Key Features**: Produces standard Schnorr signatures compatible with Taproot (BIP-341). Only requires two rounds of communication.
 - **Role in Conxian**: Institutional-grade multi-sig where the signer set is hidden on-chain.
 
