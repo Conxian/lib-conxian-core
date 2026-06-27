@@ -11,7 +11,9 @@ This document maps identified protocol gaps to research status and implementatio
 
 | Candidate | Strategic | Readiness | Demand | Total Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | Initialized |
+| **MuSig2 Aggregation (G-10)** | 40 | 30 | 30 | **100** | **In Progress** |
+| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **In Progress** |
+| **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** |
 | **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Implemented** |
 | **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
@@ -25,6 +27,8 @@ This document maps identified protocol gaps to research status and implementatio
 2. **BitVM2 Multi-Party**: Resolved (CON-1306). Implemented MuSig2-based Taproot tree aggregation.
 3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
 4. **ZKCP**: Scaffolding exists in BFF. Research expanded to core library requirements (CON-1313).
+5. **MuSig2 Signature Aggregation**: Implementation initiated to support G-10 signature compression.
+6. **DLC Primitives**: Scaffolding initiated for native Bitcoin finance support (G-06).
 
-## Current Focus: Babylon Staking (G-43)
-Babylon provides institutional yield without custody loss. Initialized `src/babylon/mod.rs` to support `StakingIntent`.
+## Current Focus: MuSig2 & DLC (2026-06-26)
+Hardening MuSig2 signature aggregation and DLC primitives to support high-efficiency multi-party signing and native Bitcoin finance.

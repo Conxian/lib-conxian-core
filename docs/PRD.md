@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): lib-conxian-core / Vault SDK v0.2.5
+# Product Requirements Document (PRD): lib-conxian-core / Vault SDK v0.2.10
 
 ## 1. Executive Summary
 Conxian builds native application infrastructure for Bitcoin. The `lib-conxian-core` (Vault SDK) is the foundational library for secure signing, policy enforcement, and protocol-aware transaction coordination. It provides the essential primitives consumed by the standalone Conxian Gateway and other ecosystem applications.
