@@ -31,7 +31,7 @@ impl HeadlessEnclave {
         const SEQUENCE_TAG: u8 = 0x30;
 
         if cert.raw_der[0] != SEQUENCE_TAG {
-             return Err("Invalid DER format: Missing SEQUENCE tag (0x30)".to_string());
+            return Err("Invalid DER format: Missing SEQUENCE tag (0x30)".to_string());
         }
 
         // Basic length parsing for DER (Short/Long forms)
@@ -49,7 +49,7 @@ impl HeadlessEnclave {
                 return Err("Unsupported DER length: Too many length bytes".to_string());
             }
             if num_len_bytes + 2 > cert.raw_der.len() {
-                 return Err("Invalid DER length: Long form header overflow".to_string());
+                return Err("Invalid DER length: Long form header overflow".to_string());
             }
         }
 
@@ -85,9 +85,7 @@ mod tests {
     fn test_verify_attestation_chain_long_form() {
         let mut der = vec![0x30, 0x81, 0x80];
         der.extend(vec![0; 128]);
-        let cert = AttestationCertificate {
-            raw_der: der,
-        };
+        let cert = AttestationCertificate { raw_der: der };
         assert!(HeadlessEnclave::verify_attestation_chain(&cert).unwrap());
     }
 

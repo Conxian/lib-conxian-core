@@ -45,7 +45,10 @@ pub struct FrostManager;
 impl FrostManager {
     /// Generates key shares for a given threshold (t-of-n).
     /// This implementation adds VSS commitments for Round 1.
-    pub fn generate_shares(threshold: u32, total: u32) -> (Vec<FrostKeyShare>, Vec<FrostShareCommitment>) {
+    pub fn generate_shares(
+        threshold: u32,
+        total: u32,
+    ) -> (Vec<FrostKeyShare>, Vec<FrostShareCommitment>) {
         if threshold > total || threshold == 0 {
             return (Vec::new(), Vec::new());
         }

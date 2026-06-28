@@ -81,7 +81,7 @@ pub fn aggregate_partial_signatures(
 
     // R is the same for all valid partial signatures in MuSig2 context
     if partial_sigs[0].len() < 32 {
-         return Err("Invalid partial signature length".to_string());
+        return Err("Invalid partial signature length".to_string());
     }
     final_sig[0..32].copy_from_slice(&partial_sigs[0][0..32]);
 

@@ -15,10 +15,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@v4.2.2 # v4.1.7
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v4.5.0
         with:
           fail-on-severity: high
           # Removed continue-on-error to ensure we fail on vulnerable changes (CON-1325)
