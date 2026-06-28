@@ -686,6 +686,16 @@ pub enum TrustTier {
 }
 
 impl TrustTier {
+    /// Returns true if this trust tier is allowed in production.
+    ///
+    /// ```
+    /// use lib_conxian_core::control_model::TrustTier;
+    ///
+    /// assert!(TrustTier::Strict.is_production_allowed());
+    /// assert!(TrustTier::Managed.is_production_allowed());
+    /// assert!(TrustTier::Expedient.is_production_allowed());
+    /// assert!(!TrustTier::ObserverOnly.is_production_allowed());
+    /// ```
     pub fn is_production_allowed(&self) -> bool {
         matches!(
             self,
@@ -693,6 +703,14 @@ impl TrustTier {
         )
     }
 
+    /// Returns true if this tier mandates light-client verification.
+    ///
+    /// ```
+    /// use lib_conxian_core::control_model::TrustTier;
+    ///
+    /// assert!(TrustTier::Strict.requires_light_client());
+    /// assert!(!TrustTier::Managed.requires_light_client());
+    /// ```
     pub fn requires_light_client(&self) -> bool {
         matches!(self, TrustTier::Strict)
     }

@@ -6,7 +6,7 @@ pub struct CovenantManager;
 
 impl CovenantManager {
     /// Generates a basic OP_CAT recursive vault script.
-    /// Logic: <pubkey> OP_CHECKSIGVERIFY <preimage_prefix> OP_CAT <preimage_suffix> OP_SHA256 <hash> OP_EQUAL
+    /// Logic: `<pubkey> OP_CHECKSIGVERIFY <preimage_prefix> OP_CAT <preimage_suffix> OP_SHA256 <hash> OP_EQUAL`
     ///
     /// This template follows the pattern where a transaction must reveal a preimage
     /// that, when concatenated (OP_CAT), matches a committed hash, enforcing spending constraints.
