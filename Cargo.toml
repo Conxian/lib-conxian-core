@@ -3,7 +3,7 @@ name = "lib-conxian-core"
 version = "0.2.10"
 description = "Foundational library and Vault SDK for the Conxian protocol ecosystem."
 edition = "2021"
-rust-version = "1.82"
+rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Conxian/lib-conxian-core"
 homepage = "https://github.com/Conxian/lib-conxian-core"
@@ -13,8 +13,9 @@ categories = ["cryptography::cryptocurrencies", "sdk"]
 
 [dependencies]
 anyhow = "1.0"
+frost-secp256k1-tr = "3.0"
 k256 = { version = "0.13", features = ["ecdsa", "sha256"] }
-ripemd = "0.2"
+ripemd = "0.1"
 serde_json = "1.0"
 secp256k1 = { version = "0.31", features = ["rand", "global-context"] }
 sha2 = "0.11.0"

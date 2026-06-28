@@ -5,6 +5,20 @@ use serde::{Deserialize, Serialize};
 
 /// The first commercial SDK primitive: Hardware-backed Bitcoin signing plus policy enforcement.
 /// This defines the core capabilities for target integrators.
+///
+/// # Examples
+///
+/// ```
+/// use lib_conxian_core::SigningPolicy;
+///
+/// let policy = SigningPolicy {
+///     max_amount_sats: 1_000_000,
+///     allowed_destinations: vec!["bc1q_safe".to_string()],
+///     require_biometric: false,
+///     timelock_blocks: 144,
+/// };
+/// assert_eq!(policy.max_amount_sats, 1_000_000);
+/// ```
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SigningPolicy {
     pub max_amount_sats: u64,
@@ -15,6 +29,29 @@ pub struct SigningPolicy {
 
 /// The VaultSDK is the primary entry point for integrators building native Bitcoin apps.
 /// It encapsulates hardware-backed signing, mandatory policy enforcement, and multi-sig aggregation.
+///
+/// # Examples
+///
+/// ```
+/// use lib_conxian_core::{VaultSDK, SigningPolicy, Wallet};
+///
+/// let key_hex = "01".repeat(32);
+/// let wallet = Wallet::from_private_key_hex(&key_hex).unwrap();
+/// let policy = SigningPolicy {
+///     max_amount_sats: 1_000_000,
+///     allowed_destinations: vec!["bc1q_safe".to_string()],
+///     require_biometric: false,
+///     timelock_blocks: 0,
+/// };
+/// let sdk = VaultSDK::new(wallet, policy);
+///
+/// // Valid transaction within policy
+/// let sig = sdk.sign_with_policy("tx_001", 500_000, "bc1q_safe").unwrap();
+/// assert!(!sig.is_empty());
+///
+/// // Policy violation: amount exceeds limit
+/// assert!(sdk.sign_with_policy("tx_002", 2_000_000, "bc1q_safe").is_err());
+/// ```
 pub struct VaultSDK {
     wallet: Wallet,
     policy: SigningPolicy,
