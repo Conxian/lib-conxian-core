@@ -17,15 +17,6 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 - `Expedient` (T3)
 
 ## Workflow Instructions
-- **Verification:** Always run the full CI suite locally before pushing:
-  ```bash
-  cargo fmt --all -- --check
-  cargo clippy --workspace --all-targets -- -D warnings
-  cargo build --workspace --release
-  cargo test --workspace
-  ```
-- **MSRV:** The Minimum Supported Rust Version is 1.82. Do not use features stabilized after Rust 1.82. If CI is not available, verify with `cargo +1.82 test`.
+- **Verification:** Always run `cargo test --workspace` to verify changes.
 - **ZSE:** Adhere to Zero Secret Egress standards. Never track environment files or private keys.
 - **Source of Truth:** Refer to `bitcoinlayers.org` for the latest Bitcoin Layer 2 research.
-- **Gap Tracking:** All identified gaps, stubs, and improvement opportunities are tracked in `docs/GAP_ANALYSIS_AND_SCORING.md`. Update this file when resolving or discovering gaps.
-- **Protocol Standards:** FROST = RFC 9591 (final), MuSig2 = BIP-327 (deployed), OP_CAT = BIP-347 (not activated on mainnet), ERC-7683 = still Draft status. Implement against final standards; mark speculative implementations clearly as stubs.

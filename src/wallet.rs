@@ -1,6 +1,6 @@
 use anyhow::Context;
 use k256::ecdsa::{signature::Signer, Signature, SigningKey};
-use ripemd::{Digest as RipemdDigest, Ripemd160};
+use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 
 pub const ENV_CONXIAN_PRIVATE_KEY_HEX: &str = "CONXIAN_PRIVATE_KEY_HEX";
@@ -52,7 +52,7 @@ impl Wallet {
     pub fn stacks_address_hash(&self) -> String {
         let pubkey = self.public_key_bytes();
         let sha2 = Sha256::digest(&pubkey);
-        let hash160 = Ripemd160::new().chain_update(sha2).finalize();
+        let hash160 = Ripemd160::digest(sha2);
         hex::encode(hash160)
     }
 

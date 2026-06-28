@@ -1,6 +1,0 @@
-# cargo-fuzz artifacts
-target/
-corpus/
-artifacts/
-.libfuzzer/
-*.dSYM/
