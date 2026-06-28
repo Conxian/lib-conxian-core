@@ -88,12 +88,31 @@ This document maps identified protocol gaps, code quality issues, CI/CD gaps, an
 
 ---
 
-## F. Resolved / Fixed This Session
+## F. Resolved / Fixed
+
+### Session 2 (2026-06-28) Ñ P0 Critical Fixes
 
 | # | Gap | Resolution |
 | :--- | :--- | :--- |
-| **FIX-01** | `is_multiple_of()` requires Rust 1.87 but MSRV is 1.82 â€” clippy error | Changed to `trimmed.len() % 2 == 0` in `src/bitvm2.rs` |
-| **FIX-02** | Cargo.lock out of sync with dependency updates | Ran `cargo generate-lockfile` |
+| **FIX-03** | CI-01/CQ-09: No MSRV verification in CI | Added `msrv` job to `.github/workflows/main.yml` with `toolchain: "1.82"` |
+| **FIX-04** | CQ-02: MuSig2 partial signature aggregation returned dummy bytes | Replaced with real `k256::Scalar` arithmetic via `PrimeField::from_repr`. BIP-327 scalar addition modulo curve order. 10 tests pass. |
+| **FIX-05** | TST-01: `anchoring.rs` had zero tests | Added 29 tests: AnchoringTarget, AnchoringRequest (defaults, roundtrip, normalize, idempotency), AnchoringPublication, AnchoringReceipt, AnchoringError (retryable, code, Display, tagged serde), TablelandAnchoringPublisher, OnChainAnchoringPublisher, compact_state_root |
+
+### Session 1 (2026-06-28)
+
+| # | Gap | Resolution |
+| :--- | :--- | :--- |
+| **FIX-01** | `is_multiple_of()` requires Rust 1.87 but MSRV is 1.82 | Changed to `trimmed.len() % 2 == 0` in `src/bitvm2.rs` |
+| **FIX-02** | Cargo.lock out of sync | Ran `cargo generate-lockfile` |
+
+### Health Dashboard (2026-06-28 Session 2)
+
+| Metric | Before | After |
+| :--- | :--- | :--- |
+| **Tests** | 68 | **102** (+34) |
+| **CI Jobs** | 1 (stable) | **2** (stable + MSRV 1.82) |
+| **anchoring.rs tests** | 0 | 29 |
+| **MuSig2 aggregation** | Dummy bytes | Real k256 scalar arithmetic |
 
 ---
 
@@ -101,9 +120,11 @@ This document maps identified protocol gaps, code quality issues, CI/CD gaps, an
 1. **Universal Chain Adapters**: Skeletal implementation complete for Cosmos, Solana, Move, and Substrate (CXIP-21).
 2. **BitVM2 Multi-Party**: Resolved (CON-1306). Implemented MuSig2-based Taproot tree aggregation.
 3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
-4. **ZKCP**: Scaffolding exists in BFF. Research expanded to core library requirements (CON-1313).
-5. **MuSig2 Signature Aggregation**: Implementation initiated â€” **still stub** for partial sig aggregation (dummy s-values).
-6. **DLC Primitives**: Scaffolding initiated â€” **still stub** (basic intent creation, no oracle verification).
+4. **ZKCP**: Scaffolding exists. Research expanded to core library requirements (CON-1313).
+5. **MuSig2 Signature Aggregation**: **RESOLVED** Ñ real k256 scalar arithmetic (Session 2).
+6. **DLC Primitives**: Scaffolding initiated Ñ still stub (basic intent creation, no oracle verification).
+7. **MSRV CI**: **RESOLVED** Ñ added `msrv` job to main.yml (Session 2).
+8. **anchoring.rs tests**: **RESOLVED** Ñ 29 comprehensive tests added (Session 2).
 
 ## H. Priority Action Plan (Next Session)
 
