@@ -90,7 +90,7 @@ This document maps identified protocol gaps, code quality issues, CI/CD gaps, an
 
 ## F. Resolved / Fixed
 
-### Session 2 (2026-06-28) � P0 Critical Fixes
+### Session 2 (2026-06-28) — P0 Critical Fixes
 
 | # | Gap | Resolution |
 | :--- | :--- | :--- |
@@ -121,36 +121,34 @@ This document maps identified protocol gaps, code quality issues, CI/CD gaps, an
 2. **BitVM2 Multi-Party**: Resolved (CON-1306). Implemented MuSig2-based Taproot tree aggregation.
 3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
 4. **ZKCP**: Scaffolding exists. Research expanded to core library requirements (CON-1313).
-5. **MuSig2 Signature Aggregation**: **RESOLVED** � real k256 scalar arithmetic (Session 2).
-6. **DLC Primitives**: Scaffolding initiated � still stub (basic intent creation, no oracle verification).
-7. **MSRV CI**: **RESOLVED** � added `msrv` job to main.yml (Session 2).
-8. **anchoring.rs tests**: **RESOLVED** � 29 comprehensive tests added (Session 2).
+5. **MuSig2 Signature Aggregation**: **RESOLVED** — real k256 scalar arithmetic (Session 2).
+6. **DLC Primitives**: Scaffolding initiated — still stub (basic intent creation, no oracle verification).
+7. **MSRV CI**: **RESOLVED** — added `msrv` job to main.yml (Session 2).
+8. **anchoring.rs tests**: **RESOLVED** — 29 comprehensive tests added (Session 2).
 
-## H. Priority Action Plan (Next Session)
+## H. Priority Action Plan
 
-### P0 — Immediate (before next release)
-1. **Add MSRV CI job** (`CI-01`, `CQ-09`) — test with `cargo +1.82 test`
-2. **Real MuSig2 partial signature aggregation** (`CQ-02`) — replace dummy s-values with real secp256k1 scalar addition
-3. **Add tests for `anchoring.rs`** (`TST-01`) — validate error types, idempotency, receipt serialization
+### P0 — RESOLVED (Session 1-2, 2026-06-28)
+1. ~~**Add MSRV CI job**~~ — ✅ `msrv` job in main.yml (`12c380d`)
+2. ~~**Real MuSig2 partial signature aggregation**~~ — ✅ k256 scalar arithmetic (`12c380d`)
+3. ~~**Add tests for anchoring.rs**~~ — ✅ 29 tests (`12c380d`)
 
-### P1 — High Priority
-4. **External security audit scoping** (`SEC-02`) — identify audit firm, scope core cryptographic paths
-5. **Split `control_model.rs`** (`CQ-01`) — into `trust/`, `lifecycle/`, `control_plane/` sub-modules
-6. **Add `cargo doc` to CI** (`CI-02`) and add doc-tests to key public APIs
+### P1 — In Progress / Tracked
+4. **External security audit scoping** → [#148](https://github.com/Conxian/lib-conxian-core/issues/148)
+5. **Split control_model.rs** → [#146](https://github.com/Conxian/lib-conxian-core/issues/146)
+6. ~~**Add cargo doc to CI + doc-tests**~~ — ✅ `docs` job + 4 doc-tests + 0 warnings (`f279240`)
 
-### P2 — Medium Priority
-7. **Add `rust-toolchain.toml`** (`CQ-08`)
-8. **Add fuzz testing** (`TST-05`) for PSBT parsing, proof verification, key aggregation
-9. **Add `cargo deny`** (`CI-07`) for license and supply chain compliance
-10. **Add `examples/` directory** (`CQ-06`) with Vault SDK usage examples
+### P2 — Partially Resolved / Tracked
+7. ~~**Add rust-toolchain.toml**~~ — ✅ pinned stable + components (`f279240`)
+8. **Add fuzz testing** → [#147](https://github.com/Conxian/lib-conxian-core/issues/147)
+9. ~~**Add cargo deny**~~ — ✅ deny.toml + CI job (`f279240`)
+10. ~~**Add examples/ directory**~~ — ✅ vault_sdk_basic.rs (`f279240`)
 
 ### P3 — Backlog
-11. Resolve `rgb-std` RC dependency (`CQ-12`)
-12. Audit WASM dependencies vs. architectural boundaries (`CQ-11`)
-13. Add benchmark infrastructure (`CI-04`)
-14. Real FROST implementation replacing dummy signatures (`CQ-02`)
-
----
+11. Resolve rgb-std RC dependency (CQ-12)
+12. Audit WASM dependencies vs. architectural boundaries (CQ-11)
+13. Add benchmark infrastructure (CI-04)
+14. Real FROST implementation → [#145](https://github.com/Conxian/lib-conxian-core/issues/145)
 
 ## I. Current Session Health Check (2026-06-28)
 
