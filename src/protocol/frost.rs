@@ -1,6 +1,6 @@
 //! FROST: Flexible Round-Optimized Schnorr Threshold Signatures.
 //!
-//! RFC 9591 threshold signing via [`frost-secp256k1-tr`] (ZcashFoundation, NCC Group audited).
+//! RFC 9591 threshold signing via `frost-secp256k1-tr` (ZcashFoundation, NCC Group audited).
 //! Produces BIP-340 compatible 64-byte Schnorr signatures with t-of-n threshold security.
 //!
 //! # Example — Trusted dealer 2-of-3 signing
@@ -66,7 +66,7 @@ pub enum FrostSessionStatus {
 
 /// Manager for FROST threshold signature lifecycle.
 ///
-/// Wraps [`frost-secp256k1-tr`] v3 with a simplified API for key generation,
+/// Wraps `frost-secp256k1-tr` v3 with a simplified API for key generation,
 /// two-round signing, and signature aggregation.
 pub struct FrostManager;
 
