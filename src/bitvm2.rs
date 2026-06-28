@@ -67,7 +67,7 @@ fn decode_hex_any(s: &str) -> Result<Vec<u8>, Bitvm2VerifyError> {
         return Err(Bitvm2VerifyError::InvalidHex);
     }
 
-    let normalized = if trimmed.len().is_multiple_of(2) {
+    let normalized = if trimmed.len() % 2 == 0 {
         trimmed.to_owned()
     } else {
         format!("0{trimmed}")
