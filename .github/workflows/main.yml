@@ -30,3 +30,16 @@ jobs:
       - name: Test Workspace
         run: |
           cargo test --workspace --locked
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Validation Scripts
+        run: |
+          python scripts/verify_knowledge_retention.py
+          python scripts/verify_tracked_artifacts.py
+          python scripts/verify_compose_env_templates.py
+          python scripts/verify_submodule_secret_filenames.py
+          python scripts/verify_bos_production_boundary.py

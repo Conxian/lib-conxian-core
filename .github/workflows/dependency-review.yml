@@ -9,7 +9,16 @@ permissions:
 
 jobs:
   dependency-review:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
-    uses: Conxian/.github/.github/workflows/dependency-review.yml@ac8cec76cb2e2e222bac3f8703f4b0a16cb86db3 # main
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          # Removed continue-on-error to ensure we fail on vulnerable changes (CON-1325)

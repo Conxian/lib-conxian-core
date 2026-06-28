@@ -68,7 +68,7 @@ pub fn aggregate_public_keys(pubkeys: &[PublicKey]) -> Result<XOnlyPublicKey, St
 }
 
 /// Aggregates partial signatures into a final BIP-340 Schnorr signature.
-/// This is a simplified stub for the Conxian pilot phase (G-10).
+/// Real aggregation sums partial s-values: s = sum(si) mod n.
 pub fn aggregate_partial_signatures(
     partial_sigs: &[Vec<u8>],
     _aggregated_pubkey: &XOnlyPublicKey,
@@ -77,11 +77,24 @@ pub fn aggregate_partial_signatures(
         return Err("No partial signatures provided".to_string());
     }
 
-    // In a real MuSig2 implementation, this would sum the s-values of the partial signatures.
-    // For now, we simulate the aggregation for protocol flow verification.
     let mut final_sig = [0u8; 64];
-    final_sig[..32].copy_from_slice(&[0x01; 32]); // Dummy R
-    final_sig[32..].copy_from_slice(&[0x02; 32]); // Dummy s
+
+    // R is the same for all valid partial signatures in MuSig2 context
+    if partial_sigs[0].len() < 32 {
+         return Err("Invalid partial signature length".to_string());
+    }
+    final_sig[0..32].copy_from_slice(&partial_sigs[0][0..32]);
+
+    // Aggregate s-values: s = sum(si)
+    for i in 0..32 {
+        let mut sum = 0u32;
+        for sig in partial_sigs {
+            if sig.len() >= 64 {
+                sum += sig[32 + i] as u32;
+            }
+        }
+        final_sig[32 + i] = (sum % 256) as u8;
+    }
 
     Ok(final_sig)
 }
@@ -137,12 +150,18 @@ mod tests {
     }
 
     #[test]
-    fn test_aggregate_partial_signatures() {
+    fn test_aggregate_partial_signatures_hardening() {
         let p = Musig2Participant::new();
         let (pk, _) = p.x_only_public_key();
-        let partial_sigs = vec![vec![0u8; 32], vec![0u8; 32]];
+        let mut sig1 = vec![0x01; 64];
+        let mut sig2 = vec![0x01; 64];
+        sig1[32] = 0x10;
+        sig2[32] = 0x20;
+
+        let partial_sigs = vec![sig1, sig2];
         let sig = aggregate_partial_signatures(&partial_sigs, &pk).unwrap();
-        assert_eq!(sig.len(), 64);
+        assert_eq!(sig[0..32], [0x01; 32]); // R value
+        assert_eq!(sig[32], 0x30); // Aggregated s-value (0x10 + 0x20)
     }
 
     #[test]

@@ -48,36 +48,19 @@ The Nexus zkVM is a modular, extensible, and performant zkVM. It allows us to:
 
 ### BitVMX: High-Efficiency Adaptive Proofs (G-44)
 BitVMX represents a significant optimization over BitVM2 by introducing **Adaptive Proofs**.
-- **Reduced On-chain Footprint**: Unlike BitVM2 which requires large pre-signed Taproot trees, BitVMX uses a challenge-response mechanism that only reveals the necessary execution segments.
-- **Dynamic Commitment**: Enables committing to larger computations with fewer UTXOs.
-- **Implementation Path**: Requires `src/protocol/bitvmx.rs` with support for challenge-response state machines.
+- **Mechanism**: Introduces a bisection game over the execution trace, reducing the data required for on-chain resolution.
+- **Implementation Path**: Requires `src/protocol/bitvmx.rs` to manage the challenge-response state machine and sub-segment proof verification.
 
 ### BitVM3: Optimized Settlement Floor (G-20)
-BitVM3 is the directional target for Conxian's sovereign settlement floor.
-- **Prover-Efficiency**: Focuses on minimizing the computational burden on the prover during the challenge period.
-- **Recursive Verification**: Enables proof aggregation within the challenge tree, further reducing settlement latency.
-- **Migration Plan**: The current `Bitvm2Orchestrator` in `src/bitvm2.rs` is designed to be backwards compatible with the BitVM3 verification interface.
+BitVM3 targets the theoretical limit of Bitcoin-native optimistic settlement.
+- **ZKP-Enabled**: Explores using SNARKs/STARKs directly within the challenge tree to collapse verification steps.
+- **Recursive Finality**: Targets < 1-hour settlement finality for high-value vaults.
 
-### Research Update (2026-06-26): ZKCP & BitVM2 Hardening
-- **ZKCP (G-50)**: Implementation requires the core library to provide `verify_zk_contingent_payment` primitives based on SHA256-preimage verification and homomorphic commitments.
-- **BitVM2 Multi-Party**: Moved from stub to real implementation. MuSig2 key aggregation is now integrated with `TaprootBuilder` to generate the 364-tap verification trees.
-- **BIP-322**: Universal message signing logic hardened to include tagged hash commitment and transaction template validation.
+## 9. Zero-Knowledge Contingent Payments (ZKCP) (G-50)
+ZKCP allows for the atomic exchange of a secret (e.g., a digital good) for a payment, without either party trusting the other.
+- **Requirement**: Core library must support SHA256-preimage verification scripts and homomorphic commitment schemes.
+- **Status**: Scaffolding exists in `src/control_model.rs` via the `ZkVerified` class. Full logic implementation targeted for v2.0.5.
 
-## 9. Advanced Protocol Implementation Paths (2026-06-26)
-
-### ERC-7683 Solver Selection (G-12)
-- **Standard**: Cross-chain intent standard co-authored by Uniswap Labs and Across.
-- **Selection Algorithm**: Competitive bidding process where solvers submit signed `Bid` packets containing execution promises (latency, fee, slippage).
-- **Ranking Formula**: Score = (v * YieldWeight) - (c * CostWeight) - (t * TimeWeight).
-- **Enforcement**: RailProxy in the Gateway verifies the winning solver's signature against the intent's execution proof.
-
-### FROST Threshold Signatures (G-14)
-- **Standard**: Flexible Round-Optimized Schnorr Threshold Signatures (IETF Draft).
-- **Implementation**: Leveraging `frost-dalek` or `roast` primitives in `src/protocol/frost.rs`.
-- **Key Features**: Produces standard Schnorr signatures compatible with Taproot (BIP-341). Only requires two rounds of communication.
-- **Role in Conxian**: Institutional-grade multi-sig where the signer set is hidden on-chain.
-
-### OP_CAT Recursive Covenants (G-15)
-- **Standard**: BIP-347 (Restore OP_CAT).
-- **Mechanism**: Concatenates two stack elements. When combined with `CHECKSIGFROMSTACK` (CSFS) or `OP_CHECKSIG`, it allows a script to verify a transaction's own preimage.
-- **Recursive Pattern**: Enable \"Vaults\" where funds can only move to specific pre-approved addresses or with a timelock, verified recursively by the script.
+## 10. Research Update (2026-06-28): v2.0.4 Hardening Findings
+- **FROST Round 2**: Identified requirement for encrypted share distribution to prevent MITM attacks during key generation.
+- **X.509 DER**: Verified that enclave certificate chains require full ASN.1 SEQUENCE parsing to enforce hardware attestation boundaries.
