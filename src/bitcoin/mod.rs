@@ -319,3 +319,4 @@ mod tests {
     }
 }
 pub mod bip322;
+pub mod liquid_adapter;
