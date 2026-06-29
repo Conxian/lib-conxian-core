@@ -1,10 +1,10 @@
-pub mod trust;
 pub mod lifecycle;
 pub mod ops;
+pub mod trust;
 
-pub use trust::*;
 pub use lifecycle::*;
 pub use ops::*;
+pub use trust::*;
 
 use serde::{Deserialize, Serialize};
 
@@ -173,10 +173,14 @@ pub fn is_timelock_satisfied(invariant: &TimelockInvariant, current_block: u64) 
 
 pub fn validate_quorum_invariant(invariant: &QuorumInvariant) -> Result<(), String> {
     if invariant.eligible_approvers == 0 {
-        return Err("Quorum invariant violation: eligible_approvers must be greater than zero".to_string());
+        return Err(
+            "Quorum invariant violation: eligible_approvers must be greater than zero".to_string(),
+        );
     }
     if invariant.approvals_required == 0 {
-        return Err("Quorum invariant violation: approvals_required must be greater than zero".to_string());
+        return Err(
+            "Quorum invariant violation: approvals_required must be greater than zero".to_string(),
+        );
     }
     if invariant.approvals_required > invariant.eligible_approvers {
         return Err(format!(
@@ -209,14 +213,19 @@ pub fn validate_signed_envelope_descriptor(
         return Err("Signed envelope descriptor validation failed: publisher is empty".to_string());
     }
     if descriptor.payload_hash.trim().is_empty() {
-        return Err("Signed envelope descriptor validation failed: payload_hash is empty".to_string());
+        return Err(
+            "Signed envelope descriptor validation failed: payload_hash is empty".to_string(),
+        );
     }
     if descriptor
         .commitments
         .iter()
         .any(|commitment| commitment.trim().is_empty())
     {
-        return Err("Signed envelope descriptor validation failed: commitments contain empty value".to_string());
+        return Err(
+            "Signed envelope descriptor validation failed: commitments contain empty value"
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -250,14 +259,19 @@ pub fn validate_session_trust_claims(claims: &SessionTrustClaims) -> Result<(), 
         return Err("Session trust validation failed: attestation_reference is empty".to_string());
     }
     if claims.confirmation_thumbprints.is_empty() {
-        return Err("Session trust validation failed: confirmation_thumbprints cannot be empty".to_string());
+        return Err(
+            "Session trust validation failed: confirmation_thumbprints cannot be empty".to_string(),
+        );
     }
     if claims
         .confirmation_thumbprints
         .iter()
         .any(|thumbprint| thumbprint.trim().is_empty())
     {
-        return Err("Session trust validation failed: confirmation_thumbprints contain empty value".to_string());
+        return Err(
+            "Session trust validation failed: confirmation_thumbprints contain empty value"
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -300,12 +314,14 @@ mod tests {
         assert!(validate_protected_action_transition(
             &ProtectedActionLifecycleState::Draft,
             &ProtectedActionLifecycleState::PendingAuthorization,
-        ).is_ok());
+        )
+        .is_ok());
 
         assert!(validate_protected_action_transition(
             &ProtectedActionLifecycleState::Executed,
             &ProtectedActionLifecycleState::ReadyForExecution,
-        ).is_err());
+        )
+        .is_err());
     }
 
     #[test]
@@ -324,7 +340,10 @@ mod tests {
         assert!(validate_monotonic_envelope_sequence(42, Some(42)).is_err());
 
         let seen = vec!["gateway-a:evt-123:42".to_string()];
-        assert!(is_duplicate_idempotency_key(&descriptor.idempotency_key(), &seen));
+        assert!(is_duplicate_idempotency_key(
+            &descriptor.idempotency_key(),
+            &seen
+        ));
     }
 
     #[test]
@@ -379,16 +398,36 @@ mod tests {
 
     #[test]
     fn test_release_status_transitions() {
-        assert!(validate_release_transition(&ReleaseStatus::Proposed, &ReleaseStatus::InReview).is_ok());
-        assert!(validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Deprecated).is_ok());
-        assert!(validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Approved).is_err());
+        assert!(
+            validate_release_transition(&ReleaseStatus::Proposed, &ReleaseStatus::InReview).is_ok()
+        );
+        assert!(
+            validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Deprecated)
+                .is_ok()
+        );
+        assert!(
+            validate_release_transition(&ReleaseStatus::Released, &ReleaseStatus::Approved)
+                .is_err()
+        );
     }
 
     #[test]
     fn test_policy_approval_transitions() {
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Pending, &PolicyApprovalStatus::Approved).is_ok());
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Approved, &PolicyApprovalStatus::Implemented).is_ok());
-        assert!(validate_policy_approval_transition(&PolicyApprovalStatus::Implemented, &PolicyApprovalStatus::Pending).is_err());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Pending,
+            &PolicyApprovalStatus::Approved
+        )
+        .is_ok());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Approved,
+            &PolicyApprovalStatus::Implemented
+        )
+        .is_ok());
+        assert!(validate_policy_approval_transition(
+            &PolicyApprovalStatus::Implemented,
+            &PolicyApprovalStatus::Pending
+        )
+        .is_err());
     }
 
     #[test]
@@ -408,9 +447,21 @@ mod tests {
 
     #[test]
     fn test_validate_trust_tier_policy() {
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum).is_err());
-        assert!(validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum).is_ok());
-        assert!(validate_trust_tier_policy(TrustTier::ObserverOnly, VerificationClass::NativeObservation).is_err());
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::LightClient).is_ok()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Strict, VerificationClass::ExternalQuorum)
+                .is_err()
+        );
+        assert!(
+            validate_trust_tier_policy(TrustTier::Managed, VerificationClass::ExternalQuorum)
+                .is_ok()
+        );
+        assert!(validate_trust_tier_policy(
+            TrustTier::ObserverOnly,
+            VerificationClass::NativeObservation
+        )
+        .is_err());
     }
 }

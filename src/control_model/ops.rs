@@ -176,7 +176,10 @@ pub fn validate_release_transition(from: &ReleaseStatus, to: &ReleaseStatus) -> 
     if valid {
         Ok(())
     } else {
-        Err(format!("Invalid release transition: {:?} -> {:?}", from, to))
+        Err(format!(
+            "Invalid release transition: {:?} -> {:?}",
+            from, to
+        ))
     }
 }
 

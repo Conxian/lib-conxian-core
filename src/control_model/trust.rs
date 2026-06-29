@@ -125,7 +125,10 @@ pub fn validate_trust_tier_policy(
     verification: VerificationClass,
 ) -> Result<(), String> {
     if !tier.is_production_allowed() {
-        return Err(format!("Trust tier {:?} is not allowed in production", tier));
+        return Err(format!(
+            "Trust tier {:?} is not allowed in production",
+            tier
+        ));
     }
 
     if tier.requires_light_client() && verification != VerificationClass::LightClient {
@@ -192,4 +195,13 @@ pub struct RailMetadata {
     pub custody_model: RailCustodyModel,
     pub compliance_constraints: RailComplianceConstraints,
     pub operational_capabilities: RailOperationalCapabilities,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SessionLifecycleStatus {
+    PendingAttestation,
+    Active,
+    Suspended,
+    Revoked,
+    Expired,
 }
