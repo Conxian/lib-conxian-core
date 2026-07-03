@@ -8,7 +8,7 @@ Prioritize the development and hardening of the `VaultSDK` primitive (`src/sdk_p
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
 - **Gateway:** Runtime orchestration, persistence, and external side effects live in the standalone `conxian-gateway` repository.
-- **Rule:** If a change needs network IO, database access, or environment-specific branching, it belongs in the Gateway, not here.
+- **Rule:** If a change needs network IO, database access, or environment-specific branching, it belongs in the Gateway, not here. This is automatically enforced by `scripts/verify_contamination_guard.py`.
 
 ## Trust Policy Enforcement (CON-791)
 Ensure all cross-domain bridge or messaging metadata aligns with the approved trust-tier taxonomy in `control_model.rs`:
