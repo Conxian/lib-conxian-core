@@ -22,7 +22,7 @@ jobs:
       - name: Install cargo-audit
         uses: taiki-e/install-action@ffad14352befc011a07601bbf501b672acbc18e6 # v2.29.0
         with:
-          tool: cargo-audit@v0.22.2
+          tool: cargo-audit@0.22.2
 
       - name: Cargo audit
         run: |
