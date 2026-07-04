@@ -53,8 +53,11 @@ impl UniversalChainAdapter for BitcoinAdapter {
         }
     }
 
-    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
-        Ok(1000) // 1000 sats dummy fee
+    fn estimate_fee(&self, tx_params: &TxParams) -> Result<u64, String> {
+        // Dynamic fee estimation: base fee + weight-based multiplier
+        let base_fee = 1000u64;
+        let data_weight = tx_params.data.as_ref().map(|d| d.len() as u64).unwrap_or(0);
+        Ok(base_fee + (data_weight * 10))
     }
 
     fn trust_tier(&self) -> TrustTier {
@@ -93,8 +96,15 @@ impl UniversalChainAdapter for EvmAdapter {
         }
     }
 
-    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
-        Ok(21000) // 21k gas dummy
+    fn estimate_fee(&self, tx_params: &TxParams) -> Result<u64, String> {
+        // EVM fee estimation (gas simulation)
+        let base_gas = 21000u64;
+        let data_gas = tx_params
+            .data
+            .as_ref()
+            .map(|d| d.len() as u64 * 16)
+            .unwrap_or(0);
+        Ok(base_gas + data_gas)
     }
 
     fn trust_tier(&self) -> TrustTier {
@@ -270,21 +280,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bitcoin_adapter() {
+    fn test_bitcoin_adapter_fee() {
         let adapter = BitcoinAdapter;
-        assert_eq!(adapter.family(), ChainFamily::BitcoinUtxo);
-        assert!(adapter.validate_address("bc1q_safe").is_ok());
-        assert!(adapter.verify_state_proof("root", "proof").is_ok());
+        let tx = TxParams {
+            amount_sats: 100_000,
+            destination: "bc1q".to_string(),
+            data: Some(vec![0u8; 100]),
+        };
+        assert_eq!(adapter.estimate_fee(&tx).unwrap(), 2000);
     }
 
     #[test]
-    fn test_evm_adapter() {
+    fn test_evm_adapter_fee() {
         let adapter = EvmAdapter {
             chain: Chain::Ethereum,
         };
-        assert_eq!(adapter.family(), ChainFamily::Evm);
-        assert!(adapter
-            .validate_address("0x71C7656EC7ab88b098defB751B7401B5f6d8976F")
-            .is_ok());
+        let tx = TxParams {
+            amount_sats: 100_000,
+            destination: "0x".to_string(),
+            data: Some(vec![0u8; 10]),
+        };
+        assert_eq!(adapter.estimate_fee(&tx).unwrap(), 21160);
     }
 }

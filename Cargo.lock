@@ -843,7 +843,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid 0.9.6",
+ "der_derive",
  "zeroize",
+]
+
+[[package]]
+name = "der_derive"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8034092389675178f570469e6c3b0465d3d30b4505c294a6550db47f3c17ad18"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
 ]
 
 [[package]]
@@ -1319,6 +1331,7 @@ dependencies = [
  "bdk",
  "bitcoin 0.32.101",
  "chrono",
+ "der",
  "getrandom 0.2.17",
  "hex",
  "k256",

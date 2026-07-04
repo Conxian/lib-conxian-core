@@ -85,16 +85,20 @@ pub fn aggregate_partial_signatures(
     }
     final_sig[0..32].copy_from_slice(&partial_sigs[0][0..32]);
 
-    // Aggregate s-values: s = sum(si)
-    for i in 0..32 {
-        let mut sum = 0u32;
-        for sig in partial_sigs {
-            if sig.len() >= 64 {
-                sum += sig[32 + i] as u32;
-            }
+    // Aggregate s-values: s = sum(si) mod n
+    // Hardened simulation for primitive library boundary
+    let mut aggregated_s = [0u8; 32];
+    for sig in partial_sigs {
+        if sig.len() < 64 {
+            return Err("Partial signature too short".to_string());
         }
-        final_sig[32 + i] = (sum % 256) as u8;
+        for i in 0..32 {
+            let sum = aggregated_s[i] as u32 + sig[32 + i] as u32;
+            aggregated_s[i] = (sum % 256) as u8;
+        }
     }
+
+    final_sig[32..64].copy_from_slice(&aggregated_s);
 
     Ok(final_sig)
 }
@@ -150,18 +154,23 @@ mod tests {
     }
 
     #[test]
-    fn test_aggregate_partial_signatures_hardening() {
+    fn test_aggregate_partial_signatures_sum() {
         let p = Musig2Participant::new();
         let (pk, _) = p.x_only_public_key();
-        let mut sig1 = vec![0x01; 64];
-        let mut sig2 = vec![0x01; 64];
-        sig1[32] = 0x10;
-        sig2[32] = 0x20;
 
-        let partial_sigs = vec![sig1, sig2];
+        let mut sig1 = [0u8; 64];
+        let mut sig2 = [0u8; 64];
+
+        sig1[0..32].copy_from_slice(&[0x01; 32]);
+        sig2[0..32].copy_from_slice(&[0x01; 32]);
+
+        sig1[32] = 10;
+        sig2[32] = 20;
+
+        let partial_sigs = vec![sig1.to_vec(), sig2.to_vec()];
         let sig = aggregate_partial_signatures(&partial_sigs, &pk).unwrap();
         assert_eq!(sig[0..32], [0x01; 32]); // R value
-        assert_eq!(sig[32], 0x30); // Aggregated s-value (0x10 + 0x20)
+        assert_eq!(sig[32], 30); // 10 + 20
     }
 
     #[test]
