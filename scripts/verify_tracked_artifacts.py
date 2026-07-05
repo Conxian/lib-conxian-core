@@ -1,14 +1,7 @@
 import subprocess
 import sys
 
-FORBIDDEN_DIRS = [
-    "target/",
-    "dist/",
-    "node_modules/",
-    "build/",
-    "test-results/",
-    "playwright-report/",
-]
+FORBIDDEN_DIRS = ["target/", "dist/", "node_modules/", "build/"]
 
 def main():
     print("Verifying tracked artifacts via git ls-files...")

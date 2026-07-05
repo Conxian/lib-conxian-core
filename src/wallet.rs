@@ -10,8 +10,7 @@ pub struct Wallet {
 
 impl Wallet {
     pub fn from_private_key_hex(hex_key: &str) -> anyhow::Result<Self> {
-        let bytes =
-            hex::decode(hex_key.trim()).with_context(|| "invalid hex in private key")?;
+        let bytes = hex::decode(hex_key.trim()).with_context(|| "invalid hex in private key")?;
         Self::from_private_key_bytes(&bytes)
     }
 
