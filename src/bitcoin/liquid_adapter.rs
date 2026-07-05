@@ -43,7 +43,9 @@ impl UniversalChainAdapter for LiquidAdapter {
         // Structural validation for Elements inclusion proof
         // Standard format: [block_hash]:[merkle_root]:[blinded_proof]
         if proof.split(':').count() < 3 {
-             return Err("Invalid Liquid proof format: Missing Elements consensus components".to_string());
+            return Err(
+                "Invalid Liquid proof format: Missing Elements consensus components".to_string(),
+            );
         }
 
         if proof.contains("invalid") {
@@ -66,7 +68,9 @@ mod tests {
     fn test_liquid_adapter_trait() {
         let adapter = LiquidAdapter;
         assert_eq!(adapter.chain(), Chain::Liquid);
-        assert!(adapter.validate_address("ex1_liquid_address_is_long_enough_39_chars").is_ok());
+        assert!(adapter
+            .validate_address("ex1_liquid_address_is_long_enough_39_chars")
+            .is_ok());
     }
 
     #[test]
@@ -75,6 +79,8 @@ mod tests {
         let valid_proof = "hash:root:blinded";
         assert!(adapter.verify_state_proof("root", valid_proof).is_ok());
         assert!(adapter.verify_state_proof("root", "").is_err());
-        assert!(adapter.verify_state_proof("root", "incomplete_proof").is_err());
+        assert!(adapter
+            .verify_state_proof("root", "incomplete_proof")
+            .is_err());
     }
 }

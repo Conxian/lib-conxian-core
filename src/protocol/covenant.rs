@@ -37,11 +37,7 @@ impl CovenantManager {
 
     /// Verifies if a given preimage satisfies the recursive invariant of a CAT script.
     /// BIP-347: ensures sha256(prefix || suffix) == committed_hash
-    pub fn verify_recursive_invariant(
-        prefix: &[u8],
-        suffix: &[u8],
-        committed_hash: &[u8],
-    ) -> bool {
+    pub fn verify_recursive_invariant(prefix: &[u8], suffix: &[u8], committed_hash: &[u8]) -> bool {
         if prefix.is_empty() || suffix.is_empty() || committed_hash.len() != 32 {
             return false;
         }
@@ -81,7 +77,15 @@ mod tests {
         hasher.update(suffix);
         let hash = hasher.finalize();
 
-        assert!(CovenantManager::verify_recursive_invariant(prefix, suffix, hash.as_slice()));
-        assert!(!CovenantManager::verify_recursive_invariant(prefix, b"wrong", hash.as_slice()));
+        assert!(CovenantManager::verify_recursive_invariant(
+            prefix,
+            suffix,
+            hash.as_slice()
+        ));
+        assert!(!CovenantManager::verify_recursive_invariant(
+            prefix,
+            b"wrong",
+            hash.as_slice()
+        ));
     }
 }

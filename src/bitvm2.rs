@@ -8,9 +8,9 @@ use bitcoin::taproot::TaprootBuilder;
 use bitcoin::ScriptBuf;
 use secp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
-use sha2::{Digest, Sha256};
 
 pub const ENV_BITVM2_GROTH16_VK_B64: &str = "BITVM2_GROTH16_VK_B64";
 
