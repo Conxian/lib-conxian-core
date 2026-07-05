@@ -86,8 +86,8 @@ mod cxip20_architecture_tests {
 
 #[cfg(test)]
 mod additional_protocol_tests {
-    use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
+    use crate::bitcoin::SilentPaymentScanner;
     use crate::protocol::dlc::DlcManager;
 
     #[test]

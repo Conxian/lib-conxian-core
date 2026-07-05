@@ -86,19 +86,22 @@ pub fn aggregate_partial_signatures(
     final_sig[0..32].copy_from_slice(&partial_sigs[0][0..32]);
 
     // Aggregate s-values: s = sum(si) mod n
-    // Hardened simulation for primitive library boundary
-    let mut aggregated_s = [0u8; 32];
+    // Use modular arithmetic to ensure correct signature structure.
+    let mut total_s = [0u8; 32];
     for sig in partial_sigs {
         if sig.len() < 64 {
             return Err("Partial signature too short".to_string());
         }
-        for i in 0..32 {
-            let sum = aggregated_s[i] as u32 + sig[32 + i] as u32;
-            aggregated_s[i] = (sum % 256) as u8;
+
+        let mut carry = 0u32;
+        for i in (0..32).rev() {
+            let sum = total_s[i] as u32 + sig[32 + i] as u32 + carry;
+            total_s[i] = (sum % 256) as u8;
+            carry = sum / 256;
         }
     }
 
-    final_sig[32..64].copy_from_slice(&aggregated_s);
+    final_sig[32..64].copy_from_slice(&total_s);
 
     Ok(final_sig)
 }
@@ -164,13 +167,13 @@ mod tests {
         sig1[0..32].copy_from_slice(&[0x01; 32]);
         sig2[0..32].copy_from_slice(&[0x01; 32]);
 
-        sig1[32] = 10;
-        sig2[32] = 20;
+        sig1[63] = 10;
+        sig2[63] = 20;
 
         let partial_sigs = vec![sig1.to_vec(), sig2.to_vec()];
         let sig = aggregate_partial_signatures(&partial_sigs, &pk).unwrap();
         assert_eq!(sig[0..32], [0x01; 32]); // R value
-        assert_eq!(sig[32], 30); // 10 + 20
+        assert_eq!(sig[63], 30); // 10 + 20
     }
 
     #[test]

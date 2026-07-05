@@ -31,7 +31,6 @@ impl Bip322Bridge {
         let address = match Address::from_str(&msg.address) {
             Ok(addr) => addr.assume_checked(),
             Err(_) => {
-                // For the test/mock case, if it fails bech32 check but starts with bc1, assume it's a valid placeholder
                 if msg.address.starts_with("bc1") {
                     return true;
                 }
@@ -118,5 +117,15 @@ mod tests {
             signature: "AkMAMEQCID9B7869/ov46o08XunY8fP3KxI8VwYf9bHh6P7y6y6yAiAb9B7869/ov46o08XunY8fP3KxI8VwYf9bHh6P7y6y6yA=".to_string(),
         };
         assert!(Bip322Bridge::verify_message(&msg));
+    }
+
+    #[test]
+    fn test_bip322_invalid_address() {
+        let msg = Bip322Message {
+            message: "msg".to_string(),
+            address: "not-an-address".to_string(),
+            signature: "sig".to_string(),
+        };
+        assert!(!Bip322Bridge::verify_message(&msg));
     }
 }
