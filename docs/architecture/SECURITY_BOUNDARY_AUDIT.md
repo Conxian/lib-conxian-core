@@ -23,4 +23,11 @@
 - **2026-05-05 Update:** Implemented mandatory administrative authentication for high-privilege endpoints (Proposal Approval/Execution, MCP) via `X-Gateway-Admin-Key (enforced by standalone Gateway)` requirement (CON-420).
 
 ## 4. Conclusion
-The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards. High-privilege state transition endpoints are now protected by mandatory administrative authentication.
+The `lib-conxian-core` and `conxian-gateway` components are compliant with Zero Secret Egress (ZSE) standards.
+
+### 4.1. Hardened Architectural Boundary (2026-06-27)
+- **Removal of Environment Side-Effects**: Logic in `src/wallet.rs` that directly read from environment variables (`std::env::var`) has been removed. This eliminates insecure defaults and ensures the core library remains platform-agnostic and free of configuration-dependent "magic" behavior.
+- **Enforced Contamination Guard**: The `scripts/verify_contamination_guard.py` script now explicitly forbids the use of `std::env` within core production code (`src/`).
+- **Secret Hygiene**: Verified that all wallet and signing initializations are now explicit, passing credentials only as function arguments from the runtime layer.
+
+High-privilege state transition endpoints remain protected by mandatory administrative authentication as enforced by the standalone Gateway.

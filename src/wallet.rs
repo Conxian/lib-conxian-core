@@ -3,32 +3,15 @@ use k256::ecdsa::{signature::Signer, Signature, SigningKey};
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 
-pub const ENV_CONXIAN_PRIVATE_KEY_HEX: &str = "CONXIAN_PRIVATE_KEY_HEX";
-pub const ENV_NEXUS_PRIVATE_KEY: &str = "NEXUS_PRIVATE_KEY";
-
 #[derive(Clone)]
 pub struct Wallet {
     signing_key: SigningKey,
 }
 
 impl Wallet {
-    pub fn new() -> anyhow::Result<Self> {
-        if let Ok(hex_key) = std::env::var(ENV_CONXIAN_PRIVATE_KEY_HEX) {
-            return Self::from_private_key_hex(&hex_key);
-        }
-
-        if let Ok(hex_key) = std::env::var(ENV_NEXUS_PRIVATE_KEY) {
-            return Self::from_private_key_hex(&hex_key);
-        }
-
-        Err(anyhow::anyhow!(
-            "missing private key env var: set {ENV_CONXIAN_PRIVATE_KEY_HEX} (or legacy {ENV_NEXUS_PRIVATE_KEY})"
-        ))
-    }
-
     pub fn from_private_key_hex(hex_key: &str) -> anyhow::Result<Self> {
         let bytes =
-            hex::decode(hex_key.trim()).with_context(|| "invalid hex in private key env var")?;
+            hex::decode(hex_key.trim()).with_context(|| "invalid hex in private key")?;
         Self::from_private_key_bytes(&bytes)
     }
 
@@ -63,11 +46,6 @@ impl Wallet {
         let signature: Signature = self.signing_key.sign(&digest);
         hex::encode(signature.to_bytes())
     }
-}
-
-pub fn sign_transaction(tx_id: &str) -> anyhow::Result<String> {
-    let wallet = Wallet::new()?;
-    Ok(wallet.sign(tx_id))
 }
 
 /// A "Sovereign Handshake" visualizing state change for hardware approval.
