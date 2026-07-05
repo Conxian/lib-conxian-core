@@ -22,6 +22,10 @@ pub enum Chain {
     Celestia,
     Solana,
     Eclipse,
+    Aptos,
+    Sui,
+    Polkadot,
+    Kusama,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -83,3 +83,46 @@ mod cxip20_architecture_tests {
         assert!(runtime.verify_seal("utxo:0", "comm").is_ok());
     }
 }
+
+#[cfg(test)]
+mod additional_protocol_tests {
+    use crate::bitcoin::SilentPaymentScanner;
+    use crate::fedimint::FedimintAdapter;
+    use crate::protocol::dlc::DlcManager;
+
+    #[test]
+    fn test_fedimint_unblinding_verification() {
+        let secret = b"ecash-secret";
+        let bf = b"bf";
+        let blinded = FedimintAdapter::blind_note(secret, bf);
+        assert!(FedimintAdapter::verify_unblinded(&blinded, bf, secret));
+        assert!(!FedimintAdapter::verify_unblinded(
+            &blinded,
+            b"wrong-bf",
+            secret
+        ));
+    }
+
+    #[test]
+    fn test_silent_payment_scanning_uniqueness() {
+        let tx = "tx_data";
+        let scan_key = [0x01; 32];
+        let spend_pk = [0x02; 33];
+        let found1 = SilentPaymentScanner::scan_transaction(tx, &scan_key, &spend_pk);
+        let found2 = SilentPaymentScanner::scan_transaction(tx, &scan_key, &spend_pk);
+        assert_eq!(found1, found2);
+
+        let found3 = SilentPaymentScanner::scan_transaction("other_tx", &scan_key, &spend_pk);
+        assert_ne!(found1, found3);
+    }
+
+    #[test]
+    fn test_dlc_verification_logic() {
+        let oracle_pk = vec![0x02; 33];
+        let outcome = [0xbb; 32];
+        let intent = DlcManager::create_intent(&oracle_pk, 50000, outcome, 2000);
+
+        assert!(DlcManager::verify_execution(&intent, b"valid-sig"));
+        assert!(!DlcManager::verify_execution(&intent, b""));
+    }
+}
