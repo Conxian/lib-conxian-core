@@ -34,7 +34,7 @@ mod tests;
 
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
 pub use sdk_primitive::{SigningPolicy, VaultSDK};
-pub use wallet::{sign_transaction, Wallet};
+pub use wallet::Wallet;
 
 #[cfg(test)]
 mod deployment_tests {

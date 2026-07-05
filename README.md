@@ -47,6 +47,9 @@ lib-conxian-core = { git = "https://github.com/Conxian/lib-conxian-core.git", ta
 ```rust
 use lib_conxian_core::{VaultSDK, SigningPolicy, Wallet};
 
+// Initialize the Wallet explicitly from a private key hex string
+let wallet = Wallet::from_private_key_hex("0101...01")?;
+
 // Initialize the SDK
 let sdk = VaultSDK::new(wallet, SigningPolicy::default());
 

@@ -8,6 +8,7 @@ FORBIDDEN_PATTERNS = [
     r"std::net",
     r"std::fs",
     r"std::process",
+    r"std::env",
 ]
 
 def is_test_file(filepath):
