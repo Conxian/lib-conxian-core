@@ -89,6 +89,7 @@ mod additional_protocol_tests {
     use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
     use crate::protocol::dlc::DlcManager;
+    use secp256k1::Secp256k1;
 
     #[test]
     fn test_fedimint_unblinding_verification() {
@@ -105,14 +106,18 @@ mod additional_protocol_tests {
 
     #[test]
     fn test_silent_payment_scanning_uniqueness() {
-        let tx = "tx_data";
+        let secp = Secp256k1::new();
+        let (_sk1, pk1) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk2, pk2) = secp.generate_keypair(&mut secp256k1::rand::rng());
+
         let scan_key = [0x01; 32];
         let spend_pk = [0x02; 33];
-        let found1 = SilentPaymentScanner::scan_transaction(tx, &scan_key, &spend_pk);
-        let found2 = SilentPaymentScanner::scan_transaction(tx, &scan_key, &spend_pk);
+
+        let found1 = SilentPaymentScanner::scan_transaction(&[pk1], &scan_key, &spend_pk);
+        let found2 = SilentPaymentScanner::scan_transaction(&[pk1], &scan_key, &spend_pk);
         assert_eq!(found1, found2);
 
-        let found3 = SilentPaymentScanner::scan_transaction("other_tx", &scan_key, &spend_pk);
+        let found3 = SilentPaymentScanner::scan_transaction(&[pk2], &scan_key, &spend_pk);
         assert_ne!(found1, found3);
     }
 
@@ -122,7 +127,8 @@ mod additional_protocol_tests {
         let outcome = [0xbb; 32];
         let intent = DlcManager::create_intent(&oracle_pk, 50000, outcome, 2000);
 
-        assert!(DlcManager::verify_execution(&intent, b"valid-sig"));
-        assert!(!DlcManager::verify_execution(&intent, b""));
+        // verify_execution requires at least 32 bytes of signature data
+        assert!(DlcManager::verify_execution(&intent, &[0x01; 32]));
+        assert!(!DlcManager::verify_execution(&intent, &[]));
     }
 }

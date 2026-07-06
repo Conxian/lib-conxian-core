@@ -11,14 +11,14 @@ use sha2::{Digest, Sha256};
 pub struct SilentPaymentScanner;
 
 impl SilentPaymentScanner {
-    /// Scans a transaction for potential silent payments to the user.
-    /// Implementation performs real ECC point multiplication to derive shared secrets.
+    /// Scans a transaction for potential silent payments to the user using input public keys.
+    /// This implementation performs real ECC point multiplication to derive shared secrets.
     pub fn scan_transaction(
-        tx_hex: &str,
+        input_pubkeys: &[PublicKey],
         user_scan_key: &[u8],
         user_spend_pubkey: &[u8],
     ) -> Vec<[u8; 32]> {
-        if tx_hex.is_empty() || user_scan_key.is_empty() || user_spend_pubkey.is_empty() {
+        if input_pubkeys.is_empty() || user_scan_key.is_empty() || user_spend_pubkey.is_empty() {
             return Vec::new();
         }
 
@@ -32,26 +32,17 @@ impl SilentPaymentScanner {
             Err(_) => return Vec::new(),
         };
 
-        // Parse spend pubkey
-        let _spend_pk = match PublicKey::from_slice(user_spend_pubkey) {
-            Ok(pk) => pk,
-            Err(_) => return Vec::new(),
-        };
+        // Compute shared secret using the dedicated method
+        let shared_secret = Self::compute_shared_secret(input_pubkeys, &scan_secret);
 
-        // Real BIP-352 scanning logic (simplified for library boundary):
-        // s = H(sum(P_in) * user_scan_key)
-        // Here we simulate the found outputs by hashing the transaction and scan key
-        let mut results = Vec::new();
-        let mut hasher = Sha256::new();
-        hasher.update(tx_hex.as_bytes());
-        hasher.update(scan_secret.secret_bytes());
-        results.push(hasher.finalize().into());
-
-        results
+        // In a full implementation, we would derive output keys from this shared secret
+        // and check them against the transaction's outputs.
+        // For the core library, returning the derived shared secret for the wallet to use.
+        vec![shared_secret]
     }
 
     /// Computes the shared secret for a silent payment output (BIP-352).
-    /// shared_secret = H(n * user_scan_privkey * sum(P_inputs))
+    /// shared_secret = H(user_scan_privkey * sum(P_inputs))
     pub fn compute_shared_secret(
         input_pubkeys: &[PublicKey],
         scan_privkey: &SecretKey,
@@ -61,7 +52,7 @@ impl SilentPaymentScanner {
             return [0u8; 32];
         }
 
-        // Sum up all input public keys
+        // Sum up all input public keys: sum(P_in)
         let mut combined_pk = input_pubkeys[0];
         for pk in input_pubkeys.iter().skip(1) {
             combined_pk = combined_pk.combine(pk).unwrap_or(combined_pk);
@@ -71,6 +62,7 @@ impl SilentPaymentScanner {
         let tweak = Scalar::from_be_bytes(scan_privkey.secret_bytes()).unwrap();
         let shared_point = combined_pk.mul_tweak(&secp, &tweak).unwrap_or(combined_pk);
 
+        // shared_secret = H(P_shared)
         let mut hasher = Sha256::new();
         hasher.update(shared_point.serialize());
         hasher.finalize().into()
@@ -83,12 +75,14 @@ mod tests {
 
     #[test]
     fn test_silent_payment_scanning_logic() {
-        let tx = "0200000001...";
+        let secp = Secp256k1::new();
+        let (_sk, pk) = secp.generate_keypair(&mut secp256k1::rand::rng());
         let scan_key = [0x01; 32];
         let spend_pk = [0x02; 33];
 
-        let found = SilentPaymentScanner::scan_transaction(tx, &scan_key, &spend_pk);
+        let found = SilentPaymentScanner::scan_transaction(&[pk], &scan_key, &spend_pk);
         assert!(!found.is_empty());
+        assert_ne!(found[0], [0u8; 32]);
     }
 
     #[test]
