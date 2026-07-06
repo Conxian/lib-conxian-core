@@ -1,6 +1,7 @@
 //! Fedimint Community Liquidity Adapter
 //! Aligned with CXIP 20 and G-16
 
+use secp256k1::{PublicKey, Scalar, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -23,19 +24,44 @@ impl FedimintAdapter {
     }
 
     /// Implements real cryptographic blinding for e-cash notes (G-16).
-    /// note = H(secret) * g^blinding_factor
+    /// Uses ECC point addition: blinded_note = H(secret)*G + r*G
     pub fn blind_note(secret: &[u8], blinding_factor: &[u8]) -> Vec<u8> {
-        let mut hasher = Sha256::new();
-        hasher.update(b"FEDIMINT-BLINDING");
-        hasher.update(secret);
-        let secret_hash = hasher.finalize();
+        let secp = Secp256k1::new();
 
-        // Simulated ECC multiplication for the primitive library boundary
-        let mut blinded = secret_hash.to_vec();
-        for i in 0..blinded.len() {
-            blinded[i] ^= blinding_factor[i % blinding_factor.len()];
-        }
-        blinded
+        let mut hasher = Sha256::new();
+        hasher.update(b"FEDIMINT-SECRET");
+        hasher.update(secret);
+        let secret_hash: [u8; 32] = hasher.finalize().into();
+
+        let secret_scalar = match Scalar::from_be_bytes(secret_hash) {
+            Ok(s) => s,
+            Err(_) => return vec![0u8; 33],
+        };
+
+        let bf_bytes: [u8; 32] = match blinding_factor.try_into() {
+            Ok(b) => b,
+            Err(_) => return vec![0u8; 33],
+        };
+
+        let bf_scalar = match Scalar::from_be_bytes(bf_bytes) {
+            Ok(s) => s,
+            Err(_) => return vec![0u8; 33],
+        };
+
+        // note_point = secret * G
+        let sk = match SecretKey::from_byte_array(secret_scalar.to_be_bytes()) {
+            Ok(k) => k,
+            Err(_) => return vec![0u8; 33],
+        };
+        let note_point = PublicKey::from_secret_key(&secp, &sk);
+
+        // blinded_point = note_point + bf * G
+        let blinded_point = match note_point.add_exp_tweak(&secp, &bf_scalar) {
+            Ok(p) => p,
+            Err(_) => return vec![0u8; 33],
+        };
+
+        blinded_point.serialize().to_vec()
     }
 
     /// Verifies the unblinding of an e-cash note.
@@ -51,13 +77,14 @@ mod tests {
 
     #[test]
     fn test_fedimint_blinding_determinism() {
-        let secret = b"my-ecash-secret";
-        let bf = b"random-blinding-factor";
+        let secret = b"my-ecash-secret-32-bytes-long-now";
+        let mut bf = [0u8; 32];
+        bf[31] = 1;
 
-        let blinded1 = FedimintAdapter::blind_note(secret, bf);
-        let blinded2 = FedimintAdapter::blind_note(secret, bf);
+        let blinded1 = FedimintAdapter::blind_note(secret, &bf);
+        let blinded2 = FedimintAdapter::blind_note(secret, &bf);
 
         assert_eq!(blinded1, blinded2);
-        assert!(FedimintAdapter::verify_unblinded(&blinded1, bf, secret));
+        assert!(FedimintAdapter::verify_unblinded(&blinded1, &bf, secret));
     }
 }

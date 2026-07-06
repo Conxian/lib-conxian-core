@@ -92,13 +92,13 @@ mod additional_protocol_tests {
 
     #[test]
     fn test_fedimint_unblinding_verification() {
-        let secret = b"ecash-secret";
-        let bf = b"bf";
+        let secret = b"ecash-secret-32-byte-long-input-";
+        let bf = &[0x01; 32];
         let blinded = FedimintAdapter::blind_note(secret, bf);
         assert!(FedimintAdapter::verify_unblinded(&blinded, bf, secret));
         assert!(!FedimintAdapter::verify_unblinded(
             &blinded,
-            b"wrong-bf",
+            &[0x02; 32],
             secret
         ));
     }
