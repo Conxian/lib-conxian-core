@@ -157,7 +157,9 @@ mod tests {
         // s_sk = a * e
         s_sk = s_sk.mul_tweak(&e).unwrap();
         // s_sk = a*e + k
-        s_sk = s_sk.add_tweak(&Scalar::from_be_bytes(nonce_sk.secret_bytes()).unwrap()).unwrap();
+        s_sk = s_sk
+            .add_tweak(&Scalar::from_be_bytes(nonce_sk.secret_bytes()).unwrap())
+            .unwrap();
 
         let s_bytes = s_sk.secret_bytes();
 

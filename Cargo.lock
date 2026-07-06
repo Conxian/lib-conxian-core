@@ -1337,7 +1337,7 @@ dependencies = [
 
 [[package]]
 name = "lib-conxian-core"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "aluvm",
  "anyhow",
