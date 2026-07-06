@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.11 (2026-07-06)
+- **Silent Payments Hardening:** Replaced transaction scanning simulation with real summation of input public keys and shared secret derivation via ECC point multiplication (sum(P_in) * user_scan_privkey) to align with BIP-352 (G-05).
+- **DLC Hardening:** Implemented real oracle attestation verification (s*G = R + e*P) in `src/protocol/dlc.rs`, resolving skeletal stubs (G-06).
+- **RGB Expansion:** Introduced `RGBStockAdapter` for production-ready client-side validation, supporting future `rgb-std` Stock persistence (CON-1407).
+- **Fedimint Hardening:** Hardened Fedimint community liquidity adapter with real ECC-based blinding (note = H(secret)*G + r*G), replacing XOR-based stubs (G-16).
+- **Fuzz Testing:** Established fuzzing infrastructure in the `fuzz/` directory with targets for ERC-7683 intent parsing and MuSig2 public key aggregation (CON-147).
+- **Workspace Alignment:** Configured the repository as a Cargo workspace to include the new fuzzing suite.
+- **Audit Readiness:** Completed hardening of all core cryptographic paths; all stubs are now resolved or replaced with production-grade logic, unblocking external security audit (CON-1333).
+
 ## v0.2.10 (2026-06-26)
 - **MuSig2 Hardening:** Implemented BIP-327 signature aggregation logic and Taproot script path integration (G-10).
 - **DLC Primitives:** Implemented native Bitcoin finance primitives and mapped them to the USI (G-06).

@@ -1,6 +1,6 @@
 [package]
 name = "lib-conxian-core"
-version = "0.2.10"
+version = "0.2.11"
 description = "Foundational library and Vault SDK for the Conxian protocol ecosystem."
 edition = "2021"
 rust-version = "1.85"
@@ -40,4 +40,4 @@ aluvm = "0.12.0"
 chrono = { version = "0.4.45", features = ["serde"] }
 
 [workspace]
-members = []
+members = ["fuzz"]

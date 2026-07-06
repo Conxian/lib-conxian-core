@@ -1,0 +1,25 @@
+[package]
+name = "lib-conxian-core-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2021"
+
+[dependencies]
+libfuzzer-sys = "0.4"
+secp256k1 = { version = "0.31", features = ["rand", "global-context"] }
+
+[dependencies.lib-conxian-core]
+path = ".."
+
+[[bin]]
+name = "parse_intent"
+path = "fuzz_targets/parse_intent.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "musig2_aggregate"
+path = "fuzz_targets/musig2_aggregate.rs"
+test = false
+doc = false
