@@ -1,6 +1,6 @@
 [package]
 name = "lib-conxian-core"
-version = "0.2.11"
+version = "0.2.10"
 description = "Foundational library and Vault SDK for the Conxian protocol ecosystem."
 edition = "2021"
 rust-version = "1.85"
