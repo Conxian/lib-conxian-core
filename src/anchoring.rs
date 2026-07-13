@@ -279,6 +279,6 @@ fn compact_state_root(state_root: &str) -> String {
     format!(
         "{}{}",
         &normalized[..8].to_ascii_lowercase(),
-        &normalized[normalized.len() - 8..].to_ascii_lowercase()
+        normalized[normalized.len() - 8..].to_ascii_lowercase()
     )
 }
