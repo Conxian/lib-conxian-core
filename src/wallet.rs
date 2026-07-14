@@ -22,7 +22,7 @@ impl Wallet {
     pub fn public_key_bytes(&self) -> Vec<u8> {
         self.signing_key
             .verifying_key()
-            .to_encoded_point(true)
+            .to_sec1_point(true)
             .as_bytes()
             .to_vec()
     }
