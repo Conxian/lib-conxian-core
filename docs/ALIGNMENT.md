@@ -1,6 +1,6 @@
 # Conxian Ecosystem Alignment Report
 
-> **Status**: Draft | **Last Updated**: 2026-07-15 | **Version**: 0.2.10
+> **Status**: Active | **Last Updated**: 2026-07-15 | **Version**: 0.2.11
 
 ## Executive Summary
 
@@ -240,7 +240,7 @@ After deprecation removal in v0.3.0:
 
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
-| lib-conxian-core | 0.2.10 | 0.3.0 | Deprecation cleanup |
+| lib-conxian-core | 0.2.11 | 0.3.0 | ✅ Migration complete (v0.2.11) |
 | conxius-enclave-sdk | 2.0.11 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
@@ -290,14 +290,14 @@ secp256k1 = "0.31"             # Align with SDK
 
 ### Immediate (This Sprint)
 
-- [ ] Finalize deprecation warnings in lib-conxian-core v0.2.10
-- [ ] Create comprehensive MIGRATION.md (done)
-- [ ] Update AGENTS.md with SDK guidance (done)
-- [ ] Update PRD.md with crate relationships (done)
+- [x] Finalize deprecation warnings in lib-conxian-core v0.2.10 ✅ DONE v0.2.11
+- [x] Create comprehensive MIGRATION.md ✅ DONE
+- [x] Update AGENTS.md with SDK guidance ✅ DONE
+- [x] Update PRD.md with crate relationships ✅ DONE
 
 ### Short-term (Next Sprint)
 
-- [ ] Publish migration guide
+- [x] Publish migration guide ✅ DONE (v0.2.11)
 - [ ] Deprecate lib-conclave-sdk on crates.io
 - [ ] Consider consolidating conxian-* crates
 
@@ -305,7 +305,7 @@ secp256k1 = "0.31"             # Align with SDK
 
 - [ ] Create Conxian Labs crates.io organization
 - [ ] Transfer crate ownership to organization
-- [ ] Publish lib-conxian-core v0.3.0 with removed deprecated code
+- [ ] Publish lib-conxian-core v0.3.0 with removed deprecated code (completed in v0.2.11)
 
 ### Long-term (Strategic)
 

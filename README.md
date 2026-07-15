@@ -1,15 +1,18 @@
 # lib-conxian-core
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.2.10-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.11-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 
 Shared protocol primitives for the Conxian ecosystem.
 
-## ⚠️ Vault SDK
+## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use the production
 [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.11) instead.
+
+> **v0.2.11 Breaking Change**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed.
+> See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions.
 
 This repository provides shared protocol primitives used across the Conxian stack.
 
@@ -23,14 +26,14 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 ## Core Capabilities
 
-- **Advanced Crypto:** BIP327 MuSig2 key aggregation and BitVM2 proof verification.
-- **Trust Policy:** Explicit enforcement of approved bridge and messaging trust tiers (CON-791).
-- **Control Models:** Canonical data structures for state proposals and ecosystem intake.
-- **Chain Adapters:** Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint support.
+- **Control Models:** Trust tier taxonomy (CON-791), lifecycle states, invariant validation
+- **Chain Adapters:** Universal adapter trait for Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint
+- **Anchoring:** State root persistence models
+- **Deployment:** Deployment manifests and verification types
 
 ## Status
 
-**v0.2.10 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.2.11 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -50,42 +53,49 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = "0.2.10"
+lib-conxian-core = "0.2.11"
 
 # For Vault SDK features (hardware signing, attestation)
-lib-conxian-core = { version = "0.2.10", features = ["enclave"] }
+lib-conxian-core = { version = "0.2.11", features = ["enclave"] }
 ```
 
 ### Quick Start
 
 ```rust
 use lib_conxian_core::{
-    Wallet,
     control_model::{TrustTier, VerificationClass},
-    musig2::Musig2Participant,
+    ContractBridge,
 };
-
-// Use protocol primitives
-let participant = Musig2Participant::new();
-let (pk, _) = participant.x_only_public_key();
+use k256::ecdsa::SigningKey;
 
 // Trust tier validation
 assert!(TrustTier::Strict.is_production_allowed());
+
+// Create signed contract call
+let signing_key = SigningKey::from_slice(&private_key_bytes)?;
+let signed_call = ContractBridge::create_signed_call(
+    &signing_key,
+    "ST1...contract-name.function-name",
+    "function-name",
+    vec![],
+)?;
 ```
 
 ## Documentation
 
+- **Migration Guide:** [docs/MIGRATION.md](docs/MIGRATION.md)
 - **PRD:** [docs/PRD.md](docs/PRD.md)
 - **API Reference:** [docs/API.md](docs/API.md)
 - **Boundaries:** [docs/ARCHITECTURE_BOUNDARIES.md](docs/ARCHITECTURE_BOUNDARIES.md)
 - **CXIP Index:** [docs/CXIP_INDEX.md](docs/CXIP_INDEX.md)
-- **Research:** [docs/UNIVERSAL_SUPPORT_RESEARCH.md](docs/UNIVERSAL_SUPPORT_RESEARCH.md)
+- **Alignment:** [docs/ALIGNMENT.md](docs/ALIGNMENT.md)
 
 ## Development
 
 ```bash
 cargo build
 cargo test --workspace
+cargo clippy --workspace -- -D warnings
 ```
 
 ## Contact
