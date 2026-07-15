@@ -62,8 +62,8 @@ All PRs require review from at least one core maintainer before merging.
 Changes to governance-sensitive files require CODEOWNERS review:
 
 - `.github/CODEOWNERS`
-- `docs/governance/SECURITY.md`
-- `docs/governance/SUPPORT.md`
+- `SECURITY.md`
+- `SUPPORT.md`
 - `.github/ISSUE_TEMPLATE/**`
 - `.github/PULL_REQUEST_TEMPLATE*`
 - `.github/workflows/**`
