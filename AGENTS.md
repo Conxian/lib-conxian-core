@@ -15,6 +15,18 @@ This repository provides:
 1. **Protocol Primitives:** Maintain canonical types and invariant validation
 2. **Chain Adapters:** Keep adapters consistent across the ecosystem
 3. **Control Models:** Trust tier taxonomy enforcement (CON-791)
+4. **BIP-110 Alignment:** Ensure all Bitcoin-related code supports reduced-data softfork principles
+
+## BIP-110 (Reduced Data Temporary Softfork)
+
+BIP-110 is a consensus proposal that temporarily limits data embedding in Bitcoin to refocus on monetary use. All Bitcoin-related code should:
+
+- **Support BIP-110 rules**: Max 256-byte pushdata, 83-byte OP_RETURN, 34-byte ScriptPubKey
+- **Prefer monetary transactions**: Design for peer-to-peer cash, not data storage
+- **Optimize for clean blocks**: Reduce inscription/ordinal noise in fee estimation
+- **Document compliance**: Add `bip110_compliant` feature flags where applicable
+
+See `docs/BIP110_ALIGNMENT.md` for full guidance.
 
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
@@ -29,6 +41,15 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 - `Expedient` (T3)
 - `ObserverOnly`
 
+## Cross-Repository Alignment
+
+| Repository | Bitcoin Layer | BIP-110 Priority |
+|------------|-------------|-----------------|
+| `conxius-enclave-sdk` | Core signing | HIGH |
+| `conxius-wallet` | L1 wallet | HIGH |
+| `conxian-nexus` | Observation | MEDIUM |
+| `lib-conxian-core` | Protocol | MEDIUM |
+
 ## Crate Publishing
 This repository is published as `lib-conxian-core` on crates.io.
 The Vault SDK is published separately as `conxius-enclave-sdk`.
@@ -36,6 +57,7 @@ The Vault SDK is published separately as `conxius-enclave-sdk`.
 ## Workflow Instructions
 - **Verification:** Always run `cargo test --workspace` to verify changes.
 - **ZSE:** Adhere to Zero Secret Egress standards. Never track environment files or private keys.
+- **BIP-110 Check:** Run `cargo clippy` to ensure no deprecated data embedding patterns.
 - **Source of Truth:** Refer to `bitcoinlayers.org` for the latest Bitcoin Layer 2 research.
 
 ## Contact

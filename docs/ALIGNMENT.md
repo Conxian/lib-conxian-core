@@ -2,6 +2,21 @@
 
 > **Status**: Active | **Last Updated**: 2026-07-15 | **Version**: 0.2.11
 
+## BIP-110 Position Statement
+
+Conxian Labs **supports BIP-110** (Reduced Data Temporary Softfork) as it aligns with our core principles:
+
+### Why BIP-110 Matters
+
+| Principle | BIP-110 | Conxian |
+|----------|---------|---------|
+| Peer-to-peer cash | Limits data embedding | Non-custodial architecture |
+| Decentralization | Lowers node costs | Hardware-enclave signing |
+| Sound money | Focus on monetary use | Trust tier enforcement |
+| Original vision | Bitcoin as money | "User owns the train" |
+
+See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full guidance.
+
 ## Executive Summary
 
 This document provides a comprehensive analysis of the Conxian ecosystem crate relationships, identifies unique value propositions for each crate, and outlines a strategic alignment plan for the Conxian Labs organization.
@@ -312,6 +327,16 @@ secp256k1 = "0.31"             # Align with SDK
 - [ ] Decide: Keep lib-conxian-core separate OR merge into conxius-enclave-sdk
 - [ ] Align all beta dependencies to stable versions
 - [ ] Publish comprehensive API documentation
+- [ ] Evaluate BIP-110 activation impact across all repos
+
+### BIP-110 Alignment
+
+- [ ] Add `bip110_compliant` feature flag to conxius-enclave-sdk
+- [ ] Update fee estimation in conxius-wallet for clean blocks
+- [ ] Verify Silent Payments (BIP-352) compatibility with BIP-110
+- [ ] Document BIP-110 compliance in all Bitcoin-related code
+
+See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full BIP-110 guidance.
 
 ## Contact
 
