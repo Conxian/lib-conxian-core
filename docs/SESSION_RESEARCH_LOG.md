@@ -4,10 +4,57 @@
 
 ---
 
-## Session 2026-07-15: SDK Integration & Remediation
+## Session 2026-07-15: SDK Integration & Ecosystem Alignment
 
 ### Objective
-Check if lib-conxian-core is using the latest SDK crate and all its capabilities. Remediate issues and align implementations.
+1. Check if lib-conxian-core is using the latest SDK crate and all its capabilities
+2. Expand research to understand full ecosystem alignment
+3. Implement all recommendations
+
+### Expanded Research Findings
+
+#### 1. Ecosystem Crate Inventory
+
+**Published Crates (botshelomokoka on crates.io):**
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| `conxius-enclave-sdk` | 2.0.11 | Production Vault SDK |
+| `lib-conclave-sdk` | 2.0.8 | Alias (should deprecate) |
+| `conxian-core` | 0.1.4 | Gateway core |
+| `conxian_api` | 0.1.4 | HTTP API |
+| `conxian_compliance` | 0.1.4 | ZK compliance |
+| `conxian_engine` | 0.1.4 | Business logic |
+
+#### 2. Unique Value of lib-conxian-core
+
+**Modules UNIQUE to lib-conxian-core (not in SDK):**
+- `control_model/` - Trust tiers, lifecycle states, invariants (HIGH value)
+- `anchoring.rs` - State persistence models (HIGH value)
+- `adapters/` - Universal chain adapter trait (CXIP-21) (HIGH value)
+- `deployment.rs` - Deployment manifests (MEDIUM value)
+
+#### 3. Beta Dependency Watchlist
+
+```
+bitcoin = "0.33.0-beta"         # Watch for stable (SDK)
+secp256k1 = "0.32.0-beta.2"    # Watch for stable (SDK)
+k256 = "0.14.0-rc.9"           # Watch for stable (SDK)
+```
+
+#### 4. Cross-Repository Dependencies
+
+```
+conxian-ui → conxian-gateway → lib-conxian-core → conxius-enclave-sdk
+conxius-wallet → conxius-enclave-sdk → lib-conxian-core
+conxian-nexus → lib-conxian-core
+```
+
+#### 5. Open Issues Summary
+
+- conxian-gateway: 11 open (P0: TypeScript SDK)
+- conxius-wallet: 3 open (P1: tech debt, Silent Payments)
+- conxian-nexus: 3 open (infrastructure)
+- conxius-enclave-sdk: 0 open (all P1 resolved)
 
 ### Key Findings
 
