@@ -33,7 +33,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 ## Status
 
-**v0.2.11 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.2.12 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -110,6 +110,8 @@ This repository follows standardized governance and security defaults.
 
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Security Policy:** [SECURITY.md](SECURITY.md)
+- **Support:** [SUPPORT.md](SUPPORT.md)
+- **Code of Conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
 ## License

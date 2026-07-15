@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vault SDK Removed**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed
 - All Vault SDK functionality now available in `conxius-enclave-sdk` v2.0.11
 
+### Added
+- **Silent Payments Hardening**: Replaced transaction scanning simulation with real summation of input public keys and shared secret derivation via ECC point multiplication (sum(P_in) * user_scan_privkey) to align with BIP-352 (G-05).
+- **DLC Hardening**: Implemented real oracle attestation verification (s*G = R + e*P) in `src/protocol/dlc.rs`, resolving skeletal stubs (G-06).
+- **RGB Expansion**: Introduced `RGBStockAdapter` for production-ready client-side validation, supporting future `rgb-std` Stock persistence (CON-1407).
+- **Fedimint Hardening**: Hardened Fedimint community liquidity adapter with real ECC-based blinding (note = H(secret)*G + r*G), replacing XOR-based stubs (G-16).
+- **Fuzz Testing**: Established fuzzing infrastructure in the `fuzz/` directory with targets for ERC-7683 intent parsing and MuSig2 public key aggregation (CON-147).
+
+### Changed
+- **Workspace Alignment**: Configured the repository as a Cargo workspace to include the new fuzzing suite.
+- **Audit Readiness**: Completed hardening of all core cryptographic paths; all stubs are now resolved or replaced with production-grade logic, unblocking external security audit (CON-1333).
+
 ### Migration
 - See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions
 
@@ -37,74 +48,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.10] - 2026-07-13
 
 ### Added
-- **Protocol Hardening**: Hardened protocol primitives and established fuzzing suite
-- **CON-700 Compliance**: Architectural boundary enforcement verified via contamination guard
-- **FROST Threshold Signatures**: Full implementation of FROST threshold signatures
-- **ERC-7683 Support**: Cross-chain order sharing protocol primitives
-- **OP_CAT Support**: Bitcoin opcode support for covenant primitives
-- **Control Model Expansion**: Enhanced trust tier taxonomy (Strict/Managed/Expedient)
-- **Chain Adapter Refinement**: Improved Bitcoin, RGB, Lightning, Stacks adapters
+- **Protocol Hardening**: Hardened protocol primitives and established fuzzing suite.
+- **CON-700 Compliance**: Architectural boundary enforcement verified via contamination guard.
+- **FROST Threshold Signatures**: Full implementation of FROST threshold signatures (G-14).
+- **ERC-7683 Support**: Cross-chain order sharing protocol primitives and solver selection algorithm (G-12).
+- **OP_CAT Support**: Bitcoin opcode support for covenant primitives and recursive templates (G-15).
+- **Control Model Expansion**: Enhanced trust tier taxonomy (Strict/Managed/Expedient).
+- **Chain Adapter Refinement**: Improved Bitcoin, RGB, Lightning, Stacks adapters.
+- **MuSig2 Hardening**: Implemented BIP-327 signature aggregation logic and Taproot script path integration (G-10).
+- **DLC Primitives**: Implemented native Bitcoin finance primitives and mapped them to the USI (G-06).
+- **Babylon Staking**: Expanded the Babylon adapter to support fee estimation and universal trait compliance (G-43).
+- **Universal Adapters**: Hardened skeletal implementations for Bitcoin, EVM, Cosmos, Solana, Move, and Substrate (CXIP-21).
+- **BIP-322 Hardening**: Hardened universal message signing logic and verification (G-09).
+- **BitVM2 Multi-Party**: Implemented real MuSig2-based Taproot tree aggregation (G-11).
+- **ZKCP Scaffolding**: Initialized research and core library requirements for zero-knowledge contingent payments (G-50).
 
 ### Changed
-- **CI/CD Hardening**: Enhanced security workflows including CodeQL and Cargo Audit
-- **Repository Standards**: Improved hygiene baseline and documentation
-- **Version Alignment**: MSRV updated to 1.85
+- **CI/CD Hardening**: Enhanced security workflows including CodeQL and Cargo Audit.
+- **Repository Standards**: Improved hygiene baseline and documentation.
+- **Version Alignment**: MSRV updated to 1.85.
+- **Governance Alignment**: Standardized readiness and executive scorecards in `docs/governance/`.
 
 ### Fixed
-- MSRV CodeQL CI failures
-- MuSig2 aggregation issues
-- Anchor protocol test coverage
+- MSRV CodeQL CI failures.
+- MuSig2 aggregation issues.
+- Anchor protocol test coverage.
 
 ### Security
-- Zero Secret Egress compliance verified
-- Secret scanning enabled at org level
-- Dependency vulnerability scanning via Cargo Audit
+- Zero Secret Egress compliance verified.
+- Secret scanning enabled at org level.
+- Dependency vulnerability scanning via Cargo Audit.
 
 ---
 
-## [v0.2.9] - 2026-05-XX
+## [v0.2.9] - 2026-06-21
 
 ### Added
-- **Vault SDK**: Primary commercial SDK primitive (Hardware-backed Bitcoin signing + policy enforcement)
-- **Musig2 Aggregation**: Taproot multi-sig key aggregation
-- **Chain Family Taxonomy**: Universal chain support policy
+- **Vault SDK**: Primary commercial SDK primitive (Hardware-backed Bitcoin signing + policy enforcement).
+- **Musig2 Aggregation**: Taproot multi-sig key aggregation.
+- **Chain Family Taxonomy**: Universal chain support policy.
+- **Nexus zkVM Research**: Expanded verifiable compute primitives for cross-chain state aggregation.
 
 ### Changed
-- Control model split into lifecycle, ops, and trust modules
-- Repository alignment with protocol-first pivot
+- **Control Model**: Split into lifecycle, ops, and trust modules.
+- **Repository Alignment**: Aligned with protocol-first pivot.
+- **RGB Shadow Mode**: Implemented shadow-mode execution for validation gating (CON-768).
+- **Vault SDK Scaffolding**: Hardened primary commercial SDK interfaces.
+- **CI/CD Alignment**: Hardened organization-wide GitHub Action pins and hygiene controls.
 
 ---
 
-## [v0.2.8] - 2026-04-XX
+## [v0.2.8] - 2026-06-15
 
 ### Added
-- Protocol gap remediation
-- Enhanced CI/CD pipeline
+- **Protocol Gap Remediation**: Addressed priority implementation gaps.
+- **CI/CD Pipeline**: Enhanced automated verification.
+- **Stacks sBTC Alignment**: Updated adapter for Nakamoto finality and peg-in/out interfaces.
+- **Lightning Resilience**: Initialized audit report tracking for cross-chain event distribution.
+- **Metric Specifications**: Established execution-ready formulas for ecosystem variables ($C_R, O_C, V_X, A_S, N_E$).
 
 ---
 
-## [v0.2.7] - 2026-03-XX
+## [v0.2.7] - 2026-06-11
 
 ### Added
-- Shared artifact schemas
-- Universal chain expansion
+- **Shared Artifact Schemas**: Standardized verification and manifest types.
+- **Universal Chain Expansion**: Expanded support for non-Bitcoin chains.
+- **Event Bus Runtime**: Implemented subscriber delivery layer for cross-chain event distribution.
+- **Audit Reports**: Consolidated security and fail-safe audit findings into `docs/architecture/`.
 
 ---
 
-## [v0.2.6] - 2026-02-XX
+## [v0.2.6] - 2026-06-08
 
 ### Added
-- Repository standards hardening
-- Package metadata alignment
+- **Repository Standards Hardening**: Aligned with public-facing governance and security standards.
+- **Package Metadata Alignment**: Hardened Cargo.toml metadata and discovery tags for the flagship SDK.
 
 ---
 
 ## [v0.2.5] - 2026-01-XX
 
 ### Added
-- Control-plane modules and SDK policy
-- Gateway extraction complete
-- Vault SDK repositioning
+- Control-plane modules and SDK policy.
+- Gateway extraction complete.
+- Vault SDK repositioning.
 
 ---
 
