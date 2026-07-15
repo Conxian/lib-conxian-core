@@ -24,7 +24,14 @@ BIP-110 is a consensus proposal that temporarily limits data embedding in Bitcoi
 - **Support BIP-110 rules**: Max 256-byte pushdata, 83-byte OP_RETURN, 34-byte ScriptPubKey
 - **Prefer monetary transactions**: Design for peer-to-peer cash, not data storage
 - **Optimize for clean blocks**: Reduce inscription/ordinal noise in fee estimation
-- **Document compliance**: Add `bip110_compliant` feature flags where applicable
+- **Document compliance**: Use `Bip110Compliance` struct for validation in `control_model`
+
+The `Bip110Compliance` struct provides:
+- `validate_pushdata(size)` - Max 256-byte pushdata
+- `validate_op_return(size)` - Max 83-byte OP_RETURN
+- `validate_script_pubkey(size)` - Max 34-byte ScriptPubKey
+- `validate_witness_element(size)` - Max 256-byte witness
+- `validate_transaction(...)` - Full transaction validation
 
 See `docs/BIP110_ALIGNMENT.md` for full guidance.
 

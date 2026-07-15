@@ -464,4 +464,159 @@ mod tests {
         )
         .is_err());
     }
+
+    // BIP-110 Compliance Tests
+    #[test]
+    fn test_bip110_pushdata_validation() {
+        let compliance = Bip110Compliance::new();
+
+        // Valid: 256 bytes (at limit)
+        let result = compliance.validate_pushdata(256);
+        assert!(result.is_compliant);
+        assert!(result.violations.is_empty());
+
+        // Valid: 100 bytes
+        let result = compliance.validate_pushdata(100);
+        assert!(result.is_compliant);
+
+        // Invalid: 257 bytes (over limit)
+        let result = compliance.validate_pushdata(257);
+        assert!(!result.is_compliant);
+        assert_eq!(result.violations.len(), 1);
+        assert!(matches!(
+            result.violations[0],
+            Bip110Violation::PushdataExceedsLimit {
+                size: 257,
+                max: 256
+            }
+        ));
+    }
+
+    #[test]
+    fn test_bip110_op_return_validation() {
+        let compliance = Bip110Compliance::new();
+
+        // Valid: 83 bytes (at limit)
+        let result = compliance.validate_op_return(83);
+        assert!(result.is_compliant);
+
+        // Valid: 40 bytes
+        let result = compliance.validate_op_return(40);
+        assert!(result.is_compliant);
+
+        // Invalid: 84 bytes (over limit)
+        let result = compliance.validate_op_return(84);
+        assert!(!result.is_compliant);
+        assert!(matches!(
+            result.violations[0],
+            Bip110Violation::OpReturnExceedsLimit { size: 84, max: 83 }
+        ));
+    }
+
+    #[test]
+    fn test_bip110_script_pubkey_validation() {
+        let compliance = Bip110Compliance::new();
+
+        // Valid: 34 bytes (P2WPKH)
+        let result = compliance.validate_script_pubkey(34);
+        assert!(result.is_compliant);
+
+        // Valid: 25 bytes (P2PKH)
+        let result = compliance.validate_script_pubkey(25);
+        assert!(result.is_compliant);
+
+        // Invalid: 35 bytes (over limit)
+        let result = compliance.validate_script_pubkey(35);
+        assert!(!result.is_compliant);
+        assert!(matches!(
+            result.violations[0],
+            Bip110Violation::ScriptPubKeyExceedsLimit { size: 35, max: 34 }
+        ));
+    }
+
+    #[test]
+    fn test_bip110_witness_element_validation() {
+        let compliance = Bip110Compliance::new();
+
+        // Valid: 256 bytes (at limit)
+        let result = compliance.validate_witness_element(256);
+        assert!(result.is_compliant);
+
+        // Valid: 32 bytes (signature)
+        let result = compliance.validate_witness_element(32);
+        assert!(result.is_compliant);
+
+        // Invalid: 257 bytes (over limit)
+        let result = compliance.validate_witness_element(257);
+        assert!(!result.is_compliant);
+        assert!(matches!(
+            result.violations[0],
+            Bip110Violation::WitnessElementExceedsLimit {
+                size: 257,
+                max: 256
+            }
+        ));
+    }
+
+    #[test]
+    fn test_bip110_full_transaction_validation() {
+        let compliance = Bip110Compliance::new();
+
+        // Valid standard transaction
+        let result = compliance.validate_transaction(
+            &[32, 33], // pushdatas: signature + pubkey
+            Some(40),  // op_return: 40 bytes memo
+            34,        // script_pubkey: P2WPKH
+            &[32, 33], // witness: signature + pubkey
+        );
+        assert!(result.is_compliant);
+
+        // Invalid: multiple violations
+        let result = compliance.validate_transaction(
+            &[300],    // oversized pushdata
+            Some(100), // oversized op_return
+            50,        // oversized script_pubkey
+            &[300],    // oversized witness
+        );
+        assert!(!result.is_compliant);
+        assert_eq!(result.violations.len(), 4);
+    }
+
+    #[test]
+    fn test_bip110_disabled_compliance() {
+        let compliance = Bip110Compliance::disabled();
+        assert!(!compliance.is_enabled());
+
+        // All validations pass when disabled
+        let result = compliance.validate_pushdata(1000);
+        assert!(result.is_compliant);
+
+        let result = compliance.validate_op_return(1000);
+        assert!(result.is_compliant);
+
+        let result = compliance.validate_transaction(&[1000], Some(1000), 1000, &[1000]);
+        assert!(result.is_compliant);
+    }
+
+    #[test]
+    fn test_bip110_constants() {
+        use super::trust::bip110;
+
+        assert_eq!(bip110::MAX_PUSHDATA_BYTES, 256);
+        assert_eq!(bip110::MAX_OP_RETURN_BYTES, 83);
+        assert_eq!(bip110::MAX_SCRIPT_PUBKEY_BYTES, 34);
+        assert_eq!(bip110::MAX_WITNESS_ELEMENT_BYTES, 256);
+    }
+
+    #[test]
+    fn test_bip110_violation_display() {
+        let violation = Bip110Violation::PushdataExceedsLimit {
+            size: 300,
+            max: 256,
+        };
+        let display = violation.to_string();
+        assert!(display.contains("300"));
+        assert!(display.contains("256"));
+        assert!(display.contains("BIP-110"));
+    }
 }

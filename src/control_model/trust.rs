@@ -1,5 +1,27 @@
 use serde::{Deserialize, Serialize};
 
+/// BIP-110 Compliance Constants
+///
+/// BIP-110 (Reduced Data Temporary Softfork) limits data embedding in Bitcoin transactions:
+/// - Max 256-byte pushdata per element
+/// - 83-byte OP_RETURN output
+/// - 34-byte ScriptPubKey for standard P2PKH/P2WPKH
+///
+/// See [docs/BIP110_ALIGNMENT.md](https://github.com/Conxian/lib-conxian-core/blob/main/docs/BIP110_ALIGNMENT.md)
+pub mod bip110 {
+    /// Maximum size of a single pushdata element in bytes
+    pub const MAX_PUSHDATA_BYTES: usize = 256;
+
+    /// Maximum OP_RETURN output size in bytes (standard policy under BIP-110)
+    pub const MAX_OP_RETURN_BYTES: usize = 83;
+
+    /// Maximum ScriptPubKey size for standard addresses (P2PKH/P2WPKH) in bytes
+    pub const MAX_SCRIPT_PUBKEY_BYTES: usize = 34;
+
+    /// Maximum witness element size in bytes
+    pub const MAX_WITNESS_ELEMENT_BYTES: usize = 256;
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Chain {
@@ -208,4 +230,237 @@ pub enum SessionLifecycleStatus {
     Suspended,
     Revoked,
     Expired,
+}
+
+/// BIP-110 compliance validation result
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Bip110ValidationResult {
+    pub is_compliant: bool,
+    pub violations: Vec<Bip110Violation>,
+}
+
+impl Bip110ValidationResult {
+    pub fn compliant() -> Self {
+        Self {
+            is_compliant: true,
+            violations: Vec::new(),
+        }
+    }
+
+    pub fn non_compliant(violations: Vec<Bip110Violation>) -> Self {
+        Self {
+            is_compliant: false,
+            violations,
+        }
+    }
+}
+
+/// Specific BIP-110 violation types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Bip110Violation {
+    PushdataExceedsLimit { size: usize, max: usize },
+    OpReturnExceedsLimit { size: usize, max: usize },
+    ScriptPubKeyExceedsLimit { size: usize, max: usize },
+    WitnessElementExceedsLimit { size: usize, max: usize },
+}
+
+impl std::fmt::Display for Bip110Violation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PushdataExceedsLimit { size, max } => {
+                write!(
+                    f,
+                    "Pushdata size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
+            }
+            Self::OpReturnExceedsLimit { size, max } => {
+                write!(
+                    f,
+                    "OP_RETURN size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
+            }
+            Self::ScriptPubKeyExceedsLimit { size, max } => {
+                write!(
+                    f,
+                    "ScriptPubKey size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
+            }
+            Self::WitnessElementExceedsLimit { size, max } => {
+                write!(
+                    f,
+                    "Witness element size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for Bip110Violation {}
+
+/// BIP-110 Compliance struct for validating Bitcoin transaction data sizes.
+///
+/// BIP-110 (Reduced Data Temporary Softfork) enforces strict limits on data embedding:
+/// - Maximum 256-byte pushdata per element
+/// - Maximum 83-byte OP_RETURN output
+/// - Maximum 34-byte ScriptPubKey for standard addresses
+///
+/// This struct provides validation helpers aligned with the `TrustTier::Strict` (T1)
+/// trust tier for Bitcoin bridges, ensuring monetary use cases are prioritized
+/// over data storage.
+///
+/// # Example
+///
+/// ```rust
+/// use lib_conxian_core::control_model::{Bip110Compliance, TrustTier};
+///
+/// let compliance = Bip110Compliance::new();
+/// let result = compliance.validate_pushdata(100);
+/// assert!(result.is_compliant);
+///
+/// let large_data = vec![0u8; 300];
+/// let result = compliance.validate_pushdata(large_data.len());
+/// assert!(!result.is_compliant);
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct Bip110Compliance {
+    enabled: bool,
+}
+
+impl Bip110Compliance {
+    pub fn new() -> Self {
+        Self { enabled: true }
+    }
+
+    pub fn disabled() -> Self {
+        Self { enabled: false }
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// Validates pushdata size against BIP-110 limit (256 bytes)
+    pub fn validate_pushdata(&self, size: usize) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        if size > bip110::MAX_PUSHDATA_BYTES {
+            Bip110ValidationResult::non_compliant(vec![Bip110Violation::PushdataExceedsLimit {
+                size,
+                max: bip110::MAX_PUSHDATA_BYTES,
+            }])
+        } else {
+            Bip110ValidationResult::compliant()
+        }
+    }
+
+    /// Validates OP_RETURN output size against BIP-110 limit (83 bytes)
+    pub fn validate_op_return(&self, size: usize) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        if size > bip110::MAX_OP_RETURN_BYTES {
+            Bip110ValidationResult::non_compliant(vec![Bip110Violation::OpReturnExceedsLimit {
+                size,
+                max: bip110::MAX_OP_RETURN_BYTES,
+            }])
+        } else {
+            Bip110ValidationResult::compliant()
+        }
+    }
+
+    /// Validates ScriptPubKey size against BIP-110 limit (34 bytes)
+    pub fn validate_script_pubkey(&self, size: usize) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        if size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
+            Bip110ValidationResult::non_compliant(vec![Bip110Violation::ScriptPubKeyExceedsLimit {
+                size,
+                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
+            }])
+        } else {
+            Bip110ValidationResult::compliant()
+        }
+    }
+
+    /// Validates witness element size against BIP-110 limit (256 bytes)
+    pub fn validate_witness_element(&self, size: usize) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
+            Bip110ValidationResult::non_compliant(vec![
+                Bip110Violation::WitnessElementExceedsLimit {
+                    size,
+                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                },
+            ])
+        } else {
+            Bip110ValidationResult::compliant()
+        }
+    }
+
+    /// Validates a complete transaction against all BIP-110 limits
+    pub fn validate_transaction(
+        &self,
+        pushdatas: &[usize],
+        op_return_size: Option<usize>,
+        script_pubkey_size: usize,
+        witness_elements: &[usize],
+    ) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        let mut violations = Vec::new();
+
+        for &size in pushdatas.iter() {
+            if size > bip110::MAX_PUSHDATA_BYTES {
+                violations.push(Bip110Violation::PushdataExceedsLimit {
+                    size,
+                    max: bip110::MAX_PUSHDATA_BYTES,
+                });
+            }
+        }
+
+        if let Some(size) = op_return_size {
+            if size > bip110::MAX_OP_RETURN_BYTES {
+                violations.push(Bip110Violation::OpReturnExceedsLimit {
+                    size,
+                    max: bip110::MAX_OP_RETURN_BYTES,
+                });
+            }
+        }
+
+        if script_pubkey_size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
+            violations.push(Bip110Violation::ScriptPubKeyExceedsLimit {
+                size: script_pubkey_size,
+                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
+            });
+        }
+
+        for &size in witness_elements {
+            if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
+                violations.push(Bip110Violation::WitnessElementExceedsLimit {
+                    size,
+                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                });
+            }
+        }
+
+        if violations.is_empty() {
+            Bip110ValidationResult::compliant()
+        } else {
+            Bip110ValidationResult::non_compliant(violations)
+        }
+    }
 }
