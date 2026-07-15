@@ -1,6 +1,8 @@
 # Gap Analysis & Implementation Scoring (CON-1305)
 
 > **Session Note**: Updated 2026-07-15 to reflect SDK integration and crate relationship mapping.
+>
+> **See Also**: [ALIGNMENT.md](./ALIGNMENT.md) for comprehensive ecosystem alignment.
 
 This document maps identified protocol gaps to research status and implementation priority scoring.
 
