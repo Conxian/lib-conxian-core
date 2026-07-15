@@ -1,7 +1,26 @@
+//! # DEPRECATED: MuSig2 Primitives
+//!
+//! ⚠️ **This module is deprecated and will be removed in v0.3.0**
+//!
+//! Use [`conxius_enclave_sdk::protocol::musig2`](https://docs.rs/conxius-enclave-sdk/latest/conxius_enclave_sdk/protocol/musig2/index.html) instead.
+//!
+//! ## Migration
+//!
+//! ```rust
+//! // OLD (deprecated)
+//! use lib_conxian_core::musig2::{Musig2Participant, aggregate_public_keys};
+//!
+//! // NEW (production)
+//! use conxius_enclave_sdk::protocol::musig2::MuSig2Session;
+//! ```
+
 use bitcoin::secp256k1 as bitcoin_secp;
 use secp256k1::rand;
 use secp256k1::{Keypair, PublicKey, Scalar, Secp256k1, XOnlyPublicKey};
 use sha2::{Digest, Sha256};
+
+#[allow(deprecated)]
+use crate::sdk_primitive::SigningPolicy;
 
 /// Represents a participant in a Taproot Musig2 Quorum.
 pub struct Musig2Participant {
@@ -131,6 +150,7 @@ pub fn get_bitcoin_secp_context() -> bitcoin_secp::Secp256k1<bitcoin_secp::All> 
 
 #[cfg(test)]
 mod tests {
+    #![allow(deprecated)]
     use super::*;
 
     #[test]

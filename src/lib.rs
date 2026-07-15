@@ -2,9 +2,9 @@
 //!
 //! Shared protocol primitives for the Conxian ecosystem.
 //!
-//! This library provides foundational types and utilities used across the Conxian stack.
-//! It is NOT the Vault SDK — for hardware-backed signing and enclave primitives,
-//! use the [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate instead.
+//! > ⚠️ **Deprecation Notice**: This library contains deprecated Vault SDK primitives
+//! > that will be removed in v0.3.0. See [docs/MIGRATION.md](docs/MIGRATION.md) for
+//! > migration instructions to [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
 //!
 //! ## Relationship to Other Crates
 //!
@@ -13,11 +13,19 @@
 //! | `conxius-enclave-sdk` | **Production Vault SDK** - Hardware-backed signing, attestation, FROST DKG, BitVM2 |
 //! | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
 //!
-//! ## Architecture
+//! ## Active Modules (Not Deprecated)
 //!
-//! - **Protocol Primitives**: `musig2`, `bitvm2`, `control_model`, `contract_bridge`
-//! - **Chain Adapters**: `bitcoin`, `stacks`, `lightning`, `rgb`, `babylon`, `fedimint`
-//! - **Control Models**: Trust tiers (CON-791), lifecycle states, invariant validation
+//! - `control_model`: Trust tiers (CON-791), lifecycle states, invariant validation
+//! - `anchoring`: State root persistence models
+//! - `adapters`: Chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint)
+//! - `contract_bridge`: Clarity contract interfaces
+//!
+//! ## Deprecated Modules (Will be removed in v0.3.0)
+//!
+//! - `sdk_primitive`: Use `conxius-enclave-sdk` instead
+//! - `musig2`: Use `conxius_enclave_sdk::protocol::musig2` instead
+//! - `bitvm2`: Use `conxius_enclave_sdk::protocol::bitvm2` instead
+//! - `wallet`: Use `k256` crate instead
 //!
 //! ## Contact
 //!
@@ -81,6 +89,7 @@ mod deployment_tests {
 
 #[cfg(test)]
 mod bitvm2_orchestration_tests {
+    #![allow(deprecated)]
     use super::bitvm2::*;
 
     #[test]

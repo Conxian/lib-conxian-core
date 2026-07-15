@@ -1,3 +1,19 @@
+//! # DEPRECATED: BitVM2 Primitives
+//!
+//! ⚠️ **This module is deprecated and will be removed in v0.3.0**
+//!
+//! Use [`conxius_enclave_sdk::protocol::bitvm2`](https://docs.rs/conxius-enclave-sdk/latest/conxius_enclave_sdk/protocol/bitvm2/index.html) instead.
+//!
+//! ## Migration
+//!
+//! ```rust
+//! // OLD (deprecated)
+//! use lib_conxian_core::bitvm2::{Bitvm2Orchestrator, Bitvm2Segment};
+//!
+//! // NEW (production)
+//! use conxius_enclave_sdk::protocol::bitvm2::BitVm2Orchestrator;
+//! ```
+
 use ark_bn254::{Bn254, Fr};
 use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{prepare_verifying_key, Groth16, PreparedVerifyingKey, Proof, VerifyingKey};

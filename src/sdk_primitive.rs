@@ -1,10 +1,36 @@
+//! # DEPRECATED: Vault SDK Primitives
+//!
+//! ⚠️ **This module is deprecated and will be removed in v0.3.0**
+//!
+//! All functionality has been moved to [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
+//!
+//! ## Migration
+//!
+//! See [docs/MIGRATION.md](../MIGRATION.md) for detailed migration instructions.
+//!
+//! ### Quick Migration
+//!
+//! ```rust
+//! // OLD (deprecated)
+//! use lib_conxian_core::{VaultSDK, SigningPolicy, Wallet};
+//!
+//! // NEW (production)
+//! use conxius_enclave_sdk::enclave::{CloudEnclave, EnclaveManager, SignRequest, SigningAlgorithm};
+//! ```
+
 use crate::musig2;
 use crate::wallet::Wallet;
 use secp256k1::{PublicKey, XOnlyPublicKey};
 use serde::{Deserialize, Serialize};
 
+/// **DEPRECATED**: Use `conxius_enclave_sdk::enclave::SigningAlgorithm` instead.
+///
 /// The first commercial SDK primitive: Hardware-backed Bitcoin signing plus policy enforcement.
 /// This defines the core capabilities for target integrators.
+#[deprecated(
+    since = "0.2.10",
+    note = "Use conxius-enclave-sdk crate directly. See docs/MIGRATION.md"
+)]
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SigningPolicy {
     pub max_amount_sats: u64,
@@ -13,19 +39,33 @@ pub struct SigningPolicy {
     pub timelock_blocks: u32,
 }
 
+/// **DEPRECATED**: Use `conxius_enclave_sdk::enclave::CloudEnclave` instead.
+///
 /// The VaultSDK is the primary entry point for integrators building native Bitcoin apps.
 /// It encapsulates hardware-backed signing, mandatory policy enforcement, and multi-sig aggregation.
+#[deprecated(
+    since = "0.2.10",
+    note = "Use conxius-enclave-sdk crate directly. See docs/MIGRATION.md"
+)]
 pub struct VaultSDK {
     wallet: Wallet,
     policy: SigningPolicy,
 }
 
 impl VaultSDK {
+    #[deprecated(
+        since = "0.2.10",
+        note = "Use conxius_enclave_sdk::enclave::CloudEnclave instead"
+    )]
     pub fn new(wallet: Wallet, policy: SigningPolicy) -> Self {
         Self { wallet, policy }
     }
 
     /// Validates a transaction request against the enforced policy.
+    #[deprecated(
+        since = "0.2.10",
+        note = "Implement policy checks in your application layer"
+    )]
     pub fn validate_request(&self, amount_sats: u64, destination: &str) -> Result<(), String> {
         if amount_sats > self.policy.max_amount_sats {
             return Err(format!(
@@ -47,6 +87,10 @@ impl VaultSDK {
     }
 
     /// Signs a Bitcoin transaction ID using the hardware-backed wallet after policy verification.
+    #[deprecated(
+        since = "0.2.10",
+        note = "Use conxius_enclave_sdk::enclave::EnclaveManager::sign() instead"
+    )]
     pub fn sign_with_policy(
         &self,
         tx_id: &str,
@@ -56,8 +100,7 @@ impl VaultSDK {
         self.validate_request(amount_sats, destination)?;
 
         if self.policy.require_biometric {
-            // In production, this triggers the StrongBox TEE biometric prompt
-            println!("Triggering TEE biometric handshake for transaction signing...");
+            eprintln!("DEPRECATION WARNING: Biometric prompt not available in deprecated SDK");
         }
 
         Ok(self.wallet.sign(tx_id))
@@ -65,6 +108,10 @@ impl VaultSDK {
 
     /// Aggregates keys for MuSig2 Taproot multi-sig, a core SDK capability.
     /// This implementation includes the internal wallet key in the aggregation.
+    #[deprecated(
+        since = "0.2.10",
+        note = "Use conxius_enclave_sdk::protocol::musig2::MuSig2Session instead"
+    )]
     pub fn aggregate_musig2_keys(
         &self,
         other_pubkeys: &[PublicKey],
@@ -86,6 +133,7 @@ impl VaultSDK {
 
 #[cfg(test)]
 mod tests {
+    #![allow(deprecated)]
     use super::*;
     use crate::wallet::Wallet;
 
