@@ -1,23 +1,23 @@
 use serde::{Deserialize, Serialize};
 
 /// BIP-110 Compliance Constants
-/// 
+///
 /// BIP-110 (Reduced Data Temporary Softfork) limits data embedding in Bitcoin transactions:
 /// - Max 256-byte pushdata per element
 /// - 83-byte OP_RETURN output
 /// - 34-byte ScriptPubKey for standard P2PKH/P2WPKH
-/// 
+///
 /// See [docs/BIP110_ALIGNMENT.md](https://github.com/Conxian/lib-conxian-core/blob/main/docs/BIP110_ALIGNMENT.md)
 pub mod bip110 {
     /// Maximum size of a single pushdata element in bytes
     pub const MAX_PUSHDATA_BYTES: usize = 256;
-    
+
     /// Maximum OP_RETURN output size in bytes (standard policy under BIP-110)
     pub const MAX_OP_RETURN_BYTES: usize = 83;
-    
+
     /// Maximum ScriptPubKey size for standard addresses (P2PKH/P2WPKH) in bytes
     pub const MAX_SCRIPT_PUBKEY_BYTES: usize = 34;
-    
+
     /// Maximum witness element size in bytes
     pub const MAX_WITNESS_ELEMENT_BYTES: usize = 256;
 }
@@ -268,16 +268,32 @@ impl std::fmt::Display for Bip110Violation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PushdataExceedsLimit { size, max } => {
-                write!(f, "Pushdata size {} exceeds BIP-110 limit of {} bytes", size, max)
+                write!(
+                    f,
+                    "Pushdata size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
             }
             Self::OpReturnExceedsLimit { size, max } => {
-                write!(f, "OP_RETURN size {} exceeds BIP-110 limit of {} bytes", size, max)
+                write!(
+                    f,
+                    "OP_RETURN size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
             }
             Self::ScriptPubKeyExceedsLimit { size, max } => {
-                write!(f, "ScriptPubKey size {} exceeds BIP-110 limit of {} bytes", size, max)
+                write!(
+                    f,
+                    "ScriptPubKey size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
             }
             Self::WitnessElementExceedsLimit { size, max } => {
-                write!(f, "Witness element size {} exceeds BIP-110 limit of {} bytes", size, max)
+                write!(
+                    f,
+                    "Witness element size {} exceeds BIP-110 limit of {} bytes",
+                    size, max
+                )
             }
         }
     }
@@ -382,10 +398,12 @@ impl Bip110Compliance {
         }
 
         if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
-            Bip110ValidationResult::non_compliant(vec![Bip110Violation::WitnessElementExceedsLimit {
-                size,
-                max: bip110::MAX_WITNESS_ELEMENT_BYTES,
-            }])
+            Bip110ValidationResult::non_compliant(vec![
+                Bip110Violation::WitnessElementExceedsLimit {
+                    size,
+                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                },
+            ])
         } else {
             Bip110ValidationResult::compliant()
         }
