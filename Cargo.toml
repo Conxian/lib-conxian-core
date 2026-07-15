@@ -1,15 +1,15 @@
 [package]
 name = "lib-conxian-core"
 version = "0.2.10"
-description = "Foundational library and Vault SDK for the Conxian protocol ecosystem."
+description = "Foundational library and shared protocol primitives for the Conxian ecosystem."
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Conxian/lib-conxian-core"
-homepage = "https://github.com/Conxian/lib-conxian-core"
+homepage = "https://www.conxian-labs.com"
 readme = "README.md"
-keywords = ["bitcoin", "sdk", "musig2", "taproot", "conxian"]
-categories = ["cryptography::cryptocurrencies", "sdk"]
+keywords = ["bitcoin", "protocol", "musig2", "taproot", "conxian"]
+categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 anyhow = "1.0"
@@ -31,13 +31,22 @@ der = { version = "0.8", features = ["derive", "alloc"] }
 # CXIP 20 Foundational Dependencies (Synchronized to v0.2.5 Strategic SDKs)
 bitcoin = { version = "0.32", features = ["serde", "rand", "std"] }
 bdk = { version = "0.30.2", features = ["key-value-db"] }
-lightning = { version = "0.2.3", features = ["std"] }
+lightning = { version = "0.2.4", features = ["std"] }
 wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
 rgb-core = "0.12.0"
 rgb-std = "0.12.0-rc.3"
 aluvm = "0.12.0"
 chrono = { version = "0.4.45", features = ["serde"] }
+
+# Production Vault SDK (Conxian-Labs Enclave SDK)
+# This crate provides hardware-backed signing, attestation, and policy primitives.
+# For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
+conxius-enclave-sdk = { version = "2.0.11", optional = true }
+
+[features]
+default = []
+enclave = ["conxius-enclave-sdk"]
 
 [workspace]
 members = ["fuzz"]

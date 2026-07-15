@@ -1,12 +1,29 @@
-//! # lib-conxian-core / Vault SDK
+//! # lib-conxian-core
 //!
-//! This library provides the production-grade primitives for native Bitcoin applications.
-//! It is divided into two primary areas:
+//! Shared protocol primitives for the Conxian ecosystem.
 //!
-//! 1. **Vault SDK (Public Boundary)**: The `sdk_primitive` and `wallet` modules provide
-//!    hardware-backed signing and policy enforcement for third-party integrators.
-//! 2. **Protocol Primitives (Internal Core)**: Modules like `musig2`, `bitvm2`, and chain adapters
-//!    provide the low-level logic required for Bitcoin-anchored orchestration.
+//! This library provides foundational types and utilities used across the Conxian stack.
+//! It is NOT the Vault SDK — for hardware-backed signing and enclave primitives,
+//! use the [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate instead.
+//!
+//! ## Relationship to Other Crates
+//!
+//! | Crate | Purpose |
+//! |-------|---------|
+//! | `conxius-enclave-sdk` | **Production Vault SDK** - Hardware-backed signing, attestation, FROST DKG, BitVM2 |
+//! | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
+//!
+//! ## Architecture
+//!
+//! - **Protocol Primitives**: `musig2`, `bitvm2`, `control_model`, `contract_bridge`
+//! - **Chain Adapters**: `bitcoin`, `stacks`, `lightning`, `rgb`, `babylon`, `fedimint`
+//! - **Control Models**: Trust tiers (CON-791), lifecycle states, invariant validation
+//!
+//! ## Contact
+//!
+//! - Support: support@conxian-labs.com
+//! - Security: security@conxian-labs.com
+//! - Labs: https://www.conxian-labs.com
 
 pub mod adapters;
 pub mod anchoring;
@@ -33,8 +50,19 @@ pub mod stacks;
 mod tests;
 
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
-pub use sdk_primitive::{SigningPolicy, VaultSDK};
 pub use wallet::Wallet;
+
+// Re-export Vault SDK primitives when enclave feature is enabled
+#[cfg(feature = "enclave")]
+pub use conxius_enclave_sdk::enclave::{
+    EnclaveManager, SignRequest, SignResponse, SigningAlgorithm,
+};
+#[cfg(feature = "enclave")]
+pub use conxius_enclave_sdk::{ConclaveError, ConclaveResult};
+
+// Legacy re-exports (deprecated - use conxius-enclave-sdk directly)
+#[deprecated(since = "0.2.10", note = "Use conxius-enclave-sdk crate directly for Vault SDK features")]
+pub use sdk_primitive::{SigningPolicy, VaultSDK};
 
 #[cfg(test)]
 mod deployment_tests {
