@@ -94,8 +94,8 @@ BIP-110 titled "Reduced Data Temporary Softfork" by Dathon Ohm seeks to:
 - State root persistence
 
 **BIP-110 Actions:**
-- [ ] Add BIP110Compliance struct to control_model
-- [ ] Document trust tier alignment with BIP-110
+- [x] Add BIP110Compliance struct to control_model ✅ (v0.2.12)
+- [x] Document trust tier alignment with BIP-110 ✅
 - [ ] Add BIP-110 rule validation to anchoring
 
 ## Implementation Checklist
