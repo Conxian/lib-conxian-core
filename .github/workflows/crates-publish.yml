@@ -36,14 +36,44 @@ jobs:
           EOF
 
       - name: Publish to crates.io
-        run: cargo publish --tokenless
+        run: |
+          if [ -n "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "Publishing with CARGO_REGISTRY_TOKEN..."
+            cargo publish
+          else
+            echo "No CARGO_REGISTRY_TOKEN available."
+            echo "For trusted publisher, ensure it's configured at:"
+            echo "https://crates.io/crates/lib-conxian-core/settings/new-trusted-publisher"
+            echo ""
+            echo "Attempting tokenless publish..."
+            cargo publish --tokenless || {
+              echo "Tokenless publish failed."
+              echo "To fix: Configure trusted publisher on crates.io or add CARGO_REGISTRY_TOKEN secret."
+              exit 1
+            }
+          fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body: |
+            ## v0.2.11 Release Notes
+
+            ### Breaking Changes
+            - **Removed deprecated modules**: sdk_primitive, musig2, bitvm2, wallet
+            - Use `conxius-enclave-sdk` for Vault SDK features
+            - Use `musig2` crate for MuSig2 functionality
+            - Use `k256` crate for key management
+
+            ### Migration
+            See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions.
+
+            ### Note
+            If crates.io publish failed, ensure trusted publisher is configured or add CARGO_REGISTRY_TOKEN secret.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
