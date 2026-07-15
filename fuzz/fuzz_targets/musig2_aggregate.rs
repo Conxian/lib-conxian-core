@@ -1,18 +1,26 @@
 #![no_main]
-use lib_conxian_core::musig2;
+//! Fuzz test for MuSig2 key aggregation using the musig2 crate.
+//!
+//! This fuzz target has been migrated to use the musig2 crate directly
+//! instead of lib-conxian-core. For production MuSig2 with hardware
+//! attestation, use conxius-enclave-sdk.
 use libfuzzer_sys::fuzz_target;
+use musig2::{secp, KeyAggContext};
 use secp256k1::PublicKey;
 
 fuzz_target!(|data: &[u8]| {
-    let mut pubkeys = Vec::new();
+    let mut points: Vec<secp::Point> = Vec::new();
     let chunk_iter = data.chunks_exact(33);
     for chunk in chunk_iter {
         if let Ok(pk) = PublicKey::from_slice(chunk) {
-            pubkeys.push(pk);
+            points.push(secp::Point::from(pk));
         }
     }
 
-    if !pubkeys.is_empty() {
-        let _ = musig2::aggregate_public_keys(&pubkeys);
+    if points.len() >= 2 {
+        // KeyAggContext takes owned values, not references
+        if let Ok(ctx) = KeyAggContext::new(points) {
+            let _aggregated_pubkey: secp::Point = ctx.aggregated_pubkey();
+        }
     }
 });

@@ -1,10 +1,11 @@
 # Migration Guide: lib-conxian-core v0.2.x → v0.3.0
 
-> **Important**: This document describes the migration from deprecated VaultSDK to the production `conxius-enclave-sdk`.
+> **Status**: As of v0.2.11, the deprecated Vault SDK modules have been removed from `lib-conxian-core`.
+> All Vault SDK functionality is now available in the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
 
 ## Overview
 
-Starting with v0.3.0, `lib-conxian-core` will no longer include Vault SDK functionality (hardware-backed signing, attestation, policy enforcement). This functionality has moved to the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
+Starting with v0.2.11, `lib-conxian-core` no longer includes Vault SDK functionality (hardware-backed signing, attestation, policy enforcement, MuSig2, BitVM2). This functionality has moved to the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
 
 ### Why This Change?
 
@@ -15,24 +16,26 @@ Starting with v0.3.0, `lib-conxian-core` will no longer include Vault SDK functi
 
 ## Migration Steps
 
-### Step 1: Add the New Dependency
+### Step 1: Update Dependencies
 
-Replace `lib-conxian-core` with `conxius-enclave-sdk`:
+Add `conxius-enclave-sdk` to your `Cargo.toml`:
 
 ```toml
-# Old (deprecated)
-[dependencies]
-lib-conxian-core = "0.2.10"
-
-# New
 [dependencies]
 conxius-enclave-sdk = "2.0.11"
-lib-conxian-core = { version = "0.3.0", features = ["enclave"] }  # Optional: for protocol primitives only
+lib-conxian-core = "0.2.11"
+```
+
+For Vault SDK re-exports (optional):
+
+```toml
+[dependencies]
+lib-conxian-core = { version = "0.2.11", features = ["enclave"] }
 ```
 
 ### Step 2: Migrate VaultSDK Usage
 
-#### Old Code (lib-conxian-core)
+#### Old Code (lib-conxian-core v0.2.10)
 
 ```rust
 use lib_conxian_core::{VaultSDK, SigningPolicy, Wallet};
@@ -126,6 +129,60 @@ let digest = hasher.finalize();
 let signature: Signature = signing_key.sign(&digest);
 ```
 
+### Step 5: Migrate MuSig2 Usage
+
+Use the `musig2` crate directly or `conxius-enclave-sdk`:
+
+```rust
+// Old
+use lib_conxian_core::musig2::{Musig2Participant, aggregate_public_keys};
+let participant = Musig2Participant::new();
+
+// New: Use musig2 crate
+use musig2::{KeyAggContext, secp};
+use secp256k1::PublicKey;
+
+let points: Vec<secp::Point> = pubkeys.iter()
+    .map(|pk| secp::Point::from(*pk))
+    .collect();
+let ctx = KeyAggContext::new(points)?;
+let aggregated_pubkey = ctx.aggregated_pubkey();
+
+// Or use conxius-enclave-sdk for production
+use conxius_enclave_sdk::protocol::musig2::MuSig2Session;
+```
+
+### Step 6: Migrate BitVM2 Usage
+
+```rust
+// Old
+use lib_conxian_core::bitvm2::{Bitvm2Orchestrator, Bitvm2Segment};
+let orchestrator = Bitvm2Orchestrator::new();
+let segments = orchestrator.generate_segments(state_root);
+
+// New: Use conxius-enclave-sdk
+use conxius_enclave_sdk::protocol::bitvm2::{BitVm2Orchestrator, Bitvm2Segment};
+let orchestrator = BitVm2Orchestrator::new();
+let segments = orchestrator.generate_segments(state_root);
+```
+
+### Step 7: Migrate Contract Bridge Usage
+
+The `contract_bridge` module now uses `k256` directly:
+
+```rust
+// Old
+use lib_conxian_core::{ContractBridge, Wallet};
+let signed_call = ContractBridge::create_signed_call(&wallet, contract, function, args)?;
+
+// New
+use k256::ecdsa::SigningKey;
+use lib_conxian_core::ContractBridge;
+
+let signing_key = SigningKey::from_slice(&hex::decode(private_key_hex)?)?;
+let signed_call = ContractBridge::create_signed_call(&signing_key, contract, function, args)?;
+```
+
 ## Module Mapping
 
 | Old Module | New Location | Notes |
@@ -133,8 +190,9 @@ let signature: Signature = signing_key.sign(&digest);
 | `VaultSDK` | `conxius_enclave_sdk::enclave::CloudEnclave` | Use for hardware signing |
 | `SigningPolicy` | Custom application logic | Implement your own checks |
 | `Wallet` | `k256` crate or `bdk_wallet` | For key management |
-| `Musig2Participant` | `conxius_enclave_sdk::protocol::musig2::MuSig2Session` | BIP-327 compliant |
+| `Musig2Participant` | `musig2::KeyAggContext` or `conxius_enclave_sdk::protocol::musig2` | BIP-327 compliant |
 | `Bitvm2Orchestrator` | `conxius_enclave_sdk::protocol::bitvm2::BitVm2Orchestrator` | Full challenge support |
+| `ContractBridge` | `lib_conxian_core::ContractBridge` | Updated to use k256 |
 
 ## What Stays in lib-conxian-core
 
@@ -144,18 +202,19 @@ These modules remain in `lib-conxian-core`:
 |--------|---------|
 | `control_model` | Trust tiers, lifecycle states, invariant validation |
 | `anchoring` | State root persistence models |
-| `adapters` | Chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon) |
-| `contract_bridge` | Clarity contract interfaces |
-| `musig2` | **Deprecated** - Use SDK |
-| `bitvm2` | **Deprecated** - Use SDK |
+| `adapters` | Chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint) |
+| `contract_bridge` | Clarity contract interfaces (updated to use k256) |
+| `deployment` | Deployment plan and manifest types |
+| `protocol` | DLC, covenants, FROST, intents, etc. |
+| `bitcoin`, `stacks`, `lightning`, `rgb` | CXIP 20 modular architecture |
 
 ## Timeline
 
 | Version | Date | Changes |
 |---------|------|---------|
 | v0.2.10 | 2026-07-15 | SDK marked deprecated, SDK dependency added |
-| v0.2.11 | TBD | Warning added to compiler output |
-| v0.3.0 | TBD | **Breaking**: VaultSDK removed, use conxius-enclave-sdk |
+| v0.2.11 | 2026-07-15 | **Breaking**: VaultSDK, Wallet, Musig2, BitVM2 removed |
+| v0.3.0 | TBD | Full release with updated architecture |
 
 ## Getting Help
 
@@ -166,14 +225,16 @@ These modules remain in `lib-conxian-core`:
 
 ## Changelog Summary
 
-### Removed in v0.3.0
+### Removed in v0.2.11
 - `VaultSDK` struct and methods
 - `SigningPolicy` struct and methods
-- `Wallet::sign()` - Use k256 directly
-- `Wallet::from_private_key_hex()` - Use k256 directly
+- `Wallet` struct and methods
+- `Musig2Participant` and related functions
+- `Bitvm2Orchestrator` and related functions
+- All deprecated re-exports
 
-### Deprecated (v0.2.x)
-- All above items emit deprecation warnings
+### Updated in v0.2.11
+- `ContractBridge` now uses `k256::ecdsa::SigningKey` directly
 
 ### Available via `enclave` feature
 - `conxius_enclave_sdk::enclave::*` - Hardware attestation, signing

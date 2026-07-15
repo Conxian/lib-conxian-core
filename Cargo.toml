@@ -1,6 +1,6 @@
 [package]
 name = "lib-conxian-core"
-version = "0.2.10"
+version = "0.2.11"
 description = "Foundational library and shared protocol primitives for the Conxian ecosystem."
 edition = "2021"
 rust-version = "1.85"
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/Conxian/lib-conxian-core"
 homepage = "https://www.conxian-labs.com"
 readme = "README.md"
-keywords = ["bitcoin", "protocol", "musig2", "taproot", "conxian"]
+keywords = ["bitcoin", "protocol", "taproot", "conxian"]
 categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
