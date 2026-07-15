@@ -1,7 +1,7 @@
 # lib-conxian-core
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.2.11-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.12-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 
 Shared protocol primitives for the Conxian ecosystem.
@@ -53,10 +53,10 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = "0.2.11"
+lib-conxian-core = "0.2.12"
 
 # For Vault SDK features (hardware signing, attestation)
-lib-conxian-core = { version = "0.2.11", features = ["enclave"] }
+lib-conxian-core = { version = "0.2.12", features = ["enclave"] }
 ```
 
 ### Quick Start

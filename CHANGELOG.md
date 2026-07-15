@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.12] - 2026-07-15
+
+### Added
+- **BIP-110 Compliance** (#168): Added `Bip110Compliance` struct to `control_model` with validation helpers:
+  - `validate_pushdata(size)` - Max 256-byte pushdata
+  - `validate_op_return(size)` - Max 83-byte OP_RETURN
+  - `validate_script_pubkey(size)` - Max 34-byte ScriptPubKey
+  - `validate_witness_element(size)` - Max 256-byte witness
+  - `validate_transaction(...)` - Full transaction validation
+- `Bip110ValidationResult` and `Bip110Violation` types for compliance reporting
+- 9 comprehensive tests for BIP-110 compliance
+
+### Documentation
+- Updated `AGENTS.md` with BIP-110 compliance documentation
+- Updated `docs/BIP110_ALIGNMENT.md` with completed items
+
+---
+
+## [v0.2.11] - 2026-07-15
+
+### Breaking Changes
+- **Vault SDK Removed**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed
+- All Vault SDK functionality now available in `conxius-enclave-sdk` v2.0.11
+
+### Migration
+- See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions
+
+---
+
 ## [v0.2.10] - 2026-07-13
 
 ### Added
