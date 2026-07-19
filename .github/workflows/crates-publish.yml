@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           toolchain: stable
 
@@ -58,21 +58,17 @@ jobs:
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           body: |
-            ## v0.2.11 Release Notes
+            ## ${{ github.ref_name }} Release Notes
 
-            ### Breaking Changes
-            - **Removed deprecated modules**: sdk_primitive, musig2, bitvm2, wallet
-            - Use `conxius-enclave-sdk` for Vault SDK features
-            - Use `musig2` crate for MuSig2 functionality
-            - Use `k256` crate for key management
-
-            ### Migration
-            See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions.
+            ### Highlights & Migration
+            For release highlights, breaking changes, and migration guides, please refer to the following documents:
+            - [Changelog](CHANGELOG.md) - Full version history and detailed change descriptions
+            - [Migration Guide](docs/MIGRATION.md) - Instructions for migrating between versions
 
             ### Note
-            If crates.io publish failed, ensure trusted publisher is configured or add CARGO_REGISTRY_TOKEN secret.
+            If the crates.io publication failed or needs manual retry, ensure the trusted publisher integration is configured or the `CARGO_REGISTRY_TOKEN` secret is added.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
