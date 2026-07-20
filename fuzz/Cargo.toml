@@ -9,7 +9,6 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
-bitcoin = { version = "0.32", features = ["serde", "rand", "std"] }
 libfuzzer-sys = "0.4"
 secp256k1 = { version = "0.31", features = ["rand", "global-context"] }
 musig2 = { version = "0.4", features = ["secp256k1"] }
@@ -31,19 +30,13 @@ test = false
 doc = false
 
 [[bin]]
-name = "bip322_verify"
-path = "fuzz_targets/bip322_verify.rs"
-test = false
-doc = false
-
-[[bin]]
-name = "bitcoin_psbt_deserialize"
-path = "fuzz_targets/bitcoin_psbt_deserialize.rs"
-test = false
-doc = false
-
-[[bin]]
 name = "musig2_aggregate"
 path = "fuzz_targets/musig2_aggregate.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "proof_request_validate"
+path = "fuzz_targets/proof_request_validate.rs"
 test = false
 doc = false

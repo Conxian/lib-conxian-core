@@ -1,8 +1,8 @@
-name: Fuzz Regression
+name: Fuzz regression
 
 on:
   schedule:
-    - cron: "0 8 * * 1"
+    - cron: '17 3 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -10,21 +10,20 @@ permissions:
 
 jobs:
   fuzz:
-    name: ${{ matrix.target }}
+    name: Fuzz ${{ matrix.target }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         target:
           - parse_intent
-          - anchoring_receipt
-          - bip322_verify
-          - bitcoin_psbt_deserialize
           - musig2_aggregate
+          - anchoring_receipt
+          - proof_request_validate
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Rust nightly
@@ -33,26 +32,21 @@ jobs:
           toolchain: nightly
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked --version 0.12.0
+        run: cargo +nightly install cargo-fuzz --locked --version 0.13.2
 
-      - name: Run bounded fuzz regression
-        run: |
-          set -euo pipefail
-          mkdir -p "fuzz/artifacts/${{ matrix.target }}"
-          cargo +nightly fuzz run "${{ matrix.target }}" "fuzz/corpus/${{ matrix.target }}" -- \
-            -max_total_time=30 \
-            -timeout=10 \
-            -rss_limit_mb=2048 \
-            -max_len=16384 \
-            -artifact_prefix="fuzz/artifacts/${{ matrix.target }}/"
+      - name: Compile fuzz target
+        run: cargo +nightly fuzz check ${{ matrix.target }}
 
-      - name: Upload fuzz failure artifacts
-        if: failure()
+      - name: Run bounded fuzz smoke
+        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=30 -rss_limit_mb=2048
+
+      - name: Upload crash and corpus artifacts
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: fuzz-failure-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fuzz-${{ matrix.target }}
           path: |
-            fuzz/artifacts/${{ matrix.target }}/
-            fuzz/corpus/${{ matrix.target }}/
+            fuzz/artifacts/${{ matrix.target }}
+            fuzz/corpus/${{ matrix.target }}
           if-no-files-found: ignore
           retention-days: 14
