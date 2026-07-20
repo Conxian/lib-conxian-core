@@ -26,8 +26,6 @@ Resilience and recovery models for Lightning operations.
 Canonical types for protocol orchestration and trust.
 - `StateProposal`: Unified model for external settlement triggers (CON-162).
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
-- `Bip110Limits`: Canonical BIP-110 byte-size limits for core validation.
-- `Bip110TransactionShape`: Serializable transaction-size metadata validated by the core contract.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 

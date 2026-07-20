@@ -525,7 +525,7 @@ mod tests {
     fn test_bip110_script_pubkey_validation() {
         let compliance = Bip110Compliance::new();
 
-        // Valid: 34 bytes (P2WPKH)
+        // Valid: 34 bytes (at the non-OP_RETURN policy limit)
         let result = compliance.validate_script_pubkey(34);
         assert!(result.is_compliant);
 
@@ -573,8 +573,8 @@ mod tests {
         // Valid standard transaction
         let result = compliance.validate_transaction(
             &[32, 33], // pushdatas: signature + pubkey
-            Some(40),  // op_return: 40 bytes memo
-            34,        // script_pubkey: P2WPKH
+            Some(40),  // OP_RETURN output ScriptPubKey size
+            34,        // non-OP_RETURN ScriptPubKey size
             &[32, 33], // witness: signature + pubkey
         );
         assert!(result.is_compliant);

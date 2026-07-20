@@ -4,11 +4,14 @@
 
 ## Executive Summary
 
-BIP-110 (Reduced Data Temporary Softfork) is a Bitcoin consensus proposal that limits data embedding in transactions. This document outlines how the Conxian ecosystem aligns with and benefits from BIP-110 principles.
+This document records the explicit size-policy subset represented by
+`lib-conxian-core`. It is not a claim that this crate implements a complete
+BIP-110 consensus model, raw-transaction parser, or script verifier.
 
 ## What is BIP-110?
 
-BIP-110 titled "Reduced Data Temporary Softfork" by Dathon Ohm seeks to:
+BIP-110, titled "Reduced Data Temporary Softfork" by Dathon Ohm, is a proposal
+that seeks to:
 
 1. **Temporarily limit data fields at consensus level** to reject data storage as a supported use case
 2. **Refocus Bitcoin on monetary use** by setting it "back on the path to becoming the world's money"
@@ -16,28 +19,33 @@ BIP-110 titled "Reduced Data Temporary Softfork" by Dathon Ohm seeks to:
 
 ### Technical Rules
 
-| Rule | Limit | Bitcoin Use |
-|------|-------|------------|
-| OP_RETURN outputs | 83 bytes | Standard memo/checksum |
-| ScriptPubKey (non-OP_RETURN) | 34 bytes | Standard P2PKH/P2WPKH |
-| Pushdata/witness elements | 256 bytes | Normal transaction data |
-| Tapleaf formats | Restricted | Standard Taproot |
+The following table describes the size-policy inputs that this repository can
+validate after a downstream adapter has classified the transaction. It does
+not define all BIP-110 script-context rules.
+
+| Core policy input | Limit | Shape interpretation |
+|-------------------|-------|----------------------|
+| OP_RETURN output ScriptPubKey | 83 bytes | Full output ScriptPubKey bytes, not only the payload |
+| Non-OP_RETURN ScriptPubKey | 34 bytes | Full ScriptPubKey bytes for each classified output; not a claim about any particular output type's serialized size |
+| Pushdata element | 256 bytes | Every supplied pushdata element subject to this limit |
+| Witness element | 256 bytes | Every supplied witness element subject to this limit |
+| Tapleaf formats | Context-sensitive | Not represented by the size-only shape; adapters handle applicable rules |
 
 ## Canonical Core Contract
 
-`lib-conxian-core` owns the protocol-level BIP-110 limits and transaction-shape
-contract in `src/control_model/bip110.rs`. The public types are re-exported from
-`lib_conxian_core::control_model`:
+`lib-conxian-core` owns the deterministic size-policy limits and transaction
+shape contract in `src/control_model/bip110.rs`. The public types are
+re-exported from `lib_conxian_core::control_model`:
 
 | Type/field | Meaning |
 |------------|---------|
 | `Bip110Limits::max_pushdata_bytes` | Maximum size of one pushdata element; canonical default is 256 bytes |
-| `Bip110Limits::max_op_return_bytes` | Maximum OP_RETURN output size; canonical default is 83 bytes |
-| `Bip110Limits::max_script_pubkey_bytes` | Maximum ScriptPubKey size; canonical default is 34 bytes |
+| `Bip110Limits::max_op_return_bytes` | Maximum full output ScriptPubKey size for each OP_RETURN entry; canonical default is 83 bytes |
+| `Bip110Limits::max_script_pubkey_bytes` | Maximum full ScriptPubKey size for each non-OP_RETURN entry; canonical default is 34 bytes |
 | `Bip110Limits::max_witness_element_bytes` | Maximum size of one witness element; canonical default is 256 bytes |
 | `Bip110TransactionShape::pushdata_sizes_bytes` | Byte size for every pushdata element being checked |
-| `Bip110TransactionShape::op_return_size_bytes` | Optional OP_RETURN byte size |
-| `Bip110TransactionShape::script_pubkey_size_bytes` | ScriptPubKey byte size |
+| `Bip110TransactionShape::op_return_script_pubkey_sizes_bytes` | Full output ScriptPubKey bytes for every OP_RETURN output being checked |
+| `Bip110TransactionShape::non_op_return_script_pubkey_sizes_bytes` | Full ScriptPubKey bytes for every non-OP_RETURN output being checked |
 | `Bip110TransactionShape::witness_element_sizes_bytes` | Byte size for every witness element being checked |
 
 `Bip110Limits::default()` and `Bip110Limits::canonical()` return the same
@@ -47,22 +55,27 @@ adapter boundaries. Its validation façade, together with
 `Bip110Compliance` aggregate validator and returns the existing structured
 `Bip110ValidationResult` and `Bip110Violation` values.
 
-This contract validates supplied size metadata only. It does not parse raw
-transactions, perform network I/O, persist state, or enforce policy at runtime;
-runtime enforcement remains downstream in the SDK, wallet, and Gateway before
-signing, broadcasting, or accepting a transaction.
+The shape is transaction-wide for this subset: each vector must contain every
+occurrence that the adapter is asking the core to check. The contract validates
+supplied size metadata only. It does not parse raw transactions, determine
+script context, perform network I/O, persist state, or enforce policy at
+runtime. It is therefore a deterministic size-policy contract, not a full
+consensus or script verifier.
 
 ### SDK and Gateway Adapter Mapping
 
-Downstream adapters should populate the core shape from the bytes they already
-inspect, then call `shape.validate()` or validate through an explicit
-`Bip110Limits`/`Bip110Compliance` configuration:
+Before constructing the shape, downstream adapters must inspect the transaction,
+apply any BIP-110 script-context exceptions, and classify each constrained
+occurrence. They should include only elements subject to the corresponding core
+limit, then call `shape.validate()` or validate through an explicit
+`Bip110Limits`/`Bip110Compliance` configuration. In particular, OP_RETURN
+values must be the full output ScriptPubKey byte length, never payload length.
 
 | Core contract field | `conxius-enclave-sdk` / wallet mapping | `conxian-gateway` mapping |
 |---------------------|----------------------------------------|--------------------------|
 | `pushdata_sizes_bytes` | Measure each script pushdata element before signing | Map observed or constructed pushdata element sizes before routing |
-| `op_return_size_bytes` | Set from the OP_RETURN output when present | Set from the transaction output metadata when present |
-| `script_pubkey_size_bytes` | Measure the ScriptPubKey selected for the output | Map the output ScriptPubKey size from the transaction shape |
+| `op_return_script_pubkey_sizes_bytes` | Measure the full output ScriptPubKey for every classified OP_RETURN output | Map the full output ScriptPubKey size for every classified OP_RETURN output |
+| `non_op_return_script_pubkey_sizes_bytes` | Measure the full ScriptPubKey for every classified non-OP_RETURN output | Map every classified non-OP_RETURN output ScriptPubKey size |
 | `witness_element_sizes_bytes` | Measure each witness stack element before signing | Map witness stack sizes from the constructed or observed transaction |
 
 No SDK or Gateway implementation, dependency, or release is changed by this
@@ -152,7 +165,7 @@ downstream adoption and does not claim unreleased SDK behavior is available.
 ## BIP-110 Compliance Checklist
 
 ### Transaction Building
-- [ ] OP_RETURN limited to 83 bytes
+- [ ] OP_RETURN output ScriptPubKey limited to 83 bytes (full output size, not payload)
 - [ ] ScriptPubKey limited to 34 bytes (non-OP_RETURN)
 - [ ] Pushdata/witness limited to 256 bytes
 - [ ] No Tapleaf abuse for data embedding
