@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Hardened `ProtocolVerifier<B>` with an enforceable consumer façade and a
+  lower-level `ProtocolVerifierBackend` hook contract. Capability, request,
+  result, state-root, provenance, and finality postconditions now run outside
+  backend control.
+- Added canonical chain-family validation, deterministic future/expiry policy,
+  request-aware proof-result checks, and versioned/domain-separated structural
+  evidence binding.
+- Added adversarial coverage proving invalid backend success cannot pass the
+  façade. Evidence binding is structural consistency only; it is not
+  cryptographic authenticity or production readiness.
+
+### Changed
+- This is an intentional pre-publication API break from the old
+  consumer-implemented `ProtocolVerifier` trait to the concrete façade/backend
+  API. See [docs/MIGRATION.md](docs/MIGRATION.md).
+
+### Documentation
+- Updated verifier architecture, API, ownership boundaries, migration, and
+  Phase 1 roadmap documentation without marking unrelated work complete.
+
 ## [v0.2.12] - 2026-07-15
 
 ### Added

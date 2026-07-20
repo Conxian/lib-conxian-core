@@ -7,11 +7,11 @@ pub use bip110::{Bip110Limits, Bip110TransactionShape};
 pub use lifecycle::*;
 pub use ops::*;
 pub use trust::{
-    validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult, Bip110Violation,
-    BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope, RailComplianceConstraints,
-    RailCustodyModel, RailFinalitySemantics, RailMetadata, RailOperationalCapabilities,
-    RailTrustAssumptions, RiskAssessment, SessionLifecycleStatus, TrustTier, VerificationClass,
-    VerificationStatus,
+    chain_family_for, validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult,
+    Bip110Violation, BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope,
+    RailComplianceConstraints, RailCustodyModel, RailFinalitySemantics, RailMetadata,
+    RailOperationalCapabilities, RailTrustAssumptions, RiskAssessment, SessionLifecycleStatus,
+    TrustTier, VerificationClass, VerificationStatus,
 };
 
 use serde::{Deserialize, Serialize};

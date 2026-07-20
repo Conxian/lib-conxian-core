@@ -147,7 +147,10 @@ Ensure transaction builder automatically enforces BIP-110 limits and suggests op
 **Depends On**: [CORE-001]  
 
 **Description**:
-Define `ProtocolVerifier` trait for cross-chain state verification. This bridges core with Nexus (UCV).
+Define the platform-neutral `ProtocolVerifier<B>` façade and lower-level
+`ProtocolVerifierBackend` contract for cross-chain state verification. This
+bridges core with Nexus (UCV) without moving runtime proof acquisition into
+Core.
 
 **Acceptance Criteria**:
 - [x] Trait methods:
@@ -161,11 +164,34 @@ Define `ProtocolVerifier` trait for cross-chain state verification. This bridges
 **Related Code**:
 - `src/control_model/trust.rs` (VerificationClass, RiskAssessment)
 
-**Delivered in #180**: Core now defines the platform-neutral `ProtocolVerifier`
-contract, capability advertisement, proof and latest-block references,
-transaction finality statuses, typed fail-closed errors, and invariant tests.
-Runtime proof acquisition and orchestration remain outside Core in Nexus,
-Gateway, or downstream adapters.
+**Delivered in #180**: Core initially defined the platform-neutral verifier
+DTOs, capability advertisement, proof and latest-block references, transaction
+finality statuses, typed errors, and invariant tests.
+
+**Contract correction in #191**: The consumer-facing trait was replaced by an
+enforceable `ProtocolVerifier<B>` façade with lower-level backend hooks. The
+correction adds canonical chain-family checks, request-aware result/state-root
+postconditions, deterministic timestamp policy, structural evidence binding,
+and adversarial backend tests. Runtime proof acquisition and orchestration
+remain outside Core in Nexus, Gateway, or downstream adapters. The binding does
+not claim cryptographic authenticity or production readiness.
+
+#### [CORE-006-HARDENING] Enforce verifier postconditions and bind proof evidence ([GitHub #191](https://github.com/Conxian/lib-conxian-core/issues/191))
+**Type**: Security / Architecture
+**Priority**: 🔴 CRITICAL
+**Parent**: [CORE-006 / GitHub #180](https://github.com/Conxian/lib-conxian-core/issues/180)
+
+**Status**: Implemented in the focused corrective PR for #191; concrete
+chain-specific cryptography remains tracked separately in [#188](https://github.com/Conxian/lib-conxian-core/issues/188).
+
+**Scope delivered**:
+- [x] Non-overridable façade validation before and after backend hooks.
+- [x] Canonical `Chain -> ChainFamily` mapping and checked/deserialized IDs.
+- [x] Request-aware chain, block, proof-format, and exact state-root checks.
+- [x] Future/expired/malformed timestamp rejection and provenance policy.
+- [x] Versioned/domain-separated structural evidence binding with mutation tests.
+
+This item does not close CORE-007 or other unrelated roadmap work.
 
 ---
 
@@ -236,7 +262,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-003 | Signing Flows Docs | 🟠 | ⏳ Create |
 | CORE-004 | BIP-110 Compliance Matrix | 🟠 | ⏳ Create |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
-| CORE-006 | Protocol Verifier Trait | 🔴 | ✅ Contract defined in [#180](https://github.com/Conxian/lib-conxian-core/issues/180) |
+| CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Initial contract in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardening in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
 | CORE-007 | Chain Risk Profiles | 🟠 | ⏳ Create |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |

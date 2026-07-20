@@ -1,12 +1,18 @@
 use chrono::{DateTime, TimeZone, Utc};
 use lib_conxian_core::control_model::{
-    ChainFamily, FinalityClass, TrustTier, VerificationClass, VerificationStatus,
+    BridgeSystem, Chain, ChainFamily, FinalityClass, TrustTier, VerificationClass,
+    VerificationStatus,
 };
 use lib_conxian_core::verifier::{
-    validate_finality_transition, BlockHeader, ChainId, ChainStateReference, LatestVerifiedBlock,
-    ProofData, ProofFormat, ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
+    compute_evidence_binding_hash, validate_finality_transition, BlockHeader, ChainId,
+    ChainStateReference, DynProtocolVerifier, LatestVerifiedBlock, ProofData, ProofFormat,
+    ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier, ProtocolVerifierBackend,
     ProtocolVerifierError, TransactionFinalityRequest, TransactionFinalityResult,
     TransactionFinalityStatus, VerificationProvenance, VerifierCapabilities, VerifierCapability,
+};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
 };
 
 fn timestamp(seconds: i64) -> DateTime<Utc> {
@@ -23,207 +29,518 @@ fn ethereum() -> ChainId {
     ChainId::new(ChainFamily::Evm, "ethereum-mainnet")
 }
 
-#[derive(Clone)]
-struct MockVerifier {
-    capabilities: VerifierCapabilities,
+fn make_capabilities(capabilities: Vec<VerifierCapability>) -> VerifierCapabilities {
+    VerifierCapabilities {
+        verifier_id: "integration-mock".to_string(),
+        version: "1".to_string(),
+        supported_chains: vec![bitcoin()],
+        supported_families: vec![ChainFamily::BitcoinUtxo],
+        capabilities,
+        proof_formats: vec![ProofFormat::HeaderChain, ProofFormat::Merkle],
+        verification_classes: vec![VerificationClass::LightClient],
+        finality_classes: vec![FinalityClass::Probabilistic],
+        trust_tiers: vec![TrustTier::Strict],
+    }
 }
 
-impl MockVerifier {
+fn block(
+    chain: ChainId,
+    state_root: Option<String>,
+    status: VerificationStatus,
+) -> LatestVerifiedBlock {
+    LatestVerifiedBlock {
+        chain,
+        header: BlockHeader {
+            hash: "block-hash".to_string(),
+            parent_hash: Some("parent-hash".to_string()),
+            height: 100,
+            timestamp: timestamp(1_000),
+            state_root,
+        },
+        finality_class: FinalityClass::Probabilistic,
+        confirmations: 6,
+        verification_class: VerificationClass::LightClient,
+        trust_tier: TrustTier::Strict,
+        verification_status: status,
+        provenance: VerificationProvenance {
+            verifier_id: "integration-mock".to_string(),
+            evidence_ref: Some("mock-proof".to_string()),
+            verified_at: timestamp(1_010),
+        },
+    }
+}
+
+fn valid_request() -> ProofVerificationRequest {
+    ProofVerificationRequest::new(
+        bitcoin(),
+        ChainStateReference::new("block-hash", 100, Some("state-root".to_string())),
+        ProofData::new(ProofFormat::HeaderChain, vec![1, 2, 3]),
+    )
+}
+
+fn envelope(
+    destination: &ChainId,
+    observed_at: i64,
+    expires_at: i64,
+) -> lib_conxian_core::control_model::ProofEnvelope {
+    lib_conxian_core::control_model::ProofEnvelope {
+        system: BridgeSystem::Ibc,
+        system_version: "v1".to_string(),
+        trust_tier: TrustTier::Managed,
+        verification_class: VerificationClass::LightClient,
+        source_chain_id: "source-chain".to_string(),
+        destination_chain_id: destination.canonical_id(),
+        finality_class: FinalityClass::Probabilistic,
+        min_confirmations: 6,
+        observed_at: timestamp(observed_at),
+        expires_at: timestamp(expires_at),
+        proof_ref: "proof-1".to_string(),
+        evidence_hash: "placeholder".to_string(),
+        evidence_uri: Some("evidence://proof-1".to_string()),
+        verifier_set_ref: "set-1".to_string(),
+        security_params: serde_json::json!({"threshold": 2, "committee": ["a", "b"]}),
+        verification_status: VerificationStatus::Verified,
+        verification_reason: Some("verified by light client".to_string()),
+    }
+}
+
+fn bound_request() -> ProofVerificationRequest {
+    let mut request =
+        valid_request().with_envelope(envelope(&bitcoin(), 1_784_000_000, 1_790_000_000));
+    let binding = compute_evidence_binding_hash(&request).expect("placeholder envelope is valid");
+    request.proof.evidence_hash = Some(binding.clone());
+    request.envelope.as_mut().expect("envelope").evidence_hash = binding;
+    request
+}
+
+#[derive(Clone, Copy)]
+enum StateResponse {
+    Valid,
+    WrongChain,
+    WrongBlock,
+    MissingStateRoot,
+    MismatchedStateRoot,
+    WrongFormat,
+    Degraded,
+}
+
+type RequestMutation = Box<dyn Fn(&mut ProofVerificationRequest)>;
+
+#[derive(Clone)]
+struct MockBackend {
+    capabilities: VerifierCapabilities,
+    state_response: StateResponse,
+    calls: Arc<AtomicUsize>,
+}
+
+impl MockBackend {
     fn new(capabilities: Vec<VerifierCapability>) -> Self {
         Self {
-            capabilities: VerifierCapabilities {
-                verifier_id: "integration-mock".to_string(),
-                version: "1".to_string(),
-                supported_chains: vec![bitcoin()],
-                supported_families: vec![ChainFamily::BitcoinUtxo],
-                capabilities,
-                proof_formats: vec![ProofFormat::HeaderChain, ProofFormat::Merkle],
-                verification_classes: vec![VerificationClass::LightClient],
-                finality_classes: vec![FinalityClass::Probabilistic],
-                trust_tiers: vec![TrustTier::Strict],
-            },
+            capabilities: make_capabilities(capabilities),
+            state_response: StateResponse::Valid,
+            calls: Arc::new(AtomicUsize::new(0)),
         }
     }
 
-    fn block(&self, chain: ChainId) -> LatestVerifiedBlock {
-        LatestVerifiedBlock {
-            chain,
-            header: BlockHeader {
-                hash: "block-hash".to_string(),
-                parent_hash: Some("parent-hash".to_string()),
-                height: 100,
-                timestamp: timestamp(1_000),
-                state_root: Some("state-root".to_string()),
-            },
-            finality_class: FinalityClass::Probabilistic,
-            confirmations: 6,
-            verification_class: VerificationClass::LightClient,
-            trust_tier: TrustTier::Strict,
-            verification_status: VerificationStatus::Verified,
-            provenance: VerificationProvenance {
-                verifier_id: self.capabilities.verifier_id.clone(),
-                evidence_ref: Some("mock-proof".to_string()),
-                verified_at: timestamp(1_010),
-            },
-        }
+    fn with_state_response(mut self, state_response: StateResponse) -> Self {
+        self.state_response = state_response;
+        self
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(Ordering::SeqCst)
     }
 }
 
-impl ProtocolVerifier for MockVerifier {
+impl ProtocolVerifierBackend for MockBackend {
     fn capabilities(&self) -> &VerifierCapabilities {
         &self.capabilities
     }
 
-    fn verify_chain_state(
+    fn backend_verify_chain_state(
         &self,
         request: &ProofVerificationRequest,
     ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
-        self.ensure_capability(&request.chain, VerifierCapability::StateProofVerification)?;
-        request.validate()?;
-        self.ensure_proof_format(&request.chain, &request.proof.format)?;
-
-        if request.proof.bytes == [0] {
-            return Err(ProtocolVerifierError::InvalidProof {
-                reason: "mock proof marker is invalid".to_string(),
-            });
-        }
-
-        let result = ProofVerificationResult {
-            chain: request.chain.clone(),
-            state: request.state.clone(),
-            proof_format: request.proof.format.clone(),
-            verified_block: self.block(request.chain.clone()),
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let (chain, state, proof_format, state_root, status) = match self.state_response {
+            StateResponse::Valid => (
+                request.chain.clone(),
+                request.state.clone(),
+                request.proof.format.clone(),
+                request.state.state_root.clone(),
+                VerificationStatus::Verified,
+            ),
+            StateResponse::WrongChain => (
+                ethereum(),
+                request.state.clone(),
+                request.proof.format.clone(),
+                request.state.state_root.clone(),
+                VerificationStatus::Verified,
+            ),
+            StateResponse::WrongBlock => (
+                request.chain.clone(),
+                ChainStateReference::new("other-block", 101, request.state.state_root.clone()),
+                request.proof.format.clone(),
+                request.state.state_root.clone(),
+                VerificationStatus::Verified,
+            ),
+            StateResponse::MissingStateRoot => (
+                request.chain.clone(),
+                ChainStateReference::new(
+                    request.state.block_hash.clone(),
+                    request.state.block_height,
+                    None,
+                ),
+                request.proof.format.clone(),
+                None,
+                VerificationStatus::Verified,
+            ),
+            StateResponse::MismatchedStateRoot => (
+                request.chain.clone(),
+                ChainStateReference::new(
+                    request.state.block_hash.clone(),
+                    request.state.block_height,
+                    Some("different-root".to_string()),
+                ),
+                request.proof.format.clone(),
+                Some("different-root".to_string()),
+                VerificationStatus::Verified,
+            ),
+            StateResponse::WrongFormat => (
+                request.chain.clone(),
+                request.state.clone(),
+                ProofFormat::Merkle,
+                request.state.state_root.clone(),
+                VerificationStatus::Verified,
+            ),
+            StateResponse::Degraded => (
+                request.chain.clone(),
+                request.state.clone(),
+                request.proof.format.clone(),
+                request.state.state_root.clone(),
+                VerificationStatus::Degraded,
+            ),
         };
-        result.validate()?;
-        Ok(result)
+
+        Ok(ProofVerificationResult {
+            chain: chain.clone(),
+            state,
+            proof_format,
+            verified_block: block(chain, state_root, status),
+        })
     }
 
-    fn get_latest_verified_block(
+    fn backend_get_latest_verified_block(
         &self,
         chain: &ChainId,
     ) -> Result<LatestVerifiedBlock, ProtocolVerifierError> {
-        self.ensure_capability(chain, VerifierCapability::LatestVerifiedBlock)?;
-        let block = self.block(chain.clone());
-        block.validate()?;
-        Ok(block)
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(block(
+            chain.clone(),
+            Some("state-root".to_string()),
+            VerificationStatus::Verified,
+        ))
     }
 
-    fn verify_transaction_finality(
+    fn backend_verify_transaction_finality(
         &self,
         request: &TransactionFinalityRequest,
     ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
-        self.ensure_capability(&request.chain, VerifierCapability::TransactionFinality)?;
-        request.validate()?;
-
-        let observed_confirmations = 6;
-        let status = if request.min_confirmations <= observed_confirmations {
-            TransactionFinalityStatus::Finalized {
-                confirmations: observed_confirmations,
-            }
-        } else {
-            TransactionFinalityStatus::Confirmed {
-                confirmations: observed_confirmations,
-            }
-        };
-        let result = TransactionFinalityResult {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(TransactionFinalityResult {
             chain: request.chain.clone(),
             transaction_id: request.transaction_id.clone(),
-            status,
+            status: TransactionFinalityStatus::Finalized { confirmations: 6 },
             finality_class: FinalityClass::Probabilistic,
             required_confirmations: request.min_confirmations,
-            observed_confirmations,
-            latest_block: Some(self.block(request.chain.clone())),
+            observed_confirmations: 6,
+            latest_block: Some(block(
+                request.chain.clone(),
+                Some("state-root".to_string()),
+                VerificationStatus::Verified,
+            )),
             verification_class: VerificationClass::LightClient,
             trust_tier: TrustTier::Strict,
             verification_status: VerificationStatus::Verified,
             provenance: VerificationProvenance {
-                verifier_id: self.capabilities.verifier_id.clone(),
+                verifier_id: "integration-mock".to_string(),
                 evidence_ref: Some("mock-finality".to_string()),
                 verified_at: timestamp(1_010),
             },
-        };
-        self.validate_finality_result(request, &result)?;
-        Ok(result)
+        })
     }
 }
 
 #[test]
-fn verifier_accepts_valid_proof_and_round_trips_result() {
-    let verifier = MockVerifier::new(vec![
+fn facade_accepts_valid_proof_and_supports_dynamic_dispatch() {
+    let backend = MockBackend::new(vec![
         VerifierCapability::StateProofVerification,
         VerifierCapability::LatestVerifiedBlock,
         VerifierCapability::TransactionFinality,
     ]);
-    let request = ProofVerificationRequest::new(
-        bitcoin(),
-        ChainStateReference::new("block-hash", 100, Some("state-root".to_string())),
-        ProofData::new(ProofFormat::HeaderChain, vec![1, 2, 3]),
-    );
-
-    let result = verifier.verify_chain_state(&request).expect("valid proof");
+    let verifier = ProtocolVerifier::new(backend.clone());
+    let result = verifier
+        .verify_chain_state_at(&valid_request(), timestamp(2_000))
+        .expect("valid proof");
     assert!(result.is_verified());
+    assert_eq!(backend.calls(), 1);
 
     let encoded = serde_json::to_vec(&result).expect("serialize result");
     let decoded: ProofVerificationResult =
         serde_json::from_slice(&encoded).expect("deserialize result");
     assert_eq!(decoded, result);
+
+    let dynamic: DynProtocolVerifier = ProtocolVerifier::new(Box::new(backend));
+    assert!(dynamic
+        .verify_chain_state_at(&valid_request(), timestamp(2_000))
+        .is_ok());
 }
 
 #[test]
-fn verifier_rejects_malformed_and_invalid_proofs() {
-    let verifier = MockVerifier::new(vec![VerifierCapability::StateProofVerification]);
-    let malformed = ProofVerificationRequest::new(
+fn adversarial_backend_cannot_bypass_facade_postconditions() {
+    let cases = [
+        StateResponse::WrongChain,
+        StateResponse::WrongBlock,
+        StateResponse::MissingStateRoot,
+        StateResponse::MismatchedStateRoot,
+        StateResponse::WrongFormat,
+        StateResponse::Degraded,
+    ];
+
+    for response in cases {
+        let backend = MockBackend::new(vec![VerifierCapability::StateProofVerification])
+            .with_state_response(response);
+        let verifier = ProtocolVerifier::new(backend.clone());
+        assert!(verifier
+            .verify_chain_state_at(&valid_request(), timestamp(2_000))
+            .is_err());
+        assert_eq!(backend.calls(), 1);
+    }
+}
+
+#[test]
+fn invalid_requests_and_capabilities_do_not_call_backend() {
+    let backend = MockBackend::new(vec![VerifierCapability::StateProofVerification]);
+    let verifier = ProtocolVerifier::new(backend.clone());
+
+    let empty_proof = ProofVerificationRequest::new(
         bitcoin(),
         ChainStateReference::new("block-hash", 100, None),
         ProofData::new(ProofFormat::Merkle, Vec::new()),
     );
     assert!(matches!(
-        verifier.verify_chain_state(&malformed),
+        verifier.verify_chain_state_at(&empty_proof, timestamp(2_000)),
         Err(ProtocolVerifierError::InsufficientProofData { .. })
     ));
+    assert_eq!(backend.calls(), 0);
 
-    let invalid = ProofVerificationRequest::new(
+    let unsupported_format = ProofVerificationRequest::new(
         bitcoin(),
         ChainStateReference::new("block-hash", 100, None),
-        ProofData::new(ProofFormat::Merkle, vec![0]),
+        ProofData::new(ProofFormat::ZkProof, vec![1]),
     );
     assert!(matches!(
-        verifier.verify_chain_state(&invalid),
-        Err(ProtocolVerifierError::InvalidProof { .. })
+        verifier.verify_chain_state_at(&unsupported_format, timestamp(2_000)),
+        Err(ProtocolVerifierError::UnsupportedProofFormat { .. })
     ));
-}
+    assert_eq!(backend.calls(), 0);
 
-#[test]
-fn verifier_rejects_unsupported_chain_and_capability() {
-    let block_only = MockVerifier::new(vec![VerifierCapability::LatestVerifiedBlock]);
-    let state_request = ProofVerificationRequest::new(
+    let block_only = MockBackend::new(vec![VerifierCapability::LatestVerifiedBlock]);
+    let block_verifier = ProtocolVerifier::new(block_only.clone());
+    let finality_request = TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true);
+    assert!(matches!(
+        block_verifier.verify_transaction_finality_at(&finality_request, timestamp(2_000)),
+        Err(ProtocolVerifierError::UnsupportedCapability { .. })
+    ));
+    assert_eq!(block_only.calls(), 0);
+
+    let unsupported_chain = ProofVerificationRequest::new(
         ethereum(),
         ChainStateReference::new("block-hash", 100, None),
         ProofData::new(ProofFormat::HeaderChain, vec![1]),
     );
     assert!(matches!(
-        block_only.verify_chain_state(&state_request),
+        verifier.verify_chain_state_at(&unsupported_chain, timestamp(2_000)),
         Err(ProtocolVerifierError::UnsupportedChain { .. })
     ));
+    assert_eq!(backend.calls(), 0);
 
-    let bitcoin_request = TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, false);
+    let mut invalid_capabilities =
+        MockBackend::new(vec![VerifierCapability::StateProofVerification]);
+    invalid_capabilities.capabilities.trust_tiers.clear();
+    let invalid_verifier = ProtocolVerifier::new(invalid_capabilities.clone());
     assert!(matches!(
-        block_only.verify_transaction_finality(&bitcoin_request),
-        Err(ProtocolVerifierError::UnsupportedCapability { .. })
+        invalid_verifier.verify_chain_state_at(&valid_request(), timestamp(2_000)),
+        Err(ProtocolVerifierError::InvariantViolation { .. })
+    ));
+    assert_eq!(invalid_capabilities.calls(), 0);
+    assert!(ProtocolVerifier::try_new(invalid_capabilities).is_err());
+}
+
+#[test]
+fn chain_family_mapping_is_checked_in_constructor_and_deserialization() {
+    let known = ChainId::from_chain(Chain::Ethereum, "mainnet");
+    assert_eq!(known.family, ChainFamily::Evm);
+    assert!(matches!(
+        ChainId::try_from_parts(Some(Chain::Ethereum), ChainFamily::BitcoinUtxo, "mainnet"),
+        Err(ProtocolVerifierError::InvalidChainFamily { .. })
+    ));
+
+    let mismatched = serde_json::json!({
+        "family": "bitcoin_utxo",
+        "chain": "ethereum",
+        "network": "mainnet"
+    });
+    assert!(serde_json::from_value::<ChainId>(mismatched).is_err());
+
+    let encoded = serde_json::to_string(&known).expect("known chain serializes");
+    let decoded: ChainId = serde_json::from_str(&encoded).expect("known chain deserializes");
+    assert_eq!(decoded, known);
+}
+
+#[test]
+fn proof_result_requires_requested_state_root_and_exact_identity() {
+    for response in [
+        StateResponse::MissingStateRoot,
+        StateResponse::MismatchedStateRoot,
+    ] {
+        let backend = MockBackend::new(vec![VerifierCapability::StateProofVerification])
+            .with_state_response(response);
+        let verifier = ProtocolVerifier::new(backend);
+        let error = verifier
+            .verify_chain_state_at(&valid_request(), timestamp(2_000))
+            .expect_err("invalid state root must fail closed");
+        assert!(matches!(
+            error,
+            ProtocolVerifierError::MissingStateRoot { .. }
+                | ProtocolVerifierError::MismatchedStateRoot { .. }
+        ));
+    }
+}
+
+#[test]
+fn envelope_timestamps_are_future_safe_expiry_safe_and_malformed_safe() {
+    let future = valid_request().with_envelope(envelope(&bitcoin(), 3_000, 4_000));
+    assert!(matches!(
+        future.validate_at(timestamp(2_000)),
+        Err(ProtocolVerifierError::FutureDatedEvidence { .. })
+    ));
+
+    let expired = valid_request().with_envelope(envelope(&bitcoin(), 1_000, 2_000));
+    assert!(matches!(
+        expired.validate_at(timestamp(2_000)),
+        Err(ProtocolVerifierError::ExpiredEvidence { .. })
+    ));
+
+    let malformed = valid_request().with_envelope(envelope(&bitcoin(), 2_000, 2_000));
+    assert!(matches!(
+        malformed.validate_at(timestamp(2_000)),
+        Err(ProtocolVerifierError::MalformedProof { .. })
     ));
 }
 
 #[test]
-fn verifier_returns_latest_block_and_finality_transitions() {
-    let verifier = MockVerifier::new(vec![
-        VerifierCapability::LatestVerifiedBlock,
-        VerifierCapability::TransactionFinality,
-    ]);
-    let latest = verifier
-        .get_latest_verified_block(&bitcoin())
-        .expect("latest verified block");
-    assert_eq!(latest.header.height, 100);
-    assert!(latest.is_verified());
+fn evidence_binding_is_deterministic_and_detects_every_material_mutation() {
+    let request = bound_request();
+    let expected = request.evidence_binding_hash().expect("valid binding");
+    assert_eq!(
+        request.proof.evidence_hash.as_deref(),
+        Some(expected.as_str())
+    );
+    assert_eq!(compute_evidence_binding_hash(&request).unwrap(), expected);
+
+    let mutations: Vec<RequestMutation> = vec![
+        Box::new(|request| request.chain.family = ChainFamily::Evm),
+        Box::new(|request| request.chain.chain = Some(Chain::Bitcoin)),
+        Box::new(|request| request.chain.network.push_str("-mutated")),
+        Box::new(|request| request.state.block_hash.push_str("-mutated")),
+        Box::new(|request| request.state.block_height += 1),
+        Box::new(|request| request.state.state_root = Some("other-root".to_string())),
+        Box::new(|request| request.proof.format = ProofFormat::Merkle),
+        Box::new(|request| request.proof.bytes.push(9)),
+        Box::new(|request| request.proof.evidence_hash.as_mut().unwrap().push('0')),
+        Box::new(|request| request.envelope.as_mut().unwrap().system = BridgeSystem::Hyperlane),
+        Box::new(|request| request.envelope.as_mut().unwrap().system_version.push('2')),
+        Box::new(|request| request.envelope.as_mut().unwrap().trust_tier = TrustTier::Strict),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().verification_class = VerificationClass::ZkVerified
+        }),
+        Box::new(|request| {
+            request
+                .envelope
+                .as_mut()
+                .unwrap()
+                .source_chain_id
+                .push_str("-mutated")
+        }),
+        Box::new(|request| {
+            request
+                .envelope
+                .as_mut()
+                .unwrap()
+                .destination_chain_id
+                .push_str("-mutated")
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().finality_class = FinalityClass::Deterministic
+        }),
+        Box::new(|request| request.envelope.as_mut().unwrap().min_confirmations += 1),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().observed_at = timestamp(1_784_000_001)
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().expires_at = timestamp(1_790_000_001)
+        }),
+        Box::new(|request| {
+            request
+                .envelope
+                .as_mut()
+                .unwrap()
+                .proof_ref
+                .push_str("-mutated")
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().evidence_uri = Some("evidence://mutated".to_string())
+        }),
+        Box::new(|request| {
+            request
+                .envelope
+                .as_mut()
+                .unwrap()
+                .verifier_set_ref
+                .push_str("-mutated")
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().security_params["threshold"] = serde_json::json!(3)
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().verification_status = VerificationStatus::Degraded
+        }),
+        Box::new(|request| {
+            request.envelope.as_mut().unwrap().verification_reason = Some("mutated".to_string())
+        }),
+        Box::new(|request| request.envelope.as_mut().unwrap().evidence_hash.push('0')),
+    ];
+
+    for mutate in mutations {
+        let mut mutated = request.clone();
+        mutate(&mut mutated);
+        assert!(mutated.validate_at(timestamp(1_785_000_000)).is_err());
+    }
+}
+
+#[test]
+fn finality_facade_checks_request_result_and_transitions() {
+    let backend = MockBackend::new(vec![VerifierCapability::TransactionFinality]);
+    let verifier = ProtocolVerifier::new(backend.clone());
+    let result = verifier
+        .verify_transaction_finality_at(
+            &TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true),
+            timestamp(2_000),
+        )
+        .expect("finalized transaction");
+    assert!(result.is_final());
+    assert_eq!(backend.calls(), 1);
 
     let pending = TransactionFinalityStatus::Pending;
     let confirmed = TransactionFinalityStatus::Confirmed { confirmations: 3 };
@@ -231,27 +548,4 @@ fn verifier_returns_latest_block_and_finality_transitions() {
     assert!(validate_finality_transition(&pending, &confirmed).is_ok());
     assert!(validate_finality_transition(&confirmed, &finalized).is_ok());
     assert!(validate_finality_transition(&finalized, &pending).is_err());
-
-    let result = verifier
-        .verify_transaction_finality(&TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true))
-        .expect("finalized transaction");
-    assert!(result.is_final());
-}
-
-#[test]
-fn capability_and_result_validation_fail_closed_on_trust_invariants() {
-    let mut capabilities = MockVerifier::new(vec![VerifierCapability::LatestVerifiedBlock]);
-    capabilities.capabilities.verification_classes = vec![VerificationClass::ExternalQuorum];
-    assert!(matches!(
-        capabilities.capabilities.validate(),
-        Err(ProtocolVerifierError::InvariantViolation { .. })
-    ));
-
-    let mut result =
-        MockVerifier::new(vec![VerifierCapability::LatestVerifiedBlock]).block(bitcoin());
-    result.trust_tier = TrustTier::ObserverOnly;
-    assert!(matches!(
-        result.validate(),
-        Err(ProtocolVerifierError::PolicyBlocked { .. })
-    ));
 }
