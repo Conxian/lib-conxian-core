@@ -1,21 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-/// BIP-110 Compliance Constants
+use super::bip110::Bip110Limits;
+
+/// BIP-110 size-policy constants used by the core contract.
 ///
-/// BIP-110 (Reduced Data Temporary Softfork) limits data embedding in Bitcoin transactions:
+/// BIP-110 (Reduced Data Temporary Softfork) proposes limits on data embedding in Bitcoin
+/// transactions. These constants describe the explicit size-policy subset represented by this
+/// crate; they are not a complete consensus or script-validation model:
 /// - Max 256-byte pushdata per element
-/// - 83-byte OP_RETURN output
-/// - 34-byte ScriptPubKey for standard P2PKH/P2WPKH
+/// - 83-byte full output ScriptPubKey for each OP_RETURN output
+/// - 34-byte ScriptPubKey policy limit for each non-OP_RETURN output
 ///
 /// See [docs/BIP110_ALIGNMENT.md](https://github.com/Conxian/lib-conxian-core/blob/main/docs/BIP110_ALIGNMENT.md)
 pub mod bip110 {
     /// Maximum size of a single pushdata element in bytes
     pub const MAX_PUSHDATA_BYTES: usize = 256;
 
-    /// Maximum OP_RETURN output size in bytes (standard policy under BIP-110)
+    /// Maximum full output ScriptPubKey size for an OP_RETURN output.
     pub const MAX_OP_RETURN_BYTES: usize = 83;
 
-    /// Maximum ScriptPubKey size for standard addresses (P2PKH/P2WPKH) in bytes
+    /// Maximum ScriptPubKey size for a non-OP_RETURN output.
     pub const MAX_SCRIPT_PUBKEY_BYTES: usize = 34;
 
     /// Maximum witness element size in bytes
@@ -232,7 +236,7 @@ pub enum SessionLifecycleStatus {
     Expired,
 }
 
-/// BIP-110 compliance validation result
+/// Result from the core BIP-110 size-policy validator.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Bip110ValidationResult {
     pub is_compliant: bool,
@@ -255,7 +259,7 @@ impl Bip110ValidationResult {
     }
 }
 
-/// Specific BIP-110 violation types
+/// Specific BIP-110 size-policy violation types.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Bip110Violation {
     PushdataExceedsLimit { size: usize, max: usize },
@@ -277,7 +281,7 @@ impl std::fmt::Display for Bip110Violation {
             Self::OpReturnExceedsLimit { size, max } => {
                 write!(
                     f,
-                    "OP_RETURN size {} exceeds BIP-110 limit of {} bytes",
+                    "OP_RETURN output ScriptPubKey size {} exceeds BIP-110 limit of {} bytes",
                     size, max
                 )
             }
@@ -301,21 +305,22 @@ impl std::fmt::Display for Bip110Violation {
 
 impl std::error::Error for Bip110Violation {}
 
-/// BIP-110 Compliance struct for validating Bitcoin transaction data sizes.
+/// Core BIP-110 size-policy validator for supplied Bitcoin transaction metadata.
 ///
-/// BIP-110 (Reduced Data Temporary Softfork) enforces strict limits on data embedding:
+/// BIP-110 (Reduced Data Temporary Softfork) proposes limits on data embedding:
 /// - Maximum 256-byte pushdata per element
-/// - Maximum 83-byte OP_RETURN output
-/// - Maximum 34-byte ScriptPubKey for standard addresses
+/// - Maximum 83-byte full output ScriptPubKey for each OP_RETURN output
+/// - Maximum 34-byte ScriptPubKey for each non-OP_RETURN output
 ///
-/// This struct provides validation helpers aligned with the `TrustTier::Strict` (T1)
-/// trust tier for Bitcoin bridges, ensuring monetary use cases are prioritized
-/// over data storage.
+/// This struct validates only the size metadata supplied by a downstream adapter. The adapter is
+/// responsible for parsing and classifying transaction/script context, applying any applicable
+/// exceptions, and passing every constrained occurrence to the aggregate validator. This type is
+/// not a raw transaction parser or a complete consensus/script verifier.
 ///
 /// # Example
 ///
 /// ```rust
-/// use lib_conxian_core::control_model::{Bip110Compliance, TrustTier};
+/// use lib_conxian_core::control_model::Bip110Compliance;
 ///
 /// let compliance = Bip110Compliance::new();
 /// let result = compliance.validate_pushdata(100);
@@ -328,88 +333,82 @@ impl std::error::Error for Bip110Violation {}
 #[derive(Debug, Clone, Default)]
 pub struct Bip110Compliance {
     enabled: bool,
+    limits: Bip110Limits,
 }
 
 impl Bip110Compliance {
     pub fn new() -> Self {
-        Self { enabled: true }
+        Self {
+            enabled: true,
+            limits: Bip110Limits::canonical(),
+        }
     }
 
     pub fn disabled() -> Self {
-        Self { enabled: false }
+        Self {
+            enabled: false,
+            limits: Bip110Limits::canonical(),
+        }
+    }
+
+    /// Creates an enabled validator with an explicit set of size limits.
+    pub fn with_limits(limits: Bip110Limits) -> Self {
+        Self {
+            enabled: true,
+            limits,
+        }
     }
 
     pub fn is_enabled(&self) -> bool {
         self.enabled
     }
 
-    /// Validates pushdata size against BIP-110 limit (256 bytes)
+    /// Returns the size limits used by this validator.
+    pub fn limits(&self) -> &Bip110Limits {
+        &self.limits
+    }
+
+    /// Validates one pushdata element against the configured size limit.
     pub fn validate_pushdata(&self, size: usize) -> Bip110ValidationResult {
-        if !self.enabled {
-            return Bip110ValidationResult::compliant();
-        }
-
-        if size > bip110::MAX_PUSHDATA_BYTES {
-            Bip110ValidationResult::non_compliant(vec![Bip110Violation::PushdataExceedsLimit {
-                size,
-                max: bip110::MAX_PUSHDATA_BYTES,
-            }])
-        } else {
-            Bip110ValidationResult::compliant()
-        }
+        self.validate_single_size(
+            size,
+            self.limits.max_pushdata_bytes,
+            Self::pushdata_violation,
+        )
     }
 
-    /// Validates OP_RETURN output size against BIP-110 limit (83 bytes)
+    /// Validates one full OP_RETURN output ScriptPubKey size against the configured limit.
     pub fn validate_op_return(&self, size: usize) -> Bip110ValidationResult {
-        if !self.enabled {
-            return Bip110ValidationResult::compliant();
-        }
-
-        if size > bip110::MAX_OP_RETURN_BYTES {
-            Bip110ValidationResult::non_compliant(vec![Bip110Violation::OpReturnExceedsLimit {
-                size,
-                max: bip110::MAX_OP_RETURN_BYTES,
-            }])
-        } else {
-            Bip110ValidationResult::compliant()
-        }
+        self.validate_single_size(
+            size,
+            self.limits.max_op_return_bytes,
+            Self::op_return_violation,
+        )
     }
 
-    /// Validates ScriptPubKey size against BIP-110 limit (34 bytes)
+    /// Validates one non-OP_RETURN ScriptPubKey size against the configured limit.
     pub fn validate_script_pubkey(&self, size: usize) -> Bip110ValidationResult {
-        if !self.enabled {
-            return Bip110ValidationResult::compliant();
-        }
-
-        if size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
-            Bip110ValidationResult::non_compliant(vec![Bip110Violation::ScriptPubKeyExceedsLimit {
-                size,
-                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
-            }])
-        } else {
-            Bip110ValidationResult::compliant()
-        }
+        self.validate_single_size(
+            size,
+            self.limits.max_script_pubkey_bytes,
+            Self::script_pubkey_violation,
+        )
     }
 
-    /// Validates witness element size against BIP-110 limit (256 bytes)
+    /// Validates one witness element against the configured size limit.
     pub fn validate_witness_element(&self, size: usize) -> Bip110ValidationResult {
-        if !self.enabled {
-            return Bip110ValidationResult::compliant();
-        }
-
-        if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
-            Bip110ValidationResult::non_compliant(vec![
-                Bip110Violation::WitnessElementExceedsLimit {
-                    size,
-                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
-                },
-            ])
-        } else {
-            Bip110ValidationResult::compliant()
-        }
+        self.validate_single_size(
+            size,
+            self.limits.max_witness_element_bytes,
+            Self::witness_element_violation,
+        )
     }
 
-    /// Validates a complete transaction against all BIP-110 limits
+    /// Validates the legacy aggregate inputs against all configured size limits.
+    ///
+    /// The `op_return_size` value is treated as one full OP_RETURN output ScriptPubKey size, and
+    /// `script_pubkey_size` is treated as one non-OP_RETURN ScriptPubKey size. New callers that
+    /// need transaction-wide vectors should use [`crate::control_model::Bip110TransactionShape`].
     pub fn validate_transaction(
         &self,
         pushdatas: &[usize],
@@ -417,50 +416,113 @@ impl Bip110Compliance {
         script_pubkey_size: usize,
         witness_elements: &[usize],
     ) -> Bip110ValidationResult {
+        let op_return_sizes = op_return_size.into_iter().collect::<Vec<_>>();
+        let non_op_return_sizes = [script_pubkey_size];
+
+        self.validate_transaction_shape(
+            pushdatas,
+            &op_return_sizes,
+            &non_op_return_sizes,
+            witness_elements,
+        )
+    }
+
+    /// Validates every size-bearing occurrence represented by the transaction shape.
+    pub(crate) fn validate_transaction_shape(
+        &self,
+        pushdata_sizes: &[usize],
+        op_return_script_pubkey_sizes: &[usize],
+        non_op_return_script_pubkey_sizes: &[usize],
+        witness_element_sizes: &[usize],
+    ) -> Bip110ValidationResult {
         if !self.enabled {
             return Bip110ValidationResult::compliant();
         }
 
         let mut violations = Vec::new();
 
-        for &size in pushdatas.iter() {
-            if size > bip110::MAX_PUSHDATA_BYTES {
-                violations.push(Bip110Violation::PushdataExceedsLimit {
-                    size,
-                    max: bip110::MAX_PUSHDATA_BYTES,
-                });
-            }
-        }
-
-        if let Some(size) = op_return_size {
-            if size > bip110::MAX_OP_RETURN_BYTES {
-                violations.push(Bip110Violation::OpReturnExceedsLimit {
-                    size,
-                    max: bip110::MAX_OP_RETURN_BYTES,
-                });
-            }
-        }
-
-        if script_pubkey_size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
-            violations.push(Bip110Violation::ScriptPubKeyExceedsLimit {
-                size: script_pubkey_size,
-                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
-            });
-        }
-
-        for &size in witness_elements {
-            if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
-                violations.push(Bip110Violation::WitnessElementExceedsLimit {
-                    size,
-                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
-                });
-            }
-        }
+        Self::append_violations(
+            &mut violations,
+            pushdata_sizes.iter().copied(),
+            self.limits.max_pushdata_bytes,
+            Self::pushdata_violation,
+        );
+        Self::append_violations(
+            &mut violations,
+            op_return_script_pubkey_sizes.iter().copied(),
+            self.limits.max_op_return_bytes,
+            Self::op_return_violation,
+        );
+        Self::append_violations(
+            &mut violations,
+            non_op_return_script_pubkey_sizes.iter().copied(),
+            self.limits.max_script_pubkey_bytes,
+            Self::script_pubkey_violation,
+        );
+        Self::append_violations(
+            &mut violations,
+            witness_element_sizes.iter().copied(),
+            self.limits.max_witness_element_bytes,
+            Self::witness_element_violation,
+        );
 
         if violations.is_empty() {
             Bip110ValidationResult::compliant()
         } else {
             Bip110ValidationResult::non_compliant(violations)
         }
+    }
+
+    fn validate_single_size(
+        &self,
+        size: usize,
+        max: usize,
+        make_violation: fn(usize, usize) -> Bip110Violation,
+    ) -> Bip110ValidationResult {
+        if !self.enabled {
+            return Bip110ValidationResult::compliant();
+        }
+
+        match Self::violation_for_size(size, max, make_violation) {
+            Some(violation) => Bip110ValidationResult::non_compliant(vec![violation]),
+            None => Bip110ValidationResult::compliant(),
+        }
+    }
+
+    fn append_violations(
+        violations: &mut Vec<Bip110Violation>,
+        sizes: impl IntoIterator<Item = usize>,
+        max: usize,
+        make_violation: fn(usize, usize) -> Bip110Violation,
+    ) {
+        for size in sizes {
+            if let Some(violation) = Self::violation_for_size(size, max, make_violation) {
+                violations.push(violation);
+            }
+        }
+    }
+
+    fn violation_for_size(
+        size: usize,
+        max: usize,
+        make_violation: fn(usize, usize) -> Bip110Violation,
+    ) -> Option<Bip110Violation> {
+        (size > max).then(|| make_violation(size, max))
+    }
+
+    fn pushdata_violation(size: usize, max: usize) -> Bip110Violation {
+        Bip110Violation::PushdataExceedsLimit { size, max }
+    }
+
+    fn op_return_violation(size: usize, max: usize) -> Bip110Violation {
+        Bip110Violation::OpReturnExceedsLimit { size, max }
+    }
+
+    fn script_pubkey_violation(size: usize, max: usize) -> Bip110Violation {
+        Bip110Violation::ScriptPubKeyExceedsLimit { size, max }
+    }
+
+    fn witness_element_violation(size: usize, max: usize) -> Bip110Violation {
+        Bip110Violation::WitnessElementExceedsLimit { size, max }
     }
 }
