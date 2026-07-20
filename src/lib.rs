@@ -52,6 +52,7 @@ pub mod crypto;
 pub mod enclave;
 pub mod lightning;
 pub mod rgb;
+pub mod signing;
 pub mod stacks;
 
 #[cfg(test)]
