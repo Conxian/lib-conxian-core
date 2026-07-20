@@ -18,20 +18,79 @@ use super::trust::{Bip110Compliance, Bip110ValidationResult, Bip110Violation};
 /// Initial version of the serialized BIP-110 preflight contract.
 pub const BIP110_PREFLIGHT_API_VERSION: u16 = 1;
 
+/// Inclusive BIP-110 maximum for one explicitly classified Taproot control block.
+pub const MAX_TAPROOT_CONTROL_BLOCK_BYTES: u64 = 257;
+
 /// The point in the transaction lifecycle at which measurements are supplied.
 ///
 /// Both phases use the same byte units and inclusive limits. In the pre-construction phase,
 /// measurements describe the intended serialized transaction surfaces before final bytes exist.
 /// In the post-serialization phase, measurements must be taken from the finalized serialized
 /// transaction. Core does not construct or serialize the transaction in either phase.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Bip110PreflightPhase {
     /// Validate measurements before a transaction is finalized or serialized.
+    #[default]
     PreConstruction,
     /// Validate measurements taken from a finalized serialized transaction.
     PostSerialization,
 }
+
+impl Bip110PreflightPhase {
+    /// Returns the measurement source that is valid for this lifecycle phase.
+    pub const fn expected_measurement_source(self) -> Bip110MeasurementSource {
+        match self {
+            Self::PreConstruction => Bip110MeasurementSource::CallerClassified,
+            Self::PostSerialization => Bip110MeasurementSource::SerializedTransaction,
+        }
+    }
+}
+
+/// Provenance of the classified byte measurements in a preflight request.
+///
+/// `CallerClassified` is intentionally weaker than serialized validation: it identifies
+/// measurements supplied by a transaction-aware caller while construction is still in progress.
+/// `SerializedTransaction` identifies measurements obtained from a finalized serialized
+/// transaction. The validator rejects a request whose phase and source disagree.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum Bip110MeasurementSource {
+    /// Measurements classified by the caller before final serialization.
+    #[default]
+    #[serde(alias = "pre_construction")]
+    CallerClassified,
+    /// Measurements classified from the finalized serialized transaction.
+    #[serde(alias = "post_serialization")]
+    SerializedTransaction,
+}
+
+impl Bip110MeasurementSource {
+    /// Returns the lifecycle phase that this provenance can validly support.
+    pub const fn phase(self) -> Bip110PreflightPhase {
+        match self {
+            Self::CallerClassified => Bip110PreflightPhase::PreConstruction,
+            Self::SerializedTransaction => Bip110PreflightPhase::PostSerialization,
+        }
+    }
+
+    /// Returns whether this provenance is valid for the supplied lifecycle phase.
+    pub const fn matches_phase(self, phase: Bip110PreflightPhase) -> bool {
+        matches!(
+            (self, phase),
+            (
+                Self::CallerClassified,
+                Bip110PreflightPhase::PreConstruction
+            ) | (
+                Self::SerializedTransaction,
+                Bip110PreflightPhase::PostSerialization
+            )
+        )
+    }
+}
+
+/// Compatibility alias for callers that use provenance terminology.
+pub type Bip110MeasurementProvenance = Bip110MeasurementSource;
 
 /// Operation context attached to a BIP-110 preflight request.
 ///
@@ -41,8 +100,8 @@ pub enum Bip110PreflightPhase {
 /// strings are retained by [`Self::Unknown`] and fail closed during validation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Bip110OperationContext {
-    /// Generic Bitcoin transaction context with all four measurement vectors classified by the
-    /// caller.
+    /// Generic Bitcoin transaction context with all ordinary vectors classified by the caller and
+    /// any Taproot control blocks supplied separately.
     BitcoinTransaction,
     /// Taproot context; its owning context contract is not defined here.
     Taproot,
@@ -52,20 +111,56 @@ pub enum Bip110OperationContext {
     TaprootScriptPath,
     /// Taproot key-path context; its owning context contract is not defined here.
     TaprootKeyPath,
+    /// Taproot leaf/Tapscript bytes; its owning context contract is not defined here.
+    Tapleaf,
     /// Miniscript context; its owning context contract is not defined here.
     Miniscript,
     /// DLC context; its owning context contract is not defined here.
     Dlc,
+    /// DLC funding context; its owning context contract is not defined here.
+    DlcFunding,
+    /// DLC refund context; its owning context contract is not defined here.
+    DlcRefund,
+    /// DLC contract execution context; its owning context contract is not defined here.
+    DlcCet,
     /// Lightning context; its owning context contract is not defined here.
     Lightning,
+    /// Lightning commitment context; its owning context contract is not defined here.
+    LightningCommitment,
+    /// Lightning closing context; its owning context contract is not defined here.
+    LightningClosing,
+    /// Lightning justice context; its owning context contract is not defined here.
+    LightningJustice,
+    /// Lightning HTLC context; its owning context contract is not defined here.
+    LightningHtlc,
     /// RGB context; its owning context contract is not defined here.
     Rgb,
+    /// RGB anchor context; its owning context contract is not defined here.
+    RgbAnchor,
     /// Babylon context; its owning context contract is not defined here.
     Babylon,
+    /// Babylon staking context; its owning context contract is not defined here.
+    BabylonStaking,
+    /// Babylon delegation context; its owning context contract is not defined here.
+    BabylonDelegation,
+    /// Babylon unbonding context; its owning context contract is not defined here.
+    BabylonUnbonding,
+    /// Babylon withdrawal context; its owning context contract is not defined here.
+    BabylonWithdrawal,
+    /// Babylon checkpoint context; its owning context contract is not defined here.
+    BabylonCheckpoint,
     /// Fedimint context; its owning context contract is not defined here.
     Fedimint,
     /// Stacks or sBTC context; its owning context contract is not defined here.
     Stacks,
+    /// Stacks/sBTC peg-in context; its owning context contract is not defined here.
+    StacksSbtcPegIn,
+    /// Stacks/sBTC peg-out context; its owning context contract is not defined here.
+    StacksSbtcPegOut,
+    /// Stacks/sBTC mint context; its owning context contract is not defined here.
+    StacksSbtcMint,
+    /// Stacks/sBTC burn context; its owning context contract is not defined here.
+    StacksSbtcBurn,
     /// Liquid or Elements context; its owning context contract is not defined here.
     Liquid,
     /// A context name not known by this contract version.
@@ -81,13 +176,31 @@ impl Bip110OperationContext {
             Self::Tapscript => "tapscript",
             Self::TaprootScriptPath => "taproot_script_path",
             Self::TaprootKeyPath => "taproot_key_path",
+            Self::Tapleaf => "tapleaf",
             Self::Miniscript => "miniscript",
             Self::Dlc => "dlc",
+            Self::DlcFunding => "dlc_funding",
+            Self::DlcRefund => "dlc_refund",
+            Self::DlcCet => "dlc_cet",
             Self::Lightning => "lightning",
+            Self::LightningCommitment => "lightning_commitment",
+            Self::LightningClosing => "lightning_closing",
+            Self::LightningJustice => "lightning_justice",
+            Self::LightningHtlc => "lightning_htlc",
             Self::Rgb => "rgb",
+            Self::RgbAnchor => "rgb_anchor",
             Self::Babylon => "babylon",
+            Self::BabylonStaking => "babylon_staking",
+            Self::BabylonDelegation => "babylon_delegation",
+            Self::BabylonUnbonding => "babylon_unbonding",
+            Self::BabylonWithdrawal => "babylon_withdrawal",
+            Self::BabylonCheckpoint => "babylon_checkpoint",
             Self::Fedimint => "fedimint",
             Self::Stacks => "stacks",
+            Self::StacksSbtcPegIn => "stacks_sbtc_peg_in",
+            Self::StacksSbtcPegOut => "stacks_sbtc_peg_out",
+            Self::StacksSbtcMint => "stacks_sbtc_mint",
+            Self::StacksSbtcBurn => "stacks_sbtc_burn",
             Self::Liquid => "liquid",
             Self::Unknown(value) => value,
         }
@@ -105,13 +218,31 @@ impl Bip110OperationContext {
             "tapscript" => Self::Tapscript,
             "taproot_script_path" => Self::TaprootScriptPath,
             "taproot_key_path" => Self::TaprootKeyPath,
+            "tapleaf" => Self::Tapleaf,
             "miniscript" => Self::Miniscript,
             "dlc" => Self::Dlc,
+            "dlc_funding" => Self::DlcFunding,
+            "dlc_refund" => Self::DlcRefund,
+            "dlc_cet" => Self::DlcCet,
             "lightning" => Self::Lightning,
+            "lightning_commitment" => Self::LightningCommitment,
+            "lightning_closing" => Self::LightningClosing,
+            "lightning_justice" => Self::LightningJustice,
+            "lightning_htlc" => Self::LightningHtlc,
             "rgb" => Self::Rgb,
+            "rgb_anchor" => Self::RgbAnchor,
             "babylon" => Self::Babylon,
+            "babylon_staking" => Self::BabylonStaking,
+            "babylon_delegation" => Self::BabylonDelegation,
+            "babylon_unbonding" => Self::BabylonUnbonding,
+            "babylon_withdrawal" => Self::BabylonWithdrawal,
+            "babylon_checkpoint" => Self::BabylonCheckpoint,
             "fedimint" => Self::Fedimint,
             "stacks" => Self::Stacks,
+            "stacks_sbtc_peg_in" => Self::StacksSbtcPegIn,
+            "stacks_sbtc_peg_out" => Self::StacksSbtcPegOut,
+            "stacks_sbtc_mint" => Self::StacksSbtcMint,
+            "stacks_sbtc_burn" => Self::StacksSbtcBurn,
             "liquid" => Self::Liquid,
             _ => Self::Unknown(value),
         }
@@ -178,6 +309,8 @@ pub enum Bip110MeasurementField {
     NonOpReturnScriptPubkey,
     /// Bytes in one applicable script-argument witness element.
     WitnessElement,
+    /// Complete serialized bytes of one explicitly classified Taproot control block.
+    TaprootControlBlock,
 }
 
 impl Bip110MeasurementField {
@@ -188,6 +321,7 @@ impl Bip110MeasurementField {
             Self::OpReturnScriptPubkey => "op_return_script_pubkey",
             Self::NonOpReturnScriptPubkey => "non_op_return_script_pubkey",
             Self::WitnessElement => "witness_element",
+            Self::TaprootControlBlock => "taproot_control_block",
         }
     }
 }
@@ -196,10 +330,14 @@ impl Bip110MeasurementField {
 ///
 /// Each vector preserves occurrence order. The fields use `u64` on the wire rather than `usize`:
 /// pushdata values are payload bytes only; ScriptPubKey values are complete serialized scripts;
-/// and witness values are individual applicable script-argument elements, not total witness
-/// serialization lengths.
+/// witness values are individual applicable script-argument elements, not total witness
+/// serialization lengths; and control-block values are complete serialized control-block witness
+/// items kept separate from ordinary witness arguments.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Bip110PreflightMeasurements {
+    /// Provenance of these classified measurements.
+    #[serde(default)]
+    pub source: Bip110MeasurementSource,
     /// Payload byte sizes for applicable pushdata occurrences.
     pub pushdata_sizes_bytes: Vec<u64>,
     /// Complete serialized OP_RETURN ScriptPubKey byte sizes.
@@ -208,6 +346,9 @@ pub struct Bip110PreflightMeasurements {
     pub non_op_return_script_pubkey_sizes_bytes: Vec<u64>,
     /// Byte sizes for applicable script-argument witness elements.
     pub witness_element_sizes_bytes: Vec<u64>,
+    /// Complete serialized Taproot control-block sizes, kept separate from witness arguments.
+    #[serde(default, alias = "control_block_sizes_bytes")]
+    pub taproot_control_block_sizes_bytes: Vec<u64>,
 }
 
 impl Bip110PreflightMeasurements {
@@ -219,11 +360,62 @@ impl Bip110PreflightMeasurements {
         witness_element_sizes_bytes: Vec<u64>,
     ) -> Self {
         Self {
+            source: Bip110MeasurementSource::default(),
             pushdata_sizes_bytes,
             op_return_script_pubkey_sizes_bytes,
             non_op_return_script_pubkey_sizes_bytes,
             witness_element_sizes_bytes,
+            taproot_control_block_sizes_bytes: Vec::new(),
         }
+    }
+
+    /// Creates fixed-width measurements with an explicit measurement source and control blocks.
+    pub fn new_with_source(
+        source: Bip110MeasurementSource,
+        pushdata_sizes_bytes: Vec<u64>,
+        op_return_script_pubkey_sizes_bytes: Vec<u64>,
+        non_op_return_script_pubkey_sizes_bytes: Vec<u64>,
+        witness_element_sizes_bytes: Vec<u64>,
+        taproot_control_block_sizes_bytes: Vec<u64>,
+    ) -> Self {
+        Self {
+            source,
+            pushdata_sizes_bytes,
+            op_return_script_pubkey_sizes_bytes,
+            non_op_return_script_pubkey_sizes_bytes,
+            witness_element_sizes_bytes,
+            taproot_control_block_sizes_bytes,
+        }
+    }
+
+    /// Creates fixed-width measurements with a separate Taproot control-block vector.
+    pub fn new_with_control_block_sizes(
+        pushdata_sizes_bytes: Vec<u64>,
+        op_return_script_pubkey_sizes_bytes: Vec<u64>,
+        non_op_return_script_pubkey_sizes_bytes: Vec<u64>,
+        witness_element_sizes_bytes: Vec<u64>,
+        taproot_control_block_sizes_bytes: Vec<u64>,
+    ) -> Self {
+        Self::new_with_source(
+            Bip110MeasurementSource::default(),
+            pushdata_sizes_bytes,
+            op_return_script_pubkey_sizes_bytes,
+            non_op_return_script_pubkey_sizes_bytes,
+            witness_element_sizes_bytes,
+            taproot_control_block_sizes_bytes,
+        )
+    }
+
+    /// Returns a copy with the supplied measurement provenance.
+    pub fn with_source(mut self, source: Bip110MeasurementSource) -> Self {
+        self.source = source;
+        self
+    }
+
+    /// Returns a copy with the supplied Taproot control-block measurements.
+    pub fn with_control_block_sizes(mut self, sizes: Vec<u64>) -> Self {
+        self.taproot_control_block_sizes_bytes = sizes;
+        self
     }
 
     /// Converts these wire measurements to the existing `usize`-based transaction shape.
@@ -275,7 +467,7 @@ impl Bip110PreflightMeasurements {
 }
 
 /// A versioned request for BIP-110 preflight validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct Bip110PreflightRequest {
     /// Serialized contract version requested by the caller.
     pub api_version: u16,
@@ -285,6 +477,81 @@ pub struct Bip110PreflightRequest {
     pub context: Bip110OperationContext,
     /// Classified fixed-width measurements for the request.
     pub measurements: Bip110PreflightMeasurements,
+    /// Whether the caller supplied classified measurements.
+    ///
+    /// This is separate from empty vectors: an explicitly present generic transaction with zero
+    /// constrained occurrences is valid, while missing measurement data always fails closed.
+    #[serde(skip_serializing_if = "is_true")]
+    pub measurements_present: bool,
+}
+
+fn is_true(value: &bool) -> bool {
+    *value
+}
+
+#[derive(Debug, Deserialize)]
+struct Bip110PreflightMeasurementsWire {
+    #[serde(default)]
+    source: Option<Bip110MeasurementSource>,
+    pushdata_sizes_bytes: Vec<u64>,
+    op_return_script_pubkey_sizes_bytes: Vec<u64>,
+    non_op_return_script_pubkey_sizes_bytes: Vec<u64>,
+    witness_element_sizes_bytes: Vec<u64>,
+    #[serde(default, alias = "control_block_sizes_bytes")]
+    taproot_control_block_sizes_bytes: Vec<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Bip110PreflightRequestWire {
+    api_version: u16,
+    phase: Bip110PreflightPhase,
+    context: Bip110OperationContext,
+    #[serde(default)]
+    measurements: Option<Bip110PreflightMeasurementsWire>,
+    #[serde(default)]
+    measurements_present: Option<bool>,
+    #[serde(default)]
+    measurement_source: Option<Bip110MeasurementSource>,
+}
+
+impl<'de> Deserialize<'de> for Bip110PreflightRequest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = Bip110PreflightRequestWire::deserialize(deserializer)?;
+        let measurements_present = wire
+            .measurements_present
+            .unwrap_or(wire.measurements.is_some())
+            && wire.measurements.is_some();
+        let measurements = match wire.measurements {
+            Some(measurements) => Bip110PreflightMeasurements {
+                source: measurements
+                    .source
+                    .or(wire.measurement_source)
+                    .unwrap_or_else(|| wire.phase.expected_measurement_source()),
+                pushdata_sizes_bytes: measurements.pushdata_sizes_bytes,
+                op_return_script_pubkey_sizes_bytes: measurements
+                    .op_return_script_pubkey_sizes_bytes,
+                non_op_return_script_pubkey_sizes_bytes: measurements
+                    .non_op_return_script_pubkey_sizes_bytes,
+                witness_element_sizes_bytes: measurements.witness_element_sizes_bytes,
+                taproot_control_block_sizes_bytes: measurements.taproot_control_block_sizes_bytes,
+            },
+            None => {
+                Bip110PreflightMeasurements::new(Vec::new(), Vec::new(), Vec::new(), Vec::new())
+                    .with_source(wire.phase.expected_measurement_source())
+            }
+        };
+
+        Ok(Self {
+            api_version: wire.api_version,
+            phase: wire.phase,
+            context: wire.context,
+            measurements,
+            measurements_present,
+        })
+    }
 }
 
 impl Bip110PreflightRequest {
@@ -294,12 +561,32 @@ impl Bip110PreflightRequest {
         context: Bip110OperationContext,
         measurements: Bip110PreflightMeasurements,
     ) -> Self {
-        Self {
-            api_version: BIP110_PREFLIGHT_API_VERSION,
+        Self::with_api_version_and_source(
+            BIP110_PREFLIGHT_API_VERSION,
             phase,
             context,
+            phase.expected_measurement_source(),
             measurements,
-        }
+        )
+    }
+
+    /// Creates a request with explicit measurement provenance.
+    ///
+    /// This constructor is useful for testing and for adapters that need the validator to reject
+    /// an accidentally mislabeled pre-construction or post-serialization measurement set.
+    pub fn new_with_source(
+        phase: Bip110PreflightPhase,
+        source: Bip110MeasurementSource,
+        context: Bip110OperationContext,
+        measurements: Bip110PreflightMeasurements,
+    ) -> Self {
+        Self::with_api_version_and_source(
+            BIP110_PREFLIGHT_API_VERSION,
+            phase,
+            context,
+            source,
+            measurements,
+        )
     }
 
     /// Creates a request with an explicitly selected API version for negotiation or rejection
@@ -310,12 +597,62 @@ impl Bip110PreflightRequest {
         context: Bip110OperationContext,
         measurements: Bip110PreflightMeasurements,
     ) -> Self {
+        Self::with_api_version_and_source(
+            api_version,
+            phase,
+            context,
+            phase.expected_measurement_source(),
+            measurements,
+        )
+    }
+
+    /// Creates a request with an explicit API version and measurement provenance.
+    pub fn with_api_version_and_source(
+        api_version: u16,
+        phase: Bip110PreflightPhase,
+        context: Bip110OperationContext,
+        source: Bip110MeasurementSource,
+        mut measurements: Bip110PreflightMeasurements,
+    ) -> Self {
+        measurements.source = source;
         Self {
             api_version,
             phase,
             context,
             measurements,
+            measurements_present: true,
         }
+    }
+
+    /// Creates an explicit missing-measurement request that cannot produce compliant success.
+    pub fn without_measurements(
+        phase: Bip110PreflightPhase,
+        context: Bip110OperationContext,
+    ) -> Self {
+        Self {
+            api_version: BIP110_PREFLIGHT_API_VERSION,
+            phase,
+            context,
+            measurements: Bip110PreflightMeasurements::new(
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            )
+            .with_source(phase.expected_measurement_source()),
+            measurements_present: false,
+        }
+    }
+
+    /// Returns whether classified measurement data was explicitly supplied.
+    pub const fn has_measurements(&self) -> bool {
+        self.measurements_present
+    }
+
+    /// Returns a copy of this request using another API version.
+    pub fn with_version(mut self, api_version: u16) -> Self {
+        self.api_version = api_version;
+        self
     }
 
     /// Validates this request with a fresh enabled canonical validator.
@@ -334,6 +671,12 @@ pub enum Bip110PreflightErrorCode {
     UnknownContext,
     /// The context is known but has no owning preflight contract yet.
     UnsupportedContext,
+    /// The request phase and measurement provenance disagree.
+    PhaseMismatch,
+    /// The request did not contain classified measurements.
+    MissingMeasurementData,
+    /// The request structure was malformed before size validation.
+    MalformedRequest,
     /// A fixed-width wire measurement could not be represented as `usize`.
     IntegerOverflow,
     /// A vector index could not be represented as a fixed-width wire index.
@@ -352,6 +695,15 @@ pub enum Bip110PreflightError {
     UnknownContext { context: String },
     /// The request carried a known but not-yet-supported context.
     UnsupportedContext { context: String },
+    /// The request phase does not match the provenance of its measurements.
+    PhaseMismatch {
+        expected_phase: Bip110PreflightPhase,
+        received_source: Bip110MeasurementSource,
+    },
+    /// The request omitted its classified measurement data.
+    MissingMeasurementData,
+    /// A request was structurally malformed before size validation could begin.
+    MalformedRequest { reason: String },
     /// A `u64` wire measurement did not fit into the target platform's `usize`.
     IntegerOverflow {
         field: Bip110MeasurementField,
@@ -371,6 +723,9 @@ impl Bip110PreflightError {
             Self::UnsupportedApiVersion { .. } => "unsupported_api_version",
             Self::UnknownContext { .. } => "unknown_context",
             Self::UnsupportedContext { .. } => "unsupported_context",
+            Self::PhaseMismatch { .. } => "phase_mismatch",
+            Self::MissingMeasurementData => "missing_measurement_data",
+            Self::MalformedRequest { .. } => "malformed_request",
             Self::IntegerOverflow { .. } => "integer_overflow",
             Self::IndexOverflow { .. } => "index_overflow",
             Self::ComplianceDisabled => "compliance_disabled",
@@ -383,9 +738,29 @@ impl Bip110PreflightError {
             Self::UnsupportedApiVersion { .. } => Bip110PreflightErrorCode::UnsupportedApiVersion,
             Self::UnknownContext { .. } => Bip110PreflightErrorCode::UnknownContext,
             Self::UnsupportedContext { .. } => Bip110PreflightErrorCode::UnsupportedContext,
+            Self::PhaseMismatch { .. } => Bip110PreflightErrorCode::PhaseMismatch,
+            Self::MissingMeasurementData => Bip110PreflightErrorCode::MissingMeasurementData,
+            Self::MalformedRequest { .. } => Bip110PreflightErrorCode::MalformedRequest,
             Self::IntegerOverflow { .. } => Bip110PreflightErrorCode::IntegerOverflow,
             Self::IndexOverflow { .. } => Bip110PreflightErrorCode::IndexOverflow,
             Self::ComplianceDisabled => Bip110PreflightErrorCode::ComplianceDisabled,
+        }
+    }
+}
+
+impl Bip110PreflightErrorCode {
+    /// Returns the stable machine-readable code string for this error category.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::UnsupportedApiVersion => "unsupported_api_version",
+            Self::UnknownContext => "unknown_context",
+            Self::UnsupportedContext => "unsupported_context",
+            Self::PhaseMismatch => "phase_mismatch",
+            Self::MissingMeasurementData => "missing_measurement_data",
+            Self::MalformedRequest => "malformed_request",
+            Self::IntegerOverflow => "integer_overflow",
+            Self::IndexOverflow => "index_overflow",
+            Self::ComplianceDisabled => "compliance_disabled",
         }
     }
 }
@@ -405,6 +780,19 @@ impl fmt::Display for Bip110PreflightError {
             }
             Self::UnsupportedContext { context } => {
                 write!(formatter, "unsupported BIP-110 preflight context {context:?}")
+            }
+            Self::PhaseMismatch {
+                expected_phase,
+                received_source,
+            } => write!(
+                formatter,
+                "BIP-110 preflight phase {expected_phase:?} does not match measurement source {received_source:?}"
+            ),
+            Self::MissingMeasurementData => {
+                formatter.write_str("missing BIP-110 preflight measurement data")
+            }
+            Self::MalformedRequest { reason } => {
+                write!(formatter, "malformed BIP-110 preflight request: {reason}")
             }
             Self::IntegerOverflow {
                 field,
@@ -438,6 +826,8 @@ pub enum Bip110PreflightViolationCode {
     ScriptPubkeyExceedsLimit,
     /// An applicable witness element exceeded its limit.
     WitnessElementExceedsLimit,
+    /// A separately classified Taproot control block exceeded its limit.
+    TaprootControlBlockExceedsLimit,
 }
 
 impl Bip110PreflightViolationCode {
@@ -448,6 +838,7 @@ impl Bip110PreflightViolationCode {
             Self::OpReturnExceedsLimit => "op_return_exceeds_limit",
             Self::ScriptPubkeyExceedsLimit => "script_pubkey_exceeds_limit",
             Self::WitnessElementExceedsLimit => "witness_element_exceeds_limit",
+            Self::TaprootControlBlockExceedsLimit => "taproot_control_block_exceeds_limit",
         }
     }
 }
@@ -508,9 +899,13 @@ pub struct Bip110PreflightResult {
     pub phase: Bip110PreflightPhase,
     /// Context copied from the request, including unknown strings.
     pub context: Bip110OperationContext,
+    /// Provenance copied from the classified measurements.
+    #[serde(default)]
+    pub measurement_source: Bip110MeasurementSource,
     /// `true` only when there are no structural errors or size violations.
     pub is_compliant: bool,
-    /// Findings in deterministic structural-then-size order.
+    /// Findings in deterministic structural-then-size order. Size findings are ordered as
+    /// pushdata, OP_RETURN, non-OP_RETURN, witness, then Taproot control block.
     pub findings: Vec<Bip110PreflightFinding>,
 }
 
@@ -593,6 +988,15 @@ impl Bip110PreflightValidator {
             ));
         }
 
+        if request.has_measurements() && !request.measurements.source.matches_phase(request.phase) {
+            findings.push(Bip110PreflightFinding::Error(
+                Bip110PreflightError::PhaseMismatch {
+                    expected_phase: request.phase,
+                    received_source: request.measurements.source,
+                },
+            ));
+        }
+
         match &request.context {
             Bip110OperationContext::BitcoinTransaction => {}
             Bip110OperationContext::Unknown(context) => {
@@ -611,6 +1015,12 @@ impl Bip110PreflightValidator {
             }
         }
 
+        if !request.has_measurements() {
+            findings.push(Bip110PreflightFinding::Error(
+                Bip110PreflightError::MissingMeasurementData,
+            ));
+        }
+
         if !findings.is_empty() {
             return result_for(request, findings);
         }
@@ -625,7 +1035,10 @@ impl Bip110PreflightValidator {
             return result_for(request, findings);
         }
 
-        let violations = match self.collect_violations(&shape) {
+        let violations = match self.collect_violations(
+            &shape,
+            &request.measurements.taproot_control_block_sizes_bytes,
+        ) {
             Ok(violations) => violations,
             Err(error) => {
                 findings.push(Bip110PreflightFinding::Error(error));
@@ -644,6 +1057,7 @@ impl Bip110PreflightValidator {
     fn collect_violations(
         &self,
         shape: &Bip110TransactionShape,
+        taproot_control_block_sizes: &[u64],
     ) -> Result<Vec<Bip110PreflightViolation>, Bip110PreflightError> {
         let mut violations = Vec::new();
         violations.extend(collect_category_violations(
@@ -666,6 +1080,9 @@ impl Bip110PreflightValidator {
             &shape.witness_element_sizes_bytes,
             |size| self.compliance.validate_witness_element(size),
         )?);
+        violations.extend(collect_control_block_violations(
+            taproot_control_block_sizes,
+        )?);
         Ok(violations)
     }
 }
@@ -683,6 +1100,7 @@ fn result_for(
         api_version: request.api_version,
         phase: request.phase,
         context: request.context.clone(),
+        measurement_source: request.measurements.source,
         is_compliant: findings.is_empty(),
         findings,
     }
@@ -744,6 +1162,30 @@ where
                 index,
                 actual_bytes,
                 max_bytes,
+            });
+        }
+    }
+
+    Ok(violations)
+}
+
+fn collect_control_block_violations(
+    sizes: &[u64],
+) -> Result<Vec<Bip110PreflightViolation>, Bip110PreflightError> {
+    let mut violations = Vec::new();
+
+    for (index, &actual_bytes) in sizes.iter().enumerate() {
+        let index = u64::try_from(index).map_err(|_| Bip110PreflightError::IndexOverflow {
+            field: Bip110MeasurementField::TaprootControlBlock,
+        })?;
+
+        if actual_bytes > MAX_TAPROOT_CONTROL_BLOCK_BYTES {
+            violations.push(Bip110PreflightViolation {
+                code: Bip110PreflightViolationCode::TaprootControlBlockExceedsLimit,
+                field: Bip110MeasurementField::TaprootControlBlock,
+                index,
+                actual_bytes,
+                max_bytes: MAX_TAPROOT_CONTROL_BLOCK_BYTES,
             });
         }
     }

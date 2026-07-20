@@ -6,11 +6,12 @@ pub mod trust;
 
 pub use bip110::{Bip110Limits, Bip110TransactionShape};
 pub use bip110_preflight::{
-    validate_bip110_preflight, Bip110MeasurementField, Bip110OperationContext,
-    Bip110PreflightError, Bip110PreflightErrorCode, Bip110PreflightFinding,
-    Bip110PreflightMeasurements, Bip110PreflightPhase, Bip110PreflightRequest,
-    Bip110PreflightResult, Bip110PreflightValidator, Bip110PreflightViolation,
-    Bip110PreflightViolationCode, BIP110_PREFLIGHT_API_VERSION,
+    validate_bip110_preflight, Bip110MeasurementField, Bip110MeasurementProvenance,
+    Bip110MeasurementSource, Bip110OperationContext, Bip110PreflightError,
+    Bip110PreflightErrorCode, Bip110PreflightFinding, Bip110PreflightMeasurements,
+    Bip110PreflightPhase, Bip110PreflightRequest, Bip110PreflightResult, Bip110PreflightValidator,
+    Bip110PreflightViolation, Bip110PreflightViolationCode, BIP110_PREFLIGHT_API_VERSION,
+    MAX_TAPROOT_CONTROL_BLOCK_BYTES,
 };
 pub use lifecycle::*;
 pub use ops::*;
