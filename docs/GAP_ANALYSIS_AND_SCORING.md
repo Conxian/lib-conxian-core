@@ -89,7 +89,7 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
 9. **DLC**: Resolved (G-06). Hardened oracle attestation verification.
 10. **RGB**: Resolved (CON-1407). Expanded integration with Stock persistence support.
-11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus fail-closed contract/policy validation. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
+11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 
 ## Open GitHub Issues (Cross-Repository)
