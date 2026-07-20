@@ -1,11 +1,18 @@
 pub mod bip110;
 pub mod lifecycle;
 pub mod ops;
+pub mod preflight;
 pub mod trust;
 
 pub use bip110::{Bip110Limits, Bip110TransactionShape};
 pub use lifecycle::*;
 pub use ops::*;
+pub use preflight::{
+    preflight, Bip110MeasurementKind, Bip110MeasurementSource, Bip110OperationContext,
+    Bip110Preflight, Bip110PreflightError, Bip110PreflightErrorCode, Bip110PreflightMeasurements,
+    Bip110PreflightPhase, Bip110PreflightRequest, Bip110PreflightResult, Bip110PreflightViolation,
+    Bip110PreflightViolationCode, BIP110_PREFLIGHT_API_VERSION, MAX_TAPROOT_CONTROL_BLOCK_BYTES,
+};
 pub use trust::{
     chain_family_for, validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult,
     Bip110Violation, BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope,
