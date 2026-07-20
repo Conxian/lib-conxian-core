@@ -18,35 +18,25 @@ pub const BIP110_PREFLIGHT_API_VERSION: u16 = 1;
 pub const MAX_TAPROOT_CONTROL_BLOCK_BYTES: usize = 257;
 
 /// Identifies whether a preflight request is made before construction or after serialization.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Bip110PreflightPhase {
     /// Validate measurements supplied while a transaction is being planned or constructed.
+    #[default]
     PreConstruction,
     /// Validate measurements classified from the serialized transaction representation.
     PostSerialization,
 }
 
-impl Default for Bip110PreflightPhase {
-    fn default() -> Self {
-        Self::PreConstruction
-    }
-}
-
 /// Identifies where the classified measurements came from.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Bip110MeasurementSource {
     /// Measurements supplied by a caller before a complete transaction is serialized.
+    #[default]
     CallerClassified,
     /// Measurements obtained by classifying the serialized transaction representation.
     SerializedTransaction,
-}
-
-impl Default for Bip110MeasurementSource {
-    fn default() -> Self {
-        Self::CallerClassified
-    }
 }
 
 impl Bip110MeasurementSource {
@@ -65,7 +55,7 @@ impl Bip110MeasurementSource {
 /// Bitcoin-anchored protocol contexts are represented so that callers can be explicit, but they
 /// fail closed until a downstream parser/classifier supplies a contract version that can validate
 /// their additional semantics.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Bip110OperationContext {
     /// A complete ordinary Bitcoin transaction shape containing all four ordinary surfaces.
@@ -129,13 +119,8 @@ pub enum Bip110OperationContext {
     /// An explicitly named context not covered by this contract version.
     Other(String),
     /// An absent or unclassified operation context.
+    #[default]
     Unknown,
-}
-
-impl Default for Bip110OperationContext {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl Bip110OperationContext {
