@@ -119,7 +119,7 @@ Document impact of BIP-110 (Reduced Data Softfork) on all protocol operations. I
 - [ ] Version compatibility matrix
 
 **Related Code**:
-- `src/protocol/bip110.rs` (validation logic)
+- `src/control_model/trust.rs` (`Bip110Compliance`) and `docs/BIP110_ALIGNMENT.md` (matrix and ownership boundaries)
 
 ---
 
@@ -234,7 +234,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-001 | UCS Interface Spec | 🔴 | ⏳ Create |
 | CORE-002 | BIP-341/342 Validation | 🔴 | ⏳ Create |
 | CORE-003 | Signing Flows Docs | 🟠 | ⏳ Create |
-| CORE-004 | BIP-110 Compliance Matrix | 🟠 | ⏳ Create |
+| CORE-004 | BIP-110 Compliance Matrix | 🟠 | 🟡 In progress in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
 | CORE-006 | Protocol Verifier Trait | 🔴 | ✅ Contract defined in [#180](https://github.com/Conxian/lib-conxian-core/issues/180) |
 | CORE-007 | Chain Risk Profiles | 🟠 | ⏳ Create |
