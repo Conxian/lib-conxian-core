@@ -98,6 +98,10 @@ fn valid_request() -> ProofVerificationRequest {
     )
 }
 
+fn valid_finality_request() -> TransactionFinalityRequest {
+    TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true)
+}
+
 fn envelope(
     destination: &ChainId,
     observed_at: i64,
@@ -151,6 +155,7 @@ struct MockBackend {
     capabilities: VerifierCapabilities,
     state_response: StateResponse,
     result_metadata: ResultPolicyMetadata,
+    nested_block_metadata: Option<ResultPolicyMetadata>,
     calls: Arc<AtomicUsize>,
 }
 
@@ -160,6 +165,7 @@ impl MockBackend {
             capabilities: make_capabilities(capabilities),
             state_response: StateResponse::Valid,
             result_metadata: ResultPolicyMetadata::default(),
+            nested_block_metadata: None,
             calls: Arc::new(AtomicUsize::new(0)),
         }
     }
@@ -171,6 +177,11 @@ impl MockBackend {
 
     fn with_result_metadata(mut self, result_metadata: ResultPolicyMetadata) -> Self {
         self.result_metadata = result_metadata;
+        self
+    }
+
+    fn with_nested_block_metadata(mut self, metadata: ResultPolicyMetadata) -> Self {
+        self.nested_block_metadata = Some(metadata);
         self
     }
 
@@ -275,6 +286,10 @@ impl ProtocolVerifierBackend for MockBackend {
         request: &TransactionFinalityRequest,
     ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
+        let nested_block_metadata = self
+            .nested_block_metadata
+            .as_ref()
+            .unwrap_or(&self.result_metadata);
         Ok(TransactionFinalityResult {
             chain: request.chain.clone(),
             transaction_id: request.transaction_id.clone(),
@@ -286,7 +301,7 @@ impl ProtocolVerifierBackend for MockBackend {
                 request.chain.clone(),
                 Some("state-root".to_string()),
                 VerificationStatus::Verified,
-                &self.result_metadata,
+                nested_block_metadata,
             )),
             verification_class: self.result_metadata.verification_class.clone(),
             trust_tier: self.result_metadata.trust_tier.clone(),
@@ -492,6 +507,103 @@ fn facade_rejects_unadvertised_policy_metadata_for_every_operation() {
         })
     ));
     assert_eq!(finality_backend.calls(), 1);
+}
+
+#[test]
+fn facade_validates_nested_finality_policy_metadata_after_backend_call() {
+    let request = valid_finality_request();
+
+    let valid_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_nested_block_metadata(ResultPolicyMetadata::default());
+    let valid_verifier = ProtocolVerifier::new(valid_backend.clone());
+    let valid_result = valid_verifier
+        .verify_transaction_finality_at(&request, timestamp(2_000))
+        .expect("advertised nested finality metadata");
+    assert!(valid_result.is_final());
+    assert_eq!(valid_result.trust_tier, TrustTier::Strict);
+    assert_eq!(
+        valid_result.verification_class,
+        VerificationClass::LightClient
+    );
+    assert_eq!(valid_result.finality_class, FinalityClass::Probabilistic);
+    assert_eq!(valid_result.provenance.verifier_id, "integration-mock");
+    let valid_block = valid_result
+        .latest_block
+        .as_ref()
+        .expect("nested latest block");
+    assert_eq!(valid_block.trust_tier, TrustTier::Strict);
+    assert_eq!(
+        valid_block.verification_class,
+        VerificationClass::LightClient
+    );
+    assert_eq!(valid_block.finality_class, FinalityClass::Probabilistic);
+    assert_eq!(valid_block.provenance.verifier_id, "integration-mock");
+    assert_eq!(valid_backend.calls(), 1);
+
+    let trust_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_nested_block_metadata(ResultPolicyMetadata {
+            trust_tier: TrustTier::Managed,
+            ..ResultPolicyMetadata::default()
+        });
+    let trust_verifier = ProtocolVerifier::new(trust_backend.clone());
+    assert!(matches!(
+        trust_verifier.verify_transaction_finality_at(&request, timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedTrustTier {
+            trust_tier: TrustTier::Managed,
+            capability: VerifierCapability::TransactionFinality,
+            ..
+        })
+    ));
+    assert_eq!(trust_backend.calls(), 1);
+
+    let mut verification_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_nested_block_metadata(ResultPolicyMetadata {
+            trust_tier: TrustTier::Managed,
+            verification_class: VerificationClass::ExternalQuorum,
+            ..ResultPolicyMetadata::default()
+        });
+    verification_backend.capabilities.trust_tiers = vec![TrustTier::Strict, TrustTier::Managed];
+    let verification_verifier = ProtocolVerifier::new(verification_backend.clone());
+    assert!(matches!(
+        verification_verifier.verify_transaction_finality_at(&request, timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedVerificationClass {
+            verification_class: VerificationClass::ExternalQuorum,
+            capability: VerifierCapability::TransactionFinality,
+            ..
+        })
+    ));
+    assert_eq!(verification_backend.calls(), 1);
+
+    let finality_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_nested_block_metadata(ResultPolicyMetadata {
+            finality_class: FinalityClass::Deterministic,
+            ..ResultPolicyMetadata::default()
+        });
+    let finality_verifier = ProtocolVerifier::new(finality_backend.clone());
+    assert!(matches!(
+        finality_verifier.verify_transaction_finality_at(&request, timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedFinalityClass {
+            finality_class: FinalityClass::Deterministic,
+            capability: VerifierCapability::TransactionFinality,
+            ..
+        })
+    ));
+    assert_eq!(finality_backend.calls(), 1);
+
+    let provenance_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_nested_block_metadata(ResultPolicyMetadata {
+            provenance_verifier_id: "other-verifier".to_string(),
+            ..ResultPolicyMetadata::default()
+        });
+    let provenance_verifier = ProtocolVerifier::new(provenance_backend.clone());
+    assert!(matches!(
+        provenance_verifier.verify_transaction_finality_at(&request, timestamp(2_000)),
+        Err(ProtocolVerifierError::VerifierIdentityMismatch {
+            expected,
+            actual,
+        }) if expected == "integration-mock" && actual == "other-verifier"
+    ));
+    assert_eq!(provenance_backend.calls(), 1);
 }
 
 #[test]
