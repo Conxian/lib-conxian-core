@@ -87,7 +87,8 @@ let signed_call = ContractBridge::create_signed_call(
 - **PRD:** [docs/PRD.md](docs/PRD.md)
 - **API Reference:** [docs/API.md](docs/API.md)
 - **Boundaries:** [docs/ARCHITECTURE_BOUNDARIES.md](docs/ARCHITECTURE_BOUNDARIES.md)
-- **CXIP Index:** [docs/CXIP_INDEX.md](docs/CXIP_INDEX.md)
+- **Signing Guides:** [docs/signing/README.md](docs/signing/README.md)
+- **CXIP Index:** [docs/governance/CXIP_INDEX.md](docs/governance/CXIP_INDEX.md)
 - **Alignment:** [docs/ALIGNMENT.md](docs/ALIGNMENT.md)
 
 ## Development
