@@ -37,9 +37,31 @@ Canonical types for protocol orchestration and trust.
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
 - `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
 - `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
+- `Bip110PreflightRequest`, `Bip110PreflightResult`, and `Bip110PreflightError`: Versioned,
+  serializable, fail-closed pre-construction/post-serialization contract for classified Bitcoin
+  measurements.
+- `Bip110OperationContext`: Explicit ordinary, Taproot, Miniscript, DLC, Lightning, RGB, Babylon,
+  Stacks/sBTC, other, and unknown context taxonomy. Version 1 supports ordinary size surfaces and
+  separately classified Taproot control-block sizes; unsupported specialized contexts fail closed.
+- `Bip110PreflightMeasurements`: Pushdata counts payload bytes only; OP_RETURN and non-OP_RETURN
+  counts are complete serialized ScriptPubKeys; witness measurements cover one applicable
+  script-argument item without its prefix or unrelated items; control blocks are separate with a
+  257-byte inclusive maximum.
+- Use `Bip110Preflight::enabled()` for enforcement. `Bip110Compliance::default()` remains disabled
+  for compatibility, while a preflight validator built with disabled compliance returns the stable
+  `EnforcementDisabled` error instead of a misleading compliant result.
 - See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for the full rule matrix, proposal/deployment assumptions, byte-measurement semantics, context exceptions, and downstream ownership.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
+
+The Core preflight API does not parse transactions, construct outputs, compile Miniscript, validate
+Taproot commitments, sign, broadcast, persist state, or perform network I/O. SDK issue
+[#179](https://github.com/Conxian/conxius-enclave-sdk/issues/179) owns builder/signing enforcement;
+Gateway issue [#245](https://github.com/Conxian/conxian-gateway/issues/245) owns routing and runtime
+side effects; and Wallet issue [#381](https://github.com/Conxian/conxius-wallet/issues/381) owns
+transaction construction, serialization, and broadcast rejection. Those consumers must preserve
+the request phase, context, stable error/violation codes, and fail-closed result semantics. See
+[Core issue #176](https://github.com/Conxian/lib-conxian-core/issues/176) and [Linear CON-1499](https://linear.app/conxian-labs/issue/CON-1499/core-005-define-the-bip-110-transaction-preflight-contract).
 
 ### Protocol Verification (`verifier`)
 Platform-neutral contracts for downstream chain verifiers.
