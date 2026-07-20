@@ -36,28 +36,22 @@ jobs:
           EOF
 
       - name: Publish to crates.io
-        run: |
-          if [ -n "$CARGO_REGISTRY_TOKEN" ]; then
-            echo "Publishing with CARGO_REGISTRY_TOKEN..."
-            cargo publish
-          else
-            echo "No CARGO_REGISTRY_TOKEN available."
-            echo "For trusted publisher, ensure it's configured at:"
-            echo "https://crates.io/crates/lib-conxian-core/settings/new-trusted-publisher"
-            echo ""
-            echo "Attempting tokenless publish..."
-            cargo publish --tokenless || {
-              echo "Tokenless publish failed."
-              echo "To fix: Configure trusted publisher on crates.io or add CARGO_REGISTRY_TOKEN secret."
-              exit 1
-            }
-          fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CARGO_REGISTRY_TOKEN:-}" ]]; then
+            echo "::error::CARGO_REGISTRY_TOKEN is unavailable; configure the repository secret before publishing."
+            echo "Add CARGO_REGISTRY_TOKEN under Settings > Secrets and variables > Actions."
+            echo "See https://doc.rust-lang.org/cargo/reference/config.html#credentials for Cargo registry authentication details."
+            exit 1
+          fi
+
+          cargo publish
 
       - name: Create GitHub Release
-        if: github.event_name == 'push'
+        if: ${{ github.event_name == 'push' && success() }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           body: |
@@ -69,6 +63,6 @@ jobs:
             - [Migration Guide](docs/MIGRATION.md) - Instructions for migrating between versions
 
             ### Note
-            If the crates.io publication failed or needs manual retry, ensure the trusted publisher integration is configured or the `CARGO_REGISTRY_TOKEN` secret is added.
+            Publication is authenticated with the `CARGO_REGISTRY_TOKEN` repository secret. If publication fails or needs a manual retry, configure that secret before rerunning the workflow.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
