@@ -37,31 +37,53 @@ Canonical types for protocol orchestration and trust.
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
 - `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
 - `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
-- `Bip110PreflightRequest`, `Bip110PreflightResult`, and `Bip110PreflightError`: Versioned,
-  serializable, fail-closed pre-construction/post-serialization contract for classified Bitcoin
-  measurements.
-- `Bip110OperationContext`: Explicit ordinary, Taproot, Miniscript, DLC, Lightning, RGB, Babylon,
-  Stacks/sBTC, other, and unknown context taxonomy. Version 1 supports ordinary size surfaces and
-  separately classified Taproot control-block sizes; unsupported specialized contexts fail closed.
-- `Bip110PreflightMeasurements`: Pushdata counts payload bytes only; OP_RETURN and non-OP_RETURN
-  counts are complete serialized ScriptPubKeys; witness measurements cover one applicable
-  script-argument item without its prefix or unrelated items; control blocks are separate with a
-  257-byte inclusive maximum.
-- Use `Bip110Preflight::enabled()` for enforcement. `Bip110Compliance::default()` remains disabled
-  for compatibility, while a preflight validator built with disabled compliance returns the stable
-  `EnforcementDisabled` error instead of a misleading compliant result.
+- `Bip110PreflightRequest` / `Bip110PreflightResult`: Versioned, serializable pre-construction and
+  post-serialization request/result envelopes with fixed-width `u64` byte measurements and an
+  explicit `Bip110MeasurementSource` provenance label. Pre-construction is caller-classified
+  planning metadata, not full serialized transaction validation.
+- `Bip110PreflightValidator`: Enabled, fail-closed composition layer over `Bip110Compliance`.
+- `Bip110PreflightError` / `Bip110PreflightViolation`: Stable structural and indexed size findings
+  with machine-readable codes, including phase mismatch and missing-measurement errors, field
+  names, occurrence indices, actual bytes, and maximum bytes.
+- `Bip110PreflightMeasurements::taproot_control_block_sizes_bytes`: Separate fixed-width control-
+  block sizes; `257` is admissible and `258` returns a control-block-specific violation. Size
+  admissibility does not validate BIP-341 shape, commitments, or cryptography.
+- `Bip110OperationContext`: Stable context strings; only `bitcoin_transaction` is supported in
+  API version 1, while known protocol-specific and unknown contexts fail closed.
 - See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for the full rule matrix, proposal/deployment assumptions, byte-measurement semantics, context exceptions, and downstream ownership.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 
-The Core preflight API does not parse transactions, construct outputs, compile Miniscript, validate
-Taproot commitments, sign, broadcast, persist state, or perform network I/O. SDK issue
-[#179](https://github.com/Conxian/conxius-enclave-sdk/issues/179) owns builder/signing enforcement;
-Gateway issue [#245](https://github.com/Conxian/conxian-gateway/issues/245) owns routing and runtime
-side effects; and Wallet issue [#381](https://github.com/Conxian/conxius-wallet/issues/381) owns
-transaction construction, serialization, and broadcast rejection. Those consumers must preserve
-the request phase, context, stable error/violation codes, and fail-closed result semantics. See
-[Core issue #176](https://github.com/Conxian/lib-conxian-core/issues/176) and [Linear CON-1499](https://linear.app/conxian-labs/issue/CON-1499/core-005-define-the-bip-110-transaction-preflight-contract).
+Preflight consumers must provide classified measurements before treating a result as usable. Empty
+vectors are valid only for an explicitly present generic Bitcoin transaction with zero constrained
+occurrences; omitted measurement data, phase/source mismatches, unsupported contexts, and unknown
+contexts never produce compliant success. Core owns these serializable contracts and deterministic
+findings. Transaction parsing/classification remains with SDK, Wallet, or another transaction-aware
+adapter; Gateway owns orchestration, persistence, routing, and external side effects. This
+repository does not claim downstream integration is complete.
+
+Example of an explicitly classified, pre-construction request:
+
+```rust
+use lib_conxian_core::control_model::{
+    Bip110OperationContext, Bip110PreflightMeasurements, Bip110PreflightPhase,
+    Bip110PreflightRequest,
+};
+
+let measurements = Bip110PreflightMeasurements::new_with_control_block_sizes(
+    vec![32], vec![], vec![34], vec![64], vec![257],
+);
+let request = Bip110PreflightRequest::new(
+    Bip110PreflightPhase::PreConstruction,
+    Bip110OperationContext::BitcoinTransaction,
+    measurements,
+);
+let result = request.validate();
+assert!(result.is_compliant);
+```
+
+Use `Bip110PreflightRequest::without_measurements` when classified data is unavailable; it returns
+the stable `missing_measurement_data` finding rather than treating empty vectors as evidence.
 
 ### Protocol Verification (`verifier`)
 Platform-neutral contracts for downstream chain verifiers.

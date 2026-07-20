@@ -20,6 +20,9 @@ This document clarifies ownership and responsibility boundaries between core lib
   - signed envelope descriptors and replay/idempotency helpers,
   - session trust/security claim types,
   - adapter-facing traits for intent authorization and session issuance.
+- The versioned, platform-neutral BIP-110 transaction preflight request/result contract. Core owns
+  byte-measurement semantics, context support declarations, checked wire-to-shape conversion, and
+  deterministic fail-closed findings; transaction-aware adapters own parsing and classification.
 - The platform-neutral `UniversalChainSigner` contract and its canonical request,
   response, capability, address, verification, and secret-safe error models;
   see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
@@ -81,6 +84,29 @@ hooks, while consumers use only the façade so capability, request, result, and
 postcondition validation cannot be bypassed. Core's evidence-binding hash
 provides structural consistency, not cryptographic authenticity or production
 readiness.
+
+### BIP-110 preflight ownership
+
+`Bip110PreflightRequest`, `Bip110PreflightResult`, and their findings are interface contracts, not
+runtime orchestration. Core owns the API version, pre-construction versus post-serialization phase
+labels, explicit measurement provenance, authoritative byte units, the generic fully-classified
+`bitcoin_transaction` context, the separate fixed-width Taproot control-block size field, and
+stable errors for missing data, phase/source mismatches, unknown contexts, or unsupported contexts.
+Core also composes ordinary measurements with enabled `Bip110Compliance` instead of maintaining a
+second set of ordinary limits.
+
+Core does **not** parse or build transactions, serialize scripts, identify Taproot annexes or
+control-block position/shape, validate control-block commitments or cryptography, compile
+Miniscript, execute Tapscript, validate DLC semantics, sign, estimate fees, broadcast, persist
+UTXOs, or infer network deployment state. Those responsibilities remain with transaction-aware
+adapters and the owning SDK, Wallet, Gateway, or Nexus layers. Pre-construction is caller-classified
+planning metadata rather than full serialized transaction validation. Empty vectors are valid only
+for an explicitly present supported generic context with zero constrained occurrences; missing data
+or an unknown/unsupported context fails closed.
+
+The contract is a downstream handoff for SDK #179, Gateway #245, and Wallet #381. This repository
+does not claim that those consumers currently enforce the contract; their builders and routing
+flows must reject non-compliant or unsupported results rather than treating them as warnings.
 
 
 ## 6. SDK Ownership & Version Policy (CON-1178)
