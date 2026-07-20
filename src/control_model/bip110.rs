@@ -9,13 +9,13 @@ pub use super::trust::bip110::{
 /// Canonical BIP-110 size-policy limits used by the core contract.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Bip110Limits {
-    /// Maximum size of one pushdata element in bytes.
+    /// Maximum payload size of one applicable pushdata element in bytes.
     pub max_pushdata_bytes: usize,
     /// Maximum full output ScriptPubKey size for one OP_RETURN output in bytes.
     pub max_op_return_bytes: usize,
     /// Maximum ScriptPubKey size for one non-OP_RETURN output in bytes.
     pub max_script_pubkey_bytes: usize,
-    /// Maximum size of one witness element in bytes.
+    /// Maximum size of one applicable witness stack element in bytes.
     pub max_witness_element_bytes: usize,
 }
 
@@ -60,13 +60,13 @@ impl Default for Bip110Limits {
 /// vector before calling [`Self::validate`].
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Bip110TransactionShape {
-    /// Byte sizes of every pushdata element subject to the core pushdata limit.
+    /// Payload byte sizes of every pushdata element subject to the core pushdata limit.
     pub pushdata_sizes_bytes: Vec<usize>,
     /// Full output ScriptPubKey byte sizes for every OP_RETURN output subject to the core limit.
     pub op_return_script_pubkey_sizes_bytes: Vec<usize>,
     /// Full ScriptPubKey byte sizes for every non-OP_RETURN output subject to the core limit.
     pub non_op_return_script_pubkey_sizes_bytes: Vec<usize>,
-    /// Byte sizes of every witness element subject to the core witness limit.
+    /// Byte sizes of every applicable witness stack element subject to the core witness limit.
     pub witness_element_sizes_bytes: Vec<usize>,
 }
 
@@ -308,5 +308,47 @@ mod tests {
         assert_eq!(shape.validate_with_limits(&limits), expected);
         assert_eq!(compliance.validate_shape(&shape), expected);
         assert_eq!(limits.validate_transaction(&shape), expected);
+    }
+
+    #[test]
+    fn disabled_compliance_accepts_invalid_shape_without_violations() {
+        let shape = Bip110TransactionShape::new(
+            vec![usize::MAX],
+            vec![usize::MAX],
+            vec![usize::MAX],
+            vec![usize::MAX],
+        );
+
+        let result = Bip110Compliance::disabled().validate_shape(&shape);
+
+        assert!(result.is_compliant);
+        assert!(result.violations.is_empty());
+    }
+
+    #[test]
+    fn default_compliance_remains_disabled_with_canonical_limits() {
+        let compliance = Bip110Compliance::default();
+
+        assert!(!compliance.is_enabled());
+        assert_eq!(compliance.limits(), &Bip110Limits::canonical());
+        assert!(compliance.validate_pushdata(usize::MAX).is_compliant);
+    }
+
+    #[test]
+    fn usize_max_is_compared_without_arithmetic_overflow() {
+        let shape = Bip110TransactionShape::new(
+            vec![usize::MAX],
+            vec![usize::MAX],
+            vec![usize::MAX],
+            vec![usize::MAX],
+        );
+        let limits = Bip110Limits {
+            max_pushdata_bytes: usize::MAX,
+            max_op_return_bytes: usize::MAX,
+            max_script_pubkey_bytes: usize::MAX,
+            max_witness_element_bytes: usize::MAX,
+        };
+
+        assert!(shape.validate_with_limits(&limits).is_compliant);
     }
 }
