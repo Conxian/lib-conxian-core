@@ -38,6 +38,15 @@ Canonical types for protocol orchestration and trust.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 
+### Protocol Verification (`verifier`)
+Platform-neutral contracts for downstream chain verifiers.
+- `ProtocolVerifier`: Interface for state-proof verification, latest verified block references, and transaction finality.
+- `VerifierCapabilities`: Explicit supported chains, proof formats, verification classes, finality classes, and trust tiers.
+- `ProtocolVerifierError`: Fail-closed taxonomy for unsupported, malformed, stale, unavailable, expired, non-final, and policy-blocked evidence.
+- `LatestVerifiedBlock` and `TransactionFinalityResult`: Provenance-bearing results with invariant validation.
+
+Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
+
 ### Anchoring (`anchoring`)
 Models for decentralized state persistence.
 - `AnchoringRequest`: Payload for committing state roots to Tableland or L1.

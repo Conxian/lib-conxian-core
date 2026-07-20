@@ -141,7 +141,7 @@ Ensure transaction builder automatically enforces BIP-110 limits and suggests op
 
 ### Category: Verification & Trust Model
 
-#### [CORE-006] Formalize Protocol Verification Interface
+#### [CORE-006] Formalize Protocol Verification Interface ([GitHub #180](https://github.com/Conxian/lib-conxian-core/issues/180))
 **Type**: Architecture  
 **Priority**: 🔴 CRITICAL  
 **Depends On**: [CORE-001]  
@@ -150,16 +150,22 @@ Ensure transaction builder automatically enforces BIP-110 limits and suggests op
 Define `ProtocolVerifier` trait for cross-chain state verification. This bridges core with Nexus (UCV).
 
 **Acceptance Criteria**:
-- [ ] Trait methods:
-  - `verify_chain_state(&self, chain: ChainId, proof: &[u8]) -> Result<bool>`
-  - `get_latest_verified_block(&self, chain: ChainId) -> Result<BlockHeader>`
-  - `verify_transaction_finality(&self, txid: &str, confirmations: u32) -> Result<bool>`
-- [ ] Support for all chain families
-- [ ] Error taxonomy per verification failure mode
-- [ ] Documentation with 3+ examples
+- [x] Trait methods:
+  - `verify_chain_state(&self, request: &ProofVerificationRequest) -> Result<ProofVerificationResult, ProtocolVerifierError>`
+  - `get_latest_verified_block(&self, chain: &ChainId) -> Result<LatestVerifiedBlock, ProtocolVerifierError>`
+  - `verify_transaction_finality(&self, request: &TransactionFinalityRequest) -> Result<TransactionFinalityResult, ProtocolVerifierError>`
+- [x] Family-neutral chain identifiers and capability advertisement for all existing `ChainFamily` variants
+- [x] Error taxonomy per verification failure mode
+- [x] Documentation with 3+ examples
 
 **Related Code**:
 - `src/control_model/trust.rs` (VerificationClass, RiskAssessment)
+
+**Delivered in #180**: Core now defines the platform-neutral `ProtocolVerifier`
+contract, capability advertisement, proof and latest-block references,
+transaction finality statuses, typed fail-closed errors, and invariant tests.
+Runtime proof acquisition and orchestration remain outside Core in Nexus,
+Gateway, or downstream adapters.
 
 ---
 
@@ -230,7 +236,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-003 | Signing Flows Docs | 🟠 | ⏳ Create |
 | CORE-004 | BIP-110 Compliance Matrix | 🟠 | ⏳ Create |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
-| CORE-006 | Protocol Verifier Trait | 🔴 | ⏳ Create |
+| CORE-006 | Protocol Verifier Trait | 🔴 | ✅ Contract defined in [#180](https://github.com/Conxian/lib-conxian-core/issues/180) |
 | CORE-007 | Chain Risk Profiles | 🟠 | ⏳ Create |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |

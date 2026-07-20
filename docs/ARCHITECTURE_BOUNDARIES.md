@@ -23,6 +23,8 @@ This document clarifies ownership and responsibility boundaries between core lib
 - The platform-neutral `UniversalChainSigner` contract and its canonical request,
   response, capability, address, verification, and secret-safe error models;
   see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
+- Platform-neutral protocol verification contracts and canonical proof,
+  block-reference, finality, capability, provenance, and typed-error models.
 
 **Constraints**:
 - Must NOT contain hardware-specific or enclave-specific implementation logic.
@@ -71,6 +73,9 @@ Use this decision rule when adding new capability:
 - **standalone Conxian Gateway (`conxian-gateway`)**: runtime orchestration, persistence, provider integrations, retries, observability, and external side effects.
 
 If a change needs network IO, database access, deployment/environment configuration, or provider-specific branching, it should not land in core.
+
+The `ProtocolVerifier` ownership boundary and examples are documented in
+[`docs/architecture/PROTOCOL_VERIFIER.md`](architecture/PROTOCOL_VERIFIER.md).
 
 
 ## 6. SDK Ownership & Version Policy (CON-1178)
