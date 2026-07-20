@@ -19,11 +19,12 @@ The current Core contract represents the neutral, size-bearing subset of BIP-110
 - applicable pushdata payloads are limited to **256 bytes**;
 - complete OP_RETURN output ScriptPubKeys are limited to **83 bytes**;
 - complete non-OP_RETURN output ScriptPubKeys are limited to **34 bytes**; and
-- applicable script-argument witness items are limited to **256 bytes**.
+- applicable script-argument witness items are limited to **256 bytes**; and
+- explicitly classified Taproot control blocks are limited to **257 bytes**.
 
-CORE-005 adds a versioned preflight envelope around those measurements. The envelope is a
-platform-neutral contract for downstream adapters; it does not make Core a transaction parser or
-claim that any downstream consumer already enforces the contract.
+CORE-005 adds a versioned, phase-aware preflight envelope around those measurements. The envelope
+is a platform-neutral contract for downstream adapters; it does not make Core a transaction parser
+or claim that any downstream consumer already enforces the contract.
 
 `Bip110Compliance`, `Bip110Limits`, and `Bip110TransactionShape` validate supplied byte-size
 metadata. A downstream adapter must parse the transaction, identify the script context, apply the
@@ -58,16 +59,17 @@ The matrix follows the current canonical texts, not an inferred activation polic
 | `Bip110Limits::max_script_pubkey_bytes` / `non_op_return_script_pubkey_sizes_bytes` | Full serialized ScriptPubKey bytes for each classified non-OP_RETURN output; `<= 34` passes. | Output classification, transaction validity, and deployment state. |
 | `Bip110Limits::max_witness_element_bytes` / `witness_element_sizes_bytes` | Bytes in each applicable script-argument witness item; `<= 256` passes. | Witness version, key-path versus script-path selection, annex/control-block identification, and script execution. |
 | `Bip110Compliance::new()` / `Bip110Compliance::disabled()` | Enables the canonical size contract or explicitly disables it. | Network consensus activation. Enabling this Rust validator is a caller choice, not a claim about Bitcoin network state. |
-| `Bip110PreflightRequest` / `Bip110PreflightResult` | Versioned request/result envelope with explicit phase, context, fixed-width `u64` measurements, and indexed findings. | Transaction construction, serialization, parsing, script execution, deployment state, and downstream rejection policy. |
+| `Bip110PreflightMeasurements::taproot_control_block_sizes_bytes` | Complete serialized control-block witness-item sizes, kept separate from script-argument witness items; `<= 257` passes. | BIP-341 control-block shape, witness position, Merkle commitment, internal-key parity, and cryptographic validity. |
+| `Bip110PreflightRequest` / `Bip110PreflightResult` | Versioned request/result envelope with explicit phase/source provenance, context, fixed-width `u64` measurements, and indexed findings. | Transaction construction, serialization, parsing, script execution, deployment state, and downstream rejection policy. |
 
 The validators use an inclusive boundary: `size <= max` is compliant and `size > max` produces
 the corresponding structured violation. Vector validation preserves the current deterministic
-ordering: pushdata, OP_RETURN ScriptPubKeys, non-OP_RETURN ScriptPubKeys, then witness elements.
+ordering: pushdata, OP_RETURN ScriptPubKeys, non-OP_RETURN ScriptPubKeys, witness elements, then
+Taproot control blocks.
 
-The executable source for the represented limits remains the existing Rust tests in
-[`src/control_model/mod.rs`](../src/control_model/mod.rs) and
-[`src/control_model/bip110.rs`](../src/control_model/bip110.rs). This document does not add a
-synthetic control-block field or claim a control-block API test that Core does not expose.
+The executable sources are [`src/control_model/bip110.rs`](../src/control_model/bip110.rs) for the
+legacy limits and [`src/control_model/bip110_preflight.rs`](../src/control_model/bip110_preflight.rs)
+for the versioned preflight contract and control-block boundary.
 
 ## CORE-005 preflight contract
 
@@ -76,9 +78,18 @@ synthetic control-block field or claim a control-block API test that Core does n
 
 - `phase`: `pre_construction` for intended serialized surfaces before final bytes exist, or
   `post_serialization` for measurements taken from the finalized serialized transaction;
+- `measurements.source`: `caller_classified` for pre-construction measurements or
+  `serialized_transaction` for post-serialization measurements. The validator returns a stable
+  `phase_mismatch` error when these labels disagree;
 - `context`: a stable string-valued operation context; only `bitcoin_transaction` is supported in
   this contract version; and
-- `measurements`: four occurrence-ordered `u64` vectors matching the canonical size categories.
+- `measurements`: four occurrence-ordered ordinary `u64` vectors plus the separate
+  `taproot_control_block_sizes_bytes` vector. An omitted measurement object is distinct from
+  present empty vectors and returns `missing_measurement_data`.
+
+Pre-construction is caller-classified planning metadata; it is not full serialized transaction
+validation. Post-serialization measurements must be classified from finalized bytes, but Core still
+does not parse, serialize, or cryptographically validate those bytes.
 
 The byte units are authoritative in both phases:
 
@@ -88,28 +99,32 @@ The byte units are authoritative in both phases:
 | `op_return_script_pubkey_sizes_bytes` | The complete serialized OP_RETURN output ScriptPubKey, including `OP_RETURN`, push opcodes, and push prefixes. |
 | `non_op_return_script_pubkey_sizes_bytes` | The complete serialized non-OP_RETURN output ScriptPubKey, including all script bytes and push prefixes. |
 | `witness_element_sizes_bytes` | Each applicable script-argument witness element, excluding item-length prefixes, other witness items, and total witness serialization. |
+| `taproot_control_block_sizes_bytes` | Each complete serialized Taproot control-block witness item, excluding the item-length prefix and kept out of the ordinary witness vector. |
 
 The preflight implementation checks every `u64` measurement before converting it to the existing
 `usize`-based `Bip110TransactionShape`; values are never truncated. It then composes with an
 enabled `Bip110Compliance` instance, so canonical limits remain defined in one place. A disabled
 `Bip110Compliance` (including the intentionally disabled `Default` value) is rejected when used to
-construct a preflight validator.
+construct a preflight validator. The ordinary `Bip110TransactionShape` and
+`Bip110Compliance` APIs remain unchanged; control-block size checking is additive to the preflight
+wrapper and does not claim that a control block is structurally or cryptographically valid.
 
 ### Context support matrix
 
 | Context wire value | Status in API version 1 | Required behavior |
 | --- | --- | --- |
-| `bitcoin_transaction` | **Supported** | The caller asserts that all four vectors are fully classified. Empty vectors are valid when no constrained occurrence exists. |
-| `taproot`, `tapscript`, `taproot_script_path`, `taproot_key_path` | **Known but unsupported** | Return `unsupported_context`; do not infer annex, control-block, key-path, or script-path semantics from generic vectors. |
-| `miniscript`, `dlc`, `lightning`, `rgb`, `babylon`, `fedimint`, `stacks`, `liquid` | **Known but unsupported** | Return `unsupported_context` until the owning context contract is defined. |
+| `bitcoin_transaction` | **Supported** | The caller asserts that all ordinary vectors are fully classified; a separately classified control-block vector may also be supplied. Empty vectors are valid only when the generic transaction has zero constrained occurrences and the measurement object is present. |
+| `taproot`, `tapleaf`, `tapscript`, `taproot_script_path`, `taproot_key_path` | **Known but unsupported** | Return `unsupported_context`; do not infer annex, control-block, key-path, or script-path semantics from generic vectors. |
+| `miniscript`, `dlc` and its funding/refund/CET roles, `lightning` and its transaction roles, `rgb`/`rgb_anchor`, `babylon` and its transaction roles, `fedimint`, `stacks`/sBTC transaction roles, `liquid` | **Known but unsupported** | Return `unsupported_context` until the owning context contract is defined. |
 | Any other string | **Unknown** | Preserve the string through serde round trips and return `unknown_context`. Empty vectors do not make an unknown context compliant. |
 
 `Bip110PreflightResult.findings` is deterministic: structural/request errors are emitted first,
 followed by size findings in canonical category order—pushdata, OP_RETURN ScriptPubKey,
-non-OP_RETURN ScriptPubKey, witness—and occurrence order within each vector. Each size finding
+non-OP_RETURN ScriptPubKey, witness, then Taproot control block—and occurrence order within each vector. Each size finding
 contains a stable code, field, zero-based `u64` index, actual bytes, and maximum bytes. The result
 is compliant only when the findings vector is empty; unsupported API versions, unknown or
-unsupported contexts, conversion failures, and size violations all fail closed.
+unsupported contexts, missing measurement data, phase/source mismatches, conversion failures, and
+size violations all fail closed.
 
 ### Downstream consumption notes
 
@@ -143,7 +158,7 @@ The status column uses three intentionally separate classifications:
 | **2. OP_PUSHDATA* payloads and script-argument witness items:** more than 256 bytes is invalid, except for the BIP-16 redeemScript push. | **Core size contract** for supplied `pushdata_sizes_bytes` and applicable `witness_element_sizes_bytes`; **adapter/parser-owned** for applicability and exceptions. | Measure payload/item bytes, not the encoding prefix. Exclude the redeemScript push, witness scripts, Tapleaf scripts, control blocks, annexes, Taproot key-path signatures, and undefined-version witness stacks as described below; then classify any remaining script-argument items and applicable inner pushdata occurrences. |
 | **3. Spending undefined witness or Tapleaf versions:** spending versions other than the defined BIP-141, BIP-341, or P2A cases is invalid; creating such outputs remains valid. | **Unsupported/not represented; adapter/parser-owned.** | The Core shape has no witness-version, Tapleaf-version, output-creation, or spend-context field. A downstream validator must distinguish creation from spending and must not turn this rule into a generic 256-byte witness check. |
 | **4. Taproot annex:** any witness stack with an annex is invalid. | **Unsupported/not represented; adapter/parser-owned.** | BIP-341 identifies an annex from the last witness element when at least two elements remain and its first byte is `0x50`. The Core shape has no annex field and cannot identify or reject it. |
-| **5. Taproot control block:** a control block larger than 257 bytes is invalid. | **Unsupported/not represented; adapter/parser-owned.** | BIP-341 requires a control block length of `33 + 32m`, with `0 <= m <= 128`; BIP-110 adds the 257-byte maximum. Core has no control-block field and performs no Taproot commitment or cryptographic validation. |
+| **5. Taproot control block:** a control block larger than 257 bytes is invalid. | **Core preflight size contract** for an explicitly classified control-block measurement; **adapter/parser-owned** for witness position, BIP-341 shape, commitment, and cryptographic validation. | `taproot_control_block_sizes_bytes` is separate from `witness_element_sizes_bytes`; `257` passes and `258` produces `taproot_control_block_exceeds_limit`. Size-admissible does not mean structurally or cryptographically valid. |
 | **6. Tapscript OP_SUCCESSx:** any OP_SUCCESSx opcode anywhere, even unexecuted, is invalid. | **Unsupported/not represented; adapter/parser-owned.** | Requires decoding a BIP-342 Tapscript in the correct Taproot script-path context. Core has no opcode stream or Tapscript interpreter. |
 | **7. Tapscript OP_IF/OP_NOTIF:** executing either opcode is invalid regardless of result. | **Unsupported/not represented; adapter/parser-owned.** | Requires identifying the BIP-342 Tapscript execution path and observing executed opcodes. A static size check cannot establish this rule. |
 | **UTXO grandfathering:** inputs spending UTXOs created before activation are exempt during the deployment; after expiry, UTXOs are unrestricted again. | **Unsupported/not represented; deployment/parser-owned.** | Enforcement requires the deployment state, activation height, spent-output creation height, and expiry state. No height, signaling, or expiry field exists in Core. |
@@ -164,7 +179,7 @@ weight units, transaction totals, or an aggregate witness serialization length.
 | OP_RETURN output | The complete serialized output ScriptPubKey, including `OP_RETURN`, push opcodes, and push prefixes. | Do not substitute only the OP_RETURN payload length. | Core checks the supplied full length against 83. |
 | Non-OP_RETURN output | The complete serialized output ScriptPubKey, including all script bytes and push prefixes. | Do not measure only a hash, key, or logical policy component. | Core checks the supplied full length against 34. |
 | Script-argument witness item | The bytes of one witness stack element that is placed on the script interpreter's initial stack. | The item-length prefix, the other witness elements, or the total witness serialization. | Core checks only items the adapter classifies as applicable rule-2 inputs. |
-| Taproot control block | The complete control-block witness item, whose BIP-341 shape is `33 + 32m` bytes. | Do not fold it into the 256-byte script-argument item vector. | Future adapter/preflight ownership; no current Core field. |
+| Taproot control block | The complete control-block witness item, whose BIP-341 shape is `33 + 32m` bytes and whose BIP-110 size cap is 257 bytes. | Do not fold it into the 256-byte script-argument item vector. | Core preflight checks only the supplied size; adapters own position, shape, commitment, and cryptographic validation. |
 
 ### Exceptions and related script surfaces
 
@@ -195,8 +210,8 @@ weight units, transaction totals, or an aggregate witness serialization length.
   consists of one control byte, a 32-byte internal key, and seven 32-byte Merkle-path sibling
   hashes. For a balanced tree, that depth-7 path corresponds to at most `2^7 = 128` leaves.
   BIP-341's generic `33 + 32m` form allows `0 <= m <= 128` (up to 4,129 bytes); BIP-110
-  supplies the stricter 257-byte cap. It is not a script argument and is not represented by the
-  current Core witness vector.
+  supplies the stricter 257-byte cap. It is not a script argument and is represented only by the
+  separate fixed-width preflight control-block vector.
 - **Taproot annexes:** BIP-341 treats a last witness element beginning with `0x50` as an annex
   when the witness has at least two elements. It is removed before script-path inputs are passed
   to the interpreter. BIP-110 would reject the spend rather than apply the 256-byte item limit;
@@ -214,7 +229,8 @@ weight units, transaction totals, or an aggregate witness serialization length.
 
 ## Boundary vectors
 
-For the four current size fields, the validator's predicate is inclusive: the exact limit passes
+For the four ordinary fields and the separate control-block field, the validator's predicate is
+inclusive: the exact limit passes
 and the next byte fails. A size of `0` also satisfies the size predicate, although a zero-length
 ScriptPubKey or witness item may be invalid for other Bitcoin reasons that this contract does not
 parse. Empty vectors mean that no occurrence of that classified surface was supplied; the legacy
@@ -226,12 +242,11 @@ optional OP_RETURN argument maps to an empty OP_RETURN vector when absent.
 | Complete OP_RETURN output ScriptPubKey | `83` → compliant | `84` → `OpReturnExceedsLimit` | **Executable now** through `validate_op_return` or `op_return_script_pubkey_sizes_bytes`. These are full ScriptPubKey sizes, not payload sizes. |
 | Complete non-OP_RETURN output ScriptPubKey | `34` → compliant | `35` → `ScriptPubKeyExceedsLimit` | **Executable now** through `validate_script_pubkey` or `non_op_return_script_pubkey_sizes_bytes`. |
 | Applicable script-argument witness item | `256` → compliant | `257` → `WitnessElementExceedsLimit` | **Executable now** through `validate_witness_element` or `witness_element_sizes_bytes`, after adapter classification. |
-| Taproot control block | `257` → size-admissible under BIP-110 and exact BIP-341 length form `33 + 32*7` | `258` → over the BIP-110 maximum and not a BIP-341 `33 + 32m` length | **Future adapter/preflight fixture only.** There is no control-block field or Taproot parser in Core; size alone cannot prove cryptographic validity. |
+| Taproot control block | `257` → size-admissible under BIP-110 and exact BIP-341 length form `33 + 32*7` | `258` → `TaprootControlBlockExceedsLimit` | **Executable now** through `taproot_control_block_sizes_bytes`; size alone cannot prove BIP-341 shape or cryptographic validity. |
 
-The existing Rust tests also exercise multiple simultaneous violations, disabled compliance, JSON
-round trips, and deterministic vector ordering for the represented fields. A future adapter or
-preflight suite may add the 257/258 control-block fixtures once it owns a control-block input; this
-documentation does not fabricate that API.
+The existing Rust tests also exercise multiple simultaneous ordinary/control-block violations,
+disabled compliance, JSON round trips, phase/source mismatches, missing measurements, specialized
+context rejection, and deterministic vector ordering.
 
 ## Protocol and chain-family mapping
 
