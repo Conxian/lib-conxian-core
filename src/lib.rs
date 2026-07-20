@@ -14,6 +14,7 @@
 //! - `control_model`: Trust tiers (CON-791), lifecycle states, invariant validation
 //! - `anchoring`: State root persistence models
 //! - `adapters`: Chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint)
+//! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
 //!
 //! ## SDK Features
@@ -45,6 +46,7 @@ pub mod control_model;
 pub mod deployment;
 pub mod fedimint;
 pub mod protocol;
+pub mod verifier;
 
 // CXIP 20 Modular Architecture
 pub mod bitcoin;
@@ -60,6 +62,17 @@ mod tests;
 
 // Re-export contract bridge types
 pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
+
+// Re-export the platform-neutral protocol verification contract and models.
+pub use verifier::{
+    validate_finality_result, validate_finality_transition, validate_proof_envelope,
+    validate_proof_envelope_at, BlockHeader, BlockReference, CapabilityAdvertisement, ChainId,
+    ChainStateReference, ChainStateVerificationRequest, LatestVerifiedBlock, ProofData,
+    ProofFormat, ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
+    ProtocolVerifierError, TransactionFinalityRequest, TransactionFinalityResult,
+    TransactionFinalityStatus, VerificationProvenance, VerifiedBlockReference,
+    VerifierCapabilities, VerifierCapability,
+};
 
 // Re-export Vault SDK primitives when enclave feature is enabled
 #[cfg(feature = "enclave")]
