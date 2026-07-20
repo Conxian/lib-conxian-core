@@ -37,6 +37,13 @@ Canonical types for protocol orchestration and trust.
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
 - `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
 - `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
+- `Bip110PreflightRequest` / `Bip110PreflightResult`: Versioned, serializable pre-construction and
+  post-serialization request/result envelopes with fixed-width `u64` byte measurements.
+- `Bip110PreflightValidator`: Enabled, fail-closed composition layer over `Bip110Compliance`.
+- `Bip110PreflightError` / `Bip110PreflightViolation`: Stable structural and indexed size findings
+  with machine-readable codes, field names, occurrence indices, actual bytes, and maximum bytes.
+- `Bip110OperationContext`: Stable context strings; only `bitcoin_transaction` is supported in
+  API version 1, while known protocol-specific and unknown contexts fail closed.
 - See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for the full rule matrix, proposal/deployment assumptions, byte-measurement semantics, context exceptions, and downstream ownership.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).

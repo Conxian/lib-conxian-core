@@ -21,6 +21,10 @@ The current Core contract represents the neutral, size-bearing subset of BIP-110
 - complete non-OP_RETURN output ScriptPubKeys are limited to **34 bytes**; and
 - applicable script-argument witness items are limited to **256 bytes**.
 
+CORE-005 adds a versioned preflight envelope around those measurements. The envelope is a
+platform-neutral contract for downstream adapters; it does not make Core a transaction parser or
+claim that any downstream consumer already enforces the contract.
+
 `Bip110Compliance`, `Bip110Limits`, and `Bip110TransactionShape` validate supplied byte-size
 metadata. A downstream adapter must parse the transaction, identify the script context, apply the
 exceptions below, and populate the shape. The adapter, SDK, Wallet, Gateway, or Nexus then owns
@@ -54,6 +58,7 @@ The matrix follows the current canonical texts, not an inferred activation polic
 | `Bip110Limits::max_script_pubkey_bytes` / `non_op_return_script_pubkey_sizes_bytes` | Full serialized ScriptPubKey bytes for each classified non-OP_RETURN output; `<= 34` passes. | Output classification, transaction validity, and deployment state. |
 | `Bip110Limits::max_witness_element_bytes` / `witness_element_sizes_bytes` | Bytes in each applicable script-argument witness item; `<= 256` passes. | Witness version, key-path versus script-path selection, annex/control-block identification, and script execution. |
 | `Bip110Compliance::new()` / `Bip110Compliance::disabled()` | Enables the canonical size contract or explicitly disables it. | Network consensus activation. Enabling this Rust validator is a caller choice, not a claim about Bitcoin network state. |
+| `Bip110PreflightRequest` / `Bip110PreflightResult` | Versioned request/result envelope with explicit phase, context, fixed-width `u64` measurements, and indexed findings. | Transaction construction, serialization, parsing, script execution, deployment state, and downstream rejection policy. |
 
 The validators use an inclusive boundary: `size <= max` is compliant and `size > max` produces
 the corresponding structured violation. Vector validation preserves the current deterministic
@@ -63,6 +68,63 @@ The executable source for the represented limits remains the existing Rust tests
 [`src/control_model/mod.rs`](../src/control_model/mod.rs) and
 [`src/control_model/bip110.rs`](../src/control_model/bip110.rs). This document does not add a
 synthetic control-block field or claim a control-block API test that Core does not expose.
+
+## CORE-005 preflight contract
+
+`BIP110_PREFLIGHT_API_VERSION` is a fixed-width `u16` with the initial value `1`. A
+`Bip110PreflightRequest` contains:
+
+- `phase`: `pre_construction` for intended serialized surfaces before final bytes exist, or
+  `post_serialization` for measurements taken from the finalized serialized transaction;
+- `context`: a stable string-valued operation context; only `bitcoin_transaction` is supported in
+  this contract version; and
+- `measurements`: four occurrence-ordered `u64` vectors matching the canonical size categories.
+
+The byte units are authoritative in both phases:
+
+| Request field | Authoritative measurement |
+| --- | --- |
+| `pushdata_sizes_bytes` | Payload bytes carried by each applicable pushdata operation, excluding its opcode and length prefix. |
+| `op_return_script_pubkey_sizes_bytes` | The complete serialized OP_RETURN output ScriptPubKey, including `OP_RETURN`, push opcodes, and push prefixes. |
+| `non_op_return_script_pubkey_sizes_bytes` | The complete serialized non-OP_RETURN output ScriptPubKey, including all script bytes and push prefixes. |
+| `witness_element_sizes_bytes` | Each applicable script-argument witness element, excluding item-length prefixes, other witness items, and total witness serialization. |
+
+The preflight implementation checks every `u64` measurement before converting it to the existing
+`usize`-based `Bip110TransactionShape`; values are never truncated. It then composes with an
+enabled `Bip110Compliance` instance, so canonical limits remain defined in one place. A disabled
+`Bip110Compliance` (including the intentionally disabled `Default` value) is rejected when used to
+construct a preflight validator.
+
+### Context support matrix
+
+| Context wire value | Status in API version 1 | Required behavior |
+| --- | --- | --- |
+| `bitcoin_transaction` | **Supported** | The caller asserts that all four vectors are fully classified. Empty vectors are valid when no constrained occurrence exists. |
+| `taproot`, `tapscript`, `taproot_script_path`, `taproot_key_path` | **Known but unsupported** | Return `unsupported_context`; do not infer annex, control-block, key-path, or script-path semantics from generic vectors. |
+| `miniscript`, `dlc`, `lightning`, `rgb`, `babylon`, `fedimint`, `stacks`, `liquid` | **Known but unsupported** | Return `unsupported_context` until the owning context contract is defined. |
+| Any other string | **Unknown** | Preserve the string through serde round trips and return `unknown_context`. Empty vectors do not make an unknown context compliant. |
+
+`Bip110PreflightResult.findings` is deterministic: structural/request errors are emitted first,
+followed by size findings in canonical category order—pushdata, OP_RETURN ScriptPubKey,
+non-OP_RETURN ScriptPubKey, witness—and occurrence order within each vector. Each size finding
+contains a stable code, field, zero-based `u64` index, actual bytes, and maximum bytes. The result
+is compliant only when the findings vector is empty; unsupported API versions, unknown or
+unsupported contexts, conversion failures, and size violations all fail closed.
+
+### Downstream consumption notes
+
+The following are integration handoffs, not claims that those consumers currently enforce this
+contract:
+
+1. **SDK #179 (`conxius-enclave-sdk`)** should use the pre-construction result as a rejection
+   gate before signing and preserve post-serialization findings for final-byte verification.
+2. **Gateway #245 (`conxian-gateway`)** should carry the version, phase, context, and ordered
+   findings through orchestration without converting them into warnings-only status.
+3. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
+   and reject any non-compliant or unsupported result before broadcast.
+
+Core defines these request/result types and their fail-closed semantics only; it does not claim
+that SDK #179, Gateway #245, or Wallet #381 have implemented enforcement.
 
 ## Proposed-rule matrix
 

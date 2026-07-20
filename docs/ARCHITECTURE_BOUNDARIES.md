@@ -20,6 +20,9 @@ This document clarifies ownership and responsibility boundaries between core lib
   - signed envelope descriptors and replay/idempotency helpers,
   - session trust/security claim types,
   - adapter-facing traits for intent authorization and session issuance.
+- The versioned, platform-neutral BIP-110 transaction preflight request/result contract. Core owns
+  byte-measurement semantics, context support declarations, checked wire-to-shape conversion, and
+  deterministic fail-closed findings; transaction-aware adapters own parsing and classification.
 - The platform-neutral `UniversalChainSigner` contract and its canonical request,
   response, capability, address, verification, and secret-safe error models;
   see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
@@ -81,6 +84,25 @@ hooks, while consumers use only the façade so capability, request, result, and
 postcondition validation cannot be bypassed. Core's evidence-binding hash
 provides structural consistency, not cryptographic authenticity or production
 readiness.
+
+### BIP-110 preflight ownership
+
+`Bip110PreflightRequest` and `Bip110PreflightResult` are interface contracts, not runtime
+orchestration. Core owns the API version, pre-construction versus post-serialization phase labels,
+authoritative byte units, the generic fully-classified `bitcoin_transaction` context, and explicit
+errors for unknown or unsupported contexts. Core also composes with enabled `Bip110Compliance`
+instead of maintaining a second set of limits.
+
+Core does **not** parse or build transactions, serialize scripts, identify Taproot annexes or
+control blocks, compile Miniscript, execute Tapscript, validate DLC semantics, sign, estimate
+fees, broadcast, persist UTXOs, or infer network deployment state. Those responsibilities remain
+with transaction-aware adapters and the owning SDK, Wallet, Gateway, or Nexus layers. Empty
+measurements are valid only for the supported generic context; an unknown or unsupported context
+fails closed even when all vectors are empty.
+
+The contract is a downstream handoff for SDK #179, Gateway #245, and Wallet #381. This repository
+does not claim that those consumers currently enforce the contract; their builders and routing
+flows must reject non-compliant or unsupported results rather than treating them as warnings.
 
 
 ## 6. SDK Ownership & Version Policy (CON-1178)
