@@ -24,7 +24,7 @@ This document maps identified protocol gaps to research status and implementatio
 |--------------|------------|-------------|
 | Removed in-core MuSig2/BitVM2/Vault implementations | `conxius-enclave-sdk` | ✅ **SDK-owned** - production signing, sessions, attestation, and BitVM2 verification live in the SDK |
 | `fuzz/fuzz_targets/musig2_aggregate.rs` | upstream `musig2::KeyAggContext` | ✅ **Dependency-level fuzz coverage** |
-| `fuzz/fuzz_targets/bitcoin_psbt_deserialize.rs` | upstream `bitcoin::psbt::Psbt` | ✅ **Dependency-level fuzz coverage** |
+| `fuzz/fuzz_targets/proof_request_validate.rs` | `src/verifier.rs::ProofVerificationRequest::validate` | ✅ **Structural and contract/policy validation; no cryptographic BitVM2 proof verification** |
 | `src/protocol/frost.rs` | `src/protocol/frost.rs` | ✅ Parity |
 | `src/control_model/` | N/A | ✅ Unique to lib-conxian-core |
 
@@ -73,7 +73,7 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 | **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK) |
 | **Silent Payments (G-05)** | 35 | 25 | 20 | **80** | **Implemented** (SDK) |
 | **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Implemented** |
-| **Fuzz Testing (CON-147)** | 30 | 30 | 20 | **80** | **Implemented** (5 bounded targets; weekly/manual CI) |
+| **Fuzz Testing (CON-1332 / GitHub #147)** | 30 | 30 | 20 | **80** | **Implemented** (4 bounded targets; weekly/manual CI) |
 | **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
 | **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
 | **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
@@ -89,7 +89,7 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
 9. **DLC**: Resolved (G-06). Hardened oracle attestation verification.
 10. **RGB**: Resolved (CON-1407). Expanded integration with Stock persistence support.
-11. **Fuzz Testing**: Resolved (CON-147). Maintained as five bounded current-API targets with weekly/manual CI; PSBT and MuSig2 targets are dependency-level coverage.
+11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 
 ## Open GitHub Issues (Cross-Repository)
