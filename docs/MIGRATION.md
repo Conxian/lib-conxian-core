@@ -66,8 +66,10 @@ let result = verifier.verify_chain_state(&request)?;
 
 Consumers must call the façade methods. They validate capabilities and
 requests before the backend hook, then validate chain/block/proof identity,
-requested state-root presence/equality, provenance timestamps, trust policy,
-and finality postconditions before returning success. Use
+requested state-root presence/equality, provenance timestamps, advertised
+trust/verification/finality policy membership, verifier identity, and finality
+postconditions before returning success. A backend result with valid structure
+but policy metadata absent from the capability snapshot is rejected. Use
 `DynProtocolVerifier` when runtime-selected backends need dynamic dispatch.
 
 ### Chain IDs and evidence

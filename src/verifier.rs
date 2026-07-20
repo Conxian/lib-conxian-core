@@ -1528,6 +1528,25 @@ pub enum ProtocolVerifierError {
         expected: String,
         actual: Option<String>,
     },
+    UnadvertisedTrustTier {
+        chain: ChainId,
+        capability: VerifierCapability,
+        trust_tier: TrustTier,
+    },
+    UnadvertisedVerificationClass {
+        chain: ChainId,
+        capability: VerifierCapability,
+        verification_class: VerificationClass,
+    },
+    UnadvertisedFinalityClass {
+        chain: ChainId,
+        capability: VerifierCapability,
+        finality_class: FinalityClass,
+    },
+    VerifierIdentityMismatch {
+        expected: String,
+        actual: String,
+    },
     StaleReference {
         chain: ChainId,
         expected_height: u64,
@@ -1604,6 +1623,34 @@ impl fmt::Display for ProtocolVerifierError {
                 f,
                 "proof evidence binding mismatch: expected {expected}, got {}",
                 actual.as_deref().unwrap_or("<missing>")
+            ),
+            Self::UnadvertisedTrustTier {
+                chain,
+                capability,
+                trust_tier,
+            } => write!(
+                f,
+                "verifier result for {chain} returned unadvertised trust tier {trust_tier:?} for capability {capability}"
+            ),
+            Self::UnadvertisedVerificationClass {
+                chain,
+                capability,
+                verification_class,
+            } => write!(
+                f,
+                "verifier result for {chain} returned unadvertised verification class {verification_class:?} for capability {capability}"
+            ),
+            Self::UnadvertisedFinalityClass {
+                chain,
+                capability,
+                finality_class,
+            } => write!(
+                f,
+                "verifier result for {chain} returned unadvertised finality class {finality_class:?} for capability {capability}"
+            ),
+            Self::VerifierIdentityMismatch { expected, actual } => write!(
+                f,
+                "verifier result provenance identity mismatch: expected {expected}, got {actual}"
             ),
             Self::StaleReference {
                 chain,
@@ -1702,9 +1749,10 @@ pub type DynProtocolVerifier = ProtocolVerifier<Box<dyn ProtocolVerifierBackend>
 /// 2. invoke the lower-level backend hook;
 /// 3. validate the returned result and request/result postconditions.
 ///
-/// This contract validates structural consistency and policy metadata. It does
-/// not prove cryptographic authenticity; downstream signatures, attestations,
-/// light clients, or verifier-set proofs remain required.
+/// This contract validates structural consistency and advertised policy
+/// metadata. It does not prove cryptographic authenticity; downstream
+/// signatures, attestations, light clients, or verifier-set proofs remain
+/// required.
 pub struct ProtocolVerifier<B: ProtocolVerifierBackend> {
     backend: B,
     capabilities: VerifierCapabilities,
@@ -1733,6 +1781,57 @@ impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
 }
 
 impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
+    /// Validates result policy metadata against the immutable capability
+    /// snapshot captured by this façade. Every consumer-facing operation uses
+    /// this helper after structural result validation and before returning
+    /// success, including nested latest-block metadata in finality results.
+    fn validate_result_policy(
+        &self,
+        capability: VerifierCapability,
+        chain: &ChainId,
+        trust_tier: &TrustTier,
+        verification_class: &VerificationClass,
+        finality_class: &FinalityClass,
+        provenance: &VerificationProvenance,
+    ) -> Result<(), ProtocolVerifierError> {
+        self.capabilities
+            .require_capability(chain, capability.clone())?;
+
+        if !self.capabilities.trust_tiers.contains(trust_tier) {
+            return Err(ProtocolVerifierError::UnadvertisedTrustTier {
+                chain: chain.clone(),
+                capability,
+                trust_tier: trust_tier.clone(),
+            });
+        }
+        if !self
+            .capabilities
+            .verification_classes
+            .contains(verification_class)
+        {
+            return Err(ProtocolVerifierError::UnadvertisedVerificationClass {
+                chain: chain.clone(),
+                capability,
+                verification_class: verification_class.clone(),
+            });
+        }
+        if !self.capabilities.finality_classes.contains(finality_class) {
+            return Err(ProtocolVerifierError::UnadvertisedFinalityClass {
+                chain: chain.clone(),
+                capability,
+                finality_class: finality_class.clone(),
+            });
+        }
+        if provenance.verifier_id != self.capabilities.verifier_id {
+            return Err(ProtocolVerifierError::VerifierIdentityMismatch {
+                expected: self.capabilities.verifier_id.clone(),
+                actual: provenance.verifier_id.clone(),
+            });
+        }
+
+        Ok(())
+    }
+
     /// Returns the capability snapshot used for every façade call.
     pub fn capabilities(&self) -> &VerifierCapabilities {
         &self.capabilities
@@ -1760,6 +1859,14 @@ impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
 
         let result = self.backend.backend_verify_chain_state(request)?;
         validate_proof_verification_result_at(request, &result, now)?;
+        self.validate_result_policy(
+            VerifierCapability::StateProofVerification,
+            &result.chain,
+            &result.verified_block.trust_tier,
+            &result.verified_block.verification_class,
+            &result.verified_block.finality_class,
+            &result.verified_block.provenance,
+        )?;
         Ok(result)
     }
 
@@ -1786,6 +1893,14 @@ impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
                 reason: "latest verified block chain does not match request".to_string(),
             });
         }
+        self.validate_result_policy(
+            VerifierCapability::LatestVerifiedBlock,
+            &result.chain,
+            &result.trust_tier,
+            &result.verification_class,
+            &result.finality_class,
+            &result.provenance,
+        )?;
         if !result.is_verified() {
             return Err(ProtocolVerifierError::PolicyBlocked {
                 trust_tier: result.trust_tier.clone(),
@@ -1815,6 +1930,24 @@ impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
 
         let result = self.backend.backend_verify_transaction_finality(request)?;
         validate_finality_result_at(request, &result, now)?;
+        self.validate_result_policy(
+            VerifierCapability::TransactionFinality,
+            &result.chain,
+            &result.trust_tier,
+            &result.verification_class,
+            &result.finality_class,
+            &result.provenance,
+        )?;
+        if let Some(block) = &result.latest_block {
+            self.validate_result_policy(
+                VerifierCapability::TransactionFinality,
+                &block.chain,
+                &block.trust_tier,
+                &block.verification_class,
+                &block.finality_class,
+                &block.provenance,
+            )?;
+        }
         Ok(result)
     }
 }
