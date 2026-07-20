@@ -41,6 +41,7 @@ jobs:
 
       - name: Run Validation Scripts
         run: |
+          python scripts/verify_signing_docs.py
           python scripts/verify_knowledge_retention.py
           python scripts/verify_tracked_artifacts.py
           python scripts/verify_compose_env_templates.py
