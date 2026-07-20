@@ -5,10 +5,15 @@ authors = ["Automatically generated"]
 publish = false
 edition = "2021"
 
+[package.metadata]
+cargo-fuzz = true
+
 [dependencies]
+bitcoin = { version = "0.32", features = ["serde", "rand", "std"] }
 libfuzzer-sys = "0.4"
 secp256k1 = { version = "0.31", features = ["rand", "global-context"] }
 musig2 = { version = "0.4", features = ["secp256k1"] }
+serde_json = "1.0"
 
 [dependencies.lib-conxian-core]
 path = ".."
@@ -16,6 +21,24 @@ path = ".."
 [[bin]]
 name = "parse_intent"
 path = "fuzz_targets/parse_intent.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "anchoring_receipt"
+path = "fuzz_targets/anchoring_receipt.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "bip322_verify"
+path = "fuzz_targets/bip322_verify.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "bitcoin_psbt_deserialize"
+path = "fuzz_targets/bitcoin_psbt_deserialize.rs"
 test = false
 doc = false
 

@@ -15,7 +15,8 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 - **Core Tests**: 74 Passing (100% success)
 - **Open Security Issues**: 0 (All stubs resolved)
-- **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Fuzzing active)
+- **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, and scheduled/manual fuzz regression active)
+- **Fuzz Regression Suite**: 5 bounded targets; upstream PSBT/MuSig2 coverage is dependency-level, and BitVM2 proof verification remains SDK-owned.
 - **Active CXIPs**: 3 (Drafting: 26, 27, 28)
 
 ## 3. High-Priority Actions
