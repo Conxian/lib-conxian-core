@@ -1,4 +1,5 @@
-"""Static regression checks for the crates.io release workflow."""
+#!/usr/bin/env python3
+"""Validate the crates.io publishing workflow's release safety invariants."""
 
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from pathlib import Path
 DEFAULT_WORKFLOW = (
     Path(__file__).resolve().parents[1] / ".github" / "workflows" / "crates-publish.yml"
 )
-STEP_HEADER = re.compile(r"^(?P<indent>[ \t]*)-\s+name:\s*(?P<name>.*?)\s*$")
+STEP_HEADER = re.compile(r"^(?P<indent>[ \t]*)-[ \t]+name:[ \t]*(?P<name>.*)$")
 KEY_VALUE = re.compile(
     r"^(?P<indent>[ \t]*)(?P<key>[A-Za-z0-9_-]+):(?:\s*(?P<value>.*))?$"
 )
@@ -97,15 +98,18 @@ def _key_values(lines: tuple[str, ...] | list[str], key: str):
             yield line_number, (match.group("value") or "").strip()
 
 
-def _without_comment(value: str) -> str:
-    return value.split("#", 1)[0].strip().lower()
+def _is_real_publish_step(step: Step) -> bool:
+    return any(
+        re.search(r"\bcargo\s+publish\b", line) and "--dry-run" not in line
+        for line in step.lines
+    )
 
 
-def _is_permissive_continue_on_error(value: str) -> bool:
-    """Treat unknown or dynamic values as permissive so the guard fails closed."""
-
-    normalized = _without_comment(value)
-    return normalized not in {"false", "no", "off", "0"}
+def _step_id(step: Step) -> str | None:
+    for _, value in _key_values(step.lines, "id"):
+        if re.fullmatch(r"[A-Za-z0-9_-]+", value):
+            return value
+    return None
 
 
 def _if_expression(step: Step) -> str | None:
@@ -125,15 +129,35 @@ def _if_expression(step: Step) -> str | None:
         continuation: list[str] = []
         for continuation_line in lines[index + 1 :]:
             if continuation_line.strip():
-                continuation_indent = _indent_width(
-                    continuation_line[: len(continuation_line) - len(continuation_line.lstrip())]
-                )
-                if continuation_indent <= key_indent:
+                indentation = continuation_line[: len(continuation_line) - len(continuation_line.lstrip())]
+                if _indent_width(indentation) <= key_indent:
                     break
                 continuation.append(continuation_line.strip())
         return " ".join(continuation)
 
     return None
+
+
+def _workflow_has_dry_run_input(workflow: str) -> list[str]:
+    errors: list[str] = []
+    if not re.search(
+        r"(?ms)^[ \t]{2}workflow_dispatch:[ \t]*$.*?^[ \t]{4}inputs:[ \t]*$.*?^[ \t]{6}dry_run:[ \t]*$",
+        workflow,
+    ):
+        errors.append("workflow_dispatch must define a dry_run input")
+    if not re.search(
+        r"(?ms)^[ \t]{6}dry_run:[ \t]*$.*?^[ \t]{8}type:[ \t]*boolean[ \t]*$",
+        workflow,
+    ):
+        errors.append("dry_run input must be boolean")
+    if not re.search(
+        r"(?ms)^[ \t]{6}dry_run:[ \t]*$.*?^[ \t]{8}default:[ \t]*true[ \t]*$",
+        workflow,
+    ):
+        errors.append("dry_run input must default to true")
+    if "cargo publish --dry-run" not in workflow:
+        errors.append("manual dry-run path must invoke `cargo publish --dry-run`")
+    return errors
 
 
 def verify(workflow_path: Path) -> list[str]:
@@ -146,80 +170,103 @@ def verify(workflow_path: Path) -> list[str]:
 
     violations: list[str] = []
 
-    if "--tokenless" in workflow:
-        violations.append("unsupported '--tokenless' cargo publish flag is present")
+    if re.search(r"\bcargo\s+publish\b[^\n]*--tokenless\b", workflow):
+        violations.append("unsupported `cargo publish --tokenless` is present")
+
+    violations.extend(_workflow_has_dry_run_input(workflow))
 
     steps = _steps(workflow)
     publish_step = _step_by_name(steps, "Publish to crates.io")
+    real_publish_steps = [step for step in steps if _is_real_publish_step(step)]
+    if not real_publish_steps:
+        violations.append("no real `cargo publish` step found")
+    else:
+        for step in real_publish_steps:
+            publish_text = "\n".join(step.lines)
+            if any(True for _ in _key_values(step.lines, "continue-on-error")):
+                violations.append(f"real publish step {step.name!r} uses continue-on-error")
+
+            has_token_env = bool(
+                re.search(
+                    r"CARGO_REGISTRY_TOKEN\s*:\s*\$\{\{\s*secrets\.CARGO_REGISTRY_TOKEN\s*\}\}",
+                    publish_text,
+                )
+            )
+            has_token_check = bool(
+                re.search(r"-z[ \t]+[^\n]*CARGO_REGISTRY_TOKEN", publish_text)
+                and re.search(r"\bexit\s+1\b", publish_text)
+            )
+            if not has_token_env or not has_token_check:
+                violations.append(
+                    f"real publish step {step.name!r} must require CARGO_REGISTRY_TOKEN and fail when absent"
+                )
+
     if publish_step is None:
         violations.append("could not find the 'Publish to crates.io' step")
-    else:
-        publish_text = "\n".join(publish_step.lines)
-        if not re.search(
-            r"CARGO_REGISTRY_TOKEN\s*:\s*\$\{\{\s*secrets\.CARGO_REGISTRY_TOKEN\s*\}\}",
-            publish_text,
-        ):
-            violations.append(
-                "the 'Publish to crates.io' step must use the CARGO_REGISTRY_TOKEN secret"
-            )
-        if not re.search(r"\[\[\s*-z\s+[\"']?\$\{CARGO_REGISTRY_TOKEN:-\}", publish_text):
-            violations.append(
-                "the 'Publish to crates.io' step must fail when CARGO_REGISTRY_TOKEN is empty"
-            )
-        elif not re.search(r"\bexit\s+1\b", publish_text):
-            violations.append(
-                "the 'Publish to crates.io' step must exit non-zero when authentication is unavailable"
-            )
-
-    for line_number, value in _key_values(workflow.splitlines(), "continue-on-error"):
-        if _is_permissive_continue_on_error(value):
-            violation = (
-                "the release workflow must not configure permissive continue-on-error "
-                f"(line {line_number})"
-            )
-            if violation not in violations:
-                violations.append(violation)
 
     release_step = _step_using(steps, "softprops/action-gh-release")
     if release_step is None:
         violations.append("could not find the GitHub Release creation step")
     else:
         release_condition = _if_expression(release_step)
-        if not release_condition or "success()" not in release_condition:
+        if release_condition is None:
             violations.append(
-                "GitHub Release creation must be explicitly gated with success() "
+                "GitHub Release creation must have an explicit if gate "
                 f"(step starts on line {release_step.start_line})"
             )
-        if not release_condition or "github.event_name" not in release_condition or "push" not in release_condition:
-            violations.append(
-                "GitHub Release creation must remain limited to push/tag executions "
-                f"(step starts on line {release_step.start_line})"
+        else:
+            if not re.search(r"github\.event_name\s*==\s*['\"]push['\"]", release_condition):
+                violations.append(
+                    "GitHub Release creation must remain limited to push/tag executions "
+                    f"(step starts on line {release_step.start_line})"
+                )
+
+            publish_step_id = _step_id(real_publish_steps[0]) if real_publish_steps else None
+            has_success_function = bool(re.search(r"\bsuccess\s*\(\s*\)", release_condition))
+            has_publish_outcome = bool(
+                publish_step_id
+                and re.search(
+                    rf"steps\.{re.escape(publish_step_id)}\.outcome\s*==\s*['\"]success['\"]",
+                    release_condition,
+                )
             )
+            if not (has_success_function or has_publish_outcome):
+                violations.append(
+                    "GitHub Release creation must require successful publication "
+                    f"(step starts on line {release_step.start_line})"
+                )
 
     return violations
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--workflow",
+        "workflow",
+        nargs="?",
         type=Path,
-        default=DEFAULT_WORKFLOW,
-        help="workflow file to inspect (default: .github/workflows/crates-publish.yml)",
+        default=None,
+        help="workflow to validate (default: .github/workflows/crates-publish.yml)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--workflow",
+        dest="workflow_option",
+        type=Path,
+        help="workflow to validate (legacy option form)",
+    )
+    args = parser.parse_args(argv)
+    workflow_path = args.workflow_option or args.workflow or DEFAULT_WORKFLOW
 
-    print(f"Verifying release workflow hygiene: {args.workflow}")
-    violations = verify(args.workflow)
+    violations = verify(workflow_path)
     if violations:
-        print("Release hygiene check failed:")
+        print(f"Release hygiene verification failed for {workflow_path}:", file=sys.stderr)
         for violation in violations:
-            print(f"- {violation}")
+            print(f"- {violation}", file=sys.stderr)
         return 1
 
-    print("Release hygiene check passed.")
+    print(f"Release hygiene verification passed for {workflow_path}.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

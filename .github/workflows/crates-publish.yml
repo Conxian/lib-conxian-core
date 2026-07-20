@@ -6,10 +6,11 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish (e.g., 0.2.11)'
-        required: true
-        type: string
+      dry_run:
+        description: 'Run cargo publish --dry-run instead of publishing'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -35,23 +36,29 @@ jobs:
           index = "sparse+https://index.crates.io/"
           EOF
 
+      - name: Publish to crates.io (dry run)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        run: cargo publish --dry-run
+
       - name: Publish to crates.io
+        id: publish
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
 
           if [[ -z "${CARGO_REGISTRY_TOKEN:-}" ]]; then
-            echo "::error::CARGO_REGISTRY_TOKEN is unavailable; configure the repository secret before publishing."
-            echo "Add CARGO_REGISTRY_TOKEN under Settings > Secrets and variables > Actions."
-            echo "See https://doc.rust-lang.org/cargo/reference/config.html#credentials for Cargo registry authentication details."
+            echo "::error::CARGO_REGISTRY_TOKEN is required for tag pushes and manual real publishing."
+            echo "::error::Configure the crates.io secret or select dry_run for a manual validation."
+            echo "::error::Add CARGO_REGISTRY_TOKEN under Settings > Secrets and variables > Actions."
             exit 1
           fi
 
           cargo publish
 
       - name: Create GitHub Release
-        if: ${{ github.event_name == 'push' && success() }}
+        if: ${{ success() && github.event_name == 'push' && steps.publish.outcome == 'success' }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           body: |
