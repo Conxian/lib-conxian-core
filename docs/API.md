@@ -5,6 +5,15 @@ This library provides the Rust-native API for Conxian protocol primitives. It is
 
 ## 2. Core Modules
 
+### Universal Chain Signing (`signing`)
+The platform-neutral contract for SDK and Gateway signer adapters.
+- `UniversalChainSigner`: capability-gated signing, address derivation, and complete signature verification.
+- `SignRequest`, `AddressDerivationRequest`, and `VerificationRequest`: explicit target, algorithm, payload/digest, and derivation metadata.
+- `SignerCapabilities`: versioned supported chain, algorithm, operation, and address-format declarations.
+- `SigningError`: structured fail-closed and secret-safe error taxonomy.
+
+See [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md) for ownership boundaries and chain examples. Core defines the contract only; SDK, Gateway, Wallet, and Nexus retain their documented runtime responsibilities.
+
 ### Vault SDK (`sdk_primitive`)
 The primary interface for hardware-anchored signing and policy enforcement.
 - `VaultSDK::new(wallet: Wallet, policy: SigningPolicy)`: Initializes a new SDK instance.

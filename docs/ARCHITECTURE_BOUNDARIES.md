@@ -20,6 +20,9 @@ This document clarifies ownership and responsibility boundaries between core lib
   - signed envelope descriptors and replay/idempotency helpers,
   - session trust/security claim types,
   - adapter-facing traits for intent authorization and session issuance.
+- The platform-neutral `UniversalChainSigner` contract and its canonical request,
+  response, capability, address, verification, and secret-safe error models;
+  see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
 
 **Constraints**:
 - Must NOT contain hardware-specific or enclave-specific implementation logic.

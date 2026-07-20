@@ -25,6 +25,14 @@ This document tracks Phase 1 issues to be created across the Conxian ecosystem. 
 **Type**: Architecture  
 **Priority**: 🔴 CRITICAL  
 **Depends On**: None  
+**GitHub Issue**: [#174](https://github.com/Conxian/lib-conxian-core/issues/174)
+
+**Implementation Note**: The implementation PR delivers the platform-neutral
+`UniversalChainSigner` contract, explicit signing/verification/address models,
+versioned capability discovery, secret-safe fail-closed errors, deterministic
+mock contract tests, and signing ownership documentation. Hardware-backed
+signing, key custody, network I/O, and runtime/provider orchestration remain
+outside core.
 
 **Description**:
 Define shared trait interface for signing operations across all chains. This is the foundation for SDK and Gateway adapter coordination.
