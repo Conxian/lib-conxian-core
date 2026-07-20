@@ -39,7 +39,7 @@ claim of Babylon signer support.
 | Address input | `validate_address(address)` currently accepts strings beginning with `bc1` |
 | Fee input/output | `estimate_fee(&TxParams) -> Result<u64, String>`; current implementation returns `1600` regardless of transaction shape |
 | Trust policy | `trust_tier() -> TrustTier::Strict` |
-| Proof input | `verify_state_proof(state_root, proof)`; current expected shape is a non-empty string containing `:` such as `[height]:[sig_hex]` |
+| Proof input | `verify_state_proof(state_root, proof)`; `[height]:[sig_hex]` is an intended/example fixture only. The current adapter accepts any non-empty string containing `:` unless it contains `invalid`; it does not parse the height or decode/verify a signature. |
 | Proof output | `Ok(true)`/`Ok(false)` from structural checks; this is not EOTS signature verification |
 | State root | `get_state_root() -> "babylon_finality_root"` in the current adapter; it is not a live chain query |
 | Signing output | `SignResponse { signature, verification_key, address, derivation }` from a concrete downstream signer, if capability-gated support exists |
@@ -78,8 +78,8 @@ Gateway, and Nexus must reconcile external side effects first.
 
 - `TrustTier::Strict` is metadata and policy input; it does not make the
   adapter's proof implementation a light client.
-- A structurally accepted `[height]:[sig_hex]` string is not a verified EOTS
-  signature. Nexus must perform the cryptographic check and bind it to the
+- A proof string that passes the current non-empty/colon checks is not a verified
+  EOTS signature. Nexus must perform the cryptographic check and bind it to the
   correct BTC header, height, and finality context.
 - The current constant state root must not be treated as live evidence.
 - A Bitcoin-family mapping or `Chain::Bitcoin` adapter identity must not be

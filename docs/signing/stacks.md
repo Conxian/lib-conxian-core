@@ -21,10 +21,12 @@ signer or a working peg flow.
    `initiate_peg_out` creates an [`SBTCIntent`](../../src/stacks/mod.rs).
    These methods represent coordination intent; they do not submit Bitcoin,
    mint/burn sBTC, or execute Clarity.
-3. For a concrete Bitcoin or Stacks signing operation, a downstream signer may
-   use the UCS target `Chain::Stacks` with `ChainFamily::BitcoinUtxo`, subject
-   to an explicit capability for the requested algorithm, operation, and
-   `AddressFormat::StacksC32` where appropriate.
+3. For a concrete Bitcoin L1 signing operation, a downstream signer uses the UCS
+   target `Chain::Bitcoin`; for a Stacks transaction signing operation, it uses
+   `Chain::Stacks`. Both targets map to the coarse `ChainFamily::BitcoinUtxo`,
+   but the exact `SigningTarget` remains significant for capability matching,
+   including the requested algorithm, operation, and `AddressFormat::StacksC32`
+   where appropriate.
 4. The Enclave SDK / Wallet signs constructed transactions. Gateway coordinates
    peg state, persistence, provider calls, and retries. Nexus observes Bitcoin
    and Stacks evidence and supplies finality information.

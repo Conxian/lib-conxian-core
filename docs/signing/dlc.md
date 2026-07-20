@@ -67,16 +67,25 @@ full DLC contract, or produce a settlement transaction.
   side effect has been confirmed;
 - ambiguous submission requiring Gateway/Nexus reconciliation.
 
-**Terminal for the supplied contract or evidence:**
+**Terminal for the supplied contract or evidence once the relevant validator
+establishes the condition:**
 
-- malformed public key, nonce point, scalar, or invalid attestation (`false`);
-- outcome mismatch, expired block, invalid collateral, or inconsistent intent;
+- malformed public key, nonce point, scalar, or invalid attestation (`false`)
+  from Core's `verify_oracle_attestation`;
+- outcome mismatch, expired block, invalid collateral, or inconsistent intent
+  only after a downstream DLC contract, builder, or orchestrator validates the
+  condition;
 - failed capability, payload, address, or signer-response validation;
 - any CET/funding/refund construction failure that the downstream builder
   classifies as invalid rather than transient.
 
-`verify_execution` must not be used to turn a compatibility boolean into a
-settlement authorization.
+The current Core helpers do not perform the downstream checks in the second
+bullet. `verify_oracle_attestation` checks the supplied `(R, s)` equation and
+input encodings for the supplied outcome message; it does not compare that
+message with `DlcIntent::outcome_hash` or validate expiry, full collateral, or
+intent consistency. `verify_execution` only checks a non-empty, non-zero,
+at-least-32-byte signature and `collateral_sats > 0`; it does not perform those
+contract checks or authorize settlement.
 
 ## Fail-closed boundaries
 
