@@ -12,7 +12,7 @@
 - **Silent Payments:** Scanning logic in `src/bitcoin/mod.rs` hardened. Performs real summation of input public keys and shared secret derivation via ECC point multiplication (sum(P_in) * d_scan) to align with BIP-352 scanning requirements. COMPLETED.
 - **DLC:** Verification in `src/protocol/dlc.rs` hardened. Implemented real oracle attestation verification (s*G = R + e*P). COMPLETED.
 - **RGB:** Implementation expanded in `src/rgb/mod.rs`. Introduced `RGBStockAdapter` for client-side validation, supporting future `rgb-std` Stock persistence. COMPLETED.
-- **Fuzz Testing:** The current `fuzz/` suite has five bounded targets covering intent parsing, anchoring receipt deserialization, BIP-322 verification, upstream PSBT deserialization, and upstream MuSig2 aggregation. Weekly/manual CI is configured; dependency-level targets do not claim removed core APIs. COMPLETED.
+- **Fuzz Testing:** The current `fuzz/` suite has four bounded targets covering intent parsing, upstream MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus fail-closed contract/policy validation. Weekly/manual CI is configured; the proof-request target does not claim cryptographic BitVM2 proof verification. COMPLETED.
 
 ## 3. Recommended Actions
 1. **Security Audit (CON-1333):** Engage an external audit for the production MuSig2 and BitVM2 implementations in `conxius-enclave-sdk`. The changes reviewed here address repository-boundary and fuzz-regression findings only; they do not constitute an external cryptographic audit or an overall mainnet-readiness determination.

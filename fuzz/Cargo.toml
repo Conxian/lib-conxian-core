@@ -47,3 +47,15 @@ name = "musig2_aggregate"
 path = "fuzz_targets/musig2_aggregate.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "anchoring_receipt"
+path = "fuzz_targets/anchoring_receipt.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "proof_request_validate"
+path = "fuzz_targets/proof_request_validate.rs"
+test = false
+doc = false
