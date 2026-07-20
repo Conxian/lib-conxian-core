@@ -1,10 +1,11 @@
 //! Platform-neutral contracts for deterministic protocol verification.
 //!
-//! [`ProtocolVerifier`] defines the boundary between protocol-bearing core types
-//! and runtime verifiers.  The trait deliberately does not acquire proofs,
+//! [`ProtocolVerifier`] is an enforceable façade around a lower-level
+//! [`ProtocolVerifierBackend`]. The façade deliberately does not acquire proofs,
 //! query nodes, persist observations, or perform chain-specific orchestration.
-//! Implementations belong in downstream adapters, Nexus, or Gateway and must
-//! validate capability and request invariants before returning a result.
+//! Implementations belong in downstream adapters, Nexus, or Gateway; their
+//! backend hooks cannot bypass the façade's capability, request, result, and
+//! postcondition checks.
 //!
 //! # Examples
 //!
@@ -64,11 +65,13 @@
 //! ```
 
 use crate::control_model::{
-    validate_trust_tier_policy, Chain, ChainFamily, FinalityClass, ProofEnvelope, TrustTier,
-    VerificationClass, VerificationStatus,
+    chain_family_for, validate_trust_tier_policy, BridgeSystem, Chain, ChainFamily, FinalityClass,
+    ProofEnvelope, TrustTier, VerificationClass, VerificationStatus,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::fmt;
 
 /// Identifies a chain instance while preserving the existing [`Chain`] and
@@ -78,7 +81,7 @@ use std::fmt;
 /// not yet enumerated by the core `Chain` model (for example a private network
 /// or a newly introduced chain) without changing that public enum. `network`
 /// remains the stable routing identity used by the verifier contract.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct ChainId {
     /// Existing core family classification for the chain.
     pub family: ChainFamily,
@@ -99,13 +102,36 @@ impl ChainId {
         }
     }
 
-    /// Creates a chain identifier tied to an existing [`Chain`] variant.
-    pub fn from_chain(chain: Chain, family: ChainFamily, network: impl Into<String>) -> Self {
+    /// Creates a chain identifier tied to an existing [`Chain`] variant and
+    /// derives its family from the canonical control-model mapping.
+    pub fn from_chain(chain: Chain, network: impl Into<String>) -> Self {
         Self {
-            family,
+            family: chain_family_for(&chain),
             chain: Some(chain),
             network: network.into(),
         }
+    }
+
+    /// Creates an identifier from explicit parts, rejecting a known
+    /// `Chain`/`ChainFamily` mismatch before it can enter a request or result.
+    pub fn try_from_parts(
+        chain: Option<Chain>,
+        family: ChainFamily,
+        network: impl Into<String>,
+    ) -> Result<Self, ProtocolVerifierError> {
+        let identifier = Self {
+            family,
+            chain,
+            network: network.into(),
+        };
+        identifier.validate()?;
+        Ok(identifier)
+    }
+
+    /// Returns the stable textual identity used when binding an envelope to a
+    /// request destination.
+    pub fn canonical_id(&self) -> String {
+        self.to_string()
     }
 
     /// Validates the structural identity required by every verifier request.
@@ -115,16 +141,49 @@ impl ChainId {
                 reason: "chain network must not be empty".to_string(),
             });
         }
+        if let Some(chain) = &self.chain {
+            let expected_family = chain_family_for(chain);
+            if expected_family != self.family {
+                return Err(ProtocolVerifierError::InvalidChainFamily {
+                    chain: chain.clone(),
+                    expected: expected_family,
+                    provided: self.family.clone(),
+                });
+            }
+        }
         Ok(())
+    }
+}
+
+impl<'de> Deserialize<'de> for ChainId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawChainId {
+            family: ChainFamily,
+            chain: Option<Chain>,
+            network: String,
+        }
+
+        let raw = RawChainId::deserialize(deserializer)?;
+        let identifier = Self {
+            family: raw.family,
+            chain: raw.chain,
+            network: raw.network,
+        };
+        identifier.validate().map_err(serde::de::Error::custom)?;
+        Ok(identifier)
     }
 }
 
 impl fmt::Display for ChainId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(chain) = &self.chain {
-            write!(f, "{:?}:{}", chain, self.network)
+            write!(f, "{}:{}", chain_name(chain), self.network)
         } else {
-            write!(f, "{:?}:{}", self.family, self.network)
+            write!(f, "{}:{}", chain_family_name(&self.family), self.network)
         }
     }
 }
@@ -300,6 +359,7 @@ impl ProofVerificationRequest {
         self.proof.validate()?;
         if let Some(envelope) = &self.envelope {
             validate_proof_envelope_at(envelope, now)?;
+            validate_evidence_binding(self)?;
         }
         Ok(())
     }
@@ -352,6 +412,14 @@ pub fn validate_proof_envelope_at(
         });
     }
 
+    if envelope.observed_at > now {
+        return Err(ProtocolVerifierError::FutureDatedEvidence {
+            reference: envelope.proof_ref.clone(),
+            observed_at: envelope.observed_at,
+            now,
+        });
+    }
+
     if envelope.expires_at <= now {
         return Err(ProtocolVerifierError::ExpiredEvidence {
             reference: envelope.proof_ref.clone(),
@@ -379,6 +447,323 @@ pub fn validate_proof_envelope_at(
     }
 
     Ok(())
+}
+
+/// Version of the structural evidence-binding encoding.
+pub const PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION: u8 = 1;
+
+/// Domain separator for the structural evidence-binding hash.
+pub const PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN: &[u8] =
+    b"lib-conxian-core/protocol-verifier/evidence-binding";
+
+/// Computes the deterministic, domain-separated binding for a request and its
+/// envelope. The encoding is manual and length-prefixed; it does not depend on
+/// JSON object ordering. The two mirrored `evidence_hash` fields are excluded
+/// because they carry the digest produced by this function; every other
+/// request, proof, and envelope field is included.
+pub fn compute_evidence_binding_hash(
+    request: &ProofVerificationRequest,
+) -> Result<String, ProtocolVerifierError> {
+    request.chain.validate()?;
+    request.state.validate()?;
+    request.proof.validate()?;
+    let envelope =
+        request
+            .envelope
+            .as_ref()
+            .ok_or_else(|| ProtocolVerifierError::InvalidRequest {
+                reason: "evidence binding requires a proof envelope".to_string(),
+            })?;
+    validate_proof_envelope_at(envelope, Utc::now())?;
+
+    Ok(compute_evidence_binding_hash_unchecked(request))
+}
+
+impl ProofVerificationRequest {
+    /// Computes the request's canonical structural evidence binding.
+    pub fn evidence_binding_hash(&self) -> Result<String, ProtocolVerifierError> {
+        compute_evidence_binding_hash(self)
+    }
+}
+
+fn validate_evidence_binding(
+    request: &ProofVerificationRequest,
+) -> Result<(), ProtocolVerifierError> {
+    let Some(envelope) = request.envelope.as_ref() else {
+        return Ok(());
+    };
+
+    let destination = request.chain.canonical_id();
+    if envelope.destination_chain_id != destination {
+        return Err(ProtocolVerifierError::EvidenceBindingMismatch {
+            expected: destination,
+            actual: Some(envelope.destination_chain_id.clone()),
+        });
+    }
+
+    let expected = compute_evidence_binding_hash_unchecked(request);
+    if request.proof.evidence_hash.as_deref() != Some(expected.as_str()) {
+        return Err(ProtocolVerifierError::EvidenceBindingMismatch {
+            expected: expected.clone(),
+            actual: request.proof.evidence_hash.clone(),
+        });
+    }
+    if envelope.evidence_hash != expected {
+        return Err(ProtocolVerifierError::EvidenceBindingMismatch {
+            expected,
+            actual: Some(envelope.evidence_hash.clone()),
+        });
+    }
+
+    Ok(())
+}
+
+fn compute_evidence_binding_hash_unchecked(request: &ProofVerificationRequest) -> String {
+    let mut encoder = CanonicalEncoder::default();
+    encoder.push_bytes(PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN);
+    encoder.push_u8(PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION);
+    encode_chain_id(&mut encoder, &request.chain);
+    encode_state_reference(&mut encoder, &request.state);
+    encode_proof_format(&mut encoder, &request.proof.format);
+    encoder.push_bytes(&request.proof.bytes);
+
+    match &request.envelope {
+        Some(envelope) => {
+            encoder.push_u8(1);
+            encode_bridge_system(&mut encoder, &envelope.system);
+            encoder.push_str(&envelope.system_version);
+            encode_trust_tier(&mut encoder, &envelope.trust_tier);
+            encode_verification_class(&mut encoder, &envelope.verification_class);
+            encoder.push_str(&envelope.source_chain_id);
+            encoder.push_str(&envelope.destination_chain_id);
+            encode_finality_class(&mut encoder, &envelope.finality_class);
+            encoder.push_u32(envelope.min_confirmations);
+            encoder.push_datetime(envelope.observed_at);
+            encoder.push_datetime(envelope.expires_at);
+            encoder.push_str(&envelope.proof_ref);
+            encoder.push_optional_str(envelope.evidence_uri.as_deref());
+            encoder.push_str(&envelope.verifier_set_ref);
+            encoder.push_json(&envelope.security_params);
+            encode_verification_status(&mut encoder, &envelope.verification_status);
+            encoder.push_optional_str(envelope.verification_reason.as_deref());
+        }
+        None => encoder.push_u8(0),
+    }
+
+    let digest = Sha256::digest(&encoder.bytes);
+    format!(
+        "v{}:sha256:{}",
+        PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION,
+        hex::encode(digest)
+    )
+}
+
+#[derive(Default)]
+struct CanonicalEncoder {
+    bytes: Vec<u8>,
+}
+
+impl CanonicalEncoder {
+    fn push_u8(&mut self, value: u8) {
+        self.bytes.push(value);
+    }
+
+    fn push_u32(&mut self, value: u32) {
+        self.bytes.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn push_u64(&mut self, value: u64) {
+        self.bytes.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn push_i64(&mut self, value: i64) {
+        self.bytes.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn push_bytes(&mut self, value: &[u8]) {
+        self.push_u64(value.len() as u64);
+        self.bytes.extend_from_slice(value);
+    }
+
+    fn push_str(&mut self, value: &str) {
+        self.push_bytes(value.as_bytes());
+    }
+
+    fn push_optional_str(&mut self, value: Option<&str>) {
+        match value {
+            Some(value) => {
+                self.push_u8(1);
+                self.push_str(value);
+            }
+            None => self.push_u8(0),
+        }
+    }
+
+    fn push_datetime(&mut self, value: DateTime<Utc>) {
+        self.push_i64(value.timestamp());
+        self.push_u32(value.timestamp_subsec_nanos());
+    }
+
+    fn push_json(&mut self, value: &Value) {
+        match value {
+            Value::Null => self.push_u8(0),
+            Value::Bool(value) => {
+                self.push_u8(1);
+                self.push_u8(u8::from(*value));
+            }
+            Value::Number(value) => {
+                self.push_u8(2);
+                self.push_str(&value.to_string());
+            }
+            Value::String(value) => {
+                self.push_u8(3);
+                self.push_str(value);
+            }
+            Value::Array(values) => {
+                self.push_u8(4);
+                self.push_u64(values.len() as u64);
+                for value in values {
+                    self.push_json(value);
+                }
+            }
+            Value::Object(values) => {
+                self.push_u8(5);
+                let mut entries: Vec<_> = values.iter().collect();
+                entries.sort_by(|left, right| left.0.cmp(right.0));
+                self.push_u64(entries.len() as u64);
+                for (key, value) in entries {
+                    self.push_str(key);
+                    self.push_json(value);
+                }
+            }
+        }
+    }
+}
+
+fn encode_chain_id(encoder: &mut CanonicalEncoder, chain: &ChainId) {
+    encode_chain_family(encoder, &chain.family);
+    match &chain.chain {
+        Some(chain) => {
+            encoder.push_u8(1);
+            encoder.push_str(chain_name(chain));
+        }
+        None => encoder.push_u8(0),
+    }
+    encoder.push_str(&chain.network);
+}
+
+fn encode_state_reference(encoder: &mut CanonicalEncoder, state: &ChainStateReference) {
+    encoder.push_str(&state.block_hash);
+    encoder.push_u64(state.block_height);
+    encoder.push_optional_str(state.state_root.as_deref());
+}
+
+fn encode_proof_format(encoder: &mut CanonicalEncoder, format: &ProofFormat) {
+    match format {
+        ProofFormat::HeaderChain => encoder.push_str("header_chain"),
+        ProofFormat::Merkle => encoder.push_str("merkle"),
+        ProofFormat::StateRoot => encoder.push_str("state_root"),
+        ProofFormat::TransactionInclusion => encoder.push_str("transaction_inclusion"),
+        ProofFormat::ZkProof => encoder.push_str("zk_proof"),
+        ProofFormat::Custom(name) => {
+            encoder.push_str("custom");
+            encoder.push_str(name);
+        }
+    }
+}
+
+fn encode_chain_family(encoder: &mut CanonicalEncoder, family: &ChainFamily) {
+    encoder.push_str(chain_family_name(family));
+}
+
+fn chain_family_name(family: &ChainFamily) -> &'static str {
+    match family {
+        ChainFamily::BitcoinUtxo => "bitcoin_utxo",
+        ChainFamily::Evm => "evm",
+        ChainFamily::CosmosIbc => "cosmos_ibc",
+        ChainFamily::SolanaSvm => "solana_svm",
+        ChainFamily::Move => "move",
+        ChainFamily::Substrate => "substrate",
+    }
+}
+
+fn chain_name(chain: &Chain) -> &'static str {
+    match chain {
+        Chain::Bitcoin => "bitcoin",
+        Chain::Stacks => "stacks",
+        Chain::Liquid => "liquid",
+        Chain::Lightning => "lightning",
+        Chain::Babylon => "babylon",
+        Chain::Bob => "bob",
+        Chain::Mezo => "mezo",
+        Chain::Citrea => "citrea",
+        Chain::Botanix => "botanix",
+        Chain::Ethereum => "ethereum",
+        Chain::Base => "base",
+        Chain::Arbitrum => "arbitrum",
+        Chain::Optimism => "optimism",
+        Chain::Polygon => "polygon",
+        Chain::CosmosHub => "cosmos_hub",
+        Chain::Osmosis => "osmosis",
+        Chain::Celestia => "celestia",
+        Chain::Solana => "solana",
+        Chain::Eclipse => "eclipse",
+        Chain::Aptos => "aptos",
+        Chain::Sui => "sui",
+        Chain::Polkadot => "polkadot",
+        Chain::Kusama => "kusama",
+    }
+}
+
+fn encode_bridge_system(encoder: &mut CanonicalEncoder, system: &BridgeSystem) {
+    encoder.push_str(match system {
+        BridgeSystem::Ibc => "ibc",
+        BridgeSystem::WormholeNtt => "wormhole_ntt",
+        BridgeSystem::Hyperlane => "hyperlane",
+        BridgeSystem::LayerZeroV2 => "layer_zero_v2",
+        BridgeSystem::Axelar => "axelar",
+        BridgeSystem::ChainlinkCcip => "chainlink_ccip",
+        BridgeSystem::NearChainSignatures => "near_chain_signatures",
+        BridgeSystem::CircleCctp => "circle_cctp",
+        BridgeSystem::NexusZkVM => "nexus_zk_vm",
+        BridgeSystem::Bitvm2 => "bitvm2",
+    });
+}
+
+fn encode_trust_tier(encoder: &mut CanonicalEncoder, tier: &TrustTier) {
+    encoder.push_str(match tier {
+        TrustTier::Strict => "strict",
+        TrustTier::Managed => "managed",
+        TrustTier::Expedient => "expedient",
+        TrustTier::ObserverOnly => "observer_only",
+    });
+}
+
+fn encode_verification_class(encoder: &mut CanonicalEncoder, class: &VerificationClass) {
+    encoder.push_str(match class {
+        VerificationClass::LightClient => "light_client",
+        VerificationClass::ExternalQuorum => "external_quorum",
+        VerificationClass::AppDefinedMultiVerifier => "app_defined_multi_verifier",
+        VerificationClass::SharedPos => "shared_pos",
+        VerificationClass::NativeObservation => "native_observation",
+        VerificationClass::ZkVerified => "zk_verified",
+    });
+}
+
+fn encode_finality_class(encoder: &mut CanonicalEncoder, class: &FinalityClass) {
+    encoder.push_str(match class {
+        FinalityClass::Economic => "economic",
+        FinalityClass::Probabilistic => "probabilistic",
+        FinalityClass::Deterministic => "deterministic",
+    });
+}
+
+fn encode_verification_status(encoder: &mut CanonicalEncoder, status: &VerificationStatus) {
+    encoder.push_str(match status {
+        VerificationStatus::Verified => "verified",
+        VerificationStatus::Degraded => "degraded",
+        VerificationStatus::Blocked => "blocked",
+    });
 }
 
 /// Capability advertised by a verifier implementation.
@@ -556,6 +941,12 @@ pub struct VerificationProvenance {
 impl VerificationProvenance {
     /// Validates provenance metadata.
     pub fn validate(&self) -> Result<(), ProtocolVerifierError> {
+        self.validate_at(Utc::now())
+    }
+
+    /// Validates provenance metadata at a caller-supplied time. A verifier
+    /// cannot claim that it observed or verified evidence in the future.
+    pub fn validate_at(&self, now: DateTime<Utc>) -> Result<(), ProtocolVerifierError> {
         if self.verifier_id.trim().is_empty() {
             return Err(ProtocolVerifierError::InvariantViolation {
                 reason: "verification provenance verifier id must not be empty".to_string(),
@@ -569,6 +960,16 @@ impl VerificationProvenance {
             return Err(ProtocolVerifierError::InvariantViolation {
                 reason: "verification evidence reference must not be empty when supplied"
                     .to_string(),
+            });
+        }
+        if self.verified_at > now {
+            return Err(ProtocolVerifierError::FutureDatedEvidence {
+                reference: self
+                    .evidence_ref
+                    .clone()
+                    .unwrap_or_else(|| self.verifier_id.clone()),
+                observed_at: self.verified_at,
+                now,
             });
         }
         Ok(())
@@ -645,9 +1046,14 @@ impl LatestVerifiedBlock {
 
     /// Validates the block reference and its trust mapping.
     pub fn validate(&self) -> Result<(), ProtocolVerifierError> {
+        self.validate_at(Utc::now())
+    }
+
+    /// Validates the block reference at a caller-supplied time.
+    pub fn validate_at(&self, now: DateTime<Utc>) -> Result<(), ProtocolVerifierError> {
         self.chain.validate()?;
         self.header.validate()?;
-        self.provenance.validate()?;
+        self.provenance.validate_at(now)?;
         validate_trust_tier_policy(self.trust_tier.clone(), self.verification_class.clone())
             .map_err(|reason| ProtocolVerifierError::PolicyBlocked {
                 trust_tier: self.trust_tier.clone(),
@@ -679,10 +1085,17 @@ impl ProofVerificationResult {
 
     /// Validates the result's state/block and chain invariants.
     pub fn validate(&self) -> Result<(), ProtocolVerifierError> {
+        self.validate_at(Utc::now())
+    }
+
+    /// Validates the result's state/block and chain invariants at a supplied
+    /// time. Request-specific checks are performed by
+    /// [`validate_proof_verification_result_at`].
+    pub fn validate_at(&self, now: DateTime<Utc>) -> Result<(), ProtocolVerifierError> {
         self.chain.validate()?;
         self.state.validate()?;
         self.proof_format.validate()?;
-        self.verified_block.validate()?;
+        self.verified_block.validate_at(now)?;
 
         if self.chain != self.verified_block.chain {
             return Err(ProtocolVerifierError::InvariantViolation {
@@ -696,18 +1109,98 @@ impl ProofVerificationResult {
                 reason: "proof state reference does not match verified block".to_string(),
             });
         }
-        if let (Some(state_root), Some(header_root)) = (
+        match (
             &self.state.state_root,
             &self.verified_block.header.state_root,
         ) {
-            if state_root != header_root {
-                return Err(ProtocolVerifierError::InvariantViolation {
-                    reason: "proof state root does not match verified block state root".to_string(),
+            (Some(state_root), Some(header_root)) if state_root != header_root => {
+                return Err(ProtocolVerifierError::MismatchedStateRoot {
+                    expected: state_root.clone(),
+                    actual: Some(header_root.clone()),
                 });
             }
+            (Some(state_root), None) => {
+                return Err(ProtocolVerifierError::MissingStateRoot {
+                    expected: state_root.clone(),
+                });
+            }
+            _ => {}
         }
         Ok(())
     }
+}
+
+/// Validates a proof result against the request that produced it.
+pub fn validate_proof_verification_result(
+    request: &ProofVerificationRequest,
+    result: &ProofVerificationResult,
+) -> Result<(), ProtocolVerifierError> {
+    validate_proof_verification_result_at(request, result, Utc::now())
+}
+
+/// Validates a proof result against a request at a deterministic time.
+pub fn validate_proof_verification_result_at(
+    request: &ProofVerificationRequest,
+    result: &ProofVerificationResult,
+    now: DateTime<Utc>,
+) -> Result<(), ProtocolVerifierError> {
+    request.validate_at(now)?;
+    result.validate_at(now)?;
+
+    if request.chain != result.chain || request.chain != result.verified_block.chain {
+        return Err(ProtocolVerifierError::InvariantViolation {
+            reason: "proof result and verified block chains must match the request".to_string(),
+        });
+    }
+    if request.state.block_hash != result.state.block_hash
+        || request.state.block_height != result.state.block_height
+        || request.state.block_hash != result.verified_block.header.hash
+        || request.state.block_height != result.verified_block.header.height
+    {
+        return Err(ProtocolVerifierError::InvariantViolation {
+            reason: "proof result block reference does not match the request".to_string(),
+        });
+    }
+    if request.proof.format != result.proof_format {
+        return Err(ProtocolVerifierError::InvariantViolation {
+            reason: "proof result format does not match the request".to_string(),
+        });
+    }
+
+    if let Some(expected_root) = &request.state.state_root {
+        let Some(result_root) = result.state.state_root.as_ref() else {
+            return Err(ProtocolVerifierError::MissingStateRoot {
+                expected: expected_root.clone(),
+            });
+        };
+        if result_root != expected_root {
+            return Err(ProtocolVerifierError::MismatchedStateRoot {
+                expected: expected_root.clone(),
+                actual: Some(result_root.clone()),
+            });
+        }
+
+        let Some(header_root) = result.verified_block.header.state_root.as_ref() else {
+            return Err(ProtocolVerifierError::MissingStateRoot {
+                expected: expected_root.clone(),
+            });
+        };
+        if header_root != expected_root {
+            return Err(ProtocolVerifierError::MismatchedStateRoot {
+                expected: expected_root.clone(),
+                actual: Some(header_root.clone()),
+            });
+        }
+    }
+
+    if !result.is_verified() {
+        return Err(ProtocolVerifierError::PolicyBlocked {
+            trust_tier: result.verified_block.trust_tier.clone(),
+            reason: "proof result is not verified evidence".to_string(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Request for a transaction-finality decision.
@@ -822,13 +1315,19 @@ impl TransactionFinalityResult {
 
     /// Validates status, confirmation, block, and trust invariants.
     pub fn validate(&self) -> Result<(), ProtocolVerifierError> {
+        self.validate_at(Utc::now())
+    }
+
+    /// Validates status, confirmation, block, trust, and provenance timestamp
+    /// invariants at a caller-supplied time.
+    pub fn validate_at(&self, now: DateTime<Utc>) -> Result<(), ProtocolVerifierError> {
         self.chain.validate()?;
         if self.transaction_id.trim().is_empty() {
             return Err(ProtocolVerifierError::InvalidRequest {
                 reason: "transaction id must not be empty".to_string(),
             });
         }
-        self.provenance.validate()?;
+        self.provenance.validate_at(now)?;
         validate_trust_tier_policy(self.trust_tier.clone(), self.verification_class.clone())
             .map_err(|reason| ProtocolVerifierError::PolicyBlocked {
                 trust_tier: self.trust_tier.clone(),
@@ -866,7 +1365,7 @@ impl TransactionFinalityResult {
         }
 
         if let Some(block) = &self.latest_block {
-            block.validate()?;
+            block.validate_at(now)?;
             if block.chain != self.chain {
                 return Err(ProtocolVerifierError::InvariantViolation {
                     reason: "transaction finality block does not match transaction chain"
@@ -887,8 +1386,17 @@ pub fn validate_finality_result(
     request: &TransactionFinalityRequest,
     result: &TransactionFinalityResult,
 ) -> Result<(), ProtocolVerifierError> {
+    validate_finality_result_at(request, result, Utc::now())
+}
+
+/// Validates a finality result against a request at a deterministic time.
+pub fn validate_finality_result_at(
+    request: &TransactionFinalityRequest,
+    result: &TransactionFinalityResult,
+    now: DateTime<Utc>,
+) -> Result<(), ProtocolVerifierError> {
     request.validate()?;
-    result.validate()?;
+    result.validate_at(now)?;
 
     if request.chain != result.chain {
         return Err(ProtocolVerifierError::InvariantViolation {
@@ -898,6 +1406,12 @@ pub fn validate_finality_result(
     if request.transaction_id != result.transaction_id {
         return Err(ProtocolVerifierError::InvariantViolation {
             reason: "finality result transaction does not match request".to_string(),
+        });
+    }
+    if result.verification_status != VerificationStatus::Verified {
+        return Err(ProtocolVerifierError::PolicyBlocked {
+            trust_tier: result.trust_tier.clone(),
+            reason: "transaction finality result is not verified evidence".to_string(),
         });
     }
     if request.require_finality
@@ -966,6 +1480,11 @@ pub enum ProtocolVerifierError {
         verifier_id: String,
         reason: String,
     },
+    InvalidChainFamily {
+        chain: Chain,
+        expected: ChainFamily,
+        provided: ChainFamily,
+    },
     UnsupportedChain {
         chain: ChainId,
     },
@@ -992,6 +1511,22 @@ pub enum ProtocolVerifierError {
     ExpiredEvidence {
         reference: String,
         expires_at: DateTime<Utc>,
+    },
+    FutureDatedEvidence {
+        reference: String,
+        observed_at: DateTime<Utc>,
+        now: DateTime<Utc>,
+    },
+    MissingStateRoot {
+        expected: String,
+    },
+    MismatchedStateRoot {
+        expected: String,
+        actual: Option<String>,
+    },
+    EvidenceBindingMismatch {
+        expected: String,
+        actual: Option<String>,
     },
     StaleReference {
         chain: ChainId,
@@ -1022,6 +1557,14 @@ impl fmt::Display for ProtocolVerifierError {
             Self::UnsupportedVerifier { verifier_id, reason } => {
                 write!(f, "unsupported verifier {verifier_id}: {reason}")
             }
+            Self::InvalidChainFamily {
+                chain,
+                expected,
+                provided,
+            } => write!(
+                f,
+                "invalid chain family for {chain:?}: expected {expected:?}, got {provided:?}"
+            ),
             Self::UnsupportedChain { chain } => write!(f, "unsupported chain: {chain}"),
             Self::UnsupportedCapability { chain, capability } => {
                 write!(f, "unsupported capability {capability} for chain {chain}")
@@ -1041,6 +1584,27 @@ impl fmt::Display for ProtocolVerifierError {
                 reference,
                 expires_at,
             } => write!(f, "verification evidence {reference} expired at {expires_at}"),
+            Self::FutureDatedEvidence {
+                reference,
+                observed_at,
+                now,
+            } => write!(
+                f,
+                "verification evidence {reference} is future-dated at {observed_at}; validation time is {now}"
+            ),
+            Self::MissingStateRoot { expected } => {
+                write!(f, "verified result omitted requested state root {expected}")
+            }
+            Self::MismatchedStateRoot { expected, actual } => write!(
+                f,
+                "verified result state root mismatch: expected {expected}, got {}",
+                actual.as_deref().unwrap_or("<missing>")
+            ),
+            Self::EvidenceBindingMismatch { expected, actual } => write!(
+                f,
+                "proof evidence binding mismatch: expected {expected}, got {}",
+                actual.as_deref().unwrap_or("<missing>")
+            ),
             Self::StaleReference {
                 chain,
                 expected_height,
@@ -1069,61 +1633,189 @@ impl fmt::Display for ProtocolVerifierError {
 
 impl std::error::Error for ProtocolVerifierError {}
 
-/// Platform-neutral verification contract.
+/// Lower-level implementation hooks used by [`ProtocolVerifier`].
 ///
-/// Implementations must remain fail-closed: unsupported chains, capabilities,
-/// malformed proofs, unavailable evidence, stale references, and policy
-/// violations must be returned as [`ProtocolVerifierError`] values rather than
-/// represented as `Ok(true)`. Network I/O, proof acquisition, persistence, and
-/// live orchestration are intentionally outside this trait.
-pub trait ProtocolVerifier: Send + Sync {
-    /// Advertises the implementation's supported chains and operations.
+/// These methods are intentionally named and documented as backend hooks. A
+/// backend must not expose this trait directly to consumers as a verification
+/// contract: the concrete [`ProtocolVerifier`] façade is the only API that
+/// performs the mandatory precondition and postcondition checks.
+pub trait ProtocolVerifierBackend: Send + Sync {
+    /// Returns the immutable capability advertisement consumed by the façade.
     fn capabilities(&self) -> &VerifierCapabilities;
 
-    /// Verifies a chain-state proof and returns its verified block provenance.
-    fn verify_chain_state(
+    /// Acquires or verifies state evidence after façade checks have passed.
+    fn backend_verify_chain_state(
         &self,
         request: &ProofVerificationRequest,
     ) -> Result<ProofVerificationResult, ProtocolVerifierError>;
 
-    /// Returns the latest block/reference already verified by the implementation.
-    fn get_latest_verified_block(
+    /// Supplies the latest verified block after façade checks have passed.
+    fn backend_get_latest_verified_block(
         &self,
         chain: &ChainId,
     ) -> Result<LatestVerifiedBlock, ProtocolVerifierError>;
 
-    /// Evaluates transaction finality without assuming that confirmation alone
-    /// implies deterministic finality.
-    fn verify_transaction_finality(
+    /// Evaluates finality after façade checks have passed.
+    fn backend_verify_transaction_finality(
         &self,
         request: &TransactionFinalityRequest,
     ) -> Result<TransactionFinalityResult, ProtocolVerifierError>;
+}
 
-    /// Shared capability check for downstream implementations.
-    fn ensure_capability(
-        &self,
-        chain: &ChainId,
-        capability: VerifierCapability,
-    ) -> Result<(), ProtocolVerifierError> {
-        self.capabilities().require_capability(chain, capability)
+impl<T: ProtocolVerifierBackend + ?Sized> ProtocolVerifierBackend for Box<T> {
+    fn capabilities(&self) -> &VerifierCapabilities {
+        (**self).capabilities()
     }
 
-    /// Shared proof-format check for downstream implementations.
-    fn ensure_proof_format(
+    fn backend_verify_chain_state(
         &self,
-        chain: &ChainId,
-        format: &ProofFormat,
-    ) -> Result<(), ProtocolVerifierError> {
-        self.capabilities().require_proof_format(chain, format)
+        request: &ProofVerificationRequest,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        (**self).backend_verify_chain_state(request)
     }
 
-    /// Shared finality-result check for downstream implementations.
-    fn validate_finality_result(
+    fn backend_get_latest_verified_block(
+        &self,
+        chain: &ChainId,
+    ) -> Result<LatestVerifiedBlock, ProtocolVerifierError> {
+        (**self).backend_get_latest_verified_block(chain)
+    }
+
+    fn backend_verify_transaction_finality(
         &self,
         request: &TransactionFinalityRequest,
-        result: &TransactionFinalityResult,
-    ) -> Result<(), ProtocolVerifierError> {
-        validate_finality_result(request, result)
+    ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
+        (**self).backend_verify_transaction_finality(request)
+    }
+}
+
+/// Ergonomic dynamic-dispatch form of the verifier façade.
+pub type DynProtocolVerifier = ProtocolVerifier<Box<dyn ProtocolVerifierBackend>>;
+
+/// Enforceable consumer-facing verifier façade.
+///
+/// The façade owns a snapshot of the backend's capabilities. Its public
+/// methods are inherent methods rather than trait methods, so a backend cannot
+/// override them or bypass the shared validation sequence:
+///
+/// 1. validate the capability advertisement and request;
+/// 2. invoke the lower-level backend hook;
+/// 3. validate the returned result and request/result postconditions.
+///
+/// This contract validates structural consistency and policy metadata. It does
+/// not prove cryptographic authenticity; downstream signatures, attestations,
+/// light clients, or verifier-set proofs remain required.
+pub struct ProtocolVerifier<B: ProtocolVerifierBackend> {
+    backend: B,
+    capabilities: VerifierCapabilities,
+}
+
+impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
+    /// Wraps a backend in the enforceable façade.
+    ///
+    /// `new` is infallible so invalid advertisements remain representable and
+    /// fail closed on the first operation. Use [`Self::try_new`] to reject an
+    /// invalid advertisement during construction instead.
+    pub fn new(backend: B) -> Self {
+        let capabilities = backend.capabilities().clone();
+        Self {
+            backend,
+            capabilities,
+        }
+    }
+
+    /// Wraps a backend and validates its capability advertisement immediately.
+    pub fn try_new(backend: B) -> Result<Self, ProtocolVerifierError> {
+        let verifier = Self::new(backend);
+        verifier.capabilities.validate()?;
+        Ok(verifier)
+    }
+}
+
+impl<B: ProtocolVerifierBackend> ProtocolVerifier<B> {
+    /// Returns the capability snapshot used for every façade call.
+    pub fn capabilities(&self) -> &VerifierCapabilities {
+        &self.capabilities
+    }
+
+    /// Verifies a chain-state proof using the current clock.
+    pub fn verify_chain_state(
+        &self,
+        request: &ProofVerificationRequest,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        self.verify_chain_state_at(request, Utc::now())
+    }
+
+    /// Verifies a chain-state proof at a deterministic time.
+    pub fn verify_chain_state_at(
+        &self,
+        request: &ProofVerificationRequest,
+        now: DateTime<Utc>,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        self.capabilities
+            .require_capability(&request.chain, VerifierCapability::StateProofVerification)?;
+        request.validate_at(now)?;
+        self.capabilities
+            .require_proof_format(&request.chain, &request.proof.format)?;
+
+        let result = self.backend.backend_verify_chain_state(request)?;
+        validate_proof_verification_result_at(request, &result, now)?;
+        Ok(result)
+    }
+
+    /// Returns the latest verified block using the current clock.
+    pub fn get_latest_verified_block(
+        &self,
+        chain: &ChainId,
+    ) -> Result<LatestVerifiedBlock, ProtocolVerifierError> {
+        self.get_latest_verified_block_at(chain, Utc::now())
+    }
+
+    /// Returns the latest verified block at a deterministic time.
+    pub fn get_latest_verified_block_at(
+        &self,
+        chain: &ChainId,
+        now: DateTime<Utc>,
+    ) -> Result<LatestVerifiedBlock, ProtocolVerifierError> {
+        self.capabilities
+            .require_capability(chain, VerifierCapability::LatestVerifiedBlock)?;
+        let result = self.backend.backend_get_latest_verified_block(chain)?;
+        result.validate_at(now)?;
+        if result.chain != *chain {
+            return Err(ProtocolVerifierError::InvariantViolation {
+                reason: "latest verified block chain does not match request".to_string(),
+            });
+        }
+        if !result.is_verified() {
+            return Err(ProtocolVerifierError::PolicyBlocked {
+                trust_tier: result.trust_tier.clone(),
+                reason: "latest block result is not verified evidence".to_string(),
+            });
+        }
+        Ok(result)
+    }
+
+    /// Evaluates transaction finality using the current clock.
+    pub fn verify_transaction_finality(
+        &self,
+        request: &TransactionFinalityRequest,
+    ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
+        self.verify_transaction_finality_at(request, Utc::now())
+    }
+
+    /// Evaluates transaction finality at a deterministic time.
+    pub fn verify_transaction_finality_at(
+        &self,
+        request: &TransactionFinalityRequest,
+        now: DateTime<Utc>,
+    ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
+        self.capabilities
+            .require_capability(&request.chain, VerifierCapability::TransactionFinality)?;
+        request.validate()?;
+
+        let result = self.backend.backend_verify_transaction_finality(request)?;
+        validate_finality_result_at(request, &result, now)?;
+        Ok(result)
     }
 }
 

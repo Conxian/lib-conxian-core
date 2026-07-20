@@ -7,6 +7,86 @@
 
 Starting with v0.2.11, `lib-conxian-core` no longer includes Vault SDK functionality (hardware-backed signing, attestation, policy enforcement, MuSig2, BitVM2). This functionality has moved to the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
 
+## ProtocolVerifier hardening (pre-publication)
+
+The verifier contract introduced by #180/PR #185 is corrected before the next
+publication. This change is intentionally documented as an unreleased API
+break; crates.io/latest release remains `0.2.11` and this work does not publish
+or tag a release.
+
+### Replace the consumer-implemented trait
+
+The old API allowed an implementation to override the consumer-facing methods:
+
+```rust,ignore
+impl ProtocolVerifier for Backend {
+    fn verify_chain_state(
+        &self,
+        request: &ProofVerificationRequest,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        // A backend could accidentally skip shared checks here.
+    }
+}
+```
+
+Implement the lower-level hooks instead and wrap the backend in the concrete
+façade:
+
+```rust,ignore
+impl ProtocolVerifierBackend for Backend {
+    fn capabilities(&self) -> &VerifierCapabilities {
+        &self.capabilities
+    }
+
+    fn backend_verify_chain_state(
+        &self,
+        request: &ProofVerificationRequest,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        // Chain-specific acquisition and cryptographic verification.
+    }
+
+    fn backend_get_latest_verified_block(
+        &self,
+        chain: &ChainId,
+    ) -> Result<LatestVerifiedBlock, ProtocolVerifierError> {
+        // Chain-specific latest-block evidence.
+    }
+
+    fn backend_verify_transaction_finality(
+        &self,
+        request: &TransactionFinalityRequest,
+    ) -> Result<TransactionFinalityResult, ProtocolVerifierError> {
+        // Chain-specific finality evidence.
+    }
+}
+
+let verifier = ProtocolVerifier::try_new(backend)?;
+let result = verifier.verify_chain_state(&request)?;
+```
+
+Consumers must call the façade methods. They validate capabilities and
+requests before the backend hook, then validate chain/block/proof identity,
+requested state-root presence/equality, provenance timestamps, trust policy,
+and finality postconditions before returning success. Use
+`DynProtocolVerifier` when runtime-selected backends need dynamic dispatch.
+
+### Chain IDs and evidence
+
+- `ChainId::from_chain(chain, network)` now derives the canonical family. Use
+  `ChainId::try_from_parts` when constructing explicit parts; mismatched known
+  `Chain`/`ChainFamily` pairs fail, including during deserialization.
+- If a proof request includes a `ProofEnvelope`, compute and populate both
+  `ProofData.evidence_hash` and `ProofEnvelope.evidence_hash` with
+  `compute_evidence_binding_hash`. The envelope destination must equal the
+  request's canonical chain ID.
+- Validate time-sensitive requests with `validate_at`/`*_at` methods when a
+  deterministic clock is required. The policy is `observed_at <= now <
+  expires_at`; provenance `verified_at` must not be future-dated.
+
+The SHA-256 binding is a structural consistency check only. It does not replace
+signatures, attestations, light clients, or verifier-set proofs and must not be
+described as cryptographic authenticity or production readiness.
+
 ### Why This Change?
 
 1. **Separation of Concerns**: Protocol primitives vs. production SDK capabilities

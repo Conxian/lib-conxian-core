@@ -43,12 +43,17 @@ Canonical types for protocol orchestration and trust.
 
 ### Protocol Verification (`verifier`)
 Platform-neutral contracts for downstream chain verifiers.
-- `ProtocolVerifier`: Interface for state-proof verification, latest verified block references, and transaction finality.
+- `ProtocolVerifier<B>`: Enforceable façade for state-proof verification, latest verified block references, and transaction finality.
+- `ProtocolVerifierBackend`: Lower-level backend hooks; consumers must call the façade rather than the hooks directly.
+- `DynProtocolVerifier`: Ergonomic `Box<dyn ProtocolVerifierBackend>` façade alias for runtime-selected backends.
 - `VerifierCapabilities`: Explicit supported chains, proof formats, verification classes, finality classes, and trust tiers.
-- `ProtocolVerifierError`: Fail-closed taxonomy for unsupported, malformed, stale, unavailable, expired, non-final, and policy-blocked evidence.
+- `ChainId::from_chain` and `control_model::chain_family_for`: Canonical chain-family mapping with checked explicit construction and deserialization validation.
+- `validate_proof_verification_result_at`: Request-aware chain, block, proof-format, and exact state-root postconditions.
+- `compute_evidence_binding_hash`: Versioned, domain-separated, manually length-prefixed structural binding for request/proof/envelope evidence.
+- `ProtocolVerifierError`: Fail-closed taxonomy for invalid families, unsupported, malformed, stale, unavailable, expired, future-dated, unbound, non-final, and policy-blocked evidence.
 - `LatestVerifiedBlock` and `TransactionFinalityResult`: Provenance-bearing results with invariant validation.
 
-Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
+Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. The structural binding is not authenticity; downstream signatures, attestations, light clients, or verifier-set proofs remain required. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
 
 ### Anchoring (`anchoring`)
 Models for decentralized state persistence.

@@ -74,8 +74,13 @@ Use this decision rule when adding new capability:
 
 If a change needs network IO, database access, deployment/environment configuration, or provider-specific branching, it should not land in core.
 
-The `ProtocolVerifier` ownership boundary and examples are documented in
+The `ProtocolVerifier<B>` ownership boundary and examples are documented in
 [`docs/architecture/PROTOCOL_VERIFIER.md`](architecture/PROTOCOL_VERIFIER.md).
+Runtime implementations provide the lower-level `ProtocolVerifierBackend`
+hooks, while consumers use only the façade so capability, request, result, and
+postcondition validation cannot be bypassed. Core's evidence-binding hash
+provides structural consistency, not cryptographic authenticity or production
+readiness.
 
 
 ## 6. SDK Ownership & Version Policy (CON-1178)

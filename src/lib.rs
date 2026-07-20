@@ -65,13 +65,16 @@ pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
 
 // Re-export the platform-neutral protocol verification contract and models.
 pub use verifier::{
-    validate_finality_result, validate_finality_transition, validate_proof_envelope,
-    validate_proof_envelope_at, BlockHeader, BlockReference, CapabilityAdvertisement, ChainId,
-    ChainStateReference, ChainStateVerificationRequest, LatestVerifiedBlock, ProofData,
+    compute_evidence_binding_hash, validate_finality_result, validate_finality_result_at,
+    validate_finality_transition, validate_proof_envelope, validate_proof_envelope_at,
+    validate_proof_verification_result, validate_proof_verification_result_at, BlockHeader,
+    BlockReference, CapabilityAdvertisement, ChainId, ChainStateReference,
+    ChainStateVerificationRequest, DynProtocolVerifier, LatestVerifiedBlock, ProofData,
     ProofFormat, ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
-    ProtocolVerifierError, TransactionFinalityRequest, TransactionFinalityResult,
-    TransactionFinalityStatus, VerificationProvenance, VerifiedBlockReference,
-    VerifierCapabilities, VerifierCapability,
+    ProtocolVerifierBackend, ProtocolVerifierError, TransactionFinalityRequest,
+    TransactionFinalityResult, TransactionFinalityStatus, VerificationProvenance,
+    VerifiedBlockReference, VerifierCapabilities, VerifierCapability,
+    PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN, PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION,
 };
 
 // Re-export Vault SDK primitives when enclave feature is enabled

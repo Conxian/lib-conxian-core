@@ -1,28 +1,149 @@
 # Protocol Verifier Architecture
 
-`lib-conxian-core` exposes the platform-neutral `ProtocolVerifier` contract in
-`src/verifier.rs`. The contract describes what a verifier can prove; it does not
-implement proof acquisition, chain observation, persistence, or live routing.
+`lib-conxian-core` exposes an enforceable, platform-neutral verifier façade in
+`src/verifier.rs`. `ProtocolVerifier<B>` owns the consumer-facing methods;
+`ProtocolVerifierBackend` is the lower-level implementation-hook trait used by
+Nexus, Gateway, or a downstream adapter. Backends cannot override the façade
+methods or skip their shared checks.
 
 ## Ownership boundary
 
 | Layer | Owns | Does not move into Core |
 | --- | --- | --- |
-| **Core** (`lib-conxian-core`) | `ProtocolVerifier`, `ChainId`, proof inputs/results, latest verified block references, transaction finality statuses, capability advertisements, typed errors, and invariant helpers | RPC/light-client clients, network I/O, storage, polling, retries, or chain-specific proof backends |
+| **Core** (`lib-conxian-core`) | `ProtocolVerifier<B>`, `ProtocolVerifierBackend`, `ChainId`, proof inputs/results, evidence-binding encoding, latest verified block references, transaction finality statuses, capability advertisements, typed errors, and invariant helpers | RPC/light-client clients, network I/O, storage, polling, retries, or chain-specific proof backends |
 | **Enclave SDK** (`conxius-enclave-sdk`) | Hardware-backed signing, attestation, and enclave policy primitives that can supply trusted evidence to a downstream verifier | The Core contract's runtime orchestration or a new Core-side transport layer |
-| **Nexus** (`conxian-nexus`) | Chain observation, proof acquisition, chain-specific light clients, and verifier implementations for supported rails | Changes to Core's canonical trust/finality taxonomies for one provider |
+| **Nexus** (`conxian-nexus`) | Chain observation, proof acquisition, chain-specific light clients, and verifier backends for supported rails | Changes to Core's canonical trust/finality taxonomies for one provider |
 | **Gateway** (`conxian-gateway`) | Request orchestration, persistence, provider selection, retries, policy routing, and external side effects | Network or database behavior hidden inside Core types |
 
-No runtime verifier implementation is introduced by this contract work. Nexus,
-Gateway, or a downstream adapter may implement the trait when it has a concrete
-evidence source.
+Core provides the contract and structural checks only. The façade does not
+prove cryptographic authenticity; downstream signatures, attestations,
+light-client proofs, or verifier-set proofs remain required.
+
+## Enforceable façade and backend hooks
+
+Implementations provide lower-level hooks and are wrapped before consumers use
+them:
+
+```rust,ignore
+use lib_conxian_core::verifier::{
+    ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
+    ProtocolVerifierBackend, ProtocolVerifierError, VerifierCapabilities,
+};
+
+struct NexusBackend {
+    capabilities: VerifierCapabilities,
+}
+
+impl ProtocolVerifierBackend for NexusBackend {
+    fn capabilities(&self) -> &VerifierCapabilities {
+        &self.capabilities
+    }
+
+    fn backend_verify_chain_state(
+        &self,
+        request: &ProofVerificationRequest,
+    ) -> Result<ProofVerificationResult, ProtocolVerifierError> {
+        // Acquire and verify chain-specific evidence here.
+        todo!()
+    }
+
+    fn backend_get_latest_verified_block(
+        &self,
+        _chain: &lib_conxian_core::verifier::ChainId,
+    ) -> Result<lib_conxian_core::verifier::LatestVerifiedBlock, ProtocolVerifierError> {
+        todo!()
+    }
+
+    fn backend_verify_transaction_finality(
+        &self,
+        _request: &lib_conxian_core::verifier::TransactionFinalityRequest,
+    ) -> Result<lib_conxian_core::verifier::TransactionFinalityResult, ProtocolVerifierError> {
+        todo!()
+    }
+}
+
+let capabilities: VerifierCapabilities = todo!();
+let request: ProofVerificationRequest = todo!();
+let verifier = ProtocolVerifier::try_new(NexusBackend { capabilities })?;
+let result = verifier.verify_chain_state(&request)?;
+```
+
+Every façade operation performs the following sequence:
+
+1. Validate the capability advertisement and request before invoking a backend
+   hook.
+2. Invoke exactly the lower-level backend hook for the requested operation.
+3. Validate result structure, chain/block/proof identity, state-root
+   postconditions, provenance timestamps, trust policy, and finality policy
+   before returning success.
+
+`ProtocolVerifier::new` keeps invalid advertisements representable but fails
+closed on the first operation. `ProtocolVerifier::try_new` rejects an invalid
+advertisement immediately. For runtime-selected implementations, use the
+`DynProtocolVerifier` alias (`ProtocolVerifier<Box<dyn ProtocolVerifierBackend>>`).
+
+## Canonical chain identity
+
+`ChainId::from_chain` derives its family from the shared
+`control_model::chain_family_for` mapping. `ChainId::try_from_parts` checks
+explicit parts, and deserializing a known chain with a mismatched family fails.
+The taxonomy intentionally keeps Bitcoin-anchored lanes such as Stacks,
+Liquid, Lightning, and Babylon in the coarse `BitcoinUtxo` family. Concrete
+chain capabilities still distinguish their operations and address/proof
+formats.
+
+## Request-aware proof result checks
+
+`validate_proof_verification_result_at` requires the returned result to match
+the request's:
+
+- chain identity;
+- block hash and height;
+- proof format; and
+- requested state root, including presence in both the result state reference
+  and verified block header, with exact equality.
+
+An omitted or changed requested state root returns a typed
+`MissingStateRoot` or `MismatchedStateRoot` error. A backend returning a result
+that bypasses all helper validation therefore cannot turn an invalid response
+into façade-level success.
+
+## Evidence timestamps and provenance
+
+`validate_proof_envelope_at` uses deterministic half-open semantics:
+
+```text
+observed_at <= now < expires_at
+```
+
+Future observations return `FutureDatedEvidence`; an expiry equal to `now` is
+already expired; `expires_at <= observed_at` is malformed. Verification
+provenance follows the same no-future policy: `verified_at` must be no later
+than the validation time. Callers that need reproducible tests should use the
+`*_at` methods.
+
+## Structural evidence binding
+
+When a `ProofEnvelope` is present, `compute_evidence_binding_hash` calculates a
+versioned, domain-separated SHA-256 digest over canonical request, proof, and
+envelope fields. The encoding uses explicit field order, type tags, and
+length-prefixing; JSON objects are sorted by key before encoding. The mirrored
+`ProofData.evidence_hash` and `ProofEnvelope.evidence_hash` fields are the only
+fields excluded because they carry the digest itself. The envelope destination
+must equal the request's canonical chain ID, and both hash fields must equal
+the computed digest.
+
+This hash provides structural integrity and consistency between the DTOs. It
+does **not** provide authenticity. Downstream signatures, attestation, light
+clients, or verifier-set proofs are still required before treating evidence as
+trusted.
 
 ## Contract examples
 
 ### 1. Advertise capabilities before accepting work
 
 ```rust
-use lib_conxian_core::control_model::ChainFamily;
+use lib_conxian_core::control_model::{ChainFamily, TrustTier, VerificationClass};
 use lib_conxian_core::verifier::{
     ChainId, ProofFormat, VerifierCapabilities, VerifierCapability,
 };
@@ -35,11 +156,9 @@ let capabilities = VerifierCapabilities {
     supported_families: vec![ChainFamily::BitcoinUtxo],
     capabilities: vec![VerifierCapability::StateProofVerification],
     proof_formats: vec![ProofFormat::HeaderChain],
-    verification_classes: vec![
-        lib_conxian_core::control_model::VerificationClass::LightClient,
-    ],
+    verification_classes: vec![VerificationClass::LightClient],
     finality_classes: vec![],
-    trust_tiers: vec![lib_conxian_core::control_model::TrustTier::Strict],
+    trust_tiers: vec![TrustTier::Strict],
 };
 
 capabilities
@@ -48,7 +167,7 @@ capabilities
 ```
 
 An unsupported chain, capability, or proof format returns a typed error rather
-than being treated as a successful verification.
+than being treated as successful verification.
 
 ### 2. Validate a proof request without choosing its backend
 
@@ -67,9 +186,9 @@ let request = ProofVerificationRequest::new(
 request.validate().expect("structurally valid proof input");
 ```
 
-Core checks structural sufficiency, envelope expiry, existing trust-tier
-policy, and malformed metadata. Cryptographic proof verification remains in the
-downstream implementation.
+Core checks structural sufficiency, envelope time/policy metadata, evidence
+binding when an envelope is present, and request/result consistency.
+Cryptographic proof verification remains in the downstream backend.
 
 ### 3. Keep finality transitions explicit
 
@@ -94,9 +213,9 @@ an arbitrary successful proof or from confirmations alone.
 
 ## Fail-closed behavior
 
-Implementations should validate their capability advertisement and request
-before acquiring or interpreting evidence. The typed error taxonomy distinguishes
-unsupported chains/capabilities, malformed or insufficient proofs, invalid or
-unavailable evidence, expired evidence, stale references, non-final state, and
-policy-blocked trust mappings. `ObserverOnly` remains non-production, and
-`Strict` continues to require the existing `LightClient` verification class.
+The typed error taxonomy distinguishes invalid chain families, unsupported
+chains/capabilities, malformed or insufficient proofs, invalid or unavailable
+evidence, expired or future-dated evidence, missing or mismatched state roots,
+binding mismatches, stale references, non-final state, and policy-blocked trust
+mappings. `ObserverOnly` remains non-production, and `Strict` continues to
+require the existing `LightClient` verification class.

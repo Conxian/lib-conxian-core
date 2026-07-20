@@ -65,6 +65,41 @@ pub enum ChainFamily {
     Substrate,
 }
 
+impl Chain {
+    /// Returns the canonical coarse family for this chain.
+    ///
+    /// Bitcoin-anchored lanes such as Stacks, Liquid, Lightning, and Babylon
+    /// intentionally reuse `BitcoinUtxo` in this shared taxonomy. Concrete
+    /// adapters still advertise their chain-specific operations, address
+    /// formats, and proof capabilities separately.
+    pub fn family(&self) -> ChainFamily {
+        match self {
+            Self::Bitcoin | Self::Stacks | Self::Liquid | Self::Lightning | Self::Babylon => {
+                ChainFamily::BitcoinUtxo
+            }
+            Self::Bob
+            | Self::Mezo
+            | Self::Citrea
+            | Self::Botanix
+            | Self::Ethereum
+            | Self::Base
+            | Self::Arbitrum
+            | Self::Optimism
+            | Self::Polygon => ChainFamily::Evm,
+            Self::CosmosHub | Self::Osmosis | Self::Celestia => ChainFamily::CosmosIbc,
+            Self::Solana | Self::Eclipse => ChainFamily::SolanaSvm,
+            Self::Aptos | Self::Sui => ChainFamily::Move,
+            Self::Polkadot | Self::Kusama => ChainFamily::Substrate,
+        }
+    }
+}
+
+/// Returns the canonical coarse [`Chain`] to [`ChainFamily`] mapping shared by
+/// signing, verification, and downstream protocol contracts.
+pub fn chain_family_for(chain: &Chain) -> ChainFamily {
+    chain.family()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum TrustTier {

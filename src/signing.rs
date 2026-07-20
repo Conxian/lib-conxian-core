@@ -47,7 +47,7 @@
 //! assert_eq!(request.target.family, ChainFamily::BitcoinUtxo);
 //! ```
 
-use crate::control_model::{Chain, ChainFamily};
+use crate::control_model::{chain_family_for, Chain, ChainFamily};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -181,31 +181,6 @@ impl SigningTarget {
             });
         }
         Ok(())
-    }
-}
-
-/// Maps the repository's existing [`Chain`] variants to its existing coarse
-/// [`ChainFamily`] taxonomy. Bitcoin-anchored lanes such as Stacks, Liquid,
-/// Babylon, and Lightning intentionally reuse `BitcoinUtxo`; their concrete
-/// address and operation support is still declared by capabilities.
-fn chain_family_for(chain: &Chain) -> ChainFamily {
-    match chain {
-        Chain::Bitcoin | Chain::Stacks | Chain::Liquid | Chain::Lightning | Chain::Babylon => {
-            ChainFamily::BitcoinUtxo
-        }
-        Chain::Bob
-        | Chain::Mezo
-        | Chain::Citrea
-        | Chain::Botanix
-        | Chain::Ethereum
-        | Chain::Base
-        | Chain::Arbitrum
-        | Chain::Optimism
-        | Chain::Polygon => ChainFamily::Evm,
-        Chain::CosmosHub | Chain::Osmosis | Chain::Celestia => ChainFamily::CosmosIbc,
-        Chain::Solana | Chain::Eclipse => ChainFamily::SolanaSvm,
-        Chain::Aptos | Chain::Sui => ChainFamily::Move,
-        Chain::Polkadot | Chain::Kusama => ChainFamily::Substrate,
     }
 }
 
