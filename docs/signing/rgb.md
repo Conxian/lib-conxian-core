@@ -1,106 +1,153 @@
-# RGB signing and validation flow
+# RGB signing flow
 
-## Status / support level
+## Scope and current support status
 
-**Transition/seal interfaces with explicit rollout modes; no concrete signer.**
-Core exposes RGB transition, single-use seal, contract lookup, and runtime mode
-contracts. The current adapters contain permissive placeholder behavior, and
-the rollout mode is not evidence of protocol completeness.
+This guide covers RGB client-side validation, single-use seals, Bitcoin
+anchoring, and the signing handoff for an RGB state transition or consignment.
+Core exposes a custom `RGBAdapter` with `validate_transition`, `verify_seal`,
+and contract lookup methods. It is not a `UniversalChainSigner`, a generic
+chain adapter, an RGB node, a consignment store, or a production Bitcoin
+transaction builder.
 
-Core never holds private keys, accesses hardware, performs RPC or other
-network I/O, persists state, or owns runtime retries. RGB has no dedicated
-`Chain` enum variant; Bitcoin anchors must use an explicitly capability-gated
-Bitcoin-family target, normally `Chain::Bitcoin`.
+`RGBStockAdapter` and `RGBSkeletonAdapter` currently accept non-empty
+transition/seal inputs structurally. `RGBRuntime::Shadow` deliberately discards
+adapter errors and returns `Ok(true)`. Shadow mode is therefore useful for
+non-enforcing observation only and **cannot authorize production signing or
+settlement**.
 
-## End-to-end flow boundary
+## Canonical target and UCS boundary
 
-1. A downstream RGB client creates or receives a transition, seal commitment,
-   contract ID, and any Bitcoin anchor transaction data.
-2. [`RGBRuntime`](../../src/rgb/mod.rs) invokes an `RGBAdapter` according to
-   `RGBExecutionMode`: `Disabled`, `Shadow`, or `Active`.
-3. For Bitcoin anchor signing, the Wallet/Gateway supplies a concrete UCS
-   request with the Bitcoin target, explicit payload, and derivation context.
-   Core's signing contract validates the request; it does not create the RGB
-   transition, construct the anchor transaction, or sign it itself.
-4. Gateway owns node/provider calls, persistence, orchestration, and external
-   side effects. Nexus observes Bitcoin anchors and supplies evidence through
-   its verifier backend. The Enclave SDK / Wallet owns key custody and concrete
-   signing.
-5. RGB policy must distinguish validation results from observation. In
-   particular, Shadow mode must never authorize enforcement or submission.
+There is no separate `Chain::RGB` variant in the Core taxonomy. RGB is a
+Bitcoin-adjacent protocol flow, so a Bitcoin anchor or Bitcoin transaction
+surface uses `SigningTarget::for_chain(Chain::Bitcoin)` and
+`ChainFamily::BitcoinUtxo`. An RGB transition or consignment is not silently
+turned into a Bitcoin signing payload; the downstream SDK/client owns its
+serialization and chooses the exact bytes or digest that require signing.
 
-## Required inputs and outputs
+The UCS boundary is:
 
-| Boundary | Current Core representation |
-| --- | --- |
-| Anchor signing target | `SigningTarget { chain: Chain::Bitcoin, family: ChainFamily::BitcoinUtxo }`, subject to a concrete capability |
-| Signing request/response | `SignRequest` / `SignResponse`; derivation metadata is public path/purpose metadata only |
-| Transition validation | `validate_transition(transition_hex) -> Result<bool, RGBError>` |
-| Seal validation | `verify_seal(utxo_txid, seal_commitment) -> Result<bool, RGBError>` |
-| Contract lookup | `get_contract_details(contract_id) -> Result<String, RGBError>` |
-| Runtime mode | `RGBExecutionMode::{Disabled, Shadow, Active}` |
-| Disabled behavior | Returns `RGBError::GatedByRolloutMode` without invoking the adapter |
-| Shadow behavior | Invokes transition/seal validation but discards the result and returns `Ok(true)`; this is observation-only/permissive and not enforcement |
-| Active behavior | Delegates to the adapter; current stock/skeleton implementations still return permissive success for non-empty transition/seal inputs |
-| Contract ID | `validate_contract_id(id_hex) -> Result<ContractId, RGBError>` |
+1. A Wallet/Gateway/client prepares the RGB operation and, if needed, the
+   Bitcoin anchor transaction bytes.
+2. Core validates the explicit Bitcoin `SignRequest` and the advertised
+   `SignerCapabilities` entry;
+   `SigningPayload` does not hash, domain-separate, or encode RGB data.
+3. The concrete SDK signer returns a public `SignResponse`. RGB transition
+   validation and seal checks remain separate protocol inputs/evidence.
 
-## Ownership
+The custom `RGBAdapter` methods are not a substitute for UCS capabilities or
+for a production signer implementation.
 
-| Owner | Owns | Does not own |
+## Participant ownership
+
+| Participant | Owns in this flow | Does not own |
 | --- | --- | --- |
-| Core (`lib-conxian-core`) | RGB adapter/runtime interfaces, rollout-mode gates, contract-ID representation, UCS request validation, and protocol error vocabulary | RGB node I/O, durable state, private keys, anchor construction, AluVM execution, or retries |
-| Conxius Enclave SDK / Wallet | Hardware-backed custody, derivation, user approval, and signing of supported Bitcoin anchor transactions | RGB state machine orchestration, node lookups, persistence, or contract validation policy |
-| Gateway (`conxian-gateway`) | RGB workflow coordination, node/provider integration, persistence, retry/reconciliation, rollout configuration, and network side effects | Private-key custody and treating Shadow results as authorization |
-| Nexus (`conxian-nexus`) | Bitcoin anchor observation, proof acquisition, and verifier backends for evidence used by policy | RGB signing, node-backed application workflow, or runtime retry ownership |
+| Core | RGB transition/seal interface, Bitcoin-family UCS DTO validation, rollout-mode semantics, and verifier/finality contracts | RGB node state, consignment persistence, private keys, anchor construction, or network I/O |
+| `conxius-enclave-sdk` | Hardware-backed key custody and concrete signing for the Bitcoin anchor or other advertised surface | RGB node validation and Gateway workflow state |
+| Gateway | Workflow orchestration, persistence, provider selection, retry policy, anchor broadcast, and external effects | RGB cryptographic truth or key custody |
+| Nexus | Bitcoin anchor observation, proof/finality acquisition, and verifier backends; any RGB-aware observation it implements | Signing keys and user approval |
+| Wallet | User approval, asset/recipient/fee policy, and display of transition/anchor status | Transition execution, proof verification, or SDK internals |
 
-## Retryable versus terminal failures
+## Sequence and ownership
 
-**Potentially retryable or reconcilable downstream failures:**
+| Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Wallet + Gateway | Contract id, transition/consignment, seal commitment, intended Bitcoin anchor | Select Bitcoin-family target only for the bytes that actually need signing | Reviewable RGB operation | Invalid contract id, empty transition/seal, or missing policy |
+| 2 | SDK/client | Transition bytes, contract/schema context, anchor UTXO/txid, seal commitment | `RGBAdapter::validate_transition` and `verify_seal` are the current Core interface; they are structural in existing adapters | Validation result and anchor inputs | Adapter rejection, disabled rollout mode, or unsupported proof context |
+| 3 | Gateway + downstream Bitcoin adapter | UTXOs, commitment output/script/witness, sighash context | Core does not construct RGB consignments or Bitcoin transactions; BIP-110 applies only to parsed Bitcoin bytes | Unsigned anchor payload and classified size metadata | Unsupported anchor context or BIP-110 violation |
+| 4 | Wallet + SDK | `SignRequest`, Bitcoin capability, attestation/policy evidence | UCS validates target, payload, derivation, capability, and response | `SignResponse` | Unsupported capability, malformed request, backend failure, or invalid response |
+| 5 | Nexus | Anchor txid, Bitcoin proof/header/finality evidence | `ProtocolVerifier` validates evidence binding, provenance, policy, and finality around a real backend | Verified or non-final anchor evidence | Invalid/stale/malformed proof, mismatch, policy block, or non-final required state |
+| 6 | Gateway | Validated transition, seal, signed anchor, verifier result | Core does not persist or authorize from Shadow mode; Gateway owns the side effect | Finalized operation record or pending status | Never authorize production from a Shadow `Ok(true)` or structural-only result |
 
-- temporary node/provider unavailability or contract lookup timeout;
-- persistence or transport failure when no external state transition occurred;
-- ambiguous anchor submission requiring Gateway/Nexus reconciliation;
-- signer backend failure only when the concrete signer confirms no side effect.
+## Required inputs
 
-**Terminal for the supplied input or policy:**
+- RGB contract identifier, transition/consignment bytes, and schema/context
+  owned by the RGB client or downstream adapter.
+- Seal commitment and the Bitcoin UTXO/transaction reference it claims to
+  anchor.
+- A Bitcoin `SignRequest` for the actual anchor bytes or digest, with an
+  advertised algorithm, operation, address format, and derivation context.
+- For the anchor, parsed Bitcoin context needed for BIP-110 classification and
+  an enabled compliance configuration when the policy requires it.
+- Bitcoin proof/finality evidence and provenance supplied by Nexus/Gateway.
 
-- invalid contract ID, empty transition, schema mismatch, transition rejection,
-  seal rejection, or invalid UCS request;
-- `GatedByRolloutMode` while the runtime is Disabled;
-- a failed Active-mode validation;
-- unavailable or unverifiable evidence when the caller requires enforcement.
+## Required outputs
 
-The current `RGBError::PersistenceError` is an error vocabulary entry; Core does
-not provide a persistence implementation or a retry classification for it.
+- A transition/seal validation result whose enforcement mode is explicit.
+- A validated Bitcoin `SignResponse` when an anchor signature is required.
+- A `ProtocolVerifier` result for the Bitcoin anchor when finality or proof is a
+  prerequisite.
+- A Gateway-owned RGB/anchor record. Core does not produce a consignment
+  receipt, broadcast result, or production authorization token.
+
+## Verification and finality boundary
+
+RGB client-side validation and seal verification are distinct from Bitcoin
+anchor finality. Nexus owns Bitcoin observation and any real verifier backend;
+Gateway consumes it through `ProtocolVerifier`. The façade checks the
+capability advertisement, request/result identity, state-root/block binding,
+provenance, trust tier, verification class, finality class, and verifier
+identity. It does not replace RGB client-side validation or prove a seal merely
+because a transition is non-empty.
+
+`RGBRuntime::Active` propagates adapter results, `Disabled` returns
+`GatedByRolloutMode`, and `Shadow` ignores adapter errors and returns success.
+Only an explicitly enforcing mode backed by real validation and policy may
+authorize a production flow. A Bitcoin anchor can be final without proving an
+RGB transition is valid, and a valid transition cannot by itself prove the
+anchor is final.
+
+## Retry versus terminal semantics
+
+- **Potentially retryable or waitable:** delayed Bitcoin anchor confirmations,
+  temporarily unavailable RGB node or Nexus provider, or a pending transition
+  while the downstream protocol permits another observation attempt.
+- **Terminal:** invalid contract id, empty/malformed transition or seal,
+  disabled rollout mode, unsupported capability, invalid signer response,
+  failed enforcing-mode validation, evidence mismatch, stale/expired proof,
+  policy block, or required anchor finality not reached before an irreversible
+  deadline.
+
+Operational retry classification is downstream policy owned by Gateway. Core
+does not retry node calls, turn Shadow mode into enforcement, or convert a
+negative Active-mode result into success.
 
 ## Fail-closed boundaries
 
-- Disabled mode must block operations rather than silently pass them.
-- Shadow mode is explicitly non-enforcing: its `Ok(true)` result must not
-  authorize signing, broadcast, minting, transfer, or settlement.
-- Active mode is not a guarantee that the underlying adapter performs complete
-  schema, AluVM, or cryptographic seal verification. Downstream policy must
-  require implementation-specific evidence.
-- A Bitcoin-family anchor signer must still pass `SignerCapabilities::require`;
-  RGB terminology does not grant a signer capability.
-- Contract lookup or observation success does not establish transition validity
-  or ownership of a seal.
+- Use `Chain::Bitcoin` for Bitcoin anchor signing; do not invent or imply a
+  separate `Chain::RGB` target.
+- Treat `Shadow` as non-enforcing. A Shadow `Ok(true)` cannot authorize a
+  production transition, seal, or release.
+- Require real transition/seal validation in an enforcing mode and real
+  Bitcoin proof/finality evidence where policy requires it.
+- Apply BIP-110 only to parsed Bitcoin anchor surfaces, not to off-chain RGB
+  consignments, seals, or state data.
+- Reject any failed signer, transition, seal, proof, policy, or finality
+  precondition before broadcasting or persisting a production result.
 
-## Current gaps / unsupported behavior
+## Known gaps and unsupported behavior
 
-- The current stock and skeleton adapters do not implement complete RGB schema
-  and AluVM transition validation or cryptographic single-use-seal checks.
-- No RGB node client, durable stock/persistence layer, consignment workflow,
-  anchor transaction builder, or concrete signer exists in Core.
-- Shadow mode deliberately bypasses enforcement and is suitable only for
-  observation/rollout exercises.
-- Core does not own RGB runtime retries, network calls, or final settlement.
+- No separate `Chain::RGB` variant or RGB-specific UCS capability exists.
+- Core has no RGB state-transition signer, consignment builder, seal cryptography,
+  node/RPC integration, persistence, or Bitcoin anchor transaction DTO.
+- `RGBStockAdapter` and `RGBSkeletonAdapter` accept non-empty inputs without
+  full schema, AluVM, seal, or contract-state verification.
+- `RGBRuntime::Shadow` is explicitly non-enforcing and cannot authorize
+  production.
+- No production RGB `UniversalChainSigner` or RGB-aware
+  `ProtocolVerifierBackend` is implemented here.
 
-## Source links
+## Source references
 
-- [Universal signing architecture](../SIGNING_ARCHITECTURE.md)
-- [UCS contract and types](../../src/signing.rs)
-- [RGB adapter and runtime modes](../../src/rgb/mod.rs)
-- [BIP-110 RGB anchor surface](../BIP110_ALIGNMENT.md)
-- [Protocol verifier ownership](../architecture/PROTOCOL_VERIFIER.md)
-- [Core/Gateway boundary](../ARCHITECTURE_BOUNDARIES.md)
+- UCS contract: [`src/signing.rs`](../../src/signing.rs) and
+  [`docs/SIGNING_ARCHITECTURE.md`](../SIGNING_ARCHITECTURE.md)
+- RGB adapter/runtime: [`src/rgb/mod.rs`](../../src/rgb/mod.rs)
+- Chain-family mapping: [`src/control_model/trust.rs`](../../src/control_model/trust.rs)
+- Protocol verification: [`src/verifier.rs`](../../src/verifier.rs) and
+  [`docs/architecture/PROTOCOL_VERIFIER.md`](../architecture/PROTOCOL_VERIFIER.md)
+- Bitcoin/BIP-110 boundary: [`src/control_model/bip110.rs`](../../src/control_model/bip110.rs)
+  and [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md)
+- Architecture boundaries: [`docs/ARCHITECTURE_BOUNDARIES.md`](../ARCHITECTURE_BOUNDARIES.md)
+- Downstream contracts: [enclave SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179),
+  [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245),
+  [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163), and
+  [Wallet issue #381](https://github.com/Conxian/conxius-wallet/issues/381)

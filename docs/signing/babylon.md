@@ -1,109 +1,166 @@
-# Babylon Bitcoin staking signing flow
+# Babylon signing flow
 
-## Status / support level
+## Scope and current support status
 
-**Bitcoin-family adapter primitives with structural proof checks only.** Core
-represents a Babylon staking intent and exposes a generic adapter surface, but
-it does not implement staking transaction construction, BTC-header acquisition,
-cryptographic EOTS verification, or a concrete signer.
+This guide covers the Babylon Bitcoin-staking handoff: staking intent data,
+Bitcoin transaction signing, BTC-header observation, and Babylon EOTS evidence.
+Core supplies the `StakingIntent` DTO/protocol model and a `BabylonAdapter`
+implementing the generic adapter interface. Gateway/downstream code constructs,
+policy-validates, persists, and advances staking intents. Core does not own that
+construction, storage, or policy workflow, and it does not create
+staking/delegation/unbonding or withdrawal transactions, own EOTS keys, verify
+EOTS signatures in production, run a light client, or broadcast Bitcoin
+transactions.
 
-Core never holds private keys, accesses hardware, performs RPC or other
-network I/O, persists state, or owns runtime retries. `Chain::Babylon` maps to
-`ChainFamily::BitcoinUtxo`; the current [`BabylonAdapter`](../../src/babylon/mod.rs)
-also reports `Chain::Bitcoin` from its `chain()` method. Neither fact is a
-claim of Babylon signer support.
+`BabylonAdapter::verify_state_proof` performs structural checks only: it rejects
+empty strings, expects a colon separator, and treats a proof containing
+`invalid` as negative. It does not validate a BTC header, height, EOTS
+signature, checkpoint, or cryptographic commitment.
 
-## End-to-end flow boundary
+## Canonical target and UCS boundary
 
-1. The Wallet or Gateway collects the staking parameters and obtains the
-   staker/finality-provider public keys through the downstream custody and
-   application layer.
-2. Core represents the parameters as [`StakingIntent`](../../src/babylon/mod.rs)
-   and exposes `UniversalChainAdapter` methods for address, fee, trust-tier,
-   state-root, and proof-shape operations.
-3. Nexus acquires Bitcoin headers, Babylon finality evidence, and EOTS
-   material from the relevant observation sources. Gateway coordinates the
-   workflow and persistence.
-4. The Enclave SDK / Wallet constructs and signs the actual staking, delegation,
-   unbonding, or withdrawal transaction if it has an explicit UCS capability.
-5. Core's current proof hook can reject empty or malformed structural input;
-   it must not be used as cryptographic proof of a Babylon finality decision.
+There are two identities in a Babylon flow and they must not be silently
+collapsed:
 
-## Required inputs and outputs
+- `Chain::Babylon` exists in the Core taxonomy and maps to
+  `ChainFamily::BitcoinUtxo`; it is the natural target for a capability that
+  explicitly represents Babylon protocol operations.
+- `BabylonAdapter::chain()` currently returns `Chain::Bitcoin`, while its
+  `family()` is `BitcoinUtxo`. That implementation mismatch means an adapter
+  result cannot be treated as a Babylon-specific signer capability without an
+  explicit contract decision.
 
-| Boundary | Current Core representation |
-| --- | --- |
-| Signing target | Prefer an explicit `SigningTarget` for `Chain::Babylon` / `BitcoinUtxo` when the downstream signer advertises it; the current adapter identity returns `Chain::Bitcoin` |
-| Staking intent | `StakingIntent { staker_pubkey, finality_provider_pubkey, amount_sats, lock_time_blocks }` |
-| Adapter family/chain | `family() -> ChainFamily::BitcoinUtxo`; `chain() -> Chain::Bitcoin` in the current implementation |
-| Address input | `validate_address(address)` currently accepts strings beginning with `bc1` |
-| Fee input/output | `estimate_fee(&TxParams) -> Result<u64, String>`; current implementation returns `1600` regardless of transaction shape |
-| Trust policy | `trust_tier() -> TrustTier::Strict` |
-| Proof input | `verify_state_proof(state_root, proof)`; `[height]:[sig_hex]` is an intended/example fixture only. The current adapter accepts any non-empty string containing `:` unless it contains `invalid`; it does not parse the height or decode/verify a signature. |
-| Proof output | `Ok(true)`/`Ok(false)` from structural checks; this is not EOTS signature verification |
-| State root | `get_state_root() -> "babylon_finality_root"` in the current adapter; it is not a live chain query |
-| Signing output | `SignResponse { signature, verification_key, address, derivation }` from a concrete downstream signer, if capability-gated support exists |
+For actual Bitcoin staking/delegation/unbonding/withdrawal transaction bytes,
+the transaction signer may instead advertise
+`SigningTarget::for_chain(Chain::Bitcoin)`. The capability declaration must
+make the chosen identity explicit; `SignerCapabilities::require` will not
+coerce `Chain::Babylon` and `Chain::Bitcoin` for the caller.
 
-## Ownership
+The UCS boundary remains an explicit `SignRequest`/`SignResponse` exchange. Core
+validates the target, algorithm, payload, derivation context, and advertised
+capability. The enclave SDK owns the private key and concrete signing
+implementation. Babylon message encoding, Bitcoin transaction construction,
+and EOTS proof production are outside the Core signer contract.
 
-| Owner | Owns | Does not own |
+## Participant ownership
+
+| Participant | Owns in this flow | Does not own |
 | --- | --- | --- |
-| Core (`lib-conxian-core`) | Staking intent representation, Bitcoin-family taxonomy, adapter contracts, trust-tier metadata, and structural input checks | BTC headers, EOTS cryptography, private keys, staking transaction builders, RPC, persistence, or retries |
-| Conxius Enclave SDK / Wallet | Key custody, derivation, hardware-backed signing, user approval, and concrete Bitcoin transaction construction | Babylon observation, finality evidence acquisition, or Gateway workflow state |
-| Gateway (`conxian-gateway`) | Staking workflow orchestration, provider/federation coordination, persistence, retries, and network side effects | Signing key custody and substituting a structural check for cryptographic verification |
-| Nexus (`conxian-nexus`) | BTC-header observation, Babylon proof/EOTS acquisition, light-client or verifier backends, and evidence provenance | Signing, staking custody, transaction construction, or runtime retry policy |
+| Core | The `StakingIntent` DTO/protocol model, UCS target/capability validation, trust/finality DTOs, and structural adapter contracts | Constructing, policy-validating, or persisting staking intents; EOTS key custody, Bitcoin transaction construction, headers, light clients, or broadcast |
+| `conxius-enclave-sdk` | Hardware-backed staking-key custody, Bitcoin signing, attestation, and any concrete UCS implementation | Babylon observation or Gateway workflow state |
+| Gateway | Staking-intent construction and policy validation, lifecycle, provider selection, signer coordination, persistence, retries, and Bitcoin/Babylon side effects | EOTS cryptographic truth or private-key custody |
+| Nexus | BTC headers, checkpoints, Babylon observations, EOTS verification backends, and finality evidence | Signing keys, user approval, or workflow retries |
+| Wallet | User review/approval of amount, lock time, provider, and fee policy | Header/EOTS verification or bridge orchestration |
 
-## Retryable versus terminal failures
+## Sequence and ownership
 
-**Potentially retryable or reconcilable downstream failures:**
+| Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Gateway | Staker public key, finality-provider public key, amount, lock time | Core supplies the `StakingIntent` DTO/model; Gateway/downstream owns construction, policy validation, persistence, and the explicit Babylon or Bitcoin signing identity | Gateway-owned reviewable staking intent | Missing keys, zero/invalid amount, or invalid lock policy |
+| 2 | Gateway + transaction adapter | UTXOs, staking script, checkpoint/delegation fields, Bitcoin sighash context | Core does not build the transaction; it carries only the explicit signing payload and metadata | Unsigned Bitcoin transaction bytes | Unsupported script context or unclassified BIP-110 surface |
+| 3 | Wallet + SDK | `SignRequest`, capability advertisement, attestation/policy evidence | UCS fail-closed request/response validation | `SignResponse` for the actual Bitcoin transaction | Target mismatch, unsupported operation, malformed payload, or backend failure |
+| 4 | Nexus | Transaction id, block header chain, confirmations, proof provenance | `ProtocolVerifier` validates state/finality evidence around a Nexus backend | Verified Bitcoin header/finality result | Stale/malformed proof, unverified header, evidence mismatch, or non-final required state |
+| 5 | Nexus | BTC header context, EOTS proof, checkpoint/evidence binding | Core can carry `ProofData` and policy metadata; the façade does not implement EOTS math | Verified Babylon evidence or typed failure | No production EOTS verifier, invalid signature, wrong height, wrong checkpoint, or policy block |
+| 6 | Gateway | Verified evidence, signer/provider acknowledgements, expiry/unbonding policy | Core state/invariant types remain the contract; Gateway owns persistence and side effects | Staking status and, later, withdrawal/unbonding transaction request | Never finalize or release from structural adapter `Ok(true)` alone |
 
-- temporary header, proof-provider, node, or network unavailability;
-- an observation timeout before a staking state is known;
-- signer or Gateway coordination failure where no transaction/signature side
-  effect has been confirmed.
+## Required inputs
 
-**Terminal for the supplied input or evidence:**
+- Explicit target identity: `Chain::Babylon` for Babylon capability metadata or
+  `Chain::Bitcoin` for actual Bitcoin transaction signing, with the selected
+  identity advertised by the signer.
+- A Gateway/downstream-constructed `StakingIntent` with staker key,
+  finality-provider key, amount, and lock time; Core supplies the DTO/model but
+  does not validate or persist the staking policy.
+- Fully constructed Bitcoin transaction bytes and the parsed context required
+  by the downstream adapter to classify BIP-110 surfaces.
+- BTC header/proof data, checkpoint reference, EOTS proof, provenance, and
+  finality policy supplied by Nexus/Gateway.
+- User approval and attestation/policy evidence owned by Wallet and the SDK.
 
-- empty or malformed staking parameters after application validation;
-- invalid address shape, unsupported capability, or invalid UCS request;
-- empty proof or proof without the required structural separator;
-- cryptographic EOTS/header verification failure once Nexus performs it;
-- a conflicting or stale evidence record that fails the downstream verifier
-  policy.
+## Required outputs
 
-Core does not decide whether a timeout is safe to retry. The concrete signer,
-Gateway, and Nexus must reconcile external side effects first.
+- A validated `SignResponse` for each actual Bitcoin transaction surface.
+- A Nexus-produced `ProtocolVerifier` result for Bitcoin state/finality and a
+  separately verified Babylon EOTS/checkpoint result when the operation needs
+  it.
+- A Gateway-owned staking lifecycle record. Core's `StakingIntent` is not a
+  broadcast receipt or a finality certificate.
+
+## Verification and finality boundary
+
+BTC headers, chain history, checkpoint binding, and EOTS proof verification are
+Nexus responsibilities. Gateway consumes them through a `ProtocolVerifier`
+façade backed by a concrete Nexus verifier. The façade checks advertised chain,
+proof format, state/block identity, evidence binding, provenance, trust tier,
+verification class, finality class, and verifier identity. It does not implement
+the EOTS cryptographic verifier.
+
+`BabylonAdapter` is not a substitute: its `chain()` returns `Chain::Bitcoin`
+and its proof check is structural-only. A production `Strict` result must meet
+the verifier capability policy, including the required light-client class where
+applicable. BTC finality for a staking transaction must be evaluated on the
+Bitcoin transaction/header evidence, not inferred from a Babylon intent or a
+non-empty proof string.
+
+BIP-110 applies to actual Bitcoin staking/delegation/unbonding/withdrawal or
+checkpoint transaction bytes. BTC header observations and EOTS/Babylon
+messages are off-chain evidence and must not be relabeled as Bitcoin pushdata
+or witness elements merely because the protocol is Bitcoin-anchored.
+
+## Retry versus terminal semantics
+
+- **Potentially retryable or waitable:** delayed Bitcoin confirmations,
+  temporarily unavailable headers or Nexus provider, delayed EOTS evidence,
+  or a pending staking lifecycle state while a configured observation window is
+  still open.
+- **Terminal:** target identity mismatch, unsupported capability, malformed
+  staking intent or signing payload, invalid signer response, malformed or
+  cryptographically invalid EOTS/header evidence, checkpoint mismatch, expired
+  evidence, verifier identity mismatch, policy block, or required finality not
+  reached before an irreversible deadline.
+
+Operational retry classification is downstream policy owned by Gateway. Core
+does not poll headers, retry EOTS verification, or downgrade an invalid proof to
+an observation-only success.
 
 ## Fail-closed boundaries
 
-- `TrustTier::Strict` is metadata and policy input; it does not make the
-  adapter's proof implementation a light client.
-- A proof string that passes the current non-empty/colon checks is not a verified
-  EOTS signature. Nexus must perform the cryptographic check and bind it to the
-  correct BTC header, height, and finality context.
-- The current constant state root must not be treated as live evidence.
-- A Bitcoin-family mapping or `Chain::Bitcoin` adapter identity must not be
-  used to infer Babylon-specific signing capability.
-- Missing signer capability, malformed response, or unverifiable proof blocks
-  the flow rather than falling back to a generic Bitcoin signer.
+- Do not silently map `Chain::Babylon` to `Chain::Bitcoin` or accept the
+  `BabylonAdapter::chain()` mismatch as a production capability declaration.
+- Do not accept a structurally formatted EOTS proof as a verified EOTS
+  signature.
+- Require Bitcoin header/finality evidence from a policy-compatible verifier
+  before staking, unbonding, withdrawal, or checkpoint-dependent effects.
+- Apply BIP-110 checks to actual Bitcoin transaction surfaces with an enabled
+  compliance configuration; do not classify off-chain Babylon messages as
+  Bitcoin data surfaces.
+- Never release funds or advance a terminal lifecycle state after any failed
+  signer, proof, checkpoint, policy, or finality precondition.
 
-## Current gaps / unsupported behavior
+## Known gaps and unsupported behavior
 
-- No Babylon-specific `UniversalChainSigner` or staking transaction builder is
-  present in Core.
-- BTC-header acquisition, EOTS cryptographic verification, checkpoint/finality
-  policy, and network submission are downstream responsibilities.
-- Address validation, fee estimation, and state-root output are deliberately
-  minimal adapter primitives rather than complete Babylon semantics.
-- Core does not own staking persistence, unbonding timers, or retry/recovery
-  workflows.
+- No production Babylon signer, staking transaction builder, EOTS key/proof
+  implementation, Babylon light client, checkpoint verifier, or broadcast path
+  exists in Core.
+- `BabylonAdapter::verify_state_proof` is structural-only and returns a static
+  state root; it is not a production EOTS verifier.
+- `BabylonAdapter::chain() == Chain::Bitcoin` conflicts with the distinct
+  `Chain::Babylon` taxonomy variant; downstream capability and verifier
+  contracts must resolve that identity explicitly.
+- Core does not define Babylon-specific transaction DTOs or lifecycle
+  persistence.
 
-## Source links
+## Source references
 
-- [Universal signing architecture](../SIGNING_ARCHITECTURE.md)
-- [UCS contract and types](../../src/signing.rs)
-- [Babylon adapter](../../src/babylon/mod.rs)
-- [Generic adapter contract](../../src/adapters/mod.rs)
-- [Chain and family mapping](../../src/control_model/trust.rs)
-- [Protocol verifier ownership](../architecture/PROTOCOL_VERIFIER.md)
-- [Core/Gateway boundary](../ARCHITECTURE_BOUNDARIES.md)
+- UCS contract: [`src/signing.rs`](../../src/signing.rs) and
+  [`docs/SIGNING_ARCHITECTURE.md`](../SIGNING_ARCHITECTURE.md)
+- Babylon adapter and intent: [`src/babylon/mod.rs`](../../src/babylon/mod.rs)
+- Chain mapping and trust tiers: [`src/control_model/trust.rs`](../../src/control_model/trust.rs)
+- Protocol verification: [`src/verifier.rs`](../../src/verifier.rs) and
+  [`docs/architecture/PROTOCOL_VERIFIER.md`](../architecture/PROTOCOL_VERIFIER.md)
+- BIP-110 Bitcoin-surface boundary: [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md)
+- Architecture boundaries: [`docs/ARCHITECTURE_BOUNDARIES.md`](../ARCHITECTURE_BOUNDARIES.md)
+- Downstream contracts: [enclave SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179),
+  [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245),
+  [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163), and
+  [Wallet issue #381](https://github.com/Conxian/conxius-wallet/issues/381)

@@ -1,142 +1,237 @@
 # Bitcoin signing flow
 
-## Status / support level
+## Scope and current support status
 
-**Protocol contract and preflight boundary only.** Core represents Bitcoin
-signing requests, capability gates, public signing responses, and BIP-110 size
-metadata. It does not provide a concrete signer or a complete Bitcoin
-transaction workflow. A `Chain::Bitcoin` entry or a
-`ChainSigningCapability` declaration is vocabulary/advertisement only; it does
-not imply that an implementation is available.
+This guide covers Bitcoin message, digest, and transaction-signing handoffs in
+the current Core contract. Core supplies platform-neutral signing DTOs,
+capability checks, BIP-110 size metadata validation, and verifier/finality
+contracts. It does **not** contain a production `UniversalChainSigner`, PSBT
+processor, transaction builder, Taproot interpreter, script engine, RPC client,
+or broadcast path.
 
-Core never holds private keys, accesses hardware, performs RPC or other
-network I/O, persists state, or owns runtime retries. The concrete signer and
-wallet flow remain downstream.
+The concrete signer remains downstream. The `BitcoinAdapter` in
+[`src/adapters/mod.rs`](../../src/adapters/mod.rs) is an adapter for address,
+fee, and state-root interfaces, not a transaction signer. The guide therefore
+documents a handoff, not an in-Core end-to-end implementation.
 
-## End-to-end flow boundary
+Wallet/Gateway/downstream transaction adapters own Bitcoin transaction
+construction, BIP-341 sighash and preimage selection, control-block and annex
+handling, and BIP-342 script parsing and execution. The enclave SDK signer
+signs only the exact supplied `SigningPayload::Message` bytes or
+`SigningPayload::Digest` bytes in a `SignRequest`; Core does not construct or
+interpret Bitcoin transactions or scripts.
 
-1. The Wallet or Gateway creates a chain-specific message, digest, or already
-   constructed Bitcoin transaction in the downstream signing layer. Core does
-   not construct transactions or PSBTs.
-2. A transaction-aware downstream adapter classifies the Bitcoin surfaces and
-   supplies a [`Bip110TransactionShape`](../../src/control_model/bip110.rs).
-   `Bip110Compliance` checks the supplied pushdata, ScriptPubKey, and applicable
-   witness sizes. The adapter, SDK, Wallet, Gateway, or Nexus owns the decision
-   to reject or route the transaction.
-3. A concrete signer advertises only the targets, algorithms, operations, and
-   address formats it actually implements through
-   [`SignerCapabilities`](../../src/signing.rs).
-4. [`UniversalChainSigner::sign`](../../src/signing.rs) validates the target,
-   payload, derivation metadata, and capability before invoking the concrete
-   `sign_impl` hook. The signer returns public verification metadata in a
-   `SignResponse`.
-5. The Gateway coordinates policy, persistence, submission, and reconciliation.
-   Nexus observes Bitcoin state and supplies separately verified evidence. Core
-   does not broadcast or poll.
+## Canonical target and UCS boundary
 
-The BIP-110 handoff is a size contract, not a transaction parser or consensus
-validator. The adapter must classify every relevant occurrence before calling
-Core; unsupported or unclassified Taproot/script context must not be silently
-treated as compliant.
+For Bitcoin, the canonical target is
+`SigningTarget::for_chain(Chain::Bitcoin)`, whose family is
+`ChainFamily::BitcoinUtxo`. A concrete signer advertises the exact subset it
+supports with `ChainSigningCapability` inside `SignerCapabilities`, normally
+including `EcdsaSecp256k1` and/or `SchnorrSecp256k1`, plus only the operations
+and address formats it actually implements.
 
-## Required inputs and outputs
+The UCS boundary is:
 
-| Boundary | Current Core representation |
-| --- | --- |
-| Signing target | `SigningTarget { chain: Chain::Bitcoin, family: ChainFamily::BitcoinUtxo }` |
-| Signing request | `SignRequest { target, algorithm, payload, derivation }` |
-| Payload | `SigningPayload::Message { bytes }` or `SigningPayload::Digest { algorithm, bytes }`; hashing and Bitcoin domain encoding are caller-owned |
-| Derivation metadata | `DerivationContext { path: DerivationPath, purpose: DerivationPurpose }`; it carries no seed, key, share, or hardware handle |
-| Address derivation | `AddressDerivationRequest` → `AddressDerivationResponse { verification_key, address, derivation }` |
-| Signing response | `SignResponse { signature, verification_key, address, derivation }`; all returned key material is public |
-| Verification request | `VerificationRequest { target, algorithm, payload, signature, verification_key, address }` |
-| Verification result | `VerificationResult { valid, target, algorithm }`; `valid: false` is a valid negative result, not a retry signal |
-| BIP-110 preflight | `Bip110TransactionShape { pushdata_sizes_bytes, op_return_script_pubkey_sizes_bytes, non_op_return_script_pubkey_sizes_bytes, witness_element_sizes_bytes }` |
+1. The caller constructs a `SignRequest` with an explicit target, algorithm,
+   `SigningPayload::Message` or `SigningPayload::Digest`, and secret-free
+   `DerivationContext`.
+2. `UniversalChainSigner::sign` checks target consistency, payload length,
+   derivation metadata, and advertised capabilities before invoking the
+   implementation hook.
+3. The signer returns a `SignResponse` containing the signature, public
+   verification key, address, and derivation context. Private keys, seeds,
+   shares, and enclave handles never cross this boundary.
 
-For Bitcoin addresses, the signing contract can advertise
-`AddressFormat::BitcoinBase58` or `AddressFormat::BitcoinBech32`, but the
-concrete signer remains responsible for network, checksum, script, and address
-policy validation.
+No Bitcoin-domain hashing, BIP-341/BIP-342 serialization, PSBT parsing, or
+transaction construction is implicit in `SigningPayload`. The caller must pass
+the exact message bytes or precomputed digest that the concrete signer is
+contracted to sign.
 
-## Ownership
+### BIP-341/BIP-342 handoff
 
-| Owner | Owns | Does not own |
+Wallet/Gateway/downstream transaction adapters own Taproot key-path and
+script-path transaction construction, BIP-341 sighash/preimage selection,
+control-block construction, annex handling, and BIP-342 Tapscript parsing and
+execution, including `OP_SUCCESSx`/`OP_IF`/`OP_NOTIF` semantics. The enclave SDK
+signer signs only the exact supplied `SigningPayload::Message` bytes or
+`SigningPayload::Digest` bytes; it does not choose a sighash, construct a
+preimage, or interpret a script. Core can carry the resulting bytes through a
+`SignRequest` or validate public response metadata, but it does not construct
+or interpret Bitcoin transactions or BIP-341/BIP-342 scripts. See the BIP-110
+matrix for the current parser/interpreter boundary in
+[`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md).
+
+### BIP-110 preflight boundary
+
+Before a Bitcoin transaction is signed or broadcast, a transaction-aware
+downstream component must parse and classify the relevant surfaces and populate
+`Bip110TransactionShape`. The enabled Core size contract is:
+
+- applicable pushdata payload: **256 bytes maximum**;
+- complete OP_RETURN ScriptPubKey: **83 bytes maximum**;
+- complete non-OP_RETURN ScriptPubKey: **34 bytes maximum**; and
+- applicable witness element: **256 bytes maximum**.
+
+`Bip110Compliance::new()` enables those checks. The derived
+`Bip110Compliance::default()` is intentionally **disabled**, so a caller that
+uses `default()` must not treat a successful result as BIP-110 compliance. The
+adapter still owns classification, BIP-16/BIP-141/BIP-341/BIP-342 context, and
+deployment or grandfathering decisions. See
+[`src/control_model/bip110.rs`](../../src/control_model/bip110.rs),
+[`src/control_model/trust.rs`](../../src/control_model/trust.rs), and
+[`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md).
+
+## Participant ownership
+
+| Participant | Owns in this flow | Does not own |
 | --- | --- | --- |
-| Core (`lib-conxian-core`) | UCS DTOs, capability gating, request/response invariants, BIP-110 size validation, and protocol contracts | Private keys, hardware, transaction construction, Taproot execution, RPC, persistence, broadcast, or retries |
-| Conxius Enclave SDK / Wallet | Hardware-backed key custody, derivation, concrete UCS implementation, transaction/PSBT construction, user policy, and signing approval | Gateway routing, chain observation, or Core's canonical DTO definitions |
-| Gateway (`conxian-gateway`) | Runtime orchestration, provider selection, persistence, idempotency, bounded retries, network submission, and reconciliation | Private-key custody and replacement of Core capability checks |
-| Nexus (`conxian-nexus`) | Bitcoin observation, header/proof acquisition, and evidence consumed by routing or finality decisions | Signing keys, transaction construction, or runtime signing retries |
+| Core | `SignRequest`/`SignResponse`, `SignerCapabilities`, target validation, BIP-110 size contract, and protocol-verifier types | Bitcoin transaction construction, BIP-341 sighash/preimage selection, control-block/annex handling, BIP-342 script parsing/execution, private keys, network I/O, retries, or broadcast |
+| `conxius-enclave-sdk` | Hardware-backed custody, derivation, concrete ECDSA/Schnorr signing, attestation, and the concrete UCS implementation | Gateway routing and persistence |
+| Gateway | Intent orchestration, transaction-construction orchestration and adapter selection, provider selection, BIP-110 preflight policy, persistence, retries, broadcast, and external side effects | Key custody and replacement of Core DTO validation |
+| Nexus | Bitcoin headers, UTXO/transaction observation, proof acquisition, and verifier backends | Signing keys and user approval |
+| Wallet | User review/approval, fee and destination policy, transaction-surface selection, and presentation of signer/verifier results | Canonical protocol DTO definitions, transaction/script construction truth, or enclave internals |
 
-## Retryable versus terminal failures
+## Sequence and ownership
 
-**Retry or reconcile only when the downstream owner can prove it is safe:**
+| Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Wallet + Gateway | Destination, amount, fee policy, derivation purpose, transaction or message bytes | Select `Chain::Bitcoin`; validate the intended operation and target family | A reviewable unsigned payload and policy context | Missing destination, amount, or policy data |
+| 2 | Wallet/Gateway + downstream transaction adapter | UTXOs, scripts, BIP-341 sighash/preimage context, control block, annex, BIP-342 script context, or message/digest bytes | Core does not build or interpret the transaction/script; it accepts only explicit `SigningPayload` and secret-free derivation metadata | Canonical bytes ready for signing and, when applicable, a classified `Bip110TransactionShape` | Unsupported transaction surface or unclassified BIP-341/BIP-342 context |
+| 3 | Gateway | Parsed script/witness sizes and transaction context | Call `Bip110Compliance::new()`/`Bip110TransactionShape::validate`; do not use disabled `Bip110Compliance::default()` as approval | Compliant size result or typed violations | Any applicable 256/83/34/256 limit violation or unsupported exception |
+| 4 | Wallet + SDK signer | `SignRequest`, capability advertisement, user approval, attestation/policy context | `UniversalChainSigner::sign` fail-closed checks target, algorithm, payload, derivation, and response metadata | `SignResponse` with public verification metadata | Unsupported chain/algorithm/operation, malformed request, backend failure, or invalid response |
+| 5 | Gateway + Nexus | Transaction id, Bitcoin proof/finality evidence, expected policy | `ProtocolVerifier` validates the request/result envelope and finality policy around a Nexus backend | Verified evidence or a non-final/invalid result | Evidence mismatch, stale/expired/malformed proof, policy block, or required finality not met |
+| 6 | Gateway | Signed transaction and verified preconditions | Core has no broadcast API; Gateway owns the side effect and Nexus observes the result | Broadcast reference and later finality status | Never broadcast when preflight, signing, or required verification failed |
 
-- temporary provider, node, fee-estimation, or network failure;
-- a signer backend timeout where the concrete signer can establish that no
-  signature was produced and the request remains idempotent;
-- an observation/finality timeout handled by Gateway or Nexus.
+## Required inputs
 
-`SigningError::BackendFailure` does not itself declare retryability. Core cannot
-decide whether a hardware operation partially completed.
+- An explicit `SigningTarget` with `Chain::Bitcoin` and
+  `ChainFamily::BitcoinUtxo`.
+- A supported algorithm and operation advertised by `SignerCapabilities`.
+- Non-empty message bytes or a digest with the exact declared digest length;
+  Core performs no implicit hashing or domain separation.
+- Secret-free derivation path and purpose metadata.
+- For transaction signing, fully constructed bytes and the transaction-aware
+  context needed by the downstream adapter to select BIP-341/BIP-342 rules and
+  classify BIP-110 surfaces.
+- For a state-proof flow, the requested chain identity, proof format, block
+  reference, proof data, and any requested state root that the result must bind.
+- For a transaction-finality flow, the requested chain identity, transaction
+  identity, confirmation/finality policy, evidence, provenance, and downstream
+  policy/trust context supplied by Nexus/Gateway.
 
-**Terminal for the current request:**
+## Required outputs
 
-- `InvalidTarget`, `UnsupportedChain`, `UnsupportedAlgorithm`, or
-  `UnsupportedOperation`;
-- invalid payload, derivation path, address, signature, verification key,
-  request, or signer response;
-- any BIP-110 violation after the adapter has classified the relevant bytes;
-- an unsupported or unclassified Taproot/script context;
-- `VerificationResult { valid: false, .. }`, which requires rejection or a new
-  request rather than blind retry.
+- A validated `SignResponse` containing a signature, public verification key,
+  chain address, and matching derivation context.
+- A BIP-110 compliance result with all applicable size vectors represented;
+  `compliant` means only that the supplied size metadata passed the configured
+  limits.
+- For state-proof verification, a `ProofVerificationResult` with the requested
+  chain, proof format, and block reference bound to the verified block; when a
+  state root was requested, the result and verified block must bind to that
+  requested root.
+- For transaction finality, a `TransactionFinalityResult` with transaction
+  identity, status, required and observed confirmations, policy/trust/finality/
+  verification metadata, and provenance. Its `latest_block` is optional; a
+  state root is not universally required for transaction finality.
+- A Gateway-owned broadcast/observation record. Core does not create or persist
+  it.
+
+## Verification and finality boundary
+
+The consumer must use the `ProtocolVerifier` façade, not call a backend hook
+directly. A Nexus `ProtocolVerifierBackend` acquires Bitcoin evidence; the
+façade validates capabilities, request/result identity, evidence binding,
+provenance, trust policy, and finality postconditions. `TrustTier::Strict`
+requires a light-client verification class. `NonFinalState` means the result is
+not final when finality was required; it is not permission to broadcast or
+settle.
+
+The two verifier result shapes have different obligations:
+
+- **State-proof flow:** `ProofVerificationResult` must bind the requested chain,
+  proof format, and block hash/height reference to the verified block. If the
+  request includes a state root, the result and verified block must bind to that
+  requested root; the binding is conditional on the request.
+- **Transaction-finality flow:** `TransactionFinalityResult` must carry the
+  transaction identity, lifecycle status, required/observed confirmations,
+  finality class, verification class, trust tier, verification status, and
+  provenance. `latest_block` is an optional latest verified block reference, and
+  no state root is universally required by this flow.
+
+The `BitcoinAdapter::verify_state_proof` implementation currently returns
+`Ok(true)` and its state root is static. That adapter behavior is not production
+Bitcoin proof verification. A production flow must use a real Nexus verifier
+backend and retain the façade's postcondition checks.
+
+Message verification has a separate BIP-322 caveat: `Bip322Bridge` in
+[`src/bitcoin/bip322.rs`](../../src/bitcoin/bip322.rs) is structural-only in
+the current implementation. It can accept a `bc1`-prefixed address before full
+validation and ultimately checks that a witness is non-empty; it does not
+execute the constructed `to_spend`/`to_sign` script validation. Do not use it as
+proof of message-signature authenticity.
+
+## Retry versus terminal semantics
+
+The following is a flow-level distinction, not an automatic retry mechanism:
+
+- **Potentially retryable or waitable:** a provider/backend is temporarily
+  unavailable; evidence has not arrived; a transaction is still pending and
+  policy permits waiting; or a finality request returns a non-final status that
+  can be observed again.
+- **Terminal:** target/family mismatch, unsupported capability, malformed
+  payload or derivation, invalid signer response, BIP-110 violation,
+  unsupported/unclassified Taproot or Tapscript context, malformed or invalid
+  proof, evidence-binding mismatch, expired evidence, verifier identity
+  mismatch, policy block, or a required finality failure that the operation
+  cannot wait through.
+
+Operational retry classification is downstream policy owned by Gateway. Core
+does not schedule retries, hide terminal errors, or convert a negative
+verification result into success.
 
 ## Fail-closed boundaries
 
-- `SignerCapabilities::require` must pass for the exact chain/family,
-  algorithm, and operation before a signer hook is called.
-- `SigningTarget::validate` rejects an inconsistent chain/family pair.
-- Payload, derivation, address, response, and verification metadata are
-  validated before success is returned.
-- A downstream preflight must not claim BIP-110 compliance when it cannot
-  classify a witness, Taproot, or script context.
-- BIP-110 compliance is an explicit caller choice; the default
-  `Bip110Compliance` value is disabled even though its canonical limits are
-  present.
-- No signature, key, address, or transaction should be submitted merely
-  because the chain enum exists.
+- Reject an inconsistent `SigningTarget` or an unadvertised capability before
+  invoking the signer.
+- Reject empty messages, invalid digest lengths, invalid public metadata, and
+  mismatched response derivation.
+- Reject any BIP-110 violation from the enabled validator and reject unknown
+  transaction context instead of treating it as compliant.
+- Require a real, policy-compatible `ProtocolVerifier` result before a
+  finality-dependent action; never treat a static root or `Ok(true)` adapter
+  stub as proof.
+- Keep BIP-322 structural checks out of an authenticity decision.
+- Do not broadcast or persist a successful-looking flow after any failed
+  precondition, verification, or finality check.
 
-## Taproot, Miniscript, construction, and BIP-322 limits
+## Known gaps and unsupported behavior
 
-Core does not implement the complete BIP-341/BIP-342 boundary. A downstream
-parser/interpreter must own Taproot key-path versus script-path selection,
-annex detection, control-block shape and commitment checks, undefined witness
-or leaf versions, `OP_SUCCESSx`, and executed `OP_IF`/`OP_NOTIF` behavior.
-Miniscript compilation, satisfaction construction, and policy/tree validation
-are also outside the current Core contract. The separate handoff is tracked at
-the known canonical issue [#178](https://github.com/Conxian/lib-conxian-core/issues/178).
+- This repository has no production `UniversalChainSigner` implementation;
+  tests use deterministic mocks.
+- There is no PSBT or transaction DTO contract, Taproot/Tapscript interpreter,
+  Miniscript compiler, fee/broadcast client, or transaction builder in Core.
+- BIP-341/BIP-342 handoff is documented, not implemented here.
+- `Bip110Compliance::default()` is disabled; use `Bip110Compliance::new()` or
+  an explicitly enabled configuration when a caller intends to enforce the
+  size contract.
+- BIP-110 activation, expiry, UTXO grandfathering, and script-context
+  exceptions remain downstream parser/deployment concerns.
+- BIP-322 verification is structural-only as described above.
 
-[`Bip322Bridge`](../../src/bitcoin/bip322.rs) is not a production authorization
-boundary: its current helper can accept a bech32-looking address when parsing
-fails, constructs the BIP-322 transaction shapes but does not execute script
-signature validation, and ultimately treats a non-empty witness as success.
-Callers must not use that boolean as proof of a valid Bitcoin signature.
+## Source references
 
-## Current gaps / unsupported behavior
-
-- No concrete Bitcoin `UniversalChainSigner` implementation exists in Core.
-- Core does not construct transactions or PSBTs, apply network-specific fee or
-  UTXO policy, submit transactions, or manage replacements.
-- Core does not implement BIP-341/BIP-342 cryptography or execution, a
-  Miniscript compiler, or a complete BIP-322 verifier.
-- BIP-110 fields validate supplied byte metadata only; they do not infer
-  activation, deployment, UTXO grandfathering, or script exceptions.
-
-## Source links
-
-- [Universal signing architecture](../SIGNING_ARCHITECTURE.md)
-- [UCS contract and types](../../src/signing.rs)
-- [Bitcoin BIP-322 helper](../../src/bitcoin/bip322.rs)
-- [BIP-110 Core facade](../../src/control_model/bip110.rs)
-- [BIP-110 alignment and downstream handoff](../BIP110_ALIGNMENT.md)
-- [Core/Gateway boundary](../ARCHITECTURE_BOUNDARIES.md)
-- [Protocol verifier ownership](../architecture/PROTOCOL_VERIFIER.md)
+- UCS contract: [`src/signing.rs`](../../src/signing.rs) and
+  [`docs/SIGNING_ARCHITECTURE.md`](../SIGNING_ARCHITECTURE.md)
+- Protocol verification: [`src/verifier.rs`](../../src/verifier.rs) and
+  [`docs/architecture/PROTOCOL_VERIFIER.md`](../architecture/PROTOCOL_VERIFIER.md)
+- BIP-110 limits and caveats: [`src/control_model/bip110.rs`](../../src/control_model/bip110.rs),
+  [`src/control_model/trust.rs`](../../src/control_model/trust.rs), and
+  [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md)
+- Bitcoin adapter and BIP-322: [`src/adapters/mod.rs`](../../src/adapters/mod.rs)
+  and [`src/bitcoin/bip322.rs`](../../src/bitcoin/bip322.rs)
+- Ownership boundaries: [`docs/ARCHITECTURE_BOUNDARIES.md`](../ARCHITECTURE_BOUNDARIES.md)
+- Downstream contracts: [enclave SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179),
+  [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245),
+  [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163), and
+  [Wallet issue #381](https://github.com/Conxian/conxius-wallet/issues/381)

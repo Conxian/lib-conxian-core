@@ -1,111 +1,153 @@
-# Liquid signing and cross-layer peg flow
+# Liquid signing flow
 
-## Status / support level
+## Scope and current support status
 
-**Address, fee, and structural-proof primitives only.** Core identifies Liquid
-as a Bitcoin-family lane and exposes a minimal adapter surface. It does not
-implement a peg-in or peg-out flow, Elements transaction construction,
-federation custody, confidential-asset proof verification, or a concrete
-Liquid signer.
+This guide covers Liquid/Elements peg-in and peg-out ownership, sidechain
+signing handoffs, and the boundary between structural Core checks and
+production federation/proof logic. Core currently exposes `LiquidAdapter` with
+Bitcoin-family mapping, prefix/length address checks, a fee stub, and
+structural proof checks. It does not contain Liquid peg DTOs, federation
+quorum/signing logic, an Elements transaction builder, confidential-asset proof
+verification, RPC clients, or a production Liquid signer.
 
-Core never holds private keys, accesses hardware, performs RPC or other
-network I/O, persists state, or owns runtime retries. `Chain::Liquid` mapping to
-`ChainFamily::BitcoinUtxo` is a coarse taxonomy entry, not evidence that a
-Liquid signer is available.
+Liquid sidechain state and a Bitcoin L1 peg transaction are different signing
+surfaces. The flow must not use a Liquid address or sidechain proof as a proxy
+for Bitcoin peg finality.
 
-## End-to-end flow boundary
+## Canonical target and UCS boundary
 
-1. The Wallet or Gateway creates a cross-layer intent and determines whether
-   the operation touches Bitcoin L1, Liquid/Elements, or both.
-2. Core can represent a signing request with `SigningTarget::for_chain(Chain::Liquid)`
-   and can expose [`LiquidAdapter`](../../src/bitcoin/liquid_adapter.rs) address,
-   fee, trust, and proof-shape checks.
-3. The Enclave SDK / Wallet constructs the actual Elements or Bitcoin
-   transaction and signs it only when the concrete signer advertises the exact
-   chain, algorithm, operation, and address format.
-4. Gateway coordinates peg/federation providers, persistence, submissions, and
-   reconciliation. Nexus observes chain state and verifies evidence through its
-   downstream verifier backend.
-5. Core's structural proof result is an input to policy; it is not a peg
-   authorization or proof of federation consensus.
+For a Liquid-side operation, the canonical UCS target is
+`SigningTarget::for_chain(Chain::Liquid)` with `ChainFamily::BitcoinUtxo`.
+Core has no dedicated `AddressFormat::Liquid`; a concrete signer must advertise
+`AddressFormat::Generic` or another compatible format only if it owns the real
+Elements address validation. For a Bitcoin L1 peg transaction, use a separate
+`SigningTarget::for_chain(Chain::Bitcoin)` request.
 
-## Required inputs and outputs
+The UCS boundary carries the exact bytes or digest for the selected surface:
 
-| Boundary | Current Core representation |
-| --- | --- |
-| Signing target | `SigningTarget { chain: Chain::Liquid, family: ChainFamily::BitcoinUtxo }` |
-| Signing request/response | `SignRequest` → `SignResponse`, or `AddressDerivationRequest` → `AddressDerivationResponse`, only through an advertised concrete capability |
-| Transaction adapter input | `TxParams { amount_sats, destination, data }` for the generic fee interface |
-| Address validation | `LiquidAdapter::validate_address` accepts `ex1` or `tlq1` prefixes with length at least 39; this is not full Elements address/checksum validation |
-| Fee output | `estimate_fee(&TxParams) -> 500` in the current adapter, independent of transaction shape |
-| Trust policy | `trust_tier() -> TrustTier::Managed` |
-| Proof input | `verify_state_proof(state_root, proof)` expects at least three colon-separated components |
-| Proof output | `Ok(true)`/`Ok(false)` from structural checks; no cryptographic confidential proof or federation verification is performed |
-| State root | `get_state_root() -> "liquid_merkle_root"` in the current adapter; it is not a live network read |
+1. Wallet/Gateway choose the target and construct a secret-free `SignRequest`.
+2. `SignerCapabilities::require` and `UniversalChainSigner::sign` validate the
+   target, algorithm, operation, payload, and derivation context.
+3. The enclave SDK returns a public `SignResponse`; Core does not receive a
+   private key, seed, share, or enclave handle.
 
-The generic `AddressFormat` vocabulary has no dedicated Elements variant. A
-concrete capability must choose an explicitly compatible representation such as
-`Generic` or a suitable Bitcoin-family format and still own Liquid network and
-checksum rules.
+Core does not infer Elements serialization, blinding factors, asset issuance,
+fee rules, federation threshold policy, or peg script semantics from the
+`SigningPayload`.
 
-## Ownership
+## Participant ownership
 
-| Owner | Owns | Does not own |
+| Participant | Owns in this flow | Does not own |
 | --- | --- | --- |
-| Core (`lib-conxian-core`) | Liquid chain/family metadata, adapter contracts, structural address/fee/proof primitives, and UCS validation | Peg custody, federation quorum, confidential cryptography, private keys, RPC, persistence, or retries |
-| Conxius Enclave SDK / Wallet | Hardware-backed custody, derivation, transaction construction, user policy, and concrete signing for explicitly supported rails | Federation orchestration, chain observation, or Core's canonical contracts |
-| Gateway (`conxian-gateway`) | Cross-layer workflow orchestration, federation/provider selection, persistence, idempotency, retry/reconciliation, and submissions | Private-key custody and treating structural checks as settlement proof |
-| Nexus (`conxian-nexus`) | Liquid/Bitcoin observation, proof acquisition, verifier backends, and evidence provenance | Signing, peg custody, Elements transaction building, or runtime retries |
+| Core | Liquid target/family mapping, UCS DTO/capability validation, structural adapter contract, and verifier/finality models | Federation custody, Elements/confidential transaction construction, peg execution, or network I/O |
+| `conxius-enclave-sdk` | Hardware-backed key custody, signer implementation, federation/member signing where contracted, and attestation | Peg orchestration and sidechain observation |
+| Gateway | Peg-in/out workflow, federation/provider coordination, persistence, retry policy, release/broadcast effects, and policy routing | Private-key custody or replacement of Core validation |
+| Nexus | Liquid/Elements and Bitcoin observations, proof acquisition, chain-state/finality verifier backends | Signing keys and user approval |
+| Wallet | User approval, destination/amount/fee review, and display of peg status | Federation quorum, proof verification, or transaction construction truth |
 
-## Retryable versus terminal failures
+## Sequence and ownership
 
-**Potentially retryable or reconcilable downstream failures:**
+| Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Wallet + Gateway | Direction, amount, Liquid/Bitcoin destination, fee and federation policy | Select `Chain::Liquid` for sidechain bytes or `Chain::Bitcoin` for L1 bytes | Reviewable intent and target | Missing/invalid destination, amount, or policy |
+| 2 | Gateway + downstream Elements/Bitcoin adapter | UTXOs, peg script, Elements inputs/outputs, blinding/asset context, sighash bytes | Core does not build either transaction; it accepts explicit signing bytes and metadata | Unsigned transaction surface | Unsupported serialization, missing confidential context, or unclassified Bitcoin BIP-110 surface |
+| 3 | Wallet + SDK | `SignRequest`, capability advertisement, attestation, federation/member policy | UCS validates request/response metadata and fails closed | `SignResponse` | Unsupported capability, malformed payload, backend failure, or invalid response |
+| 4 | Nexus | Liquid block/proof, federation/peg evidence, Bitcoin txid and headers where applicable | `ProtocolVerifier` validates the evidence envelope and policy metadata around a real backend | Verified or non-final evidence | Structural-only proof, stale/malformed proof, identity mismatch, or policy block |
+| 5 | Gateway | Verified evidence, signer quorum, provider response, timelock/release policy | Core supplies typed inputs; Gateway owns persistence and side effects | Peg-in/out status and release decision | Missing quorum, failed proof, failed policy, or missing Bitcoin finality |
+| 6 | Nexus | Sidechain and/or Bitcoin finality result | Core validates the finality result; it does not declare settlement from an intent | Finalized or pending operational record | Never finalize from an address prefix, static root, or structural proof alone |
 
-- temporary federation, node, provider, or network unavailability;
-- fee-estimation or observation timeouts;
-- ambiguous peg submission where Gateway must query both layers before retrying;
-- signer backend failure only after the signer confirms no side effect occurred.
+## Required inputs
 
-**Terminal for the supplied request or evidence:**
+- An explicit Liquid or Bitcoin signing target matching the bytes being signed.
+- A capability advertisement covering the chosen chain, algorithm, operation,
+  and address representation.
+- Fully constructed Elements/Bitcoin bytes or a correctly sized digest; Core
+  does not supply confidential transaction serialization or peg scripts.
+- For Liquid proof decisions, the actual block/proof/evidence format and
+  provenance required by a Nexus verifier backend.
+- For a Bitcoin-side peg, parsed transaction context for BIP-110 size checks
+  and a Bitcoin finality request when policy requires it.
+- Wallet approval, SDK attestation, federation/provider acknowledgements, and
+  Gateway policy context.
 
-- invalid address shape or unsupported network/checksum;
-- malformed or structurally incomplete proof;
-- cryptographic proof, federation policy, or asset-commitment rejection;
-- unsupported UCS chain, algorithm, operation, or address format;
-- a confirmed failed or expired peg intent.
+## Required outputs
+
+- A validated `SignResponse` for each Liquid or Bitcoin transaction surface.
+- A `ProtocolVerifier` result whose chain identity, proof/result binding,
+  provenance, trust tier, verification class, and finality class satisfy policy.
+- A Gateway-owned peg lifecycle and release record. Core does not mint, burn,
+  release, or broadcast assets.
+
+## Verification and finality boundary
+
+Nexus owns chain observation and any real Liquid/Elements or Bitcoin verifier
+backend. Gateway must consume that backend through `ProtocolVerifier`, which
+validates capabilities, request/result identity, state roots, provenance,
+evidence binding, trust policy, and finality requirements. A finality request
+that requires finality must not be satisfied by a merely observed block.
+
+The current `LiquidAdapter::verify_state_proof` only checks non-empty input,
+the presence of at least three colon-separated components, and the literal
+`invalid` marker. `LiquidAdapter::validate_address` checks only `ex1`/`tlq1`
+prefix and minimum length. These are structural checks, not confidential proof,
+Merkle proof, Elements consensus, or federation verification.
+
+BIP-110 applies to a Bitcoin L1 peg transaction only when its actual outputs,
+scripts, and applicable witness elements are serialized on Bitcoin. Liquid
+sidechain transactions and confidential proofs are not Bitcoin pushdata merely
+because the system is Bitcoin-family mapped.
+
+## Retry versus terminal semantics
+
+- **Potentially retryable or waitable:** delayed Liquid/Bitcoin observations,
+  temporarily unavailable proof/federation provider, incomplete signer quorum,
+  or a non-final transaction while policy permits additional confirmations.
+- **Terminal:** target/capability mismatch, malformed transaction bytes,
+  invalid signer response, malformed or structurally invalid proof, failed
+  confidential/federation verification, evidence-binding mismatch, stale or
+  expired evidence, policy block, or a required finality failure that cannot be
+  waited through.
+
+Operational retry classification is downstream policy owned by Gateway. Core
+does not retry federation members, poll sidechain nodes, or turn a structural
+`Ok(true)` into cryptographic proof.
 
 ## Fail-closed boundaries
 
-- `LiquidAdapter::verify_state_proof` accepting three colon-separated fields
-  does not verify a block hash, Merkle path, blinded proof, asset, or
-  federation signature.
-- The constant state root and fixed fee are not live network evidence or a
-  transaction quote.
-- No peg-in/peg-out implementation exists in this adapter; do not infer one
-  from the `Chain::Liquid` enum or `UniversalChainAdapter` trait.
-- A concrete signer must pass the UCS capability gate for the exact Liquid
-  target. Falling back to a generic Bitcoin signer is not permitted without an
-  explicit downstream policy decision and compatible address/transaction
-  semantics.
-- Unknown or unverifiable cross-layer state blocks settlement rather than
-  becoming a successful structural result.
+- Keep Liquid-side and Bitcoin-L1 signing targets separate.
+- Do not treat `ex1`/`tlq1` prefix validation as complete address validation.
+- Do not treat the current structural proof check as verification of Merkle,
+  confidential-asset, federation, or Elements consensus evidence.
+- Require a policy-compatible `ProtocolVerifier` result and required Bitcoin
+  finality before a peg release or irreversible side effect.
+- Apply BIP-110 only to parsed Bitcoin surfaces with an enabled compliance
+  configuration; reject unknown/unclassified transaction context.
+- Stop after any failed signer, quorum, proof, policy, or finality precondition.
 
-## Current gaps / unsupported behavior
+## Known gaps and unsupported behavior
 
-- No Liquid `UniversalChainSigner`, Elements transaction builder, PSBT/PSET
-  workflow, peg state machine, or federation integration exists in Core.
-- No confidential-asset range-proof, surjection-proof, or federation-signature
-  verification is implemented by the current adapter.
-- Address validation, fee estimation, proof checks, and state-root output are
-  minimal primitives with placeholder-level semantics.
-- Gateway owns all network I/O, persistence, retry, and reconciliation work.
+- Core defines no peg-in/peg-out DTOs, federation threshold protocol, Elements
+  transaction builder, confidential proof implementation, or Liquid broadcast
+  integration.
+- `LiquidAdapter` address and proof checks are structural and its state root is
+  static; it is not a production verifier.
+- No production Liquid `UniversalChainSigner` or
+  `ProtocolVerifierBackend` is implemented in this repository.
+- The coarse `BitcoinUtxo` family mapping does not provide Liquid transaction
+  semantics or imply that Bitcoin and Liquid transactions are interchangeable.
 
-## Source links
+## Source references
 
-- [Universal signing architecture](../SIGNING_ARCHITECTURE.md)
-- [UCS contract and types](../../src/signing.rs)
-- [Liquid adapter](../../src/bitcoin/liquid_adapter.rs)
-- [Generic adapter contract](../../src/adapters/mod.rs)
-- [Chain and family mapping](../../src/control_model/trust.rs)
-- [Protocol verifier ownership](../architecture/PROTOCOL_VERIFIER.md)
-- [Core/Gateway boundary](../ARCHITECTURE_BOUNDARIES.md)
+- UCS contract: [`src/signing.rs`](../../src/signing.rs) and
+  [`docs/SIGNING_ARCHITECTURE.md`](../SIGNING_ARCHITECTURE.md)
+- Liquid adapter: [`src/bitcoin/liquid_adapter.rs`](../../src/bitcoin/liquid_adapter.rs)
+- Chain-family mapping: [`src/control_model/trust.rs`](../../src/control_model/trust.rs)
+- Protocol verification: [`src/verifier.rs`](../../src/verifier.rs) and
+  [`docs/architecture/PROTOCOL_VERIFIER.md`](../architecture/PROTOCOL_VERIFIER.md)
+- BIP-110 Bitcoin-surface boundary: [`src/control_model/bip110.rs`](../../src/control_model/bip110.rs)
+  and [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md)
+- Architecture boundaries: [`docs/ARCHITECTURE_BOUNDARIES.md`](../ARCHITECTURE_BOUNDARIES.md)
+- Downstream contracts: [enclave SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179),
+  [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245),
+  [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163), and
+  [Wallet issue #381](https://github.com/Conxian/conxius-wallet/issues/381)

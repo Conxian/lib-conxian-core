@@ -1,123 +1,172 @@
-# DLC signing and oracle-attestation flow
+# DLC signing flow
 
-## Status / support level
+## Scope and current support status
 
-**Intent representation and oracle-attestation verification only.** Core can
-create a [`DlcIntent`](../../src/protocol/dlc.rs) and perform the current
-equation-based secp256k1 oracle-attestation check. It does not provide a DLC
-signer or settlement workflow.
+This guide covers the Discreet Log Contract flow from intent through funding,
+refund/CET signing, oracle attestation, and Bitcoin settlement. Core currently
+defines `DlcIntent`, `DlcStatus`, construction-only intent creation, and two
+oracle/execution helpers. It does not define funding, refund, CET,
+adaptor-signature, or transaction DTOs; it also does not build, persist,
+broadcast, or monitor a DLC.
 
-Core never holds private keys, accesses hardware, performs RPC or other
-network I/O, persists state, or owns runtime retries. DLC has no dedicated
-`Chain` enum variant; Bitcoin funding and settlement signing must use an
-explicitly capability-gated Bitcoin-family target and keep DLC metadata outside
-the generic signing payload unless a downstream protocol contract defines it.
+`DlcManager::verify_oracle_attestation` performs a real secp256k1 point-equation
+check for caller-supplied oracle public key, nonce point, outcome message, and
+signature scalar. `DlcManager::verify_execution` is a compatibility-only check
+for a non-empty, non-zero-ish signature and positive collateral. It is not a
+cryptographic oracle-attestation or CET verifier.
 
-## End-to-end flow boundary
+`DlcManager::create_intent` is construction-only: it copies the supplied oracle
+key bytes, collateral, outcome hash, and expiry into a `DlcIntent`. It does not
+validate oracle-key encoding, reject zero collateral, check expiry semantics, or
+bind the intent to a funding contract or counterparty agreement. Those checks
+belong to the caller/Gateway policy before the intent is accepted or used.
 
-1. Counterparties or Gateway create and exchange a [`DlcIntent`](../../src/protocol/dlc.rs)
-   containing the oracle public key, collateral, outcome hash, and expiry
-   block.
-2. The downstream application acquires the oracle event and nonce/signature
-   material. Core does not query an oracle or decide which event is canonical.
-3. [`DlcManager::verify_oracle_attestation`](../../src/protocol/dlc.rs)
-   verifies the supplied `(R, s)` attestation against the oracle public key and
-   outcome message. A false result blocks the outcome.
-4. The Enclave SDK / Wallet and Gateway own funding/refund transaction
-   construction, adaptor-signature coordination, concrete signing, workflow
-   persistence, and Bitcoin submission when those capabilities exist.
-5. Nexus observes Bitcoin funding/settlement state and supplies independently
-   verified evidence. Core's DLC intent and verifier do not create or execute a
-   contract on chain.
+## Canonical target and UCS boundary
 
-## Required inputs and outputs
+DLC is Bitcoin-native and has no separate `Chain::DLC` variant. The canonical
+target for funding, refund, and CET transaction bytes is
+`SigningTarget::for_chain(Chain::Bitcoin)` with `ChainFamily::BitcoinUtxo`.
+Oracle messages are protocol inputs to the attestation verifier; they are not a
+new chain target. A concrete signer advertises the exact ECDSA/Schnorr
+algorithm, operation, and address format it can safely implement.
 
-| Boundary | Current Core representation |
-| --- | --- |
-| Intent input | `DlcManager::create_intent(oracle_pubkey, collateral, outcome, expiry)` |
-| Intent output | `DlcIntent { oracle_pubkey, collateral_sats, outcome_hash, expiry_block }` |
-| Lifecycle vocabulary | `DlcStatus::{Offered, Accepted, Signed, Executed, Refunded}`; Core does not persist or drive these transitions |
-| Attestation inputs | `oracle_pubkey`, `nonce_point` (`R`), `outcome_msg`, and `signature_scalar` (`s`) |
-| Attestation output | `bool` from `verify_oracle_attestation`; `false` means the attestation must be rejected |
-| Compatibility execution check | `verify_execution(intent, oracle_signature)` only checks a non-empty, non-zero, at-least-32-byte value and positive collateral; it is not full DLC execution verification |
-| Bitcoin signing boundary | `SignRequest` / `SignResponse` with `Chain::Bitcoin` / `ChainFamily::BitcoinUtxo`, only if the concrete signer advertises the requested operation |
-| Bitcoin preflight | Funding/refund/settlement transaction bytes must be classified by a downstream adapter before applying the [`Bip110TransactionShape`](../../src/control_model/bip110.rs) contract |
+The UCS boundary is intentionally narrow:
 
-The oracle-attestation verifier performs cryptographic point/scalar parsing and
-checks the relation `s*G = R + H(R, m)*P` for the supplied inputs. That verifies
-the supplied attestation; it does not acquire the oracle event, validate the
-full DLC contract, or produce a settlement transaction.
+1. Gateway/Wallet/downstream DLC code constructs the exact transaction bytes or
+   digest and a secret-free `SignRequest`.
+2. `SignerCapabilities` and `UniversalChainSigner::sign` validate target,
+   capability, payload, and
+   derivation metadata before calling the SDK implementation.
+3. The SDK returns a public `SignResponse`; Core does not receive the adaptor
+   secret, oracle private key, funding key, or CET key material.
 
-## Ownership
+Core's `DlcIntent` and oracle helper do not imply that the requested bytes are a
+valid DLC transaction or that an oracle outcome is bound to the intent. The
+caller must perform those bindings explicitly.
 
-| Owner | Owns | Does not own |
+## Participant ownership
+
+| Participant | Owns in this flow | Does not own |
 | --- | --- | --- |
-| Core (`lib-conxian-core`) | DLC intent fields, status vocabulary, oracle-attestation verification, UCS validation, and Bitcoin preflight contracts | CET construction, funding/refund builders, adaptor-signature sessions, private keys, oracle acquisition, RPC, persistence, or retries |
-| Conxius Enclave SDK / Wallet | Hardware-backed custody, key derivation, adaptor-signature policy, concrete signing, and user approval for supported Bitcoin flows | Oracle event acquisition, Gateway workflow state, or Core's intent/verifier definitions |
-| Gateway (`conxian-gateway`) | Counterparty/oracle workflow coordination, persistence, provider selection, retries/reconciliation, transaction submission, and external side effects | Private-key custody and bypassing oracle or capability checks |
-| Nexus (`conxian-nexus`) | Bitcoin observation, funding/settlement evidence, proof acquisition, and verifier backends | Oracle event acquisition by assumption, DLC signing, CET construction, or runtime retry policy |
+| Core | `DlcIntent`/`DlcStatus` models, construction-only intent creation, UCS request/response validation, oracle-attestation primitive, and verifier/finality contracts | Oracle-key encoding, zero-collateral/expiry/contract-binding policy; funding/refund/CET construction, adaptor-signature protocol, oracle key custody, persistence, or broadcast |
+| `conxius-enclave-sdk` | Hardware-backed signer custody and concrete Bitcoin signing/adaptor-signature implementation where supported | Oracle observation and Gateway workflow state |
+| Gateway | Intent construction and policy validation, offer/accept/sign/execute/refund orchestration, persistence, counterparty/provider routing, retries, and broadcast effects | Private-key custody or replacing Core's attestation contract |
+| Nexus | Oracle/Bitcoin observation, transaction proofs, block/finality evidence, and verifier backends | DLC key custody, transaction construction, or user approval |
+| Wallet | User review/approval, collateral/expiry/outcome display, and fee policy | Oracle truth, CET construction, or proof verification |
 
-## Retryable versus terminal failures
+## Sequence and ownership
 
-**Potentially retryable or reconcilable downstream failures:**
+| Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Gateway | Oracle public key, collateral, outcome hash, expiry block, funding/counterparty binding | `DlcManager::create_intent` is construction-only and copies the supplied fields; caller/Gateway validates oracle-key encoding, non-zero collateral, expiry semantics, and contract binding | Reviewable, Gateway-owned intent | Invalid oracle-key encoding, zero collateral, invalid expiry, or missing contract/counterparty binding |
+| 2 | Gateway + counterparty | Contract descriptors, collateral UTXOs, payout policy, refund timelock, oracle event mapping | Core has no funding/refund DTO or builder; downstream code owns exact bytes | Unsigned funding/refund transaction payloads | Missing contract binding, unsupported script, or incomplete counterparty agreement |
+| 3 | Wallet + SDK | `SignRequest`, Bitcoin capability, policy/attestation context | UCS validates request/response metadata | Public `SignResponse` for each transaction | Unsupported capability, malformed payload, backend failure, or invalid response |
+| 4 | Oracle | Nonce point `R`, outcome message, signature scalar `s`, oracle public key | `verify_oracle_attestation` checks the point equation; caller binds message to `DlcIntent::outcome_hash` | Cryptographically valid/invalid attestation result | Invalid key/point/scalar, equation failure, wrong outcome binding, or expired event |
+| 5 | Downstream | Verified oracle outcome, funding outpoint, adaptor data, payout outputs | Core supplies no CET/adaptor DTO; use a Bitcoin `SignRequest` only for exact constructed bytes | Signed CET or refund path | No verified attestation, missing funding state, unsupported adaptor flow, or policy block |
+| 6 | Nexus + Gateway | Funding/CET/refund txid, Bitcoin proof and finality evidence | `ProtocolVerifier` validates transaction/state/finality result around a real backend | Verified settlement or non-final result | Invalid/stale proof, evidence mismatch, non-final required state, or rejected transaction |
 
-- temporary oracle/provider/node unavailability before an event is acquired;
-- network or observation timeout while checking funding or settlement;
-- counterparty/signing coordination failure when no signature or transaction
-  side effect has been confirmed;
-- ambiguous submission requiring Gateway/Nexus reconciliation.
+## Required inputs
 
-**Terminal for the supplied contract or evidence once the relevant validator
-establishes the condition:**
+- Caller/Gateway-validated `DlcIntent` fields: oracle public key, collateral,
+  outcome hash, and expiry block. Before accepting the model, caller/Gateway
+  policy must validate oracle-key encoding, non-zero collateral, expiry
+  semantics, and funding/contract/counterparty binding; `create_intent` does
+  not perform those checks.
+- Fully constructed funding, refund, or CET bytes/digest and the Bitcoin
+  signing target/capability for each signing operation.
+- For oracle verification: exact oracle public key bytes, nonce point bytes,
+  outcome message bytes, and 32-byte signature scalar bytes.
+- An explicit caller-side binding that the verified outcome message corresponds
+  to the intent's `outcome_hash`; `verify_oracle_attestation` does not perform
+  that binding.
+- Bitcoin transaction proof/finality evidence and provenance supplied by Nexus
+  when settlement or refund policy requires it.
 
-- malformed public key, nonce point, scalar, or invalid attestation (`false`)
-  from Core's `verify_oracle_attestation`;
-- outcome mismatch, expired block, invalid collateral, or inconsistent intent
-  only after a downstream DLC contract, builder, or orchestrator validates the
-  condition;
-- failed capability, payload, address, or signer-response validation;
-- any CET/funding/refund construction failure that the downstream builder
-  classifies as invalid rather than transient.
+## Required outputs
 
-The current Core helpers do not perform the downstream checks in the second
-bullet. `verify_oracle_attestation` checks the supplied `(R, s)` equation and
-input encodings for the supplied outcome message; it does not compare that
-message with `DlcIntent::outcome_hash` or validate expiry, full collateral, or
-intent consistency. `verify_execution` only checks a non-empty, non-zero,
-at-least-32-byte signature and `collateral_sats > 0`; it does not perform those
-contract checks or authorize settlement.
+- A validated `SignResponse` for each actual funding/refund/CET transaction
+  surface.
+- A positive result from `verify_oracle_attestation` plus a separately checked
+  outcome-to-intent binding before a CET can be considered executable.
+- A `ProtocolVerifier` finality result for funding, CET, or refund settlement
+  when required by policy.
+- A Gateway-owned `DlcStatus`/workflow record. Core does not create a broadcast
+  receipt or declare `Executed` from `verify_execution` alone.
+
+## Verification and finality boundary
+
+`verify_oracle_attestation` is a Core cryptographic primitive for the supplied
+attestation tuple. The caller still owns outcome encoding, event-id/nonce
+binding, oracle-key-set policy, expiry checks, collateral policy, contract and
+counterparty binding, and association with the `DlcIntent`.
+`verify_execution` should remain compatibility-only and must not be used as the
+production authorization gate.
+
+Nexus supplies Bitcoin transaction/block evidence through a
+`ProtocolVerifierBackend`; Gateway consumes the `ProtocolVerifier` façade. The
+façade validates capabilities, transaction and chain identity, proof/result
+binding, provenance, trust/finality policy, and required finality. A finality
+result with `NonFinalState` is not settlement authority. A verified oracle
+attestation is also not Bitcoin transaction finality.
+
+## Retry versus terminal semantics
+
+- **Potentially retryable or waitable:** counterparty/provider unavailability,
+  delayed oracle event before expiry, missing Bitcoin confirmations, or a
+  pending funding/CET observation while the contract remains safely open.
+- **Terminal:** malformed intent or transaction payload, unsupported signer
+  capability, invalid signer response, failed oracle equation, outcome/hash
+  mismatch, expired oracle event, missing funding binding, unsupported adaptor
+  flow, malformed/stale proof, evidence mismatch, policy block, or required
+  finality not reached before the refund/expiry boundary.
+
+Operational retry classification is downstream policy owned by Gateway. Core
+does not retry oracle calls, reconstruct CETs, or promote
+`verify_execution`'s compatibility result into a cryptographic approval.
 
 ## Fail-closed boundaries
 
-- Oracle event acquisition is required before attestation verification can be
-  meaningfully applied; Core does not invent an event or outcome.
-- A false cryptographic attestation result blocks execution.
-- A valid oracle attestation does not prove that the intent, collateral,
-  funding transaction, refund path, or settlement transaction is correct.
-- The compatibility `verify_execution` check is insufficient for authorization
-  because it does not verify a DLC signature or contract execution.
-- No CET builder, funding/refund builder, adaptor-signature coordinator, or
-  signer capability exists in Core; those missing capabilities must fail closed
-  rather than fall back to a generic signing path.
-- Bitcoin transaction policy, including BIP-110 classification, must be
-  satisfied before a downstream signer or broadcaster proceeds.
+- Require an explicit Bitcoin target and capability for every funding, refund,
+  and CET signing request; do not infer support from `DlcIntent` construction.
+- Require caller/Gateway policy to validate oracle-key encoding, non-zero
+  collateral, expiry semantics, and funding/contract/counterparty binding;
+  `DlcManager::create_intent` is not a policy validator.
+- Require real `verify_oracle_attestation` success and a caller-verified
+  outcome-to-`outcome_hash` binding before CET authorization.
+- Do not use `verify_execution` as a substitute for oracle attestation, adaptor
+  signature verification, or CET validation.
+- Require a policy-compatible `ProtocolVerifier` result before a
+  finality-dependent settlement or refund side effect.
+- Reject missing or unsupported transaction construction context rather than
+  signing an opaque or guessed CET/funding payload.
+- Stop after any failed signer, oracle, contract-binding, proof, policy, or
+  finality precondition.
 
-## Current gaps / unsupported behavior
+## Known gaps and unsupported behavior
 
-- No CET construction, funding/refund transaction builder, DLC script/policy
-  compiler, or adaptor-signature coordination exists in Core.
-- No oracle event acquisition, nonce management, persistence, counterparty
-  protocol, or Bitcoin network submission exists here.
-- `verify_execution` is retained as a compatibility helper and is not a
-  complete DLC execution verifier.
-- No concrete DLC `UniversalChainSigner` or chain-specific capability is
-  advertised by this module.
+- No funding, refund, CET, adaptor-signature, oracle-event, or transaction DTOs
+  exist in Core.
+- No DLC transaction builder, contract execution engine, persistence, counterparty
+  coordinator, oracle-set manager, or broadcast integration exists here.
+- `verify_oracle_attestation` does not bind `outcome_msg` to
+  `DlcIntent::outcome_hash`; the caller must do so.
+- `verify_execution` is compatibility-only and does not cryptographically
+  verify an oracle signature or CET.
+- No production DLC `UniversalChainSigner` or DLC-aware
+  `ProtocolVerifierBackend` is implemented in this repository.
 
-## Source links
+## Source references
 
-- [Universal signing architecture](../SIGNING_ARCHITECTURE.md)
-- [UCS contract and types](../../src/signing.rs)
-- [DLC intent and oracle verifier](../../src/protocol/dlc.rs)
-- [BIP-110 Bitcoin transaction handoff](../BIP110_ALIGNMENT.md)
-- [Protocol verifier ownership](../architecture/PROTOCOL_VERIFIER.md)
-- [Core/Gateway boundary](../ARCHITECTURE_BOUNDARIES.md)
+- UCS contract: [`src/signing.rs`](../../src/signing.rs) and
+  [`docs/SIGNING_ARCHITECTURE.md`](../SIGNING_ARCHITECTURE.md)
+- DLC intent and verification helpers: [`src/protocol/dlc.rs`](../../src/protocol/dlc.rs)
+- Bitcoin-family mapping: [`src/control_model/trust.rs`](../../src/control_model/trust.rs)
+- Protocol verification: [`src/verifier.rs`](../../src/verifier.rs) and
+  [`docs/architecture/PROTOCOL_VERIFIER.md`](../architecture/PROTOCOL_VERIFIER.md)
+- Bitcoin/BIP-110 boundary: [`src/control_model/bip110.rs`](../../src/control_model/bip110.rs)
+  and [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md)
+- Architecture boundaries: [`docs/ARCHITECTURE_BOUNDARIES.md`](../ARCHITECTURE_BOUNDARIES.md)
+- Downstream contracts: [enclave SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179),
+  [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245),
+  [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163), and
+  [Wallet issue #381](https://github.com/Conxian/conxius-wallet/issues/381)
