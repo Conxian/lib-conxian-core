@@ -1,6 +1,6 @@
 # BIP-110 Alignment for Conxian Ecosystem
 
-> **Status**: Active | **Last Updated**: 2026-07-20 | **Version**: 1.0
+> **Status**: Core contract documented; consensus activation not assumed | **Last Updated**: 2026-07-20 | **Version**: 1.0
 
 ## Executive Summary
 
@@ -39,14 +39,14 @@ re-exported from `lib_conxian_core::control_model`:
 
 | Type/field | Meaning |
 |------------|---------|
-| `Bip110Limits::max_pushdata_bytes` | Maximum size of one pushdata element; canonical default is 256 bytes |
+| `Bip110Limits::max_pushdata_bytes` | Maximum payload size of one applicable pushdata element; canonical default is 256 bytes |
 | `Bip110Limits::max_op_return_bytes` | Maximum full output ScriptPubKey size for each OP_RETURN entry; canonical default is 83 bytes |
 | `Bip110Limits::max_script_pubkey_bytes` | Maximum full ScriptPubKey size for each non-OP_RETURN entry; canonical default is 34 bytes |
-| `Bip110Limits::max_witness_element_bytes` | Maximum size of one witness element; canonical default is 256 bytes |
-| `Bip110TransactionShape::pushdata_sizes_bytes` | Byte size for every pushdata element being checked |
+| `Bip110Limits::max_witness_element_bytes` | Maximum size of one applicable witness stack element; canonical default is 256 bytes |
+| `Bip110TransactionShape::pushdata_sizes_bytes` | Payload byte size for every pushdata element being checked |
 | `Bip110TransactionShape::op_return_script_pubkey_sizes_bytes` | Full output ScriptPubKey bytes for every OP_RETURN output being checked |
 | `Bip110TransactionShape::non_op_return_script_pubkey_sizes_bytes` | Full ScriptPubKey bytes for every non-OP_RETURN output being checked |
-| `Bip110TransactionShape::witness_element_sizes_bytes` | Byte size for every witness element being checked |
+| `Bip110TransactionShape::witness_element_sizes_bytes` | Byte size for every applicable witness stack element being checked |
 
 `Bip110Limits::default()` and `Bip110Limits::canonical()` return the same
 canonical values. `Bip110TransactionShape` is serializable/deserializable for
@@ -55,12 +55,23 @@ adapter boundaries. Its validation façade, together with
 `Bip110Compliance` aggregate validator and returns the existing structured
 `Bip110ValidationResult` and `Bip110Violation` values.
 
+Pushdata sizes are payload bytes, excluding their opcode/length prefixes.
+OP_RETURN and non-OP_RETURN values are full serialized ScriptPubKey lengths,
+including opcodes and push prefixes. Witness values are byte lengths of the
+applicable witness stack elements supplied by the downstream adapter, not a
+general witness serialization length. The fields use Rust `usize` to match
+in-memory byte lengths; serde encodes them as JSON numbers, so adapters must
+provide representable byte counts rather than character counts, fee units, or
+unrelated payload measurements.
+
 The shape is transaction-wide for this subset: each vector must contain every
 occurrence that the adapter is asking the core to check. The contract validates
 supplied size metadata only. It does not parse raw transactions, determine
 script context, perform network I/O, persist state, or enforce policy at
 runtime. It is therefore a deterministic size-policy contract, not a full
-consensus or script verifier.
+consensus or script verifier. SDK, Wallet, and Gateway implementations must
+measure the supplied byte sizes and enforce the result before signing,
+broadcasting, or routing a transaction.
 
 ### SDK and Gateway Adapter Mapping
 
@@ -73,10 +84,10 @@ values must be the full output ScriptPubKey byte length, never payload length.
 
 | Core contract field | `conxius-enclave-sdk` / wallet mapping | `conxian-gateway` mapping |
 |---------------------|----------------------------------------|--------------------------|
-| `pushdata_sizes_bytes` | Measure each script pushdata element before signing | Map observed or constructed pushdata element sizes before routing |
+| `pushdata_sizes_bytes` | Measure each applicable pushdata payload before signing | Map observed or constructed pushdata payload sizes before routing |
 | `op_return_script_pubkey_sizes_bytes` | Measure the full output ScriptPubKey for every classified OP_RETURN output | Map the full output ScriptPubKey size for every classified OP_RETURN output |
 | `non_op_return_script_pubkey_sizes_bytes` | Measure the full ScriptPubKey for every classified non-OP_RETURN output | Map every classified non-OP_RETURN output ScriptPubKey size |
-| `witness_element_sizes_bytes` | Measure each witness stack element before signing | Map witness stack sizes from the constructed or observed transaction |
+| `witness_element_sizes_bytes` | Measure each applicable witness stack element before signing | Map applicable witness stack sizes from the constructed or observed transaction |
 
 No SDK or Gateway implementation, dependency, or release is changed by this
 core contract update. The mapping above is an integration contract for future
@@ -218,8 +229,8 @@ conxius-wallet
 
 - [BIP-110 Specification](https://github.com/bitcoin/bips/blob/master/bip-0110.mediawiki)
 - [BIPs.dev Explanation](https://bips.dev/110)
-- [Conxian Unified Theory](docs/CONXIAN_UNIFIED_THEORY_v2.md)
-- [Trust Tier (CON-791)](src/control_model/)
+- [Conxian Unified Theory](CONXIAN_UNIFIED_THEORY_v2.md)
+- [Trust Tier (CON-791)](../src/control_model/)
 
 ## Contact
 

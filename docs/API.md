@@ -1,4 +1,4 @@
-# lib-conxian-core / Vault SDK API Reference v0.2.10
+# lib-conxian-core API Reference v0.2.12
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
@@ -35,6 +35,9 @@ Resilience and recovery models for Lightning operations.
 Canonical types for protocol orchestration and trust.
 - `StateProposal`: Unified model for external settlement triggers (CON-162).
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
+- `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
+- `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
+- See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for byte-measurement semantics and downstream ownership.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 

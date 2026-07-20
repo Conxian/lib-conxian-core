@@ -7,13 +7,13 @@ use super::bip110::Bip110Limits;
 /// BIP-110 (Reduced Data Temporary Softfork) proposes limits on data embedding in Bitcoin
 /// transactions. These constants describe the explicit size-policy subset represented by this
 /// crate; they are not a complete consensus or script-validation model:
-/// - Max 256-byte pushdata per element
+/// - Max 256-byte pushdata payload per element
 /// - 83-byte full output ScriptPubKey for each OP_RETURN output
 /// - 34-byte ScriptPubKey policy limit for each non-OP_RETURN output
 ///
 /// See [docs/BIP110_ALIGNMENT.md](https://github.com/Conxian/lib-conxian-core/blob/main/docs/BIP110_ALIGNMENT.md)
 pub mod bip110 {
-    /// Maximum size of a single pushdata element in bytes
+    /// Maximum payload size of one applicable pushdata element in bytes.
     pub const MAX_PUSHDATA_BYTES: usize = 256;
 
     /// Maximum full output ScriptPubKey size for an OP_RETURN output.
@@ -22,7 +22,7 @@ pub mod bip110 {
     /// Maximum ScriptPubKey size for a non-OP_RETURN output.
     pub const MAX_SCRIPT_PUBKEY_BYTES: usize = 34;
 
-    /// Maximum witness element size in bytes
+    /// Maximum size of one applicable witness stack element in bytes.
     pub const MAX_WITNESS_ELEMENT_BYTES: usize = 256;
 }
 
@@ -308,7 +308,7 @@ impl std::error::Error for Bip110Violation {}
 /// Core BIP-110 size-policy validator for supplied Bitcoin transaction metadata.
 ///
 /// BIP-110 (Reduced Data Temporary Softfork) proposes limits on data embedding:
-/// - Maximum 256-byte pushdata per element
+/// - Maximum 256-byte pushdata payload per element
 /// - Maximum 83-byte full output ScriptPubKey for each OP_RETURN output
 /// - Maximum 34-byte ScriptPubKey for each non-OP_RETURN output
 ///
