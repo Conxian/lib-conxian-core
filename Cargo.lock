@@ -3636,7 +3636,6 @@ dependencies = [
 name = "lib-conxian-core-fuzz"
 version = "0.0.0"
 dependencies = [
- "bitcoin 0.32.101",
  "lib-conxian-core",
  "libfuzzer-sys",
  "musig2",
