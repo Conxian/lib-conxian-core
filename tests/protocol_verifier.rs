@@ -43,10 +43,30 @@ fn make_capabilities(capabilities: Vec<VerifierCapability>) -> VerifierCapabilit
     }
 }
 
+#[derive(Clone)]
+struct ResultPolicyMetadata {
+    finality_class: FinalityClass,
+    verification_class: VerificationClass,
+    trust_tier: TrustTier,
+    provenance_verifier_id: String,
+}
+
+impl Default for ResultPolicyMetadata {
+    fn default() -> Self {
+        Self {
+            finality_class: FinalityClass::Probabilistic,
+            verification_class: VerificationClass::LightClient,
+            trust_tier: TrustTier::Strict,
+            provenance_verifier_id: "integration-mock".to_string(),
+        }
+    }
+}
+
 fn block(
     chain: ChainId,
     state_root: Option<String>,
     status: VerificationStatus,
+    metadata: &ResultPolicyMetadata,
 ) -> LatestVerifiedBlock {
     LatestVerifiedBlock {
         chain,
@@ -57,13 +77,13 @@ fn block(
             timestamp: timestamp(1_000),
             state_root,
         },
-        finality_class: FinalityClass::Probabilistic,
+        finality_class: metadata.finality_class.clone(),
         confirmations: 6,
-        verification_class: VerificationClass::LightClient,
-        trust_tier: TrustTier::Strict,
+        verification_class: metadata.verification_class.clone(),
+        trust_tier: metadata.trust_tier.clone(),
         verification_status: status,
         provenance: VerificationProvenance {
-            verifier_id: "integration-mock".to_string(),
+            verifier_id: metadata.provenance_verifier_id.clone(),
             evidence_ref: Some("mock-proof".to_string()),
             verified_at: timestamp(1_010),
         },
@@ -130,6 +150,7 @@ type RequestMutation = Box<dyn Fn(&mut ProofVerificationRequest)>;
 struct MockBackend {
     capabilities: VerifierCapabilities,
     state_response: StateResponse,
+    result_metadata: ResultPolicyMetadata,
     calls: Arc<AtomicUsize>,
 }
 
@@ -138,12 +159,18 @@ impl MockBackend {
         Self {
             capabilities: make_capabilities(capabilities),
             state_response: StateResponse::Valid,
+            result_metadata: ResultPolicyMetadata::default(),
             calls: Arc::new(AtomicUsize::new(0)),
         }
     }
 
     fn with_state_response(mut self, state_response: StateResponse) -> Self {
         self.state_response = state_response;
+        self
+    }
+
+    fn with_result_metadata(mut self, result_metadata: ResultPolicyMetadata) -> Self {
+        self.result_metadata = result_metadata;
         self
     }
 
@@ -226,7 +253,7 @@ impl ProtocolVerifierBackend for MockBackend {
             chain: chain.clone(),
             state,
             proof_format,
-            verified_block: block(chain, state_root, status),
+            verified_block: block(chain, state_root, status, &self.result_metadata),
         })
     }
 
@@ -239,6 +266,7 @@ impl ProtocolVerifierBackend for MockBackend {
             chain.clone(),
             Some("state-root".to_string()),
             VerificationStatus::Verified,
+            &self.result_metadata,
         ))
     }
 
@@ -251,19 +279,20 @@ impl ProtocolVerifierBackend for MockBackend {
             chain: request.chain.clone(),
             transaction_id: request.transaction_id.clone(),
             status: TransactionFinalityStatus::Finalized { confirmations: 6 },
-            finality_class: FinalityClass::Probabilistic,
+            finality_class: self.result_metadata.finality_class.clone(),
             required_confirmations: request.min_confirmations,
             observed_confirmations: 6,
             latest_block: Some(block(
                 request.chain.clone(),
                 Some("state-root".to_string()),
                 VerificationStatus::Verified,
+                &self.result_metadata,
             )),
-            verification_class: VerificationClass::LightClient,
-            trust_tier: TrustTier::Strict,
+            verification_class: self.result_metadata.verification_class.clone(),
+            trust_tier: self.result_metadata.trust_tier.clone(),
             verification_status: VerificationStatus::Verified,
             provenance: VerificationProvenance {
-                verifier_id: "integration-mock".to_string(),
+                verifier_id: self.result_metadata.provenance_verifier_id.clone(),
                 evidence_ref: Some("mock-finality".to_string()),
                 verified_at: timestamp(1_010),
             },
@@ -283,7 +312,20 @@ fn facade_accepts_valid_proof_and_supports_dynamic_dispatch() {
         .verify_chain_state_at(&valid_request(), timestamp(2_000))
         .expect("valid proof");
     assert!(result.is_verified());
-    assert_eq!(backend.calls(), 1);
+
+    let latest = verifier
+        .get_latest_verified_block_at(&bitcoin(), timestamp(2_000))
+        .expect("valid latest block");
+    assert!(latest.is_verified());
+
+    let finality = verifier
+        .verify_transaction_finality_at(
+            &TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true),
+            timestamp(2_000),
+        )
+        .expect("valid finality");
+    assert!(finality.is_final());
+    assert_eq!(backend.calls(), 3);
 
     let encoded = serde_json::to_vec(&result).expect("serialize result");
     let decoded: ProofVerificationResult =
@@ -294,6 +336,180 @@ fn facade_accepts_valid_proof_and_supports_dynamic_dispatch() {
     assert!(dynamic
         .verify_chain_state_at(&valid_request(), timestamp(2_000))
         .is_ok());
+}
+
+#[test]
+fn facade_rejects_trust_tier_downgrade_and_upgrade() {
+    let downgrade_backend = MockBackend::new(vec![VerifierCapability::StateProofVerification])
+        .with_result_metadata(ResultPolicyMetadata {
+            trust_tier: TrustTier::Managed,
+            ..ResultPolicyMetadata::default()
+        });
+    let downgrade_verifier = ProtocolVerifier::new(downgrade_backend.clone());
+    assert!(matches!(
+        downgrade_verifier.verify_chain_state_at(&valid_request(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedTrustTier {
+            trust_tier: TrustTier::Managed,
+            ..
+        })
+    ));
+    assert_eq!(downgrade_backend.calls(), 1);
+
+    let mut upgrade_backend = MockBackend::new(vec![VerifierCapability::LatestVerifiedBlock]);
+    upgrade_backend.capabilities.trust_tiers = vec![TrustTier::Managed];
+    let upgrade_verifier = ProtocolVerifier::new(upgrade_backend.clone());
+    assert!(matches!(
+        upgrade_verifier.get_latest_verified_block_at(&bitcoin(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedTrustTier {
+            trust_tier: TrustTier::Strict,
+            ..
+        })
+    ));
+    assert_eq!(upgrade_backend.calls(), 1);
+}
+
+#[test]
+fn facade_accepts_valid_advertised_managed_external_quorum_combination() {
+    let mut backend = MockBackend::new(vec![VerifierCapability::StateProofVerification]);
+    backend.capabilities.verification_classes = vec![VerificationClass::ExternalQuorum];
+    backend.capabilities.trust_tiers = vec![TrustTier::Managed];
+    backend.result_metadata = ResultPolicyMetadata {
+        verification_class: VerificationClass::ExternalQuorum,
+        trust_tier: TrustTier::Managed,
+        ..ResultPolicyMetadata::default()
+    };
+
+    let verifier = ProtocolVerifier::new(backend.clone());
+    let result = verifier
+        .verify_chain_state_at(&valid_request(), timestamp(2_000))
+        .expect("advertised managed external-quorum result");
+    assert!(result.is_verified());
+    assert_eq!(backend.calls(), 1);
+}
+
+#[test]
+fn facade_rejects_unadvertised_policy_metadata_for_every_operation() {
+    let mut state_class_backend =
+        MockBackend::new(vec![VerifierCapability::StateProofVerification]);
+    state_class_backend.capabilities.trust_tiers = vec![TrustTier::Strict, TrustTier::Managed];
+    state_class_backend.result_metadata = ResultPolicyMetadata {
+        trust_tier: TrustTier::Managed,
+        verification_class: VerificationClass::ExternalQuorum,
+        ..ResultPolicyMetadata::default()
+    };
+    let state_class_verifier = ProtocolVerifier::new(state_class_backend.clone());
+    assert!(matches!(
+        state_class_verifier.verify_chain_state_at(&valid_request(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedVerificationClass {
+            verification_class: VerificationClass::ExternalQuorum,
+            ..
+        })
+    ));
+    assert_eq!(state_class_backend.calls(), 1);
+
+    let state_finality_backend = MockBackend::new(vec![VerifierCapability::StateProofVerification])
+        .with_result_metadata(ResultPolicyMetadata {
+            finality_class: FinalityClass::Deterministic,
+            ..ResultPolicyMetadata::default()
+        });
+    let state_finality_verifier = ProtocolVerifier::new(state_finality_backend.clone());
+    assert!(matches!(
+        state_finality_verifier.verify_chain_state_at(&valid_request(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedFinalityClass {
+            finality_class: FinalityClass::Deterministic,
+            ..
+        })
+    ));
+    assert_eq!(state_finality_backend.calls(), 1);
+
+    let mut latest_class_backend = MockBackend::new(vec![VerifierCapability::LatestVerifiedBlock]);
+    latest_class_backend.capabilities.trust_tiers = vec![TrustTier::Managed];
+    latest_class_backend.result_metadata = ResultPolicyMetadata {
+        trust_tier: TrustTier::Managed,
+        verification_class: VerificationClass::ExternalQuorum,
+        ..ResultPolicyMetadata::default()
+    };
+    let latest_class_verifier = ProtocolVerifier::new(latest_class_backend.clone());
+    assert!(matches!(
+        latest_class_verifier.get_latest_verified_block_at(&bitcoin(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedVerificationClass {
+            verification_class: VerificationClass::ExternalQuorum,
+            ..
+        })
+    ));
+    assert_eq!(latest_class_backend.calls(), 1);
+
+    let latest_finality_backend = MockBackend::new(vec![VerifierCapability::LatestVerifiedBlock])
+        .with_result_metadata(ResultPolicyMetadata {
+            finality_class: FinalityClass::Deterministic,
+            ..ResultPolicyMetadata::default()
+        });
+    let latest_finality_verifier = ProtocolVerifier::new(latest_finality_backend.clone());
+    assert!(matches!(
+        latest_finality_verifier.get_latest_verified_block_at(&bitcoin(), timestamp(2_000)),
+        Err(ProtocolVerifierError::UnadvertisedFinalityClass {
+            finality_class: FinalityClass::Deterministic,
+            ..
+        })
+    ));
+    assert_eq!(latest_finality_backend.calls(), 1);
+
+    let mut finality_class_backend =
+        MockBackend::new(vec![VerifierCapability::TransactionFinality]);
+    finality_class_backend.capabilities.trust_tiers = vec![TrustTier::Strict, TrustTier::Managed];
+    finality_class_backend.result_metadata = ResultPolicyMetadata {
+        trust_tier: TrustTier::Managed,
+        verification_class: VerificationClass::ExternalQuorum,
+        ..ResultPolicyMetadata::default()
+    };
+    let finality_class_verifier = ProtocolVerifier::new(finality_class_backend.clone());
+    assert!(matches!(
+        finality_class_verifier.verify_transaction_finality_at(
+            &TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true),
+            timestamp(2_000),
+        ),
+        Err(ProtocolVerifierError::UnadvertisedVerificationClass {
+            verification_class: VerificationClass::ExternalQuorum,
+            ..
+        })
+    ));
+    assert_eq!(finality_class_backend.calls(), 1);
+
+    let finality_backend = MockBackend::new(vec![VerifierCapability::TransactionFinality])
+        .with_result_metadata(ResultPolicyMetadata {
+            finality_class: FinalityClass::Deterministic,
+            ..ResultPolicyMetadata::default()
+        });
+    let finality_verifier = ProtocolVerifier::new(finality_backend.clone());
+    assert!(matches!(
+        finality_verifier.verify_transaction_finality_at(
+            &TransactionFinalityRequest::new(bitcoin(), "tx-1", 6, true),
+            timestamp(2_000),
+        ),
+        Err(ProtocolVerifierError::UnadvertisedFinalityClass {
+            finality_class: FinalityClass::Deterministic,
+            ..
+        })
+    ));
+    assert_eq!(finality_backend.calls(), 1);
+}
+
+#[test]
+fn facade_rejects_result_provenance_from_another_verifier() {
+    let backend = MockBackend::new(vec![VerifierCapability::LatestVerifiedBlock])
+        .with_result_metadata(ResultPolicyMetadata {
+            provenance_verifier_id: "other-verifier".to_string(),
+            ..ResultPolicyMetadata::default()
+        });
+    let verifier = ProtocolVerifier::new(backend.clone());
+    assert!(matches!(
+        verifier.get_latest_verified_block_at(&bitcoin(), timestamp(2_000)),
+        Err(ProtocolVerifierError::VerifierIdentityMismatch {
+            expected,
+            actual,
+        }) if expected == "integration-mock" && actual == "other-verifier"
+    ));
+    assert_eq!(backend.calls(), 1);
 }
 
 #[test]

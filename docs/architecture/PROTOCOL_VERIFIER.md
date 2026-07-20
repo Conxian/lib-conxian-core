@@ -74,8 +74,10 @@ Every façade operation performs the following sequence:
    hook.
 2. Invoke exactly the lower-level backend hook for the requested operation.
 3. Validate result structure, chain/block/proof identity, state-root
-   postconditions, provenance timestamps, trust policy, and finality policy
-   before returning success.
+   postconditions, provenance timestamps, advertised trust/verification/finality
+   policy membership, verifier identity, and finality policy before returning
+   success. This applies to nested latest-block metadata returned with a
+   finality result as well.
 
 `ProtocolVerifier::new` keeps invalid advertisements representable but fails
 closed on the first operation. `ProtocolVerifier::try_new` rejects an invalid
@@ -107,6 +109,21 @@ An omitted or changed requested state root returns a typed
 `MissingStateRoot` or `MismatchedStateRoot` error. A backend returning a result
 that bypasses all helper validation therefore cannot turn an invalid response
 into façade-level success.
+
+## Result policy postconditions
+
+The façade validates every returned policy triple against the immutable
+`VerifierCapabilities` snapshot captured at construction:
+
+- `trust_tier` must appear in `capabilities.trust_tiers`;
+- `verification_class` must appear in `capabilities.verification_classes`; and
+- `finality_class` must appear in `capabilities.finality_classes`.
+
+The returned provenance `verifier_id` must also equal
+`capabilities.verifier_id`. These checks run for state-proof results, latest
+verified blocks, finality results, and any nested latest block carried by a
+finality result. Mismatches return typed errors rather than being treated as
+verified evidence.
 
 ## Evidence timestamps and provenance
 

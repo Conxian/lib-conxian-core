@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lower-level `ProtocolVerifierBackend` hook contract. Capability, request,
   result, state-root, provenance, and finality postconditions now run outside
   backend control.
+- Every façade success path now rejects returned trust tiers, verification
+  classes, and finality classes missing from the stored capability snapshot,
+  and requires result provenance to identify the advertised verifier.
 - Added canonical chain-family validation, deterministic future/expiry policy,
   request-aware proof-result checks, and versioned/domain-separated structural
   evidence binding.
