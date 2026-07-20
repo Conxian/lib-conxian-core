@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated verifier architecture, API, ownership boundaries, migration, and
   Phase 1 roadmap documentation without marking unrelated work complete.
 
+### Added
+- **Fuzz Regression Coverage** (#147): Expanded the current suite to five bounded targets with weekly/manual CI. MuSig2 aggregation and PSBT deserialization targets intentionally cover upstream dependencies, while BitVM2 proof verification remains owned by `conxius-enclave-sdk`.
+
+---
+
 ## [v0.2.12] - 2026-07-15
 
 ### Added
@@ -60,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DLC Hardening**: Implemented real oracle attestation verification (s*G = R + e*P) in `src/protocol/dlc.rs`, resolving skeletal stubs (G-06).
 - **RGB Expansion**: Introduced `RGBStockAdapter` for production-ready client-side validation, supporting future `rgb-std` Stock persistence (CON-1407).
 - **Fedimint Hardening**: Hardened Fedimint community liquidity adapter with real ECC-based blinding (note = H(secret)*G + r*G), replacing XOR-based stubs (G-16).
-- **Fuzz Testing**: Established fuzzing infrastructure in the `fuzz/` directory with targets for ERC-7683 intent parsing and MuSig2 public key aggregation (CON-147).
+- **Fuzz Testing**: Established the initial fuzzing infrastructure in the `fuzz/` directory with intent parsing and direct dependency-level MuSig2 public key aggregation coverage (CON-147).
 
 ### Changed
 - **Workspace Alignment**: Configured the repository as a Cargo workspace to include the new fuzzing suite.
