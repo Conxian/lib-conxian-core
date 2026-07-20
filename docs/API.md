@@ -37,7 +37,7 @@ Canonical types for protocol orchestration and trust.
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
 - `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
 - `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
-- See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for byte-measurement semantics and downstream ownership.
+- See [`BIP110_ALIGNMENT.md`](BIP110_ALIGNMENT.md) for the full rule matrix, proposal/deployment assumptions, byte-measurement semantics, context exceptions, and downstream ownership.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 
