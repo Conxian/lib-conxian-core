@@ -129,9 +129,12 @@ weight units, transaction totals, or an aggregate witness serialization length.
   semantic validity, and compiler choices remain part of the BIP-341/BIP-342 and Miniscript
   handoff in [issue #178](https://github.com/Conxian/lib-conxian-core/issues/178).
 - **Taproot control blocks:** The control block is the final script-path witness element after
-  annex handling. Its maximum proposed size is 257 bytes, not 256, because BIP-341 encodes one
-  control byte, a 32-byte internal key, and up to 128 32-byte Merkle-path hashes. It is not a
-  script argument and is not represented by the current Core witness vector.
+  annex handling. Under BIP-110, its maximum proposed size is 257 bytes, not 256: `33 + 32*7`
+  consists of one control byte, a 32-byte internal key, and seven 32-byte Merkle-path sibling
+  hashes. For a balanced tree, that depth-7 path corresponds to at most `2^7 = 128` leaves.
+  BIP-341's generic `33 + 32m` form allows `0 <= m <= 128` (up to 4,129 bytes); BIP-110
+  supplies the stricter 257-byte cap. It is not a script argument and is not represented by the
+  current Core witness vector.
 - **Taproot annexes:** BIP-341 treats a last witness element beginning with `0x50` as an annex
   when the witness has at least two elements. It is removed before script-path inputs are passed
   to the interpreter. BIP-110 would reject the spend rather than apply the 256-byte item limit;
