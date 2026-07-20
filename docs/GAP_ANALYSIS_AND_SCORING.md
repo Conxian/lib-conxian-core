@@ -22,10 +22,9 @@ This document maps identified protocol gaps to research status and implementatio
 
 | Local Module | SDK Module | Gap Status |
 |--------------|------------|-------------|
-| `src/musig2.rs` | `src/protocol/musig2.rs` | ⚠️ **Simplified** - SDK uses real musig2 crate with BIP-327 |
-| `src/bitvm2.rs` | `src/protocol/bitvm2.rs` | ⚠️ **Stub** - SDK has full challenge orchestration |
-| `src/wallet.rs` | `src/enclave/` | ⚠️ **Basic** - SDK has hardware attestation |
-| `src/sdk_primitive.rs` | N/A | ⚠️ **Deprecated** - Use conxius-enclave-sdk directly |
+| Removed in-core MuSig2/BitVM2/Vault implementations | `conxius-enclave-sdk` | ✅ **SDK-owned** - production signing, sessions, attestation, and BitVM2 verification live in the SDK |
+| `fuzz/fuzz_targets/musig2_aggregate.rs` | upstream `musig2::KeyAggContext` | ✅ **Dependency-level fuzz coverage** |
+| `fuzz/fuzz_targets/bitcoin_psbt_deserialize.rs` | upstream `bitcoin::psbt::Psbt` | ✅ **Dependency-level fuzz coverage** |
 | `src/protocol/frost.rs` | `src/protocol/frost.rs` | ✅ Parity |
 | `src/control_model/` | N/A | ✅ Unique to lib-conxian-core |
 
@@ -74,23 +73,23 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 | **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK) |
 | **Silent Payments (G-05)** | 35 | 25 | 20 | **80** | **Implemented** (SDK) |
 | **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Implemented** |
-| **Fuzz Testing (CON-147)** | 30 | 30 | 20 | **80** | **Implemented** |
+| **Fuzz Testing (CON-147)** | 30 | 30 | 20 | **80** | **Implemented** (5 bounded targets; weekly/manual CI) |
 | **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
 | **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
 | **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
 
 ## Gap Identification & Resolution
 1. **Universal Chain Adapters**: Skeletal implementation complete for Cosmos, Solana, Move, and Substrate (CXIP-21).
-2. **BitVM2 Multi-Party**: Resolved (CON-1306). Implemented MuSig2-based Taproot tree aggregation.
+2. **BitVM2 Multi-Party**: Resolved (CON-1306). Production MuSig2-based Taproot tree aggregation and BitVM2 verification are owned by `conxius-enclave-sdk`; this crate no longer carries the Vault implementation.
 3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
 4. **FROST Round 2**: Resolved (CON-1329). Moving from skeletal generation to encrypted share distribution.
 5. **Hardware Attestation**: Resolved (CON-1329). Implementing X.509 DER parsing for enclave certificate chains.
-6. **MuSig2 Signature Aggregation**: Resolved (G-10). Transitioning from dummy aggregation to real sum-of-scalars logic.
+6. **MuSig2 Signature Aggregation**: Resolved (G-10). Production signing and session aggregation are owned by `conxius-enclave-sdk`; this crate retains only protocol primitives and direct dependency-level fuzz coverage.
 7. **Fedimint**: Resolved (G-16). Transitioning to real cryptographic blinding via `fedimint-client-wasm`.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
 9. **DLC**: Resolved (G-06). Hardened oracle attestation verification.
 10. **RGB**: Resolved (CON-1407). Expanded integration with Stock persistence support.
-11. **Fuzz Testing**: Resolved (CON-147). Established fuzzing infrastructure for intent and MuSig2.
+11. **Fuzz Testing**: Resolved (CON-147). Maintained as five bounded current-API targets with weekly/manual CI; PSBT and MuSig2 targets are dependency-level coverage.
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 
 ## Open GitHub Issues (Cross-Repository)
@@ -116,13 +115,13 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 ## Current Focus: SDK Alignment
 
 1. ✅ Add conxius-enclave-sdk dependency
-2. ✅ Deprecate local VaultSDK
-3. ⚠️ Consider removing duplicated implementations (musig2, bitvm2)
+2. ⚠️ Keep the optional SDK integration thin; migrate consumers directly to `conxius-enclave-sdk`
+3. ✅ Removed duplicated Vault implementations from core; production MuSig2 and BitVM2 ownership is in `conxius-enclave-sdk`
 4. ⚠️ Add feature flags for SDK integration
 5. 📋 Update conxian-gateway to use SDK properly
 
 ## Recommendations
 
-1. **Short-term**: Mark local VaultSDK as deprecated, guide users to conxius-enclave-sdk
-2. **Medium-term**: Remove duplicated code from lib-conxian-core, keep only unique protocol primitives
+1. **Short-term**: Keep the optional SDK integration thin and guide consumers to migrate directly to `conxius-enclave-sdk`
+2. **Medium-term**: Maintain lib-conxian-core as the home for unique protocol primitives while keeping production Vault functionality in `conxius-enclave-sdk`
 3. **Long-term**: Consider merging lib-conxian-core into conxius-enclave-sdk or keeping as thin wrapper
