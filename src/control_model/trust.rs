@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::bip110::Bip110Limits;
+
 /// BIP-110 Compliance Constants
 ///
 /// BIP-110 (Reduced Data Temporary Softfork) limits data embedding in Bitcoin transactions:
@@ -328,19 +330,39 @@ impl std::error::Error for Bip110Violation {}
 #[derive(Debug, Clone, Default)]
 pub struct Bip110Compliance {
     enabled: bool,
+    limits: Bip110Limits,
 }
 
 impl Bip110Compliance {
     pub fn new() -> Self {
-        Self { enabled: true }
+        Self {
+            enabled: true,
+            limits: Bip110Limits::canonical(),
+        }
     }
 
     pub fn disabled() -> Self {
-        Self { enabled: false }
+        Self {
+            enabled: false,
+            limits: Bip110Limits::canonical(),
+        }
+    }
+
+    /// Creates an enabled validator with an explicit set of size limits.
+    pub fn with_limits(limits: Bip110Limits) -> Self {
+        Self {
+            enabled: true,
+            limits,
+        }
     }
 
     pub fn is_enabled(&self) -> bool {
         self.enabled
+    }
+
+    /// Returns the size limits used by this validator.
+    pub fn limits(&self) -> &Bip110Limits {
+        &self.limits
     }
 
     /// Validates pushdata size against BIP-110 limit (256 bytes)
@@ -349,10 +371,10 @@ impl Bip110Compliance {
             return Bip110ValidationResult::compliant();
         }
 
-        if size > bip110::MAX_PUSHDATA_BYTES {
+        if size > self.limits.max_pushdata_bytes {
             Bip110ValidationResult::non_compliant(vec![Bip110Violation::PushdataExceedsLimit {
                 size,
-                max: bip110::MAX_PUSHDATA_BYTES,
+                max: self.limits.max_pushdata_bytes,
             }])
         } else {
             Bip110ValidationResult::compliant()
@@ -365,10 +387,10 @@ impl Bip110Compliance {
             return Bip110ValidationResult::compliant();
         }
 
-        if size > bip110::MAX_OP_RETURN_BYTES {
+        if size > self.limits.max_op_return_bytes {
             Bip110ValidationResult::non_compliant(vec![Bip110Violation::OpReturnExceedsLimit {
                 size,
-                max: bip110::MAX_OP_RETURN_BYTES,
+                max: self.limits.max_op_return_bytes,
             }])
         } else {
             Bip110ValidationResult::compliant()
@@ -381,10 +403,10 @@ impl Bip110Compliance {
             return Bip110ValidationResult::compliant();
         }
 
-        if size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
+        if size > self.limits.max_script_pubkey_bytes {
             Bip110ValidationResult::non_compliant(vec![Bip110Violation::ScriptPubKeyExceedsLimit {
                 size,
-                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
+                max: self.limits.max_script_pubkey_bytes,
             }])
         } else {
             Bip110ValidationResult::compliant()
@@ -397,11 +419,11 @@ impl Bip110Compliance {
             return Bip110ValidationResult::compliant();
         }
 
-        if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
+        if size > self.limits.max_witness_element_bytes {
             Bip110ValidationResult::non_compliant(vec![
                 Bip110Violation::WitnessElementExceedsLimit {
                     size,
-                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                    max: self.limits.max_witness_element_bytes,
                 },
             ])
         } else {
@@ -424,35 +446,35 @@ impl Bip110Compliance {
         let mut violations = Vec::new();
 
         for &size in pushdatas.iter() {
-            if size > bip110::MAX_PUSHDATA_BYTES {
+            if size > self.limits.max_pushdata_bytes {
                 violations.push(Bip110Violation::PushdataExceedsLimit {
                     size,
-                    max: bip110::MAX_PUSHDATA_BYTES,
+                    max: self.limits.max_pushdata_bytes,
                 });
             }
         }
 
         if let Some(size) = op_return_size {
-            if size > bip110::MAX_OP_RETURN_BYTES {
+            if size > self.limits.max_op_return_bytes {
                 violations.push(Bip110Violation::OpReturnExceedsLimit {
                     size,
-                    max: bip110::MAX_OP_RETURN_BYTES,
+                    max: self.limits.max_op_return_bytes,
                 });
             }
         }
 
-        if script_pubkey_size > bip110::MAX_SCRIPT_PUBKEY_BYTES {
+        if script_pubkey_size > self.limits.max_script_pubkey_bytes {
             violations.push(Bip110Violation::ScriptPubKeyExceedsLimit {
                 size: script_pubkey_size,
-                max: bip110::MAX_SCRIPT_PUBKEY_BYTES,
+                max: self.limits.max_script_pubkey_bytes,
             });
         }
 
         for &size in witness_elements {
-            if size > bip110::MAX_WITNESS_ELEMENT_BYTES {
+            if size > self.limits.max_witness_element_bytes {
                 violations.push(Bip110Violation::WitnessElementExceedsLimit {
                     size,
-                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                    max: self.limits.max_witness_element_bytes,
                 });
             }
         }

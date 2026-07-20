@@ -1,10 +1,18 @@
+pub mod bip110;
 pub mod lifecycle;
 pub mod ops;
 pub mod trust;
 
+pub use bip110::{Bip110Limits, Bip110TransactionShape};
 pub use lifecycle::*;
 pub use ops::*;
-pub use trust::*;
+pub use trust::{
+    validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult, Bip110Violation,
+    BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope, RailComplianceConstraints,
+    RailCustodyModel, RailFinalitySemantics, RailMetadata, RailOperationalCapabilities,
+    RailTrustAssumptions, RiskAssessment, SessionLifecycleStatus, TrustTier, VerificationClass,
+    VerificationStatus,
+};
 
 use serde::{Deserialize, Serialize};
 

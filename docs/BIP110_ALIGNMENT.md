@@ -1,6 +1,6 @@
 # BIP-110 Alignment for Conxian Ecosystem
 
-> **Status**: Active | **Last Updated**: 2026-07-15 | **Version**: 1.0
+> **Status**: Active | **Last Updated**: 2026-07-20 | **Version**: 1.0
 
 ## Executive Summary
 
@@ -22,6 +22,52 @@ BIP-110 titled "Reduced Data Temporary Softfork" by Dathon Ohm seeks to:
 | ScriptPubKey (non-OP_RETURN) | 34 bytes | Standard P2PKH/P2WPKH |
 | Pushdata/witness elements | 256 bytes | Normal transaction data |
 | Tapleaf formats | Restricted | Standard Taproot |
+
+## Canonical Core Contract
+
+`lib-conxian-core` owns the protocol-level BIP-110 limits and transaction-shape
+contract in `src/control_model/bip110.rs`. The public types are re-exported from
+`lib_conxian_core::control_model`:
+
+| Type/field | Meaning |
+|------------|---------|
+| `Bip110Limits::max_pushdata_bytes` | Maximum size of one pushdata element; canonical default is 256 bytes |
+| `Bip110Limits::max_op_return_bytes` | Maximum OP_RETURN output size; canonical default is 83 bytes |
+| `Bip110Limits::max_script_pubkey_bytes` | Maximum ScriptPubKey size; canonical default is 34 bytes |
+| `Bip110Limits::max_witness_element_bytes` | Maximum size of one witness element; canonical default is 256 bytes |
+| `Bip110TransactionShape::pushdata_sizes_bytes` | Byte size for every pushdata element being checked |
+| `Bip110TransactionShape::op_return_size_bytes` | Optional OP_RETURN byte size |
+| `Bip110TransactionShape::script_pubkey_size_bytes` | ScriptPubKey byte size |
+| `Bip110TransactionShape::witness_element_sizes_bytes` | Byte size for every witness element being checked |
+
+`Bip110Limits::default()` and `Bip110Limits::canonical()` return the same
+canonical values. `Bip110TransactionShape` is serializable/deserializable for
+adapter boundaries. Its validation façade, together with
+`Bip110Limits::validate_transaction`, delegates to the existing
+`Bip110Compliance` aggregate validator and returns the existing structured
+`Bip110ValidationResult` and `Bip110Violation` values.
+
+This contract validates supplied size metadata only. It does not parse raw
+transactions, perform network I/O, persist state, or enforce policy at runtime;
+runtime enforcement remains downstream in the SDK, wallet, and Gateway before
+signing, broadcasting, or accepting a transaction.
+
+### SDK and Gateway Adapter Mapping
+
+Downstream adapters should populate the core shape from the bytes they already
+inspect, then call `shape.validate()` or validate through an explicit
+`Bip110Limits`/`Bip110Compliance` configuration:
+
+| Core contract field | `conxius-enclave-sdk` / wallet mapping | `conxian-gateway` mapping |
+|---------------------|----------------------------------------|--------------------------|
+| `pushdata_sizes_bytes` | Measure each script pushdata element before signing | Map observed or constructed pushdata element sizes before routing |
+| `op_return_size_bytes` | Set from the OP_RETURN output when present | Set from the transaction output metadata when present |
+| `script_pubkey_size_bytes` | Measure the ScriptPubKey selected for the output | Map the output ScriptPubKey size from the transaction shape |
+| `witness_element_sizes_bytes` | Measure each witness stack element before signing | Map witness stack sizes from the constructed or observed transaction |
+
+No SDK or Gateway implementation, dependency, or release is changed by this
+core contract update. The mapping above is an integration contract for future
+downstream adoption and does not claim unreleased SDK behavior is available.
 
 ## Conxian's Position on BIP-110
 
@@ -93,9 +139,9 @@ BIP-110 titled "Reduced Data Temporary Softfork" by Dathon Ohm seeks to:
 - Control models with TrustTier
 - State root persistence
 
-**BIP-110 Actions:**
-- [x] Add BIP110Compliance struct to control_model ✅ (v0.2.12)
-- [x] Document trust tier alignment with BIP-110 ✅
+**BIP-110 Actions (core source tree; not a release claim):**
+- [x] Keep `Bip110Compliance` as the existing validation engine
+- [x] Add the additive `Bip110Limits` and `Bip110TransactionShape` core contract
 - [ ] Add BIP-110 rule validation to anchoring
 
 ## Implementation Checklist
