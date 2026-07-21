@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "policy": "config/core_coverage.json",
+  "toolchain": {
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "cargo_llvm_cov": "cargo-llvm-cov 0.8.7"
+  },
+  "collection_command": "cargo llvm-cov --workspace --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --json --output-path target/coverage/coverage.json",
+  "evaluation_command": "python3 scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha <source-sha>",
+  "baselines": {
+    "historical-pre-critical-module": {
+      "source_sha": "4065271bf6d9b035aa17f1c454f6a1db0c54754c",
+      "label": "historical-pre-critical-module",
+      "status": "thresholds_below_target",
+      "denominator": {
+        "file_count": 25,
+        "unmeasured_files": [
+          "src/cjcs.rs",
+          "src/protocol/mod.rs"
+        ],
+        "lines": {
+          "covered": 1424,
+          "total": 2052,
+          "percent": 69.4
+        },
+        "regions": {
+          "covered": 1971,
+          "total": 2778,
+          "percent": 70.95
+        },
+        "functions": {
+          "covered": 162,
+          "total": 250,
+          "percent": 64.8
+        },
+        "branches": {
+          "covered": 0,
+          "total": 0,
+          "percent": null,
+          "supported": false,
+          "reason": "LLVM reported no measurable items"
+        }
+      },
+      "targets": {
+        "overall": {
+          "metric": "lines",
+          "status": "fail",
+          "covered": 1424,
+          "total": 2052,
+          "percent": 69.4
+        },
+        "signing": {
+          "metric": "lines",
+          "status": "missing",
+          "missing_patterns": [
+            "src/signing.rs"
+          ]
+        },
+        "verification": {
+          "metric": "lines",
+          "status": "missing",
+          "missing_patterns": [
+            "src/verifier.rs"
+          ]
+        },
+        "trust_policy": {
+          "metric": "functions",
+          "status": "pass",
+          "covered": 14,
+          "total": 14,
+          "percent": 100.0
+        },
+        "bip110": {
+          "metric": "lines",
+          "status": "missing",
+          "missing_patterns": [
+            "src/control_model/bip110.rs",
+            "src/control_model/bip110_preflight.rs"
+          ]
+        }
+      },
+      "caveat": "This SHA predates finalized signing, verifier, and BIP-110 preflight modules. It is historical context, not a current enforcement candidate."
+    },
+    "current-enforcement-candidate": {
+      "source_sha": "604ec2be569e2862acaaa400d5d2b90824b13fd3",
+      "label": "current-enforcement-candidate",
+      "status": "thresholds_below_target",
+      "denominator": {
+        "file_count": 29,
+        "unmeasured_files": [
+          "src/cjcs.rs",
+          "src/protocol/mod.rs"
+        ],
+        "lines": {
+          "covered": 3573,
+          "total": 4885,
+          "percent": 73.14
+        },
+        "regions": {
+          "covered": 4463,
+          "total": 6107,
+          "percent": 73.08
+        },
+        "functions": {
+          "covered": 376,
+          "total": 518,
+          "percent": 72.59
+        },
+        "branches": {
+          "covered": 0,
+          "total": 0,
+          "percent": null,
+          "supported": false,
+          "reason": "LLVM reported no measurable items"
+        }
+      },
+      "targets": {
+        "overall": {
+          "metric": "lines",
+          "status": "fail",
+          "covered": 3573,
+          "total": 4885,
+          "percent": 73.14
+        },
+        "signing": {
+          "metric": "lines",
+          "status": "fail",
+          "covered": 387,
+          "total": 529,
+          "percent": 73.16
+        },
+        "verification": {
+          "metric": "lines",
+          "status": "fail",
+          "covered": 978,
+          "total": 1360,
+          "percent": 71.91
+        },
+        "trust_policy": {
+          "metric": "functions",
+          "status": "pass",
+          "covered": 27,
+          "total": 27,
+          "percent": 100.0
+        },
+        "bip110": {
+          "metric": "lines",
+          "status": "fail",
+          "covered": 727,
+          "total": 887,
+          "percent": 81.96
+        }
+      },
+      "caveat": "This is the latest origin/main observed for the rollout and is the candidate for future enforcement after exclusions and gap review."
+    }
+  }
+}
