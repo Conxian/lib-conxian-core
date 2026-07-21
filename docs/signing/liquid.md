@@ -3,10 +3,10 @@
 ## Scope and current support status
 
 This guide covers Liquid/Elements peg-in and peg-out ownership, sidechain
-signing handoffs, and the boundary between Core's typed input checks and
-production federation/proof logic. Core currently exposes `LiquidAdapter` with
-Bitcoin-family mapping, prefix/length address checks, a fee stub, and a typed
-unsupported proof boundary. It does not contain Liquid peg DTOs, federation
+signing handoffs, and the boundary between Core's fail-closed adapter boundary
+and production federation/proof logic. Core currently exposes `LiquidAdapter`
+with Bitcoin-family mapping, prefix/length address checks, a fee stub, and a
+typed unsupported proof boundary. It does not contain Liquid peg DTOs, federation
 quorum/signing logic, an Elements transaction builder, confidential-asset proof
 verification, RPC clients, or a production Liquid signer.
 
@@ -89,9 +89,10 @@ validates capabilities, request/result identity, state roots, provenance,
 evidence binding, trust policy, and finality requirements. A finality request
 that requires finality must not be satisfied by a merely observed block.
 
-The current `LiquidAdapter::verify_state_proof` rejects empty input as malformed
-and returns typed `StateProofError::Unsupported` for non-empty input. Its
-`get_state_root` result is typed unavailable. `LiquidAdapter::validate_address`
+The current `LiquidAdapter::verify_state_proof` rejects empty input as
+`StateProofError::MalformedInput` and returns typed
+`StateProofError::Unsupported` for non-empty input. Its `get_state_root` result
+is typed `StateProofError::Unavailable`. `LiquidAdapter::validate_address`
 still checks only `ex1`/`tlq1` prefix and minimum length. These APIs are not
 confidential proof, Merkle proof, Elements consensus, or federation verification.
 

@@ -14,7 +14,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 ## 2. Key Metrics
 
 - **Core Tests**: 74 Passing (100% success)
-- **Open Security Issues**: 0 (All stubs resolved)
+- **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 5 bounded targets; upstream PSBT/MuSig2 coverage is dependency-level, and BitVM2 proof verification remains SDK-owned.
 - **Active CXIPs**: 3 (Drafting: 26, 27, 28)

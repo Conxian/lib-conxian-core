@@ -15,6 +15,10 @@ transactions.
 The `BabylonAdapter` support described here is structural only; it does not
 establish BTC-header, checkpoint, or EOTS verification.
 
+The v0.3.0 boundary is intentionally fail-closed: structural Babylon input is
+not an authorization result, and the typed adapter errors do not replace a
+Nexus-backed verifier.
+
 `BabylonAdapter::verify_state_proof` does not implement BTC header, height,
 EOTS signature, checkpoint, or cryptographic commitment verification. It returns
 typed `StateProofError::MalformedInput` for empty evidence and
