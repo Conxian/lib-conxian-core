@@ -1,0 +1,8 @@
+{
+  "chain": {
+    "family": "bitcoin_utxo",
+    "chain": null,
+    "network": "mainnet"
+  },
+  "state": {
+    "block_hash":

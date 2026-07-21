@@ -17,6 +17,12 @@ The removed `psbt_parse`, Core-owned `key_aggregate`, and BitVM2 `proof_verify`
 targets are intentionally not restored. Their APIs no longer belong to this
 crate's current fuzz surface.
 
+BIP-322 is also intentionally not a dedicated target in the current
+four-target suite. The current core `Bip322Bridge` implementation performs
+structural checks only; it does not establish message-signature authenticity or
+provide cryptographic verification coverage. No such authenticity or
+cryptographic coverage should be inferred from this fuzz suite.
+
 ## Local usage
 
 Install a nightly toolchain and the pinned cargo-fuzz release used by CI:
@@ -37,21 +43,26 @@ Run a bounded local smoke test. The same bounds are used by CI:
 ```sh
 cargo +nightly fuzz run <target> -- \
   -max_total_time=30 \
-  -rss_limit_mb=2048
+  -rss_limit_mb=2048 \
+  -timeout=5 \
+  -max_len=16384
 ```
 
 Replace `<target>` with one of `parse_intent`, `musig2_aggregate`,
-`anchoring_receipt`, or `proof_request_validate`.
+`anchoring_receipt`, or `proof_request_validate`. The proof-request target
+performs structural and policy validation only; it does not verify Groth16 or
+BitVM2 cryptographic proofs.
 
 ## CI regression policy
 
 `.github/workflows/fuzz-regression.yml` runs every target in a matrix on a
 weekly schedule and through `workflow_dispatch`. Each matrix job compiles with
 Rust nightly and runs cargo-fuzz for a maximum of 30 seconds with a 2048 MiB
-resident-memory limit. Fuzz failures are not allowed to pass via
-`continue-on-error`; a crash or other non-zero fuzz result fails its matrix
-job. Crash artifacts and target corpus files are uploaded after every run,
-including failed runs, with a 14-day retention period.
+resident-memory limit, a five-second per-input timeout, and a 16 KiB maximum
+input length. Fuzz failures are not allowed to pass via `continue-on-error`; a
+crash or other non-zero fuzz result fails its matrix job. Crash artifacts and
+target corpus files are uploaded after every run, including failed runs, with a
+14-day retention period.
 
 ## Corpus review and retention
 
