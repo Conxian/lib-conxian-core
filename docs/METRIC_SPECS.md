@@ -43,5 +43,16 @@
 - **Contract CX-002:** Velocity tracking requires all development tasks to be tagged with `AI-Assisted` or `Manual` in Linear for $V_X$ calculation.
 - **Dependency D-001:** $N_E$ reporting depends on successful ERP sync completion as defined in the Institutional Alignment row.
 
+## 3. Relationship to canonical chain risk profiles
+
+The metrics in this document describe operational and strategic reporting; they
+are not the static chain-family risk-profile schema. A metric refresh, market
+observation, or Gateway risk calculation must not be serialized as an approved
+Core risk score. Canonical profiles use the separately versioned
+`control_model::risk_profile` contract, public evidence, and governance
+references. Nexus owns live proof/finality/freshness observations and Gateway
+owns routing and policy decisions. Unknown or stale metadata must fail closed
+downstream.
+
 ---
 *Last Updated: 2026-05-27*
