@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "tool": {
+    "name": "cargo-llvm-cov",
+    "version": "0.8.7"
+  },
+  "denominator": {
+    "include": [
+      "src/**/*.rs"
+    ],
+    "exclude": [
+      "src/tests.rs",
+      "tests/**",
+      "fuzz/**",
+      "target/**",
+      "generated/**",
+      "vendor/**",
+      "examples/**"
+    ],
+    "dimensions": [
+      "lines",
+      "regions",
+      "functions",
+      "branches"
+    ],
+    "note": "Tests execute production code but standalone test, fuzz, example, generated, vendor, and target paths are not denominator paths."
+  },
+  "targets": {
+    "overall": {
+      "scope": "denominator",
+      "metric": "lines",
+      "minimum_percent": 85.0,
+      "description": "Overall production line coverage"
+    },
+    "signing": {
+      "files": [
+        "src/signing.rs"
+      ],
+      "metric": "lines",
+      "minimum_percent": 95.0,
+      "description": "Universal signing contracts and validation"
+    },
+    "verification": {
+      "files": [
+        "src/verifier.rs"
+      ],
+      "metric": "lines",
+      "minimum_percent": 95.0,
+      "description": "Protocol verifier facade and policy enforcement"
+    },
+    "trust_policy": {
+      "files": [
+        "src/control_model/trust.rs"
+      ],
+      "metric": "functions",
+      "minimum_percent": 100.0,
+      "description": "Trust-policy functions covered for every decision intent",
+      "branch_intent": "Decision and branch intent is reviewed against the trust-tier taxonomy; LLVM branch metrics remain report-only until stable support is available."
+    },
+    "bip110": {
+      "files": [
+        "src/control_model/bip110.rs",
+        "src/control_model/bip110_preflight.rs"
+      ],
+      "metric": "lines",
+      "minimum_percent": 95.0,
+      "description": "BIP-110 limits and transaction preflight",
+      "boundary_matrix": "docs/COVERAGE.md#bip-110-boundary-matrix"
+    }
+  }
+}
