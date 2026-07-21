@@ -6,11 +6,20 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Run cargo publish --dry-run instead of publishing'
+      mode:
+        description: 'Select a safe release operation'
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - publish
+          - release-only
+      release_tag:
+        description: 'Existing matching vX.Y.Z[-prerelease][+build] tag for publish or release-only recovery'
         required: false
-        default: true
-        type: boolean
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -22,19 +31,49 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
-          toolchain: stable
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.10'
+
+      - name: Select manual release tag
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode != 'dry-run' }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${RELEASE_TAG:-}" ]]; then
+            echo "::error::publish and release-only require an explicit release_tag input."
+            exit 1
+          fi
+          python - "$RELEASE_TAG" <<'PY'
+          import sys
+
+          from scripts.verify_release_version import is_valid_release_tag
+
+          release_tag = sys.argv[1]
+          if not is_valid_release_tag(release_tag):
+              print(
+                  "::error::release_tag must use valid SemVer "
+                  "vX.Y.Z[-prerelease][+build] form."
+              )
+              raise SystemExit(1)
+          PY
+
+          git fetch --force origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          git checkout --detach "refs/tags/${RELEASE_TAG}"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          toolchain: stable
 
       - name: Configure sparse Cargo registry
         run: |
@@ -45,116 +84,207 @@ jobs:
           index = "sparse+https://index.crates.io/"
           EOF
 
-      - name: Verify release parity
-        id: release_parity
+      - name: Validate release workflow hygiene
+        run: >-
+          python scripts/verify_release_hygiene.py
+          --workflow .github/workflows/crates-publish.yml
+          --main-workflow .github/workflows/main.yml
+
+      - name: Validate source parity (dry run)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run' }}
+        run: python scripts/verify_release_version.py --phase source-only
+
+      - name: Validate pre-publish parity
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            python scripts/verify_release_hygiene.py --tag "$GITHUB_REF_NAME"
-          else
-            python scripts/verify_release_hygiene.py
+          if [[ -z "${RELEASE_TAG:-}" ]]; then
+            echo "::error::A tag is required before publication."
+            exit 1
           fi
 
-      - name: Check crates.io version
-        id: crates_state
-        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+          python scripts/verify_release_version.py \
+            --phase pre-publish \
+            --tag "$RELEASE_TAG" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-revision "$(git rev-parse HEAD)" \
+            --registry-attempts 1 \
+            --registry-delay-seconds 0
+
+      - name: Validate published candidate for recovery
+        id: recovery
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'release-only' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
-          python scripts/verify_release_hygiene.py --crates-io-state
-          status=$?
-          set -e
+          set -euo pipefail
 
-          if [[ "$status" -eq 0 ]]; then
-            echo "already_published=true" >> "$GITHUB_OUTPUT"
-          elif [[ "$status" -eq 10 ]]; then
-            echo "already_published=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Could not safely determine the crates.io publication state."
-            exit "$status"
-          fi
+          python scripts/verify_release_version.py \
+            --phase post-publish \
+            --tag "$RELEASE_TAG" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-revision "$(git rev-parse HEAD)" \
+            --registry-attempts 12 \
+            --registry-delay-seconds 10
 
       - name: Publish to crates.io (dry run)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
-        run: cargo publish --dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run' }}
+        run: cargo publish --dry-run --locked
 
       - name: Publish to crates.io
         id: publish
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && steps.crates_state.outputs.already_published != 'true' }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish') }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
           if [[ -z "${CARGO_REGISTRY_TOKEN:-}" ]]; then
             echo "::error::CARGO_REGISTRY_TOKEN is required for tag pushes and manual real publishing."
-            echo "::error::Configure the crates.io secret or select dry_run for a manual validation."
+            echo "::error::Configure the crates.io secret or select dry-run for a manual validation."
             echo "::error::Add CARGO_REGISTRY_TOKEN under Settings > Secrets and variables > Actions."
             exit 1
           fi
 
-          if cargo publish; then
+          if cargo publish --locked; then
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             publish_status=$?
-            echo "::warning::cargo publish exited non-zero; checking the exact crates.io version before failing closed."
-            if python scripts/verify_release_hygiene.py --crates-io-state; then
+            echo "::warning::cargo publish exited non-zero; checking the exact candidate before failing closed."
+            if python scripts/verify_release_version.py \
+              --phase post-publish \
+              --tag "$RELEASE_TAG" \
+              --repository "$GITHUB_REPOSITORY" \
+              --source-revision "$(git rev-parse HEAD)" \
+              --registry-attempts 1 \
+              --registry-delay-seconds 0; then
               echo "already_published=true" >> "$GITHUB_OUTPUT"
-              echo "Publication is already confirmed on crates.io; treating this run as a safe retry."
+              echo "The exact candidate is already confirmed on crates.io; treating this as a safe retry state."
             else
-              echo "::error::Publication did not succeed and the expected crates.io version was not confirmed."
+              echo "::error::Publication did not succeed and the exact candidate was not confirmed."
               exit "$publish_status"
             fi
           fi
 
       - name: Verify crates.io publication
-        id: crates_verify
-        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        id: registry
+        if: ${{ success() && steps.publish.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python scripts/verify_release_hygiene.py --wait-for-crates-io --poll-attempts 12 --poll-delay-seconds 10
 
-      - name: Check GitHub Release state
-        id: github_release_state
-        if: ${{ github.event_name == 'push' }}
+          python scripts/verify_release_version.py \
+            --phase post-publish \
+            --tag "$RELEASE_TAG" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-revision "$(git rev-parse HEAD)" \
+            --registry-attempts 12 \
+            --registry-delay-seconds 10
+
+      - name: Create GitHub Release (idempotent)
+        id: release
+        if: >-
+          ${{
+            success() &&
+            (
+              (github.event_name == 'push' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success') ||
+              (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success') ||
+              (github.event_name == 'workflow_dispatch' && inputs.mode == 'release-only' && steps.recovery.outcome == 'success')
+            )
+          }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
-          python scripts/verify_release_hygiene.py --github-release-state --tag "$GITHUB_REF_NAME"
-          status=$?
-          set -e
+          set -euo pipefail
 
-          if [[ "$status" -eq 0 ]]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          elif [[ "$status" -eq 10 ]]; then
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+          diagnostic() {
+            local file="$1"
+            local value
+            value="$(tr '\n' ' ' < "$file" | cut -c 1-400)"
+            if [[ -n "${GH_TOKEN:-}" ]]; then
+              value="${value//${GH_TOKEN}/[REDACTED]}"
+            fi
+            if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+              value="${value//${GITHUB_TOKEN}/[REDACTED]}"
+            fi
+            printf '%s' "$value"
+          }
+
+          release_view_output="$(mktemp)"
+          create_output="$(mktemp)"
+          post_create_view_output="$(mktemp)"
+          trap 'rm -f "$release_view_output" "$create_output" "$post_create_view_output" release-notes.md' EXIT
+
+          if gh release view "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,url >"$release_view_output" 2>&1; then
+            echo "GitHub Release $RELEASE_TAG already exists; leaving it unchanged."
           else
-            echo "::error::Could not safely determine GitHub Release state."
-            exit "$status"
+            view_status=$?
+            view_diagnostic="$(diagnostic "$release_view_output")"
+            if ! grep -Eqi 'release not found|http[^ ]* 404|not found' "$release_view_output"; then
+              echo "::error::Unable to determine whether GitHub Release $RELEASE_TAG exists (gh release view exit $view_status): ${view_diagnostic:-no diagnostic output}."
+              exit 1
+            fi
+            echo "No existing GitHub Release $RELEASE_TAG was found; gh release view diagnostic: ${view_diagnostic:-no diagnostic output}."
+
+            cat > release-notes.md <<'EOF'
+          ## Release Notes
+
+          See [CHANGELOG.md](CHANGELOG.md) for the full change history and
+          [docs/MIGRATION.md](docs/MIGRATION.md) for migration guidance.
+
+          Publication is authenticated with the `CARGO_REGISTRY_TOKEN`
+          repository secret. If publication succeeds but release creation
+          fails, rerun this workflow in `release-only` mode; do not republish.
+          EOF
+            if gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$RELEASE_TAG" \
+              --notes-file release-notes.md >"$create_output" 2>&1; then
+              echo "Created GitHub Release $RELEASE_TAG."
+            else
+              create_status=$?
+              create_diagnostic="$(diagnostic "$create_output")"
+              echo "::warning::GitHub Release creation returned exit $create_status for $RELEASE_TAG: ${create_diagnostic:-no diagnostic output}. Re-checking for a race or already-existing release."
+
+              if gh release view "$RELEASE_TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json tagName,isDraft,url >"$post_create_view_output" 2>&1; then
+                echo "GitHub Release $RELEASE_TAG is now visible after the create failure; running post-release verification before accepting the race."
+                python scripts/verify_release_version.py \
+                  --phase post-release \
+                  --tag "$RELEASE_TAG" \
+                  --repository "$GITHUB_REPOSITORY" \
+                  --source-revision "$(git rev-parse HEAD)" \
+                  --registry-attempts 12 \
+                  --registry-delay-seconds 10
+              else
+                recheck_status=$?
+                recheck_diagnostic="$(diagnostic "$post_create_view_output")"
+                echo "::error::GitHub Release creation failed and the verification re-check could not confirm $RELEASE_TAG (create exit $create_status; re-check exit $recheck_status): ${recheck_diagnostic:-no diagnostic output}."
+                exit 1
+              fi
+            fi
           fi
 
-      - name: Create GitHub Release
-        if: >-
-          ${{
-            github.event_name == 'push' &&
-            steps.release_parity.outcome == 'success' &&
-            steps.crates_verify.outcome == 'success' &&
-            (steps.publish.outcome == 'success' || steps.crates_state.outputs.already_published == 'true') &&
-            steps.github_release_state.outcome == 'success' &&
-            steps.github_release_state.outputs.exists != 'true'
-          }}
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          body: |
-            ## ${{ github.ref_name }} Release Notes
-
-            ### Highlights & Migration
-            For release highlights, breaking changes, and migration guides, please refer to the following documents:
-            - [Changelog](CHANGELOG.md) - Full version history and detailed change descriptions
-            - [Migration Guide](docs/MIGRATION.md) - Instructions for migrating between versions
-
-            ### Note
-            Publication is authenticated with the `CARGO_REGISTRY_TOKEN` repository secret. If publication fails or needs a manual retry, configure that secret before rerunning the workflow.
+      - name: Verify post-release parity
+        if: ${{ success() && steps.release.outcome == 'success' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          python scripts/verify_release_version.py \
+            --phase post-release \
+            --tag "$RELEASE_TAG" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-revision "$(git rev-parse HEAD)" \
+            --registry-attempts 12 \
+            --registry-delay-seconds 10
