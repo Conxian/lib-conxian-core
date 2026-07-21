@@ -108,6 +108,36 @@ The contract is a downstream handoff for SDK #179, Gateway #245, and Wallet #381
 does not claim that those consumers currently enforce the contract; their builders and routing
 flows must reject non-compliant or unsupported results rather than treating them as warnings.
 
+### Deterministic core-to-downstream fixture boundary (CON-1505)
+
+Core owns the synthetic golden fixtures in `tests/fixtures/` and the
+repository-local harness in `tests/core_to_downstream_integration.rs`. The
+fixtures deserialize into the existing public signing, verifier, BIP-110, and
+adapter contract types where those types exist, then exercise deterministic
+round trips, version constants, capability gates, request/result postconditions,
+and fail-closed error shapes.
+
+The harness uses clearly named test-only doubles for successful signing and
+verification, unsupported capabilities, malformed proofs, stale evidence, and
+policy rejection. These doubles never acquire evidence, access a node, use
+credentials, hold secret material, or stand in for hardware. Adapter coverage
+is limited to representative `TxParams`, address, family, trust, and fee
+metadata; it intentionally does not assert that an adapter's placeholder proof
+method is authoritative cryptographic verification.
+
+The current compatibility pins are Core `0.2.12` with Rust `1.85`, signing API
+version `1`, BIP-110 preflight API version `1`, and protocol-verifier evidence
+binding version `1`. The existing optional `conxius-enclave-sdk` `2.0.11`
+reference is not compiled by this layer, and no optional SDK or `--all-features`
+path is enabled. Downstream repositories remain responsible for runtime
+orchestration, parsing/classification, live evidence, cryptography, persistence,
+and external side effects.
+
+Local verification starts with `cargo fmt --all -- --check` and
+`cargo test --locked --test core_to_downstream_integration`; adjacent Core tests
+and the full workspace command remain follow-up checks. Live downstream CI
+fan-out is deferred and must remain opt-in and pinned until the APIs stabilize.
+
 
 ## 6. SDK Ownership & Version Policy (CON-1178)
 
