@@ -109,6 +109,59 @@ Platform-neutral contracts for downstream chain verifiers.
 
 Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. The structural binding is not authenticity; downstream signatures, attestations, light clients, or verifier-set proofs remain required. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
 
+## 5. Deterministic Core-to-Downstream Fixtures (CON-1505)
+
+This is the initial Core-owned serialized-contract checkpoint. The first
+repository-local integration layer is owned by Core and lives under
+`tests/fixtures/` with its harness in `tests/core_to_downstream_integration.rs`:
+
+- `signing_boundary.json` covers the versioned signer capability advertisement,
+  `SignRequest`/`SignResponse` shapes, and unsupported chain, algorithm, and
+  operation errors.
+- `verifier_boundary.json` covers proof and finality request/result shapes,
+  capability advertisements, malformed proof input, stale evidence returned by
+  a named test-only backend, and policy rejection of degraded evidence.
+- `bip110_preflight.json` covers compliant and non-compliant measurements plus
+  rejection of an unsupported API version.
+- `adapter_contracts.json` covers representative `TxParams`, chain-family, trust,
+  address, and fee contract metadata for local adapter doubles/implementations.
+
+Fixtures are synthetic, deterministic, and safe to commit. They contain no
+credentials, private key material, production principals, RPC data, network
+calls, environment requirements, hardware behavior, or downstream checkouts.
+The verifier and adapter cases assert structural Core contracts only; they do
+not claim authoritative cryptographic verification. The stale-evidence case
+preserves the typed `ProtocolVerifierError::StaleReference` shape through a
+test-only backend because the current Core façade does not acquire live evidence.
+
+The compatibility assumptions recorded by this checkpoint are limited to the
+Core package `lib-conxian-core` `0.2.12`, Rust `1.85`, the default feature set
+(`default = []`),
+`UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
+`BIP110_PREFLIGHT_API_VERSION = 1`, and
+`PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
+domain constant. The known optional production SDK assumption is the existing
+`conxius-enclave-sdk` `2.0.11` declaration; this fixture layer deliberately does
+not compile or force that optional SDK path. This checkpoint does not claim
+direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+`conxian-gateway`, or `conxian-nexus`. Per CON-1505, pinned downstream fan-out
+is intentionally deferred until the UCS and ProtocolVerifier APIs stabilize;
+no Gateway or Nexus pin is asserted here.
+
+Run the focused layer locally with:
+
+```text
+cargo fmt --all -- --check
+cargo test --locked --test core_to_downstream_integration
+cargo test --locked --test universal_chain_signer
+cargo test --locked --test protocol_verifier
+cargo test --locked --test bip110_preflight
+```
+
+The existing workspace CI remains the broader validation path. Live downstream
+CI fan-out is intentionally deferred, opt-in, and expected to use pinned
+consumer revisions until these Core contracts stabilize.
+
 ### Anchoring (`anchoring`)
 Models for decentralized state persistence.
 - `AnchoringRequest`: Payload for committing state roots to Tableland or L1.
