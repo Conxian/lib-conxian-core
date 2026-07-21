@@ -22,7 +22,9 @@ use conxius_enclave_sdk::enclave::{
     SigningAlgorithm as SdkSigningAlgorithm,
 };
 use lib_conxian_core::{
-    control_model::{validate_bip110_preflight, Bip110PreflightRequest, Chain, TrustTier},
+    control_model::{
+        validate_bip110_preflight, Bip110PreflightRequest, Chain, ChainFamily, TrustTier,
+    },
     signing::{
         DerivationContext, DerivationPathError, DigestAlgorithm, PublicVerificationKey,
         SignRequest, Signature, SignatureEncoding, SigningAlgorithm, SigningPayload, SigningTarget,
@@ -118,6 +120,7 @@ impl TrustPolicy {
     fn validate_attestation(
         &self,
         provider_attestation: Option<&str>,
+        expected_nonce: &[u8],
     ) -> Result<AttestationSummary, AdapterError> {
         self.ensure_signing_allowed()?;
 
@@ -128,6 +131,9 @@ impl TrustPolicy {
 
         let report: DeviceIntegrityReport =
             serde_json::from_str(serialized).map_err(|_| AdapterError::InvalidAttestation)?;
+        if report.challenge_nonce != expected_nonce {
+            return Err(AdapterError::AttestationChallengeMismatch);
+        }
         let level = AttestationLevel::from_sdk(report.level.clone());
 
         let allowed = match self.minimum_attestation {
@@ -158,19 +164,47 @@ impl TrustPolicy {
         Ok(AttestationSummary {
             level,
             device_fingerprint: report.get_device_fingerprint(),
+            evidence: AttestationEvidence {
+                raw_report: serialized.to_owned(),
+                level,
+                challenge_nonce: report.challenge_nonce,
+                signature: report.signature,
+                certificate_chain: report.certificate_chain,
+                timestamp: report.timestamp,
+                extension_data: report.extension_data,
+            },
         })
     }
 }
 
+/// Opaque and structured attestation evidence retained for downstream
+/// verification.
+///
+/// The adapter preserves the exact SDK JSON plus every field in
+/// [`DeviceIntegrityReport`]. It performs only JSON parsing, request-nonce
+/// binding, and trust-level gating; it does not verify report signatures,
+/// certificate chains, freshness, or hardware claims.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AttestationEvidence {
+    pub raw_report: String,
+    pub level: AttestationLevel,
+    pub challenge_nonce: Vec<u8>,
+    pub signature: Vec<u8>,
+    pub certificate_chain: Vec<String>,
+    pub timestamp: u64,
+    pub extension_data: String,
+}
+
 /// Public attestation metadata returned by a successful adapter call.
 ///
-/// The raw SDK attestation JSON is intentionally not retained. Verification
-/// remains an SDK/downstream responsibility; this summary is only the result
-/// of the adapter's conservative level gate and stable fingerprint extraction.
+/// The summary contains the adapter's conservative level-gate result and the
+/// complete evidence needed by a downstream SDK/provider verifier. This layer
+/// does not claim cryptographic verification of the report.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttestationSummary {
     pub level: AttestationLevel,
     pub device_fingerprint: String,
+    pub evidence: AttestationEvidence,
 }
 
 /// Adapter-owned signing result. It contains public signature material only;
@@ -208,6 +242,12 @@ pub enum AdapterError {
         actual: usize,
     },
     InvalidDerivationPath(DerivationPathError),
+    UnsupportedChainAlgorithm {
+        chain: Chain,
+        family: ChainFamily,
+        algorithm: SigningAlgorithm,
+    },
+    UnsupportedPublicKeyDerivation(SigningAlgorithm),
     PreflightRequired,
     PreflightTargetMismatch,
     PreflightRejected {
@@ -217,6 +257,7 @@ pub enum AdapterError {
     MalformedProviderResponse(ProviderResponseField),
     MissingAttestation,
     InvalidAttestation,
+    AttestationChallengeMismatch,
     InsufficientAttestation {
         required: Option<MinimumAttestation>,
         observed: AttestationLevel,
@@ -244,6 +285,18 @@ impl fmt::Display for AdapterError {
             Self::InvalidDerivationPath(error) => {
                 write!(formatter, "invalid derivation path: {error}")
             }
+            Self::UnsupportedChainAlgorithm {
+                chain,
+                family,
+                algorithm,
+            } => write!(
+                formatter,
+                "signing algorithm {algorithm:?} is not allowed for {chain:?} in {family:?}"
+            ),
+            Self::UnsupportedPublicKeyDerivation(algorithm) => write!(
+                formatter,
+                "public-key derivation is unsupported for {algorithm:?} with SDK 2.0.11"
+            ),
             Self::PreflightRequired => {
                 formatter.write_str("Bitcoin signing requires a compliant Core BIP-110 preflight")
             }
@@ -260,6 +313,9 @@ impl fmt::Display for AdapterError {
             Self::MissingAttestation => formatter.write_str("enclave provider omitted attestation"),
             Self::InvalidAttestation => {
                 formatter.write_str("enclave provider returned invalid attestation")
+            }
+            Self::AttestationChallengeMismatch => {
+                formatter.write_str("enclave attestation is not bound to the signing digest")
             }
             Self::InsufficientAttestation { required, observed } => write!(
                 formatter,
@@ -297,6 +353,55 @@ impl AttestationLevel {
             SdkAttestationLevel::StrongBox => Self::StrongBox,
             SdkAttestationLevel::CloudTEE => Self::CloudTee,
         }
+    }
+}
+
+/// Returns whether the adapter's conservative SDK `2.0.11` capability
+/// allowlist permits an algorithm for a canonical Core target.
+///
+/// The allowlist intentionally names concrete chains instead of treating a
+/// coarse `ChainFamily` as proof of SDK support. Bitcoin-family monetary
+/// targets use secp256k1 algorithms, Stacks uses ECDSA secp256k1, Ethereum uses
+/// ECDSA secp256k1, and Solana uses Ed25519. Other Core chains are denied until
+/// an exact SDK mapping is established.
+pub fn is_supported_chain_algorithm(target: &SigningTarget, algorithm: SigningAlgorithm) -> bool {
+    matches!(
+        (&target.chain, &target.family, algorithm),
+        (
+            Chain::Bitcoin | Chain::Liquid | Chain::Lightning | Chain::Babylon,
+            ChainFamily::BitcoinUtxo,
+            SigningAlgorithm::EcdsaSecp256k1 | SigningAlgorithm::SchnorrSecp256k1,
+        ) | (
+            Chain::Stacks,
+            ChainFamily::BitcoinUtxo,
+            SigningAlgorithm::EcdsaSecp256k1
+        ) | (
+            Chain::Ethereum,
+            ChainFamily::Evm,
+            SigningAlgorithm::EcdsaSecp256k1
+        ) | (
+            Chain::Solana,
+            ChainFamily::SolanaSvm,
+            SigningAlgorithm::Ed25519
+        )
+    )
+}
+
+/// Validates a canonical Core target and the adapter's explicit chain/
+/// algorithm capability mapping before any provider call.
+pub fn validate_chain_algorithm(
+    target: &SigningTarget,
+    algorithm: SigningAlgorithm,
+) -> Result<(), AdapterError> {
+    target.validate().map_err(|_| AdapterError::InvalidTarget)?;
+    if is_supported_chain_algorithm(target, algorithm) {
+        Ok(())
+    } else {
+        Err(AdapterError::UnsupportedChainAlgorithm {
+            chain: target.chain.clone(),
+            family: target.family.clone(),
+            algorithm,
+        })
     }
 }
 
@@ -396,10 +501,7 @@ impl EnclaveSdkAdapter {
         request: &SignRequest,
     ) -> Result<SdkSignRequest, AdapterError> {
         self.trust_policy.ensure_signing_allowed()?;
-        request
-            .target
-            .validate()
-            .map_err(|_| AdapterError::InvalidTarget)?;
+        validate_chain_algorithm(&request.target, request.algorithm)?;
 
         let message_hash = extract_sdk_digest(&request.payload)?;
         let derivation_path = render_derivation_path(&request.derivation)?;
@@ -418,6 +520,7 @@ impl EnclaveSdkAdapter {
     /// Bitcoin targets must use [`Self::sign_digest_with_bip110_preflight`]
     /// so the Core preflight is evaluated before provider invocation.
     pub fn sign_digest(&self, request: &SignRequest) -> Result<EnclaveSignResponse, AdapterError> {
+        validate_chain_algorithm(&request.target, request.algorithm)?;
         if request.target.chain == Chain::Bitcoin {
             return Err(AdapterError::PreflightRequired);
         }
@@ -432,6 +535,7 @@ impl EnclaveSdkAdapter {
         request: &SignRequest,
         preflight: &Bip110PreflightRequest,
     ) -> Result<EnclaveSignResponse, AdapterError> {
+        validate_chain_algorithm(&request.target, request.algorithm)?;
         let result = validate_bip110_preflight(preflight);
         if !result.is_compliant {
             let code = result
@@ -459,7 +563,10 @@ impl EnclaveSdkAdapter {
         algorithm: SigningAlgorithm,
         derivation: &DerivationContext,
     ) -> Result<PublicVerificationKey, AdapterError> {
-        target.validate().map_err(|_| AdapterError::InvalidTarget)?;
+        validate_chain_algorithm(target, algorithm)?;
+        if algorithm == SigningAlgorithm::SchnorrSecp256k1 {
+            return Err(AdapterError::UnsupportedPublicKeyDerivation(algorithm));
+        }
         let derivation_path = render_derivation_path(derivation)?;
         let public_key_hex = self
             .manager
@@ -477,16 +584,18 @@ impl EnclaveSdkAdapter {
         request: &SignRequest,
     ) -> Result<EnclaveSignResponse, AdapterError> {
         let sdk_request = self.build_sdk_sign_request(request)?;
+        let message_hash = sdk_request.message_hash.clone();
         let sdk_response = self
             .manager
             .sign(sdk_request)
             .map_err(|_| AdapterError::ProviderFailure)?;
-        self.map_sdk_response(request, sdk_response)
+        self.map_sdk_response(request, &message_hash, sdk_response)
     }
 
     fn map_sdk_response(
         &self,
         request: &SignRequest,
+        message_hash: &[u8],
         response: SdkSignResponse,
     ) -> Result<EnclaveSignResponse, AdapterError> {
         let signature_bytes =
@@ -500,7 +609,7 @@ impl EnclaveSdkAdapter {
         validate_public_key_length(algorithm, verification_key_bytes.len())?;
         let attestation = self
             .trust_policy
-            .validate_attestation(response.device_attestation.as_deref())?;
+            .validate_attestation(response.device_attestation.as_deref(), message_hash)?;
 
         Ok(EnclaveSignResponse {
             target: request.target.clone(),
@@ -551,7 +660,7 @@ fn validate_public_key_length(
 ) -> Result<(), AdapterError> {
     let valid = match algorithm {
         SigningAlgorithm::EcdsaSecp256k1 => matches!(byte_len, 33 | 65),
-        SigningAlgorithm::SchnorrSecp256k1 => matches!(byte_len, 32 | 33 | 65),
+        SigningAlgorithm::SchnorrSecp256k1 => byte_len == 32,
         SigningAlgorithm::Ed25519 => byte_len == 32,
     };
 

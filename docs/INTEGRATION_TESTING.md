@@ -41,10 +41,13 @@ boundary rather than a simulator or provider implementation. Coverage includes:
 - byte-preserving SHA-256 digest extraction plus message and unsupported-digest
   rejection;
 - SDK request construction and public response shape validation;
-- malformed hex, signature/key lengths, missing/invalid attestations, and
-  secret-safe provider errors;
+- malformed hex, signature/key lengths, missing/invalid attestations, exact
+  attestation request binding, evidence retention, and secret-safe provider
+  errors;
 - `Strict`, `Managed`, `Expedient`, and `ObserverOnly` trust-policy behavior;
-  `ObserverOnly` never invokes the provider; and
+- `ObserverOnly` never invokes the provider;
+- the deny-by-default chain/algorithm capability gate, including invalid-pair
+  zero-call assertions and the Schnorr getter fail-closed rule; and
 - BIP-110 rejection before provider invocation, plus inclusive compliant
   boundary values.
 
@@ -99,7 +102,7 @@ The exact pins represented by this checkpoint are:
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
 | Optional SDK dependency in Core manifest | `conxius-enclave-sdk` exact `2.0.11` |
 | Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.11`; default features remain minimal |
-| SDK main line | `conxius-enclave-sdk` `2.0.12`; not the stable target for this checkpoint |
+| SDK main line | `2.0.12` is metadata on unreleased upstream `main`; the latest published target remains exact `2.0.11` |
 | Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `3b091d2700d840514427e4190c40d631b6d8132c`; this checkpoint does not change that downstream pin |
 | Gateway | local Core crate integration; no cross-repository dependency is added here |
 | Wallet | TypeScript boundary; no Rust runtime dependency is added here |
@@ -138,7 +141,16 @@ cargo test --test deterministic_contracts --locked
 cargo test --test adapter_conformance --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo package -p lib-conxian-core-enclave --locked --allow-dirty --no-verify
 ```
+
+The add-on package check is a release/package dry-run for the workspace
+member. Its manifest keeps the local path for workspace builds and declares
+the compatible published Core requirement `lib-conxian-core = "0.3.0"` so Cargo
+can produce a registry-ready package manifest. The check requires Core `0.3.0`
+to be available from the configured registry; before that publication Cargo
+must reject resolution rather than silently selecting the older published
+`0.2.11` Core release.
 
 The integration tests are credential-free and do not require a node, RPC endpoint, database,
 hardware-backed signer, enclave, custody service, or environment-specific configuration.

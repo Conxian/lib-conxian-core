@@ -185,17 +185,22 @@ and the deterministic downstream fixture work
 Core default feature graph remains SDK-independent and no Core-to-SDK-to-Core
 dependency cycle is introduced.
 
+The `2.0.12` value associated with the SDK's unreleased upstream `main` line is
+metadata only. The latest published SDK target for this workspace and its
+companion adapter remains exact `2.0.11`.
+
 | Surface | Feature selection | SDK target | Effective Rust | Default bypass features |
 | --- | --- | --- | --- | --- |
 | `lib-conxian-core-enclave` | Workspace member; no feature flags | Exact `2.0.11` | `1.91+` | None; simulator/mock/dev paths are not enabled |
 | Core `enclave` feature | Optional direct SDK dependency | Exact `2.0.11` | `1.91+` | None by default |
 
 The companion adapter is intentionally narrower than the SDK. It supports
-explicit algorithm conversion, deterministic derivation-path rendering,
-digest-only SHA-256 request construction, conservative trust-tier gates, typed
-public response mapping, and Core-first BIP-110 preflight for Bitcoin signing.
-Provider lifecycle, attestation verification, replay state, networking,
-persistence, telemetry, and environment-specific policy remain outside Core
-and this adapter. See
+explicit algorithm conversion, a deny-by-default chain/algorithm allowlist,
+deterministic derivation-path rendering, digest-only SHA-256 request
+construction, conservative trust-tier gates, request-bound attestation evidence
+retention, typed public response mapping, and Core-first BIP-110 preflight for
+Bitcoin signing. Provider lifecycle, cryptographic signature/attestation
+verification, replay state, networking, persistence, telemetry, and
+environment-specific policy remain outside Core and this adapter. See
 [`addons/lib-conxian-core-enclave/README.md`](../addons/lib-conxian-core-enclave/README.md)
 and [`SIGNING_ARCHITECTURE.md`](SIGNING_ARCHITECTURE.md).

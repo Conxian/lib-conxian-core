@@ -25,6 +25,8 @@ use lib_conxian_core_enclave::{
     AttestationLevel, EnclaveSdkAdapter, MinimumAttestation, ProviderResponseField, TrustPolicy,
 };
 
+const TEST_DIGEST: [u8; 32] = [7; 32];
+
 #[derive(Clone)]
 enum Outcome {
     Response(SdkSignResponse),
@@ -33,6 +35,7 @@ enum Outcome {
 
 struct RecordingManager {
     calls: AtomicUsize,
+    public_key_calls: AtomicUsize,
     outcome: Mutex<Outcome>,
     last_request: Mutex<Option<SdkSignRequest>>,
 }
@@ -41,6 +44,7 @@ impl RecordingManager {
     fn new(response: SdkSignResponse) -> Self {
         Self {
             calls: AtomicUsize::new(0),
+            public_key_calls: AtomicUsize::new(0),
             outcome: Mutex::new(Outcome::Response(response)),
             last_request: Mutex::new(None),
         }
@@ -49,6 +53,7 @@ impl RecordingManager {
     fn failing() -> Self {
         Self {
             calls: AtomicUsize::new(0),
+            public_key_calls: AtomicUsize::new(0),
             outcome: Mutex::new(Outcome::Failure),
             last_request: Mutex::new(None),
         }
@@ -60,6 +65,10 @@ impl RecordingManager {
 
     fn calls(&self) -> usize {
         self.calls.load(Ordering::SeqCst)
+    }
+
+    fn public_key_calls(&self) -> usize {
+        self.public_key_calls.load(Ordering::SeqCst)
     }
 
     fn last_request(&self) -> SdkSignRequest {
@@ -77,6 +86,7 @@ impl EnclaveManager for RecordingManager {
     }
 
     fn get_public_key(&self, _derivation_path: &str) -> ConclaveResult<String> {
+        self.public_key_calls.fetch_add(1, Ordering::SeqCst);
         Ok(format!("02{}", "11".repeat(32)))
     }
 
@@ -93,9 +103,13 @@ impl EnclaveManager for RecordingManager {
 }
 
 fn attestation(level: SdkAttestationLevel) -> String {
+    attestation_with_nonce(level, TEST_DIGEST.to_vec())
+}
+
+fn attestation_with_nonce(level: SdkAttestationLevel, challenge_nonce: Vec<u8>) -> String {
     serde_json::to_string(&DeviceIntegrityReport {
         level,
-        challenge_nonce: vec![1, 2, 3],
+        challenge_nonce,
         signature: vec![4, 5, 6],
         certificate_chain: vec!["device".to_owned(), "root".to_owned()],
         timestamp: 1,
@@ -109,10 +123,24 @@ fn response(
     public_key_bytes: usize,
     level: SdkAttestationLevel,
 ) -> SdkSignResponse {
+    response_with_nonce(
+        signature_bytes,
+        public_key_bytes,
+        level,
+        TEST_DIGEST.to_vec(),
+    )
+}
+
+fn response_with_nonce(
+    signature_bytes: usize,
+    public_key_bytes: usize,
+    level: SdkAttestationLevel,
+    challenge_nonce: Vec<u8>,
+) -> SdkSignResponse {
     SdkSignResponse {
         signature_hex: hex::encode(vec![0x11; signature_bytes]),
         public_key_hex: hex::encode(vec![0x22; public_key_bytes]),
-        device_attestation: Some(attestation(level)),
+        device_attestation: Some(attestation_with_nonce(level, challenge_nonce)),
     }
 }
 
@@ -139,7 +167,15 @@ fn digest_request(chain: Chain, algorithm: SigningAlgorithm) -> SignRequest {
     request(
         chain,
         algorithm,
-        SigningPayload::digest(DigestAlgorithm::Sha256, vec![7; 32]),
+        SigningPayload::digest(DigestAlgorithm::Sha256, TEST_DIGEST.to_vec()),
+    )
+}
+
+fn compliant_bip110_preflight() -> Bip110PreflightRequest {
+    Bip110PreflightRequest::new(
+        Bip110PreflightPhase::PreConstruction,
+        lib_conxian_core::control_model::Bip110OperationContext::BitcoinTransaction,
+        Bip110PreflightMeasurements::new(vec![256], vec![83], vec![34], vec![256]),
     )
 }
 
@@ -280,6 +316,19 @@ fn response_mapping_supports_exact_sdk_signature_shapes() {
     assert_eq!(compact.signature.encoding, SignatureEncoding::Compact);
     assert_eq!(compact.signature.bytes.len(), 64);
     assert_eq!(compact.verification_key.bytes.len(), 33);
+    assert_eq!(
+        compact.attestation.evidence.challenge_nonce,
+        TEST_DIGEST.to_vec()
+    );
+    assert_eq!(
+        compact.attestation.evidence.raw_report,
+        attestation(SdkAttestationLevel::TEE)
+    );
+    assert_eq!(compact.attestation.evidence.signature, vec![4, 5, 6]);
+    assert_eq!(
+        compact.attestation.evidence.certificate_chain,
+        vec!["device".to_owned(), "root".to_owned()]
+    );
     let forwarded = manager.last_request();
     assert_eq!(forwarded.algorithm, SdkSigningAlgorithm::EcdsaSecp256k1);
     assert_eq!(forwarded.message_hash, vec![7; 32]);
@@ -308,13 +357,35 @@ fn response_mapping_supports_exact_sdk_signature_shapes() {
     let schnorr_adapter =
         EnclaveSdkAdapter::new(schnorr_manager, "test-key", TrustTier::Managed).unwrap();
     let schnorr = schnorr_adapter
-        .sign_digest(&digest_request(
-            Chain::Ethereum,
-            SigningAlgorithm::SchnorrSecp256k1,
-        ))
+        .sign_digest_with_bip110_preflight(
+            &digest_request(Chain::Bitcoin, SigningAlgorithm::SchnorrSecp256k1),
+            &compliant_bip110_preflight(),
+        )
         .unwrap();
     assert_eq!(schnorr.signature.encoding, SignatureEncoding::Compact);
     assert_eq!(schnorr.verification_key.bytes.len(), 32);
+
+    let malformed_schnorr_manager = Arc::new(RecordingManager::new(response(
+        64,
+        33,
+        SdkAttestationLevel::TEE,
+    )));
+    let malformed_schnorr_adapter = EnclaveSdkAdapter::new(
+        malformed_schnorr_manager.clone(),
+        "test-key",
+        TrustTier::Managed,
+    )
+    .unwrap();
+    assert_eq!(
+        malformed_schnorr_adapter
+            .sign_digest_with_bip110_preflight(
+                &digest_request(Chain::Bitcoin, SigningAlgorithm::SchnorrSecp256k1),
+                &compliant_bip110_preflight(),
+            )
+            .unwrap_err(),
+        AdapterError::MalformedProviderResponse(ProviderResponseField::VerificationKey)
+    );
+    assert_eq!(malformed_schnorr_manager.calls(), 1);
 
     let ed_manager = Arc::new(RecordingManager::new(response(
         64,
@@ -323,10 +394,117 @@ fn response_mapping_supports_exact_sdk_signature_shapes() {
     )));
     let ed_adapter = EnclaveSdkAdapter::new(ed_manager, "test-key", TrustTier::Managed).unwrap();
     let ed25519 = ed_adapter
-        .sign_digest(&digest_request(Chain::Ethereum, SigningAlgorithm::Ed25519))
+        .sign_digest(&digest_request(Chain::Solana, SigningAlgorithm::Ed25519))
         .unwrap();
     assert_eq!(ed25519.signature.encoding, SignatureEncoding::Raw);
     assert_eq!(ed25519.verification_key.bytes.len(), 32);
+}
+
+#[test]
+fn attestation_nonce_mismatch_rejects_the_provider_response() {
+    let manager = Arc::new(RecordingManager::new(response_with_nonce(
+        64,
+        33,
+        SdkAttestationLevel::TEE,
+        vec![8; 32],
+    )));
+    let adapter = adapter(manager.clone(), TrustTier::Managed);
+
+    assert_eq!(
+        adapter
+            .sign_digest(&digest_request(
+                Chain::Ethereum,
+                SigningAlgorithm::EcdsaSecp256k1,
+            ))
+            .unwrap_err(),
+        AdapterError::AttestationChallengeMismatch
+    );
+    assert_eq!(manager.calls(), 1);
+}
+
+#[test]
+fn schnorr_public_key_derivation_fails_closed_before_getter_invocation() {
+    let manager = Arc::new(RecordingManager::new(response(
+        64,
+        33,
+        SdkAttestationLevel::TEE,
+    )));
+    let adapter = adapter(manager.clone(), TrustTier::ObserverOnly);
+
+    assert_eq!(
+        adapter
+            .derive_public_key(
+                &SigningTarget::for_chain(Chain::Bitcoin),
+                SigningAlgorithm::SchnorrSecp256k1,
+                &context(),
+            )
+            .unwrap_err(),
+        AdapterError::UnsupportedPublicKeyDerivation(SigningAlgorithm::SchnorrSecp256k1)
+    );
+    assert_eq!(manager.public_key_calls(), 0);
+}
+
+#[test]
+fn invalid_chain_algorithm_pairs_are_rejected_before_provider_calls() {
+    for (chain, algorithm) in [
+        (Chain::Solana, SigningAlgorithm::EcdsaSecp256k1),
+        (Chain::Ethereum, SigningAlgorithm::Ed25519),
+        (Chain::Bitcoin, SigningAlgorithm::Ed25519),
+    ] {
+        let manager = Arc::new(RecordingManager::new(response(
+            64,
+            33,
+            SdkAttestationLevel::TEE,
+        )));
+        let adapter = adapter(manager.clone(), TrustTier::Managed);
+        assert!(matches!(
+            adapter.sign_digest(&digest_request(chain.clone(), algorithm)),
+            Err(AdapterError::UnsupportedChainAlgorithm { .. })
+        ));
+        assert_eq!(manager.calls(), 0);
+    }
+}
+
+#[test]
+fn capability_allowlist_accepts_only_explicit_safe_mappings() {
+    for (chain, algorithm) in [
+        (Chain::Bitcoin, SigningAlgorithm::EcdsaSecp256k1),
+        (Chain::Bitcoin, SigningAlgorithm::SchnorrSecp256k1),
+        (Chain::Stacks, SigningAlgorithm::EcdsaSecp256k1),
+        (Chain::Ethereum, SigningAlgorithm::EcdsaSecp256k1),
+        (Chain::Solana, SigningAlgorithm::Ed25519),
+    ] {
+        let manager = Arc::new(RecordingManager::new(response(
+            64,
+            33,
+            SdkAttestationLevel::TEE,
+        )));
+        let adapter = adapter(manager, TrustTier::Managed);
+        assert!(adapter
+            .build_sdk_sign_request(&digest_request(chain, algorithm))
+            .is_ok());
+    }
+}
+
+#[test]
+fn schnorr_signing_requires_an_x_only_verification_key() {
+    let manager = Arc::new(RecordingManager::new(response(
+        64,
+        65,
+        SdkAttestationLevel::TEE,
+    )));
+    let adapter = adapter(manager.clone(), TrustTier::Managed);
+
+    assert_eq!(
+        adapter
+            .sign_digest_with_bip110_preflight(
+                &digest_request(Chain::Bitcoin, SigningAlgorithm::SchnorrSecp256k1),
+                &compliant_bip110_preflight(),
+            )
+            .unwrap_err(),
+        AdapterError::MalformedProviderResponse(ProviderResponseField::VerificationKey)
+    );
+    assert_eq!(manager.calls(), 1);
 }
 
 #[test]
