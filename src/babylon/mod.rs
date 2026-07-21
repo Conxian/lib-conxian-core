@@ -1,7 +1,10 @@
 //! Babylon Bitcoin Staking Adapter
 //! Aligned with CXIP-21 and G-43
 
-use crate::adapters::{StateProofError, TxParams, UniversalChainAdapter};
+use crate::adapters::{
+    reject_unverified_state_proof, unavailable_state_root, StateProofError, TxParams,
+    UniversalChainAdapter,
+};
 use crate::control_model::{Chain, ChainFamily, TrustTier};
 use serde::{Deserialize, Serialize};
 
@@ -45,52 +48,13 @@ impl UniversalChainAdapter for BabylonAdapter {
         TrustTier::Strict
     }
 
-    /// Rejects Babylon evidence until a real EOTS/finality verifier is wired.
-    ///
-    /// The parser only establishes that the input is well-formed enough to
-    /// classify. It never treats a height/signature-shaped string as verified.
+    /// No audited Babylon EOTS/header verifier lives in Core.
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        if state_root.trim().is_empty() {
-            return Err(StateProofError::MissingStateRoot);
-        }
-        let mut parts = proof.split(':');
-        let height = parts.next().ok_or_else(|| StateProofError::InvalidProof {
-            reason: "Babylon proof is missing its height".to_string(),
-        })?;
-        let signature = parts.next().ok_or_else(|| StateProofError::InvalidProof {
-            reason: "Babylon proof is missing its EOTS signature".to_string(),
-        })?;
-        if parts.next().is_some() || height.trim().is_empty() || signature.trim().is_empty() {
-            return Err(StateProofError::InvalidProof {
-                reason: "Babylon proof must be exactly <height>:<signature_hex>".to_string(),
-            });
-        }
-        height
-            .parse::<u64>()
-            .map_err(|_| StateProofError::InvalidProof {
-                reason: "Babylon proof height must be an unsigned integer".to_string(),
-            })?;
-        let signature_bytes =
-            hex::decode(signature).map_err(|_| StateProofError::InvalidProof {
-                reason: "Babylon EOTS signature must be hexadecimal".to_string(),
-            })?;
-        if signature_bytes.len() != 64 {
-            return Err(StateProofError::InvalidProof {
-                reason: "Babylon EOTS signature must contain 64 bytes".to_string(),
-            });
-        }
-
-        Err(StateProofError::Unsupported {
-            chain: Chain::Bitcoin,
-            reason: "Babylon EOTS/finality verification is unavailable in core".to_string(),
-        })
+        reject_unverified_state_proof("babylon", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        Err(StateProofError::Unavailable {
-            chain: Chain::Bitcoin,
-            reason: "Babylon state roots require a verified downstream source".to_string(),
-        })
+        unavailable_state_root("babylon")
     }
 }
 
@@ -106,24 +70,19 @@ mod tests {
     }
 
     #[test]
-    fn test_babylon_verify_state_proof_fails_closed() {
+    fn test_babylon_verify_state_proof_hardened() {
         let adapter = BabylonAdapter;
-        let well_formed = format!("840000:{}", "ab".repeat(64));
         assert!(matches!(
-            adapter.verify_state_proof("root", &well_formed),
+            adapter.verify_state_proof("root", "840000:abc123def"),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("wrong-root", "840000:abc123def"),
             Err(StateProofError::Unsupported { .. })
         ));
         assert!(matches!(
             adapter.verify_state_proof("root", ""),
-            Err(StateProofError::InvalidProof { .. })
-        ));
-        assert!(matches!(
-            adapter.verify_state_proof("root", "invalid_format"),
-            Err(StateProofError::InvalidProof { .. })
-        ));
-        assert!(matches!(
-            adapter.verify_state_proof("root", "840000:not-hex"),
-            Err(StateProofError::InvalidProof { .. })
+            Err(StateProofError::MalformedInput(_))
         ));
         assert!(matches!(
             adapter.get_state_root(),

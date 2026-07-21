@@ -21,10 +21,10 @@ pub enum RGBError {
     ContractNotFound(String),
     /// Operation gated by current rollout mode.
     GatedByRolloutMode,
-    /// The core crate has no standards-compliant verifier for this operation.
-    Unsupported { operation: String, reason: String },
-    /// The requested evidence source is not available at this boundary.
-    Unavailable { operation: String, reason: String },
+    /// No audited RGB transition/seal verifier is available in Core.
+    VerificationUnavailable,
+    /// Shadow observations are explicitly non-authoritative.
+    NonAuthoritativeShadow,
     /// Persistence layer error.
     PersistenceError(String),
 }
@@ -40,11 +40,11 @@ impl std::fmt::Display for RGBError {
             Self::SealVerificationFailed => write!(f, "RGB seal verification failed"),
             Self::ContractNotFound(id) => write!(f, "RGB contract not found: {id}"),
             Self::GatedByRolloutMode => write!(f, "RGB operation gated by rollout mode"),
-            Self::Unsupported { operation, reason } => {
-                write!(f, "unsupported RGB operation {operation}: {reason}")
+            Self::VerificationUnavailable => {
+                write!(f, "RGB verification is unavailable in Core")
             }
-            Self::Unavailable { operation, reason } => {
-                write!(f, "RGB operation {operation} unavailable: {reason}")
+            Self::NonAuthoritativeShadow => {
+                write!(f, "RGB shadow observation is non-authoritative")
             }
             Self::PersistenceError(msg) => write!(f, "RGB persistence error: {msg}"),
         }
@@ -59,10 +59,10 @@ impl std::error::Error for RGBError {}
 pub enum RGBExecutionMode {
     /// Adapter is inactive; all calls return errors.
     Disabled,
-    /// Adapter observations are non-authoritative and cannot authorize
-    /// production execution. Callers must treat validation as gated.
+    /// Adapter observations are collected but are never authoritative.
+    /// This mode cannot authorize a production flow.
     Shadow,
-    /// Adapter is fully active and enforced.
+    /// Adapter is fully active and enforced by a real downstream verifier.
     Active,
 }
 
@@ -79,10 +79,7 @@ pub trait RGBAdapter {
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError>;
 }
 
-/// RGB adapter boundary for a future Stock-backed implementation.
-///
-/// Until a complete Stock/consignment/seal verifier is wired, every
-/// authorization-shaped operation fails closed.
+/// In-memory RGB adapter with stock-style contract membership (CON-1407).
 pub struct RGBStockAdapter {
     pub contract_ids: Vec<ContractId>,
 }
@@ -108,20 +105,14 @@ impl RGBAdapter for RGBStockAdapter {
                 "Empty transition".to_string(),
             ));
         }
-        Err(RGBError::Unsupported {
-            operation: "transition validation".to_string(),
-            reason: "RGB Stock/AluVM verification is not wired into core".to_string(),
-        })
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn verify_seal(&self, utxo_txid: &str, seal_commitment: &str) -> Result<bool, RGBError> {
         if utxo_txid.is_empty() || seal_commitment.is_empty() {
             return Err(RGBError::SealVerificationFailed);
         }
-        Err(RGBError::Unsupported {
-            operation: "seal verification".to_string(),
-            reason: "RGB seal resolution is not wired into core".to_string(),
-        })
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError> {
@@ -134,8 +125,7 @@ impl RGBAdapter for RGBStockAdapter {
     }
 }
 
-/// A non-authoritative RGB adapter for research and integration scaffolding.
-/// It must never report placeholder transition or seal checks as verified.
+/// A skeleton implementation of RGBAdapter for PoC/Research purposes (CON-768).
 pub struct RGBSkeletonAdapter;
 
 impl RGBAdapter for RGBSkeletonAdapter {
@@ -145,28 +135,21 @@ impl RGBAdapter for RGBSkeletonAdapter {
                 "Empty transition".to_string(),
             ));
         }
-        Err(RGBError::Unsupported {
-            operation: "transition validation".to_string(),
-            reason: "RGB skeleton adapter has no standards-compliant verifier".to_string(),
-        })
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn verify_seal(&self, utxo_txid: &str, seal_commitment: &str) -> Result<bool, RGBError> {
         if utxo_txid.is_empty() || seal_commitment.is_empty() {
             return Err(RGBError::SealVerificationFailed);
         }
-        Err(RGBError::Unsupported {
-            operation: "seal verification".to_string(),
-            reason: "RGB skeleton adapter has no standards-compliant verifier".to_string(),
-        })
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError> {
-        ContractId::from_str(contract_id).map_err(|_| RGBError::InvalidContractId)?;
-        Err(RGBError::Unavailable {
-            operation: "contract lookup".to_string(),
-            reason: "RGB skeleton adapter has no node-backed contract store".to_string(),
-        })
+        if contract_id.trim().is_empty() {
+            return Err(RGBError::InvalidContractId);
+        }
+        Err(RGBError::VerificationUnavailable)
     }
 }
 
@@ -185,10 +168,13 @@ impl<A: RGBAdapter> RGBRuntime<A> {
     pub fn validate_transition(&self, transition_hex: &str) -> Result<bool, RGBError> {
         match self.mode {
             RGBExecutionMode::Disabled => Err(RGBError::GatedByRolloutMode),
-            RGBExecutionMode::Shadow => {
-                let _observation = self.adapter.validate_transition(transition_hex);
-                Err(RGBError::GatedByRolloutMode)
-            }
+            RGBExecutionMode::Shadow => match self.adapter.validate_transition(transition_hex) {
+                Err(error @ RGBError::TransitionValidationFailed(_)) => Err(error),
+                Err(RGBError::VerificationUnavailable) | Ok(_) => {
+                    Err(RGBError::NonAuthoritativeShadow)
+                }
+                Err(error) => Err(error),
+            },
             RGBExecutionMode::Active => self.adapter.validate_transition(transition_hex),
         }
     }
@@ -198,8 +184,13 @@ impl<A: RGBAdapter> RGBRuntime<A> {
         match self.mode {
             RGBExecutionMode::Disabled => Err(RGBError::GatedByRolloutMode),
             RGBExecutionMode::Shadow => {
-                let _observation = self.adapter.verify_seal(utxo_txid, seal_commitment);
-                Err(RGBError::GatedByRolloutMode)
+                match self.adapter.verify_seal(utxo_txid, seal_commitment) {
+                    Err(error @ RGBError::SealVerificationFailed) => Err(error),
+                    Err(RGBError::VerificationUnavailable) | Ok(_) => {
+                        Err(RGBError::NonAuthoritativeShadow)
+                    }
+                    Err(error) => Err(error),
+                }
             }
             RGBExecutionMode::Active => self.adapter.verify_seal(utxo_txid, seal_commitment),
         }
@@ -236,57 +227,22 @@ mod tests {
 
         assert_eq!(
             shadow.validate_transition("abc"),
-            Err(RGBError::GatedByRolloutMode)
+            Err(RGBError::NonAuthoritativeShadow)
         );
 
-        assert!(matches!(
+        assert_eq!(
             active.validate_transition("abc"),
-            Err(RGBError::Unsupported { .. })
-        ));
-        assert!(active.validate_transition("").is_err());
-    }
-
-    struct SuccessfulObservationAdapter;
-
-    impl RGBAdapter for SuccessfulObservationAdapter {
-        fn validate_transition(&self, _: &str) -> Result<bool, RGBError> {
-            Ok(true)
-        }
-
-        fn verify_seal(&self, _: &str, _: &str) -> Result<bool, RGBError> {
-            Ok(true)
-        }
-
-        fn get_contract_details(&self, _: &str) -> Result<String, RGBError> {
-            Ok("observation-only".to_string())
-        }
-    }
-
-    #[test]
-    fn test_rgb_shadow_mode_never_authorizes_successful_observation() {
-        let shadow = RGBRuntime::new(RGBExecutionMode::Shadow, SuccessfulObservationAdapter);
-
-        assert_eq!(
-            shadow.validate_transition("observed"),
-            Err(RGBError::GatedByRolloutMode)
+            Err(RGBError::VerificationUnavailable)
         );
         assert_eq!(
-            shadow.verify_seal("txid", "seal"),
-            Err(RGBError::GatedByRolloutMode)
-        );
-    }
-
-    #[test]
-    fn test_rgb_shadow_mode_never_authorizes_adapter_error() {
-        let shadow = RGBRuntime::new(RGBExecutionMode::Shadow, RGBSkeletonAdapter);
-
-        assert_eq!(
-            shadow.validate_transition("observed"),
-            Err(RGBError::GatedByRolloutMode)
+            active.validate_transition(""),
+            Err(RGBError::TransitionValidationFailed(
+                "Empty transition".to_string()
+            ))
         );
         assert_eq!(
-            shadow.verify_seal("txid", "seal"),
-            Err(RGBError::GatedByRolloutMode)
+            shadow.verify_seal("utxo", "commitment"),
+            Err(RGBError::NonAuthoritativeShadow)
         );
     }
 

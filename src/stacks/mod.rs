@@ -9,6 +9,10 @@ pub enum StacksError {
     InvalidTransaction,
     InvalidAddress,
     FinalityTimeout,
+    MalformedFinalityEvidence,
+    UnsupportedFinalityEvidence,
+    StatusUnavailable,
+    UnknownIntent,
     PegInFailed(String),
     PegOutFailed(String),
     SignerCoordinationError(String),
@@ -20,6 +24,12 @@ impl fmt::Display for StacksError {
             Self::InvalidTransaction => write!(f, "Invalid Stacks or Bitcoin transaction"),
             Self::InvalidAddress => write!(f, "Invalid Stacks address"),
             Self::FinalityTimeout => write!(f, "Transaction finality timeout"),
+            Self::MalformedFinalityEvidence => write!(f, "Malformed Bitcoin finality evidence"),
+            Self::UnsupportedFinalityEvidence => {
+                write!(f, "Bitcoin finality evidence is unsupported in Core")
+            }
+            Self::StatusUnavailable => write!(f, "sBTC status evidence is unavailable"),
+            Self::UnknownIntent => write!(f, "Unknown or empty sBTC intent"),
             Self::PegInFailed(msg) => write!(f, "Peg-in failed: {msg}"),
             Self::PegOutFailed(msg) => write!(f, "Peg-out failed: {msg}"),
             Self::SignerCoordinationError(msg) => write!(f, "Signer coordination error: {msg}"),
@@ -54,9 +64,25 @@ pub struct SBTCIntent {
 pub struct StacksNakamoto;
 
 impl StacksNakamoto {
+    /// A block number alone is not Bitcoin finality evidence. Core has no
+    /// header-chain or transaction proof verifier for this operation.
+    pub fn verify_bitcoin_finality_checked(stacks_block: u64) -> Result<bool, StacksError> {
+        if stacks_block == 0 {
+            return Err(StacksError::MalformedFinalityEvidence);
+        }
+        Err(StacksError::UnsupportedFinalityEvidence)
+    }
+
+    /// Compatibility wrapper. It is intentionally fail-closed until real
+    /// Bitcoin evidence is supplied to a downstream verifier.
+    #[deprecated(
+        note = "use verify_bitcoin_finality_checked; a block number alone never authorizes finality"
+    )]
     pub fn verify_bitcoin_finality(stacks_block: u64) -> bool {
-        // Nakamoto blocks inherit 100% Bitcoin finality after tenure change
-        stacks_block > 0
+        matches!(
+            Self::verify_bitcoin_finality_checked(stacks_block),
+            Ok(true)
+        )
     }
 }
 
@@ -125,9 +151,11 @@ impl StacksAdapter for SBTCBridge {
         })
     }
 
-    fn get_status(&self, _intent_id: &str) -> Result<SBTCState, StacksError> {
-        // In pilot mode, we return a hardcoded state or look up from a minimal cache
-        Ok(SBTCState::Finalized)
+    fn get_status(&self, intent_id: &str) -> Result<SBTCState, StacksError> {
+        if intent_id.trim().is_empty() {
+            return Err(StacksError::UnknownIntent);
+        }
+        Err(StacksError::StatusUnavailable)
     }
 }
 
@@ -137,8 +165,18 @@ mod tests {
 
     #[test]
     fn test_nakamoto_finality() {
-        assert!(StacksNakamoto::verify_bitcoin_finality(100));
-        assert!(!StacksNakamoto::verify_bitcoin_finality(0));
+        assert_eq!(
+            StacksNakamoto::verify_bitcoin_finality_checked(100),
+            Err(StacksError::UnsupportedFinalityEvidence)
+        );
+        assert_eq!(
+            StacksNakamoto::verify_bitcoin_finality_checked(0),
+            Err(StacksError::MalformedFinalityEvidence)
+        );
+        #[allow(deprecated)]
+        {
+            assert!(!StacksNakamoto::verify_bitcoin_finality(100));
+        }
     }
 
     #[test]
@@ -162,5 +200,15 @@ mod tests {
         let bridge = SBTCBridge::new();
         let result = bridge.initiate_peg_in(1000000, "");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_status_requires_authoritative_evidence() {
+        let bridge = SBTCBridge::new();
+        assert_eq!(
+            bridge.get_status("sbtc-intent"),
+            Err(StacksError::StatusUnavailable)
+        );
+        assert_eq!(bridge.get_status(""), Err(StacksError::UnknownIntent));
     }
 }

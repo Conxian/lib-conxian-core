@@ -3,25 +3,32 @@
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
 
-## 2. v0.3.0 Breaking-Release Migration
+## 2. Core Modules
 
-Version `0.3.0` intentionally changes the fail-closed verifier APIs from
-`0.2.12`:
+### v0.3.0 Breaking-Release Migration
 
-- `UniversalChainAdapter::{verify_state_proof, get_state_root}` now return
-  `Result<..., StateProofError>`. Handle typed missing, invalid, unsupported,
-  unavailable, and state-root-mismatch failures instead of string results.
-- `FrostManager::{generate_shares, prepare_distribution_shares,
-  aggregate_signature}` now return `Result<..., FrostError>`. Even
-  structurally valid inputs return `FrostError::Unsupported` until an audited
-  FROST backend exists; input shape validation is not authorization.
-- `DlcManager::verify_execution` now returns `Result<bool, DlcError>` and
-  remains a typed unsupported boundary because its arguments cannot bind the
-  complete attestation context. Callers needing authoritative verification
-  should use `verify_execution_attestation` with the intent, nonce point,
-  outcome message, signature scalar, and current block.
+Version `0.3.0` intentionally changes the fail-closed verifier APIs from the
+`0.2.12` baseline:
 
-## 3. Core Modules
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` return typed
+  `StateProofError` outcomes. Core adapters do not claim state verification or
+  static roots without an audited provider.
+- `Bip322Bridge::verify_message_checked` returns
+  `Result<bool, Bip322VerificationError>` after structural parsing only;
+  deprecated `verify_message` returns `false` until audited script and witness
+  verification exists.
+- `FrostManager` operations return `Result<..., FrostError>` and reject
+  structurally valid placeholder operations with `FrostError::Unsupported`.
+- `DlcManager::verify_oracle_attestation` remains the raw equation primitive;
+  `verify_oracle_attestation_for_intent` returns typed
+  `DlcVerificationError::UnsupportedIntentBinding` for an otherwise valid
+  tuple, and `verify_execution_checked` returns
+  `DlcVerificationError::UnsupportedExecutionContext` when its compatibility
+  inputs omit the required execution evidence. Deprecated `verify_execution`
+  fails closed.
+- RGB, enclave/AML, Fedimint status, and Stacks finality paths remain typed
+  fail-closed boundaries; see [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
+  for the authoritative evidence and compatibility matrix.
 
 ### Universal Chain Signing (`signing`)
 The platform-neutral contract for SDK and Gateway signer adapters.
@@ -127,6 +134,20 @@ Platform-neutral contracts for downstream chain verifiers.
 
 Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. The structural binding is not authenticity; downstream signatures, attestations, light clients, or verifier-set proofs remain required. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
 
+### Fail-closed verifier inventory
+The chain-specific verifier helpers in this crate are not interchangeable with
+production proof providers. See [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
+for the authoritative status, supported evidence, typed errors, and compatibility
+wrappers for adapters, Babylon, Liquid, RGB, BIP-322, DLC, FROST, enclave
+attestation/AML, Stacks, and Fedimint.
+
+In particular, a non-empty proof, a valid string shape, a parseable DER
+sequence, a static state root, a positive block number, or an RGB Shadow
+observation is not verification. Core returns typed unsupported/unavailable or
+non-authoritative outcomes until an audited downstream provider supplies the
+missing evidence. Deprecated bare-boolean wrappers return `false` rather than
+fabricating success.
+
 ## 5. Deterministic Core-to-Downstream Fixtures (CON-1505)
 
 This is the initial Core-owned serialized-contract checkpoint. The first
@@ -153,7 +174,7 @@ preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
 The compatibility assumptions recorded by this checkpoint are limited to the
-Core package `lib-conxian-core` `0.2.12`, Rust `1.85`, the default feature set
+Core package `lib-conxian-core` `0.3.0`, Rust `1.85`, the default feature set
 (`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and
@@ -189,34 +210,32 @@ Models for decentralized state persistence.
 Advanced Bitcoin-native primitives.
 - `MuSig2`: BIP327-compliant key aggregation, signature aggregation, and signing (CON-145, CON-1270).
 - `BitVM2`: Segment generation and optimistic fraud-proof verification (CON-464).
-- `BIP-322`: Strict message/address/witness parsing with typed unsupported
-  results until an audited script verifier is available; the compatibility
-  boolean wrapper fails closed (G-09).
+- `Bip322Bridge::verify_message_checked`: Structural address/base64/witness validation with a typed `Unsupported` result until audited script and signature verification is available. The deprecated `verify_message` wrapper fails closed.
 
-## 4. Trust Tier Policy (CON-791)
+## 3. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:
 - **T1: Strict**: Sovereign verified (e.g., IBC light-clients).
 - **T2: Managed**: Hybrid verified with independent attesters.
 - **T3: Expedient**: Attester network with caps and kill-switches.
 - **T4: ObserverOnly**: Not allowed in production.
 
-## 5. Integration Guidelines
+## 4. Integration Guidelines
 Implementation details for runtime orchestration, network IO, and database persistence live in the standalone `conxian-gateway` repository. This library focuses exclusively on stable interfaces and protocol-bearing logic.
 
 ### Protocol Primitives (`protocol`)
 Advanced protocol support for multi-party and cross-chain coordination.
 - `IntentManager::rank_bids(bids: &[Bid])`: Ranks ERC-7683 intent solver bids.
-- `FrostManager`: Typed fail-closed boundary for unsupported FROST DKG,
-  distribution, and aggregation; production FROST belongs in the audited
-  enclave SDK.
+- `FrostManager`: Typed fail-closed boundary for FROST DKG, distribution, and aggregation; no fabricated shares or signatures are emitted without an audited provider.
 - `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.
 - `DlcManager::create_intent(oracle_pubkey: &[u8], collateral: u64, outcome: [u8; 32], expiry: u32)`: Creates DLC intents for native Bitcoin finance (G-06).
+- `DlcManager::verify_oracle_attestation_for_intent`: Performs typed intent/outcome/expiry checks but returns `UnsupportedIntentBinding` for a valid tuple because the existing oracle signature does not commit to collateral and expiry. `verify_execution_checked` remains explicitly unsupported because its compatibility inputs omit the required execution evidence.
+- `FedimintAdapter::blind_note` and `verify_unblinded_checked`: Deterministic secp256k1 point reconstruction/equality primitives, not provider-backed mint or note verification.
+- `FedimintAdapter::get_mint_status`: Rejects an empty/whitespace ID with `FedimintError::MalformedMintId`; every non-empty ID returns `FedimintError::StatusUnavailable` until an authenticated provider supplies status. Core does not fabricate community or liquidity data.
 
 ### Universal Chain Adapters (`adapters`)
 CXIP-21 interface for cross-chain orchestration.
-- `UniversalChainAdapter`: Trait for uniform multi-chain support with typed
-  `StateProofError` failures; core adapters do not claim unverified state
-  proofs or static roots.
+- `UniversalChainAdapter`: Trait for uniform multi-chain support.
+- `StateProofError`: Typed malformed, failed, unsupported, and unavailable outcomes; no adapter returns a static root or `Ok(true)` without a real verifier.
 - `BitcoinAdapter`: Native UTXO support.
 - `EvmAdapter`: Ethereum, Base, etc.
 - `CosmosAdapter`: IBC-enabled networks.

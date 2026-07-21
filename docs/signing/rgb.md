@@ -9,12 +9,13 @@ and contract lookup methods. It is not a `UniversalChainSigner`, a generic
 chain adapter, an RGB node, a consignment store, or a production Bitcoin
 transaction builder.
 
-`RGBStockAdapter` and `RGBSkeletonAdapter` reject non-empty transition/seal
-inputs with typed unsupported errors until a complete schema, AluVM, seal, and
-contract-state verifier is wired. `RGBRuntime::Shadow` may observe an adapter
-result, but always returns `GatedByRolloutMode`; it never turns adapter success
-or error into authorization. Shadow mode is therefore non-enforcing and
-**cannot authorize production signing or settlement**.
+The v0.3.0 RGB boundary is intentionally fail-closed. `RGBStockAdapter` and
+`RGBSkeletonAdapter` reject empty transition/seal inputs and return
+`RGBError::VerificationUnavailable` for otherwise non-empty input.
+`RGBRuntime::Shadow` maps a usable observation to the explicit
+`RGBError::NonAuthoritativeShadow` outcome. Shadow mode is observational only
+and **cannot authorize production signing or settlement**. It is
+non-enforcing by design.
 
 ## Canonical target and UCS boundary
 
@@ -53,11 +54,11 @@ for a production signer implementation.
 | Step | Owner | Inputs and evidence | Core contract / boundary | Output | Stop condition |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Wallet + Gateway | Contract id, transition/consignment, seal commitment, intended Bitcoin anchor | Select Bitcoin-family target only for the bytes that actually need signing | Reviewable RGB operation | Invalid contract id, empty transition/seal, or missing policy |
-| 2 | SDK/client | Transition bytes, contract/schema context, anchor UTXO/txid, seal commitment | `RGBAdapter::validate_transition` and `verify_seal` are the current Core interface; Core adapters return typed unsupported until a real verifier is wired | Validation result and anchor inputs | Adapter rejection, disabled rollout mode, or unsupported proof context |
+| 2 | SDK/client | Transition bytes, contract/schema context, anchor UTXO/txid, seal commitment | `RGBAdapter::validate_transition` and `verify_seal` are typed Core boundaries; existing adapters return unavailable without a real provider | Validation result and anchor inputs | Adapter rejection, disabled rollout mode, or unsupported proof context |
 | 3 | Gateway + downstream Bitcoin adapter | UTXOs, commitment output/script/witness, sighash context | Core does not construct RGB consignments or Bitcoin transactions; BIP-110 applies only to parsed Bitcoin bytes | Unsigned anchor payload and classified size metadata | Unsupported anchor context or BIP-110 violation |
 | 4 | Wallet + SDK | `SignRequest`, Bitcoin capability, attestation/policy evidence | UCS validates target, payload, derivation, capability, and response | `SignResponse` | Unsupported capability, malformed request, backend failure, or invalid response |
 | 5 | Nexus | Anchor txid, Bitcoin proof/header/finality evidence | `ProtocolVerifier` validates evidence binding, provenance, policy, and finality around a real backend | Verified or non-final anchor evidence | Invalid/stale/malformed proof, mismatch, policy block, or non-final required state |
-| 6 | Gateway | Validated transition, seal, signed anchor, verifier result | Core does not persist or authorize from Shadow mode; Gateway owns the side effect | Finalized operation record or pending status | Never authorize production from a Shadow `Ok(true)` or structural-only result |
+| 6 | Gateway | Validated transition, seal, signed anchor, verifier result | Core does not persist or authorize from Shadow mode; Gateway owns the side effect | Finalized operation record or pending status | Never authorize production from `NonAuthoritativeShadow` or unavailable verification |
 
 ## Required inputs
 
@@ -91,9 +92,9 @@ identity. It does not replace RGB client-side validation or prove a seal merely
 because a transition is non-empty.
 
 `RGBRuntime::Active` propagates adapter results, `Disabled` returns
-`GatedByRolloutMode`, and `Shadow` always returns `GatedByRolloutMode` after an
-observation attempt. Only an explicitly enforcing mode backed by real
-validation and policy may authorize a production flow. A Bitcoin anchor can be final without proving an
+`GatedByRolloutMode`, and `Shadow` returns an explicit non-authoritative error
+for a usable observation. Only an explicitly enforcing mode backed by real validation and policy may
+authorize a production flow. A Bitcoin anchor can be final without proving an
 RGB transition is valid, and a valid transition cannot by itself prove the
 anchor is final.
 
@@ -116,9 +117,8 @@ negative Active-mode result into success.
 
 - Use `Chain::Bitcoin` for Bitcoin anchor signing; do not invent or imply a
   separate `Chain::RGB` target.
-- Treat `Shadow` as non-enforcing. Its typed `GatedByRolloutMode` result cannot
-  authorize a production transition, seal, or release, even if an observation
-  adapter reports success.
+- Treat `Shadow` as non-enforcing. `NonAuthoritativeShadow` cannot authorize a
+  production transition, seal, or release.
 - Require real transition/seal validation in an enforcing mode and real
   Bitcoin proof/finality evidence where policy requires it.
 - Apply BIP-110 only to parsed Bitcoin anchor surfaces, not to off-chain RGB
@@ -131,9 +131,8 @@ negative Active-mode result into success.
 - No separate `Chain::RGB` variant or RGB-specific UCS capability exists.
 - Core has no RGB state-transition signer, consignment builder, seal cryptography,
   node/RPC integration, persistence, or Bitcoin anchor transaction DTO.
-- `RGBStockAdapter` and `RGBSkeletonAdapter` return typed unsupported errors
-  for non-empty transition/seal inputs until full schema, AluVM, seal, and
-  contract-state verification exists.
+- `RGBStockAdapter` and `RGBSkeletonAdapter` return typed unavailable outcomes
+  without full schema, AluVM, seal, or contract-state verification.
 - `RGBRuntime::Shadow` is explicitly non-enforcing and cannot authorize
   production.
 - No production RGB `UniversalChainSigner` or RGB-aware

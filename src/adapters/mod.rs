@@ -1,80 +1,73 @@
 use crate::control_model::{Chain, ChainFamily, TrustTier};
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TxParams {
-    pub amount_sats: u64,
-    pub destination: String,
-    pub data: Option<Vec<u8>>,
-}
-
-/// Typed failures for adapter-level state-proof operations.
+/// Typed failure returned when an adapter cannot establish authoritative state.
 ///
-/// The core crate owns the adapter contract, but it does not own chain RPC,
-/// light-client, or consensus-proof backends. Adapters therefore reject
-/// evidence they cannot verify instead of treating a plausible string as
-/// authoritative.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// `Ok(true)` is reserved for a verifier that has actually checked the supplied
+/// evidence. Structural checks and static roots must use one of these errors
+/// instead of presenting an observation as verified state.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum StateProofError {
-    /// The caller did not provide the state root required for verification.
-    MissingStateRoot,
-    /// The supplied proof cannot be parsed as the adapter's declared input.
-    InvalidProof { reason: String },
-    /// The input shape is understood, but this core adapter has no verifier.
-    Unsupported { chain: Chain, reason: String },
-    /// A verified state source is not available in this library boundary.
-    Unavailable { chain: Chain, reason: String },
-    /// Parsed evidence names a different state root than the request.
-    MismatchedStateRoot { expected: String, actual: String },
+    /// The caller supplied an empty or otherwise malformed proof input.
+    MalformedInput(String),
+    /// A real verifier rejected otherwise well-formed evidence.
+    VerificationFailed,
+    /// Core has no audited verifier for this chain/proof surface.
+    Unsupported { chain: String },
+    /// A verified source for the requested state root is not available.
+    Unavailable { chain: String },
 }
 
-impl fmt::Display for StateProofError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for StateProofError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::MissingStateRoot => write!(f, "state proof verification requires a state root"),
-            Self::InvalidProof { reason } => write!(f, "invalid state proof: {reason}"),
-            Self::Unsupported { chain, reason } => {
-                write!(f, "unsupported state proof for {chain:?}: {reason}")
+            Self::MalformedInput(reason) => write!(f, "malformed state proof input: {reason}"),
+            Self::VerificationFailed => write!(f, "state proof verification failed"),
+            Self::Unsupported { chain } => {
+                write!(f, "state proof verification is unsupported for {chain}")
             }
-            Self::Unavailable { chain, reason } => {
-                write!(f, "state proof source unavailable for {chain:?}: {reason}")
+            Self::Unavailable { chain } => {
+                write!(f, "verified state root is unavailable for {chain}")
             }
-            Self::MismatchedStateRoot { expected, actual } => write!(
-                f,
-                "state proof root mismatch: expected {expected}, got {actual}"
-            ),
         }
     }
 }
 
 impl std::error::Error for StateProofError {}
 
-fn reject_unverified_state_proof(
-    chain: Chain,
+pub(crate) fn reject_unverified_state_proof(
+    chain: &str,
     state_root: &str,
     proof: &str,
 ) -> Result<bool, StateProofError> {
     if state_root.trim().is_empty() {
-        return Err(StateProofError::MissingStateRoot);
+        return Err(StateProofError::MalformedInput(
+            "state root must not be empty".to_string(),
+        ));
     }
     if proof.trim().is_empty() {
-        return Err(StateProofError::InvalidProof {
-            reason: "proof must not be empty".to_string(),
-        });
+        return Err(StateProofError::MalformedInput(
+            "proof must not be empty".to_string(),
+        ));
     }
 
     Err(StateProofError::Unsupported {
-        chain,
-        reason: "no cryptographic state-proof backend is wired into core".to_string(),
+        chain: chain.to_string(),
     })
 }
 
-fn unavailable_state_root(chain: Chain) -> Result<String, StateProofError> {
+pub(crate) fn unavailable_state_root(chain: &str) -> Result<String, StateProofError> {
     Err(StateProofError::Unavailable {
-        chain,
-        reason: "state roots must come from a verified downstream source".to_string(),
+        chain: chain.to_string(),
     })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxParams {
+    pub amount_sats: u64,
+    pub destination: String,
+    pub data: Option<Vec<u8>>,
 }
 
 /// CXIP-21: Universal interface for chain-specific orchestration.
@@ -96,9 +89,6 @@ pub trait UniversalChainAdapter {
     fn trust_tier(&self) -> TrustTier;
 
     /// Verifies a state proof for the chain (e.g., light client or ZK proof).
-    ///
-    /// The core adapters do not acquire or verify chain evidence themselves.
-    /// They return a typed failure until a downstream verifier is wired.
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError>;
 
     /// Retrieves the current state root from a verified source.
@@ -136,11 +126,11 @@ impl UniversalChainAdapter for BitcoinAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(Chain::Bitcoin, state_root, proof)
+        reject_unverified_state_proof("bitcoin", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(Chain::Bitcoin)
+        unavailable_state_root("bitcoin")
     }
 }
 
@@ -181,11 +171,11 @@ impl UniversalChainAdapter for EvmAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(self.chain.clone(), state_root, proof)
+        reject_unverified_state_proof("evm", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(self.chain.clone())
+        unavailable_state_root("evm")
     }
 }
 
@@ -226,11 +216,11 @@ impl UniversalChainAdapter for CosmosAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(self.chain.clone(), state_root, proof)
+        reject_unverified_state_proof("cosmos", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(self.chain.clone())
+        unavailable_state_root("cosmos")
     }
 }
 
@@ -269,11 +259,11 @@ impl UniversalChainAdapter for SolanaAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(Chain::Solana, state_root, proof)
+        reject_unverified_state_proof("solana", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(Chain::Solana)
+        unavailable_state_root("solana")
     }
 }
 
@@ -317,11 +307,11 @@ impl UniversalChainAdapter for MoveAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(self.chain.clone(), state_root, proof)
+        reject_unverified_state_proof("move", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(self.chain.clone())
+        unavailable_state_root("move")
     }
 }
 
@@ -356,11 +346,11 @@ impl UniversalChainAdapter for SubstrateAdapter {
     }
 
     fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
-        reject_unverified_state_proof(self.chain.clone(), state_root, proof)
+        reject_unverified_state_proof("substrate", state_root, proof)
     }
 
     fn get_state_root(&self) -> Result<String, StateProofError> {
-        unavailable_state_root(self.chain.clone())
+        unavailable_state_root("substrate")
     }
 }
 
@@ -424,36 +414,37 @@ mod tests {
     }
 
     #[test]
-    fn test_state_proof_adapters_fail_closed_for_unverified_evidence() {
-        let adapters: Vec<Box<dyn UniversalChainAdapter>> = vec![
-            Box::new(BitcoinAdapter),
-            Box::new(EvmAdapter {
-                chain: Chain::Ethereum,
-            }),
-            Box::new(CosmosAdapter {
-                chain: Chain::CosmosHub,
-            }),
-            Box::new(SolanaAdapter),
-            Box::new(MoveAdapter {
-                chain: Chain::Aptos,
-            }),
-            Box::new(SubstrateAdapter {
-                chain: Chain::Polkadot,
-            }),
-        ];
+    fn test_all_state_proof_adapters_fail_closed() {
+        let bitcoin = BitcoinAdapter;
+        let evm = EvmAdapter {
+            chain: Chain::Ethereum,
+        };
+        let cosmos = CosmosAdapter {
+            chain: Chain::CosmosHub,
+        };
+        let solana = SolanaAdapter;
+        let move_adapter = MoveAdapter {
+            chain: Chain::Aptos,
+        };
+        let substrate = SubstrateAdapter {
+            chain: Chain::Polkadot,
+        };
+
+        let adapters: [&dyn UniversalChainAdapter; 6] =
+            [&bitcoin, &evm, &cosmos, &solana, &move_adapter, &substrate];
 
         for adapter in adapters {
             assert!(matches!(
-                adapter.verify_state_proof("root", "mutated-proof"),
+                adapter.verify_state_proof("root", "non-empty garbage"),
                 Err(StateProofError::Unsupported { .. })
             ));
             assert!(matches!(
-                adapter.verify_state_proof("", "mutated-proof"),
-                Err(StateProofError::MissingStateRoot)
+                adapter.verify_state_proof("wrong-root", "non-empty garbage"),
+                Err(StateProofError::Unsupported { .. })
             ));
             assert!(matches!(
-                adapter.verify_state_proof("root", ""),
-                Err(StateProofError::InvalidProof { .. })
+                adapter.verify_state_proof("", "proof"),
+                Err(StateProofError::MalformedInput(_))
             ));
             assert!(matches!(
                 adapter.get_state_root(),

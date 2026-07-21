@@ -10,6 +10,32 @@ pub struct AttestationCertificate {
     pub raw_der: Vec<u8>,
 }
 
+/// Typed failures for Core's enclave-verification boundary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnclaveVerificationError {
+    /// Evidence is absent.
+    EmptyEvidence,
+    /// Evidence cannot be parsed as the expected DER container.
+    MalformedDer(String),
+    /// A provider-backed verifier must run in the enclave SDK/downstream.
+    UnsupportedProvider,
+}
+
+impl std::fmt::Display for EnclaveVerificationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyEvidence => write!(f, "enclave verification evidence is empty"),
+            Self::MalformedDer(reason) => write!(f, "malformed attestation DER: {reason}"),
+            Self::UnsupportedProvider => write!(
+                f,
+                "provider-backed enclave verification is unsupported in Core"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for EnclaveVerificationError {}
+
 pub struct HeadlessEnclave;
 
 impl HeadlessEnclave {
@@ -21,35 +47,53 @@ impl HeadlessEnclave {
         f()
     }
 
-    /// Verifies the X.509 DER certificate chain for hardware attestation.
-    /// This is a critical hardening target for v2.0.4 (CON-1329).
-    /// Now uses real ASN.1 DER parsing via the 'der' crate.
-    pub fn verify_attestation_chain(cert: &AttestationCertificate) -> Result<bool, String> {
+    /// Parses the DER container but does not claim certificate-chain
+    /// authenticity. Provider-backed attestation verification belongs in the
+    /// production enclave SDK.
+    pub fn verify_attestation_chain(
+        cert: &AttestationCertificate,
+    ) -> Result<bool, EnclaveVerificationError> {
         if cert.raw_der.is_empty() {
-            return Err("Empty certificate DER".to_string());
+            return Err(EnclaveVerificationError::EmptyEvidence);
         }
 
-        // Real DER parsing: ensure the blob is a valid ASN.1 SEQUENCE (standard for X.509)
-        let any =
-            Any::from_der(&cert.raw_der).map_err(|e| format!("ASN.1 DER parse failure: {}", e))?;
+        let any = Any::from_der(&cert.raw_der)
+            .map_err(|e| EnclaveVerificationError::MalformedDer(e.to_string()))?;
 
         if any.tag() != Tag::Sequence {
-            return Err("Invalid DER format: Expected SEQUENCE".to_string());
+            return Err(EnclaveVerificationError::MalformedDer(
+                "expected SEQUENCE".to_string(),
+            ));
         }
 
-        // Hardening: In production, we'd verify the signature path and extensions here.
-        // For v2.0.4, we have transitioned from manual byte-checks to library-backed parsing.
-
-        Ok(true)
+        Err(EnclaveVerificationError::UnsupportedProvider)
     }
 }
 
 pub struct ZKCompliance;
 
 impl ZKCompliance {
+    /// Checks input presence and reports that AML proof verification must be
+    /// supplied by an audited downstream/provider implementation.
+    pub fn verify_aml_stateless_checked(
+        identity_commitment: &str,
+        tx_metadata: &str,
+    ) -> Result<bool, EnclaveVerificationError> {
+        if identity_commitment.trim().is_empty() || tx_metadata.trim().is_empty() {
+            return Err(EnclaveVerificationError::EmptyEvidence);
+        }
+        Err(EnclaveVerificationError::UnsupportedProvider)
+    }
+
+    /// Compatibility wrapper. Non-empty AML inputs are not authorization.
+    #[deprecated(
+        note = "use verify_aml_stateless_checked; Core returns false until provider-backed AML verification is available"
+    )]
     pub fn verify_aml_stateless(identity_commitment: &str, tx_metadata: &str) -> bool {
-        // Placeholder for secp256k1 cryptographic verification of AML controls
-        !identity_commitment.is_empty() && !tx_metadata.is_empty()
+        matches!(
+            Self::verify_aml_stateless_checked(identity_commitment, tx_metadata),
+            Ok(true)
+        )
     }
 }
 
@@ -58,12 +102,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_verify_attestation_chain_valid_der() {
-        // A minimal valid ASN.1 SEQUENCE (0x30 0x00)
+    fn test_verify_attestation_chain_parse_only_is_unsupported() {
         let cert = AttestationCertificate {
             raw_der: vec![0x30, 0x00],
         };
-        assert!(HeadlessEnclave::verify_attestation_chain(&cert).unwrap());
+        assert_eq!(
+            HeadlessEnclave::verify_attestation_chain(&cert),
+            Err(EnclaveVerificationError::UnsupportedProvider)
+        );
     }
 
     #[test]
@@ -71,7 +117,10 @@ mod tests {
         let cert = AttestationCertificate {
             raw_der: vec![0xff, 0xff],
         };
-        assert!(HeadlessEnclave::verify_attestation_chain(&cert).is_err());
+        assert!(matches!(
+            HeadlessEnclave::verify_attestation_chain(&cert),
+            Err(EnclaveVerificationError::MalformedDer(_))
+        ));
     }
 
     #[test]
@@ -80,6 +129,25 @@ mod tests {
         let cert = AttestationCertificate {
             raw_der: vec![0x30, 0x05, 0x01],
         };
-        assert!(HeadlessEnclave::verify_attestation_chain(&cert).is_err());
+        assert!(matches!(
+            HeadlessEnclave::verify_attestation_chain(&cert),
+            Err(EnclaveVerificationError::MalformedDer(_))
+        ));
+    }
+
+    #[test]
+    fn test_aml_non_empty_input_is_unsupported() {
+        assert_eq!(
+            ZKCompliance::verify_aml_stateless_checked("id", "metadata"),
+            Err(EnclaveVerificationError::UnsupportedProvider)
+        );
+        assert_eq!(
+            ZKCompliance::verify_aml_stateless_checked("", "metadata"),
+            Err(EnclaveVerificationError::EmptyEvidence)
+        );
+        #[allow(deprecated)]
+        {
+            assert!(!ZKCompliance::verify_aml_stateless("id", "metadata"));
+        }
     }
 }

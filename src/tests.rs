@@ -5,12 +5,15 @@ mod cxip20_architecture_tests {
     };
     use crate::enclave::ZKCompliance;
     use crate::lightning::LightningNode;
-    use crate::rgb::{RGBError, RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
+    use crate::rgb::{RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
     use crate::stacks::{SBTCBridge, StacksNakamoto};
 
     #[test]
     fn test_enclave_zkc_logic() {
-        assert!(ZKCompliance::verify_aml_stateless("id_comm", "tx_meta"));
+        assert_eq!(
+            ZKCompliance::verify_aml_stateless_checked("id_comm", "tx_meta"),
+            Err(crate::enclave::EnclaveVerificationError::UnsupportedProvider)
+        );
     }
 
     #[test]
@@ -69,7 +72,10 @@ mod cxip20_architecture_tests {
 
     #[test]
     fn test_stacks_nakamoto_sbtc() {
-        assert!(StacksNakamoto::verify_bitcoin_finality(1));
+        assert_eq!(
+            StacksNakamoto::verify_bitcoin_finality_checked(1),
+            Err(crate::stacks::StacksError::UnsupportedFinalityEvidence)
+        );
         let bridge = SBTCBridge::new();
         use crate::stacks::StacksAdapter;
         assert!(bridge.initiate_peg_in(100000, "btc_txid").is_ok());
@@ -79,14 +85,14 @@ mod cxip20_architecture_tests {
     #[test]
     fn test_rgb_csv_logic() {
         let runtime = RGBRuntime::new(RGBExecutionMode::Active, RGBSkeletonAdapter);
-        assert!(matches!(
+        assert_eq!(
             runtime.validate_transition("state_transition"),
-            Err(RGBError::Unsupported { .. })
-        ));
-        assert!(matches!(
+            Err(crate::rgb::RGBError::VerificationUnavailable)
+        );
+        assert_eq!(
             runtime.verify_seal("utxo:0", "comm"),
-            Err(RGBError::Unsupported { .. })
-        ));
+            Err(crate::rgb::RGBError::VerificationUnavailable)
+        );
     }
 }
 
@@ -94,20 +100,16 @@ mod cxip20_architecture_tests {
 mod additional_protocol_tests {
     use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
-    use crate::protocol::dlc::{DlcError, DlcManager};
+    use crate::protocol::dlc::DlcManager;
     use secp256k1::Secp256k1;
 
     #[test]
     fn test_fedimint_unblinding_verification() {
         let secret = b"ecash-secret-32-byte-long-input-";
         let bf = &[0x01; 32];
-        let blinded = FedimintAdapter::blind_note(secret, bf);
-        assert!(FedimintAdapter::verify_unblinded(&blinded, bf, secret));
-        assert!(!FedimintAdapter::verify_unblinded(
-            &blinded,
-            &[0x02; 32],
-            secret
-        ));
+        let blinded = FedimintAdapter::blind_note(secret, bf).unwrap();
+        assert!(FedimintAdapter::verify_unblinded_checked(&blinded, bf, secret).unwrap());
+        assert!(!FedimintAdapter::verify_unblinded_checked(&blinded, &[0x02; 32], secret).unwrap());
     }
 
     #[test]
@@ -134,12 +136,12 @@ mod additional_protocol_tests {
         let intent = DlcManager::create_intent(&oracle_pk, 50000, outcome, 2000);
 
         assert_eq!(
-            DlcManager::verify_execution(&intent, &[0x01; 32]),
-            Err(DlcError::UnsupportedExecutionVerification)
+            DlcManager::verify_execution_checked(&intent, &[0x01; 32]),
+            Err(crate::protocol::dlc::DlcVerificationError::UnsupportedExecutionContext)
         );
         assert_eq!(
-            DlcManager::verify_execution(&intent, &[]),
-            Err(DlcError::UnsupportedExecutionVerification)
+            DlcManager::verify_execution_checked(&intent, &[]),
+            Err(crate::protocol::dlc::DlcVerificationError::MalformedAttestation)
         );
     }
 }
