@@ -1,0 +1,156 @@
+{
+  "api_version": 1,
+  "capabilities": {
+    "api_version": 1,
+    "chains": [
+      {
+        "target": {
+          "chain": "bitcoin",
+          "family": "bitcoin_utxo"
+        },
+        "algorithms": ["ecdsa_secp256k1"],
+        "operations": ["sign_message"],
+        "address_formats": ["bitcoin_bech32"]
+      }
+    ]
+  },
+  "request": {
+    "target": {
+      "chain": "bitcoin",
+      "family": "bitcoin_utxo"
+    },
+    "algorithm": "ecdsa_secp256k1",
+    "payload": {
+      "message": {
+        "bytes": [67, 111, 114, 101, 32, 102, 105, 120, 116, 117, 114, 101]
+      }
+    },
+    "derivation": {
+      "path": {
+        "components": [
+          {"index": 0, "hardened": true},
+          {"index": 1, "hardened": false}
+        ]
+      },
+      "purpose": "message_signing"
+    }
+  },
+  "response": {
+    "signature": {
+      "algorithm": "ecdsa_secp256k1",
+      "encoding": "raw",
+      "bytes": [17, 34, 51, 68]
+    },
+    "verification_key": {
+      "algorithm": "ecdsa_secp256k1",
+      "bytes": [2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
+    },
+    "address": {
+      "chain": "bitcoin",
+      "format": "bitcoin_bech32",
+      "value": "bc1qfixtureaddress"
+    },
+    "derivation": {
+      "path": {
+        "components": [
+          {"index": 0, "hardened": true},
+          {"index": 1, "hardened": false}
+        ]
+      },
+      "purpose": "message_signing"
+    }
+  },
+  "unsupported_cases": [
+    {
+      "name": "unsupported_chain",
+      "request": {
+        "target": {
+          "chain": "ethereum",
+          "family": "evm"
+        },
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {
+          "message": {
+            "bytes": [67, 111, 114, 101, 32, 102, 105, 120, 116, 117, 114, 101]
+          }
+        },
+        "derivation": {
+          "path": {
+            "components": [
+              {"index": 0, "hardened": true},
+              {"index": 1, "hardened": false}
+            ]
+          },
+          "purpose": "message_signing"
+        }
+      },
+      "expected_error": {
+        "unsupported_chain": {
+          "chain": "ethereum",
+          "family": "evm"
+        }
+      }
+    },
+    {
+      "name": "unsupported_algorithm",
+      "request": {
+        "target": {
+          "chain": "bitcoin",
+          "family": "bitcoin_utxo"
+        },
+        "algorithm": "schnorr_secp256k1",
+        "payload": {
+          "message": {
+            "bytes": [67, 111, 114, 101, 32, 102, 105, 120, 116, 117, 114, 101]
+          }
+        },
+        "derivation": {
+          "path": {
+            "components": [
+              {"index": 0, "hardened": true},
+              {"index": 1, "hardened": false}
+            ]
+          },
+          "purpose": "message_signing"
+        }
+      },
+      "expected_error": {
+        "unsupported_algorithm": {
+          "chain": "bitcoin",
+          "algorithm": "schnorr_secp256k1"
+        }
+      }
+    },
+    {
+      "name": "unsupported_operation",
+      "request": {
+        "target": {
+          "chain": "bitcoin",
+          "family": "bitcoin_utxo"
+        },
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {
+          "digest": {
+            "algorithm": "sha256",
+            "bytes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          }
+        },
+        "derivation": {
+          "path": {
+            "components": [
+              {"index": 0, "hardened": true},
+              {"index": 1, "hardened": false}
+            ]
+          },
+          "purpose": "message_signing"
+        }
+      },
+      "expected_error": {
+        "unsupported_operation": {
+          "chain": "bitcoin",
+          "operation": "sign_digest"
+        }
+      }
+    }
+  ]
+}
