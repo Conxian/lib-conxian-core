@@ -91,9 +91,9 @@ This repository provides **shared protocol primitives** that are consumed by all
 
 | Module | lib-conxian-core | conxius-enclave-sdk | Strategy |
 |--------|-------------------|---------------------|----------|
-| `protocol/frost.rs` | Skeletal | Full implementation | Keep local, reference SDK |
+| `protocol/frost.rs` | Fail-closed boundary | Full implementation | Keep local boundary, reference SDK |
 | `enclave/` | X.509 stubs | Full attestation | Keep local stubs only |
-| `bitcoin/bip322.rs` | Basic | Full BIP-322 | Keep local |
+| `bitcoin/bip322.rs` | Strict parser / unsupported boundary | Full BIP-322 | Keep local boundary, reference SDK |
 | `fedimint/` | Basic adapter | Full adapter | Keep local |
 | `lightning/` | Basic adapter | Full LND | Keep local |
 

@@ -3,10 +3,12 @@
 ## Scope and current support status
 
 This guide covers Liquid/Elements peg-in and peg-out ownership, sidechain
-signing handoffs, and the boundary between structural Core checks and
-production federation/proof logic. Core currently exposes `LiquidAdapter` with
-Bitcoin-family mapping, prefix/length address checks, a fee stub, and
-structural proof checks. It does not contain Liquid peg DTOs, federation
+signing handoffs, and the boundary between Core's fail-closed adapter boundary
+and production federation/proof logic. Core currently exposes a structural
+`LiquidAdapter`
+with Bitcoin-family mapping, prefix/length address checks, a fee stub, and
+strict proof-envelope parsing that returns typed unsupported errors. It does not
+contain Liquid peg DTOs, federation
 quorum/signing logic, an Elements transaction builder, confidential-asset proof
 verification, RPC clients, or a production Liquid signer.
 
@@ -86,11 +88,13 @@ validates capabilities, request/result identity, state roots, provenance,
 evidence binding, trust policy, and finality requirements. A finality request
 that requires finality must not be satisfied by a merely observed block.
 
-The current `LiquidAdapter::verify_state_proof` only checks non-empty input,
-the presence of at least three colon-separated components, and the literal
-`invalid` marker. `LiquidAdapter::validate_address` checks only `ex1`/`tlq1`
-prefix and minimum length. These are structural checks, not confidential proof,
-Merkle proof, Elements consensus, or federation verification.
+`LiquidAdapter::verify_state_proof` requires exactly three non-empty
+colon-separated components, binds the declared Merkle-root component to the
+requested state root, and then returns typed unsupported because Core has no
+confidential proof, Merkle proof, Elements consensus, or federation verifier.
+`LiquidAdapter::validate_address` still checks only the `ex1`/`tlq1` prefix and
+minimum length; neither that check nor the proof envelope is production
+cryptographic verification.
 
 BIP-110 applies to a Bitcoin L1 peg transaction only when its actual outputs,
 scripts, and applicable witness elements are serialized on Bitcoin. Liquid
@@ -116,7 +120,7 @@ does not retry federation members, poll sidechain nodes, or turn a structural
 
 - Keep Liquid-side and Bitcoin-L1 signing targets separate.
 - Do not treat `ex1`/`tlq1` prefix validation as complete address validation.
-- Do not treat the current structural proof check as verification of Merkle,
+- Do not treat the current proof-envelope parser as verification of Merkle,
   confidential-asset, federation, or Elements consensus evidence.
 - Require a policy-compatible `ProtocolVerifier` result and required Bitcoin
   finality before a peg release or irreversible side effect.
@@ -129,8 +133,9 @@ does not retry federation members, poll sidechain nodes, or turn a structural
 - Core defines no peg-in/peg-out DTOs, federation threshold protocol, Elements
   transaction builder, confidential proof implementation, or Liquid broadcast
   integration.
-- `LiquidAdapter` address and proof checks are structural and its state root is
-  static; it is not a production verifier.
+- `LiquidAdapter` address checks remain structural; its proof path returns
+  typed unsupported errors after parsing and its state root is unavailable. It
+  is not a production verifier.
 - No production Liquid `UniversalChainSigner` or
   `ProtocolVerifierBackend` is implemented in this repository.
 - The coarse `BitcoinUtxo` family mapping does not provide Liquid transaction

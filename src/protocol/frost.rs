@@ -1,8 +1,39 @@
-//! FROST: Flexible Round-Optimized Schnorr Threshold Signatures
-//! Institutional-grade multi-sig primitives aligned with IETF RFC 9591.
+//! FROST: Flexible Round-Optimized Schnorr Threshold Signatures.
+//!
+//! This module keeps the protocol data shapes used by the core API, but does
+//! not claim to implement FROST. Production FROST DKG and signing belong in
+//! the audited enclave SDK. Every authorization-shaped operation therefore
+//! fails closed rather than emitting fabricated key material or signatures.
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use std::fmt;
+
+/// Typed failures returned by the unsupported core FROST boundary.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum FrostError {
+    InvalidParameters { reason: String },
+    InvalidShare { reason: String },
+    InsufficientShares { required: u32, provided: usize },
+    Unsupported { operation: String, reason: String },
+}
+
+impl fmt::Display for FrostError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidParameters { reason } => write!(f, "invalid FROST parameters: {reason}"),
+            Self::InvalidShare { reason } => write!(f, "invalid FROST share: {reason}"),
+            Self::InsufficientShares { required, provided } => write!(
+                f,
+                "insufficient FROST shares: required {required}, provided {provided}"
+            ),
+            Self::Unsupported { operation, reason } => {
+                write!(f, "unsupported FROST operation {operation}: {reason}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for FrostError {}
 
 /// Represents a secret key share in the FROST threshold scheme.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -40,103 +71,86 @@ pub enum FrostSessionStatus {
     Aborted,
 }
 
-/// Manager for FROST threshold signature lifecycle.
+/// Manager for the FROST protocol boundary.
 pub struct FrostManager;
 
 impl FrostManager {
-    /// Generates key shares for a given threshold (t-of-n).
-    /// This implementation adds VSS commitments for Round 1.
+    /// Returns typed unsupported instead of fabricating shares or commitments.
     pub fn generate_shares(
         threshold: u32,
         total: u32,
-    ) -> (Vec<FrostKeyShare>, Vec<FrostShareCommitment>) {
-        if threshold > total || threshold == 0 {
-            return (Vec::new(), Vec::new());
+    ) -> Result<(Vec<FrostKeyShare>, Vec<FrostShareCommitment>), FrostError> {
+        if threshold == 0 || total == 0 || threshold > total {
+            return Err(FrostError::InvalidParameters {
+                reason: "threshold and total must be non-zero, with threshold <= total".to_string(),
+            });
         }
 
-        // Simplified production-ready scaffolding for scalar/point distribution
-        let shares = (1..=total)
-            .map(|i| {
-                let mut hasher = Sha256::new();
-                hasher.update(b"FROST-SHARE-DERIVATION");
-                hasher.update(i.to_be_bytes());
-                let share = hasher.finalize().to_vec();
-
-                FrostKeyShare {
-                    index: i,
-                    share,
-                    public_key: vec![0x02; 33], // Placeholder for generator * share
-                }
-            })
-            .collect();
-
-        let commitments = (1..=total)
-            .map(|i| FrostShareCommitment {
-                index: i,
-                commitment_points: vec![vec![0x02; 33]; threshold as usize],
-            })
-            .collect();
-
-        (shares, commitments)
+        Err(FrostError::Unsupported {
+            operation: "generate_shares".to_string(),
+            reason: "standards-compliant FROST DKG is owned by the audited enclave SDK".to_string(),
+        })
     }
 
-    /// Prepares encrypted shares for distribution (Round 2) per RFC 9591 Section 4.2.
-    /// This uses an authenticated encryption pattern (HMAC-SHA256 for MAC).
+    /// Returns typed unsupported instead of using XOR or an unauthenticated
+    /// digest as share encryption/authentication.
     pub fn prepare_distribution_shares(
         from_share: &FrostKeyShare,
         target_indices: &[u32],
         shared_secrets: &[(u32, [u8; 32])],
-    ) -> Vec<EncryptedFrostShare> {
-        target_indices
+    ) -> Result<Vec<EncryptedFrostShare>, FrostError> {
+        if from_share.index == 0 || from_share.share.len() != 32 {
+            return Err(FrostError::InvalidShare {
+                reason: "a FROST scalar share must be exactly 32 bytes".to_string(),
+            });
+        }
+        if target_indices.is_empty() {
+            return Err(FrostError::InvalidParameters {
+                reason: "at least one target participant is required".to_string(),
+            });
+        }
+        if target_indices
             .iter()
-            .filter_map(|&to_idx| {
-                let secret = shared_secrets.iter().find(|(idx, _)| *idx == to_idx)?.1;
+            .any(|index| *index == 0 || !shared_secrets.iter().any(|(known, _)| known == index))
+        {
+            return Err(FrostError::InvalidParameters {
+                reason: "every target participant must have a non-zero shared secret".to_string(),
+            });
+        }
 
-                // XOR "encryption" for the share using derived secret
-                let mut encrypted_payload = from_share.share.clone();
-                for i in 0..encrypted_payload.len() {
-                    encrypted_payload[i] ^= secret[i % 32];
-                }
-
-                // Compute MAC for authentication
-                let mut mac_hasher = Sha256::new();
-                mac_hasher.update(b"FROST-SHARE-MAC");
-                mac_hasher.update(secret);
-                mac_hasher.update(&encrypted_payload);
-                let mac: [u8; 32] = mac_hasher.finalize().into();
-
-                Some(EncryptedFrostShare {
-                    from_index: from_share.index,
-                    to_index: to_idx,
-                    encrypted_payload,
-                    mac,
-                })
-            })
-            .collect()
+        Err(FrostError::Unsupported {
+            operation: "prepare_distribution_shares".to_string(),
+            reason: "FROST share encryption and authentication are not implemented in core"
+                .to_string(),
+        })
     }
 
-    /// Aggregates partial signatures into a final Schnorr signature.
-    /// Real aggregation sums partial s-values: s = sum(si * lambda_i) mod n.
-    pub fn aggregate_signature(shares: &[Vec<u8>], threshold: u32) -> Result<Vec<u8>, String> {
+    /// Returns typed unsupported instead of performing byte-wise signature
+    /// aggregation that is not Schnorr scalar arithmetic.
+    pub fn aggregate_signature(shares: &[Vec<u8>], threshold: u32) -> Result<Vec<u8>, FrostError> {
+        if threshold == 0 {
+            return Err(FrostError::InvalidParameters {
+                reason: "threshold must be non-zero".to_string(),
+            });
+        }
         if shares.len() < threshold as usize {
-            return Err("Insufficient shares for aggregation".to_string());
+            return Err(FrostError::InsufficientShares {
+                required: threshold,
+                provided: shares.len(),
+            });
+        }
+        if shares.iter().any(|share| share.len() != 64) {
+            return Err(FrostError::InvalidShare {
+                reason: "each partial Schnorr signature must be exactly 64 bytes".to_string(),
+            });
         }
 
-        let mut final_sig = vec![0u8; 64];
-        final_sig[0..32].copy_from_slice(&shares[0][0..32]); // R value from first participant
-
-        // Real sum of scalars (simplified for the primitive library boundary)
-        for i in 0..32 {
-            let mut sum: u32 = 0;
-            for share in shares {
-                if share.len() >= 64 {
-                    sum += share[32 + i] as u32;
-                }
-            }
-            final_sig[32 + i] = (sum % 256) as u8;
-        }
-
-        Ok(final_sig)
+        Err(FrostError::Unsupported {
+            operation: "aggregate_signature".to_string(),
+            reason: "FROST nonce binding, participant checks, and scalar aggregation are not"
+                .to_string()
+                + " implemented in core",
+        })
     }
 }
 
@@ -145,36 +159,55 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_frost_round_1_integrity() {
-        let (shares, commitments) = FrostManager::generate_shares(2, 3);
-        assert_eq!(shares.len(), 3);
-        assert_eq!(commitments.len(), 3);
-        assert!(!shares[0].share.is_empty());
+    fn test_frost_generation_is_typed_unsupported() {
+        assert!(matches!(
+            FrostManager::generate_shares(2, 3),
+            Err(FrostError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            FrostManager::generate_shares(0, 3),
+            Err(FrostError::InvalidParameters { .. })
+        ));
     }
 
     #[test]
-    fn test_frost_round_2_distribution_with_mac() {
-        let (shares, _) = FrostManager::generate_shares(2, 3);
-        let shared_secrets = vec![(2, [0x42; 32]), (3, [0x43; 32])];
+    fn test_frost_distribution_never_returns_xor_ciphertext() {
+        let share = FrostKeyShare {
+            index: 1,
+            share: vec![0x11; 32],
+            public_key: vec![0x02; 33],
+        };
+        let result = FrostManager::prepare_distribution_shares(
+            &share,
+            &[2, 3],
+            &[(2, [0x42; 32]), (3, [0x43; 32])],
+        );
+        assert!(matches!(result, Err(FrostError::Unsupported { .. })));
 
-        let encrypted =
-            FrostManager::prepare_distribution_shares(&shares[0], &[2, 3], &shared_secrets);
-        assert_eq!(encrypted.len(), 2);
-        assert_eq!(encrypted[0].to_index, 2);
-        assert_ne!(encrypted[0].encrypted_payload, shares[0].share); // Ensure "encrypted"
-        assert_ne!(encrypted[0].mac, [0u8; 32]);
+        let malformed = FrostKeyShare {
+            share: vec![0x11; 31],
+            ..share
+        };
+        assert!(matches!(
+            FrostManager::prepare_distribution_shares(&malformed, &[2], &[(2, [0x42; 32])]),
+            Err(FrostError::InvalidShare { .. })
+        ));
     }
 
     #[test]
-    fn test_frost_signature_aggregation_hardened() {
-        let mut share1 = vec![0x00; 64];
-        let mut share2 = vec![0x00; 64];
-        share1[0..32].copy_from_slice(&[0x01; 32]);
-        share1[63] = 10;
-        share2[63] = 20;
-
-        let sig = FrostManager::aggregate_signature(&[share1, share2], 2).unwrap();
-        assert_eq!(sig[0..32], [0x01; 32]);
-        assert_eq!(sig[63], 30);
+    fn test_frost_aggregation_rejects_placeholder_inputs() {
+        let shares = vec![vec![0x01; 64], vec![0x02; 64]];
+        assert!(matches!(
+            FrostManager::aggregate_signature(&shares, 2),
+            Err(FrostError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            FrostManager::aggregate_signature(&[vec![0x01; 31]], 1),
+            Err(FrostError::InvalidShare { .. })
+        ));
+        assert!(matches!(
+            FrostManager::aggregate_signature(&[], 1),
+            Err(FrostError::InsufficientShares { .. })
+        ));
     }
 }

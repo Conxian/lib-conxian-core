@@ -5,7 +5,7 @@ mod cxip20_architecture_tests {
     };
     use crate::enclave::ZKCompliance;
     use crate::lightning::LightningNode;
-    use crate::rgb::{RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
+    use crate::rgb::{RGBError, RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
     use crate::stacks::{SBTCBridge, StacksNakamoto};
 
     #[test]
@@ -79,8 +79,14 @@ mod cxip20_architecture_tests {
     #[test]
     fn test_rgb_csv_logic() {
         let runtime = RGBRuntime::new(RGBExecutionMode::Active, RGBSkeletonAdapter);
-        assert!(runtime.validate_transition("state_transition").is_ok());
-        assert!(runtime.verify_seal("utxo:0", "comm").is_ok());
+        assert!(matches!(
+            runtime.validate_transition("state_transition"),
+            Err(RGBError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            runtime.verify_seal("utxo:0", "comm"),
+            Err(RGBError::Unsupported { .. })
+        ));
     }
 }
 
@@ -88,7 +94,7 @@ mod cxip20_architecture_tests {
 mod additional_protocol_tests {
     use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
-    use crate::protocol::dlc::DlcManager;
+    use crate::protocol::dlc::{DlcError, DlcManager};
     use secp256k1::Secp256k1;
 
     #[test]
@@ -127,8 +133,13 @@ mod additional_protocol_tests {
         let outcome = [0xbb; 32];
         let intent = DlcManager::create_intent(&oracle_pk, 50000, outcome, 2000);
 
-        // verify_execution requires at least 32 bytes of signature data
-        assert!(DlcManager::verify_execution(&intent, &[0x01; 32]));
-        assert!(!DlcManager::verify_execution(&intent, &[]));
+        assert_eq!(
+            DlcManager::verify_execution(&intent, &[0x01; 32]),
+            Err(DlcError::UnsupportedExecutionVerification)
+        );
+        assert_eq!(
+            DlcManager::verify_execution(&intent, &[]),
+            Err(DlcError::UnsupportedExecutionVerification)
+        );
     }
 }

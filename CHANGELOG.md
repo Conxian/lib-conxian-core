@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **CON-1509 fail-closed verifier remediation:** Removed BIP-322 prefix and
+  non-empty-witness fallbacks; adapter, Babylon, and Liquid state-proof paths
+  now return typed invalid/unsupported/unavailable failures; RGB Shadow mode
+  can no longer authorize; FROST placeholders now return typed unsupported;
+  and shallow DLC execution verification is typed unsupported.
+- Preserved the real DLC oracle point-equation verifier and added a fully bound
+  outcome/collateral/expiry helper plus mutation coverage. Core now advertises
+  no BIP-322 script types until a real audited script/witness verifier exists.
 - Hardened `ProtocolVerifier<B>` with an enforceable consumer façade and a
   lower-level `ProtocolVerifierBackend` hook contract. Capability, request,
   result, state-root, provenance, and finality postconditions now run outside

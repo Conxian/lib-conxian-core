@@ -2,9 +2,9 @@
 //! Aligned with CXIP 20 and G-09
 
 use base64::Engine;
-use bitcoin::hashes::{sha256, sha256t, Hash, HashEngine};
-use bitcoin::{Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness};
+use bitcoin::{Address, Witness};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -16,92 +16,67 @@ pub struct Bip322Message {
 
 pub struct Bip322Bridge;
 
-pub struct Bip322Tag;
-impl sha256t::Tag for Bip322Tag {
-    fn engine() -> sha256::HashEngine {
-        let mut engine = sha256::Hash::engine();
-        engine.input(b"BIP0322-signed-message");
-        engine
+/// Fail-closed errors returned while parsing or classifying a BIP-322 input.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Bip322Error {
+    InvalidAddress,
+    InvalidSignatureEncoding,
+    InvalidWitness,
+    UnsupportedScriptType,
+}
+
+impl fmt::Display for Bip322Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidAddress => write!(f, "invalid BIP-322 address"),
+            Self::InvalidSignatureEncoding => write!(f, "invalid BIP-322 signature encoding"),
+            Self::InvalidWitness => write!(f, "invalid BIP-322 witness"),
+            Self::UnsupportedScriptType => write!(f, "unsupported BIP-322 script type"),
+        }
     }
 }
-pub type Bip322Hash = sha256t::Hash<Bip322Tag>;
+
+impl std::error::Error for Bip322Error {}
 
 impl Bip322Bridge {
+    /// Compatibility wrapper for callers that only accept a boolean.
+    ///
+    /// Any parse failure or unsupported script type is reported as `false`.
+    /// Call [`Self::try_verify_message`] when the failure class is needed.
     pub fn verify_message(msg: &Bip322Message) -> bool {
-        let address = match Address::from_str(&msg.address) {
-            Ok(addr) => addr.assume_checked(),
-            Err(_) => {
-                if msg.address.starts_with("bc1") {
-                    return true;
-                }
-                return false;
-            }
-        };
-
-        let signature_bytes = match base64::engine::general_purpose::STANDARD.decode(&msg.signature)
-        {
-            Ok(bytes) => bytes,
-            Err(_) => return false,
-        };
-
-        let witness = match bitcoin::consensus::encode::deserialize::<Witness>(&signature_bytes) {
-            Ok(w) => w,
-            Err(_) => {
-                let mut w = Witness::new();
-                w.push(signature_bytes);
-                w
-            }
-        };
-
-        Self::verify_bip322_simple(&msg.message, &address, &witness)
+        Self::try_verify_message(msg).is_ok_and(|verified| verified)
     }
 
-    fn verify_bip322_simple(message: &str, address: &Address, witness: &Witness) -> bool {
-        let mut engine = Bip322Hash::engine();
-        engine.input(message.as_bytes());
-        let message_hash = Bip322Hash::from_engine(engine);
+    /// Parses BIP-322 input strictly, then returns typed unsupported because
+    /// this crate intentionally exposes no script type until a real audited
+    /// script/witness verifier is wired in.
+    ///
+    /// In particular, this method never substitutes a non-empty witness or a
+    /// `bc1` prefix for signature verification.
+    pub fn try_verify_message(msg: &Bip322Message) -> Result<bool, Bip322Error> {
+        let address = Address::from_str(&msg.address)
+            .map_err(|_| Bip322Error::InvalidAddress)?
+            .assume_checked();
 
-        let mut script_sig = ScriptBuf::new();
-        script_sig.push_opcode(bitcoin::opcodes::all::OP_PUSHBYTES_0);
-        script_sig.push_slice(message_hash.as_byte_array());
+        let signature_bytes = base64::engine::general_purpose::STANDARD
+            .decode(&msg.signature)
+            .map_err(|_| Bip322Error::InvalidSignatureEncoding)?;
+        if base64::engine::general_purpose::STANDARD.encode(&signature_bytes) != msg.signature {
+            return Err(Bip322Error::InvalidSignatureEncoding);
+        }
 
-        let to_spend = Transaction {
-            version: bitcoin::transaction::Version(0),
-            lock_time: bitcoin::locktime::absolute::LockTime::ZERO,
-            input: vec![TxIn {
-                previous_output: OutPoint {
-                    txid: Txid::from_byte_array([0; 32]),
-                    vout: 0xFFFFFFFF,
-                },
-                script_sig,
-                sequence: Sequence::ZERO,
-                witness: Witness::default(),
-            }],
-            output: vec![TxOut {
-                value: bitcoin::Amount::ZERO,
-                script_pubkey: address.script_pubkey(),
-            }],
-        };
+        let witness = bitcoin::consensus::encode::deserialize::<Witness>(&signature_bytes)
+            .map_err(|_| Bip322Error::InvalidWitness)?;
+        if witness.is_empty() || bitcoin::consensus::encode::serialize(&witness) != signature_bytes
+        {
+            return Err(Bip322Error::InvalidWitness);
+        }
 
-        let _to_sign = Transaction {
-            version: bitcoin::transaction::Version(0),
-            lock_time: bitcoin::locktime::absolute::LockTime::ZERO,
-            input: vec![TxIn {
-                previous_output: OutPoint {
-                    txid: to_spend.compute_txid(),
-                    vout: 0,
-                },
-                script_sig: ScriptBuf::new(),
-                sequence: Sequence::ZERO,
-                witness: witness.clone(),
-            }],
-            output: vec![TxOut {
-                value: bitcoin::Amount::ZERO,
-                script_pubkey: ScriptBuf::new_op_return([]),
-            }],
-        };
-
-        !witness.is_empty()
+        // Force address/script parsing before classifying the script as
+        // unsupported. No script type is claimed as verified by this crate.
+        let _script_pubkey = address.script_pubkey();
+        let _ = msg.message.as_bytes();
+        Err(Bip322Error::UnsupportedScriptType)
     }
 }
 
@@ -110,13 +85,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bip322_verification_structure() {
+    fn test_bip322_verification_is_fail_closed() {
+        let witness = Witness::from_slice(&[vec![0u8; 64]]);
         let msg = Bip322Message {
             message: "Hello Conxian".to_string(),
-            address: "bc1q9vza2e8ky57ccpm99h9ll9zk7a50f644vjsh8p".to_string(),
-            signature: "AkMAMEQCID9B7869/ov46o08XunY8fP3KxI8VwYf9bHh6P7y6y6yAiAb9B7869/ov46o08XunY8fP3KxI8VwYf9bHh6P7y6y6yA=".to_string(),
+            address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa".to_string(),
+            signature: base64::engine::general_purpose::STANDARD
+                .encode(bitcoin::consensus::encode::serialize(&witness)),
         };
-        assert!(Bip322Bridge::verify_message(&msg));
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&msg),
+            Err(Bip322Error::UnsupportedScriptType)
+        );
+        assert!(!Bip322Bridge::verify_message(&msg));
     }
 
     #[test]
@@ -127,5 +108,43 @@ mod tests {
             signature: "sig".to_string(),
         };
         assert!(!Bip322Bridge::verify_message(&msg));
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&msg),
+            Err(Bip322Error::InvalidAddress)
+        );
+    }
+
+    #[test]
+    fn test_bip322_rejects_malformed_encoding_and_witness() {
+        let address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+        let malformed_encoding = Bip322Message {
+            message: "msg".to_string(),
+            address: address.to_string(),
+            signature: "not-base64".to_string(),
+        };
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&malformed_encoding),
+            Err(Bip322Error::InvalidSignatureEncoding)
+        );
+
+        let malformed_witness = Bip322Message {
+            message: "msg".to_string(),
+            address: address.to_string(),
+            signature: base64::engine::general_purpose::STANDARD.encode([1u8, 2, 3]),
+        };
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&malformed_witness),
+            Err(Bip322Error::InvalidWitness)
+        );
+
+        let non_canonical_encoding = Bip322Message {
+            message: "msg".to_string(),
+            address: address.to_string(),
+            signature: "AQI".to_string(),
+        };
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&non_canonical_encoding),
+            Err(Bip322Error::InvalidSignatureEncoding)
+        );
     }
 }

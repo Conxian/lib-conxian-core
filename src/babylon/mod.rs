@@ -1,7 +1,7 @@
 //! Babylon Bitcoin Staking Adapter
 //! Aligned with CXIP-21 and G-43
 
-use crate::adapters::{TxParams, UniversalChainAdapter};
+use crate::adapters::{StateProofError, TxParams, UniversalChainAdapter};
 use crate::control_model::{Chain, ChainFamily, TrustTier};
 use serde::{Deserialize, Serialize};
 
@@ -45,27 +45,52 @@ impl UniversalChainAdapter for BabylonAdapter {
         TrustTier::Strict
     }
 
-    /// Verifies the Babylon finality gadget proof (EOTS signature).
-    /// CON-1335: Transitioning from trivial stub to structural validation.
-    fn verify_state_proof(&self, _state_root: &str, proof: &str) -> Result<bool, String> {
-        if proof.is_empty() {
-            return Err("Empty Babylon proof".to_string());
+    /// Rejects Babylon evidence until a real EOTS/finality verifier is wired.
+    ///
+    /// The parser only establishes that the input is well-formed enough to
+    /// classify. It never treats a height/signature-shaped string as verified.
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        if state_root.trim().is_empty() {
+            return Err(StateProofError::MissingStateRoot);
+        }
+        let mut parts = proof.split(':');
+        let height = parts.next().ok_or_else(|| StateProofError::InvalidProof {
+            reason: "Babylon proof is missing its height".to_string(),
+        })?;
+        let signature = parts.next().ok_or_else(|| StateProofError::InvalidProof {
+            reason: "Babylon proof is missing its EOTS signature".to_string(),
+        })?;
+        if parts.next().is_some() || height.trim().is_empty() || signature.trim().is_empty() {
+            return Err(StateProofError::InvalidProof {
+                reason: "Babylon proof must be exactly <height>:<signature_hex>".to_string(),
+            });
+        }
+        height
+            .parse::<u64>()
+            .map_err(|_| StateProofError::InvalidProof {
+                reason: "Babylon proof height must be an unsigned integer".to_string(),
+            })?;
+        let signature_bytes =
+            hex::decode(signature).map_err(|_| StateProofError::InvalidProof {
+                reason: "Babylon EOTS signature must be hexadecimal".to_string(),
+            })?;
+        if signature_bytes.len() != 64 {
+            return Err(StateProofError::InvalidProof {
+                reason: "Babylon EOTS signature must contain 64 bytes".to_string(),
+            });
         }
 
-        // Structural validation of Babylon EOTS proof
-        // Standard format: [height]:[sig_hex]
-        if !proof.contains(':') {
-            return Err("Invalid Babylon proof format: Missing height separator".to_string());
-        }
-
-        if proof.contains("invalid") {
-            return Ok(false);
-        }
-        Ok(true)
+        Err(StateProofError::Unsupported {
+            chain: Chain::Bitcoin,
+            reason: "Babylon EOTS/finality verification is unavailable in core".to_string(),
+        })
     }
 
-    fn get_state_root(&self) -> Result<String, String> {
-        Ok("babylon_finality_root".to_string())
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        Err(StateProofError::Unavailable {
+            chain: Chain::Bitcoin,
+            reason: "Babylon state roots require a verified downstream source".to_string(),
+        })
     }
 }
 
@@ -81,14 +106,28 @@ mod tests {
     }
 
     #[test]
-    fn test_babylon_verify_state_proof_hardened() {
+    fn test_babylon_verify_state_proof_fails_closed() {
         let adapter = BabylonAdapter;
-        assert!(adapter
-            .verify_state_proof("root", "840000:abc123def")
-            .is_ok());
-        assert!(adapter.verify_state_proof("root", "").is_err());
-        assert!(adapter
-            .verify_state_proof("root", "invalid_format")
-            .is_err());
+        let well_formed = format!("840000:{}", "ab".repeat(64));
+        assert!(matches!(
+            adapter.verify_state_proof("root", &well_formed),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("root", ""),
+            Err(StateProofError::InvalidProof { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("root", "invalid_format"),
+            Err(StateProofError::InvalidProof { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("root", "840000:not-hex"),
+            Err(StateProofError::InvalidProof { .. })
+        ));
+        assert!(matches!(
+            adapter.get_state_root(),
+            Err(StateProofError::Unavailable { .. })
+        ));
     }
 }

@@ -11,10 +11,10 @@ This index tracks the formal improvement proposals for the Conxian protocol and 
 | **CXIP-22** | **Trust-Tier Policy Enforcement** | **Implemented** | Formalizes T1-T4 trust classification for bridge and messaging lanes. |
 | **CXIP-23** | **Agentic MCP Surface** | **Implemented** | Defines the Model Context Protocol (MCP) toolset for autonomous interaction. |
 | **CXIP-26** | **Cross-Chain Intent Solving (ERC-7683)** | **Implemented** | Implements the competitive solver selection and bidding algorithm. |
-| **CXIP-27** | **Threshold Signature Infrastructure (FROST)** | **Implemented** | Implements the FROST TSS manager for multi-party signing. |
+| **CXIP-27** | **Threshold Signature Infrastructure (FROST)** | **SDK-owned / Core fail-closed** | The core boundary rejects placeholder DKG/distribution/aggregation; production FROST signing remains in the audited enclave SDK. |
 | **CXIP-28** | **Bitcoin Recursive Covenants (OP_CAT)** | **Implemented** | Defines the template library for OP_CAT-based vault covenants. |
 | **CXIP-29** | **MuSig2 Signature Aggregation** | **Implemented** | Formalizes BIP-327 signature aggregation for efficient multi-sig. |
-| **CXIP-30** | **DLC Native Finance Primitives** | **Implemented** | Maps Discreet Log Contracts (DLC) to the Universal Settlement Interface. |
+| **CXIP-30** | **DLC primitive boundary** | **Equation + bound helper** | Core verifies the oracle attestation equation and a fully bound outcome/collateral/expiry helper; shallow execution and funding/CET/finality remain downstream. |
 | **CXIP-32** | **Hardware Attestation (X.509 DER)** | **Implemented** | Implements structural verification for enclave certificate chains. |
 
 ## Research & Exploration

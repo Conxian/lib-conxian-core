@@ -25,7 +25,7 @@ This document maps identified protocol gaps to research status and implementatio
 | Removed in-core MuSig2/BitVM2/Vault implementations | `conxius-enclave-sdk` | ✅ **SDK-owned** - production signing, sessions, attestation, and BitVM2 verification live in the SDK |
 | `fuzz/fuzz_targets/musig2_aggregate.rs` | upstream `musig2::KeyAggContext` | ✅ **Dependency-level fuzz coverage** |
 | `fuzz/fuzz_targets/proof_request_validate.rs` | `src/verifier.rs::ProofVerificationRequest::validate` | ✅ **Structural and contract/policy validation; no cryptographic BitVM2 proof verification** |
-| `src/protocol/frost.rs` | `src/protocol/frost.rs` | ✅ Parity |
+| `src/protocol/frost.rs` | `src/protocol/frost.rs` | ⚠️ Fail-closed boundary; production FROST remains SDK-owned |
 | `src/control_model/` | N/A | ✅ Unique to lib-conxian-core |
 
 ## SDK Capabilities Now Available (via `enclave` feature)
@@ -64,31 +64,31 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 | Candidate | Strategic | Readiness | Demand | Total Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **MuSig2 Aggregation (G-10)** | 40 | 30 | 30 | **100** | **Implemented** (SDK) |
-| **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **Implemented** (SDK) |
-| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Implemented** (SDK) |
+| **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **SDK-owned; core rejects placeholders** |
+| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Equation + bound helper; execution downstream** |
 | **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK) |
 | **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** (SDK) |
-| **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Implemented** (SDK) |
+| **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Strict parser; verifier downstream** |
 | **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK) |
 | **Silent Payments (G-05)** | 35 | 25 | 20 | **80** | **Implemented** (SDK) |
-| **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Implemented** |
+| **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Fail-closed adapter boundary** |
 | **Fuzz Testing (CON-1332 / GitHub #147)** | 30 | 30 | 20 | **80** | **Implemented** (4 bounded targets; weekly/manual CI) |
 | **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
 | **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
 | **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
 
 ## Gap Identification & Resolution
-1. **Universal Chain Adapters**: Skeletal implementation complete for Cosmos, Solana, Move, and Substrate (CXIP-21).
+1. **Universal Chain Adapters**: Core adapters expose typed fail-closed boundaries for Cosmos, Solana, Move, and Substrate; verified light-client backends remain downstream (CXIP-21).
 2. **BitVM2 Multi-Party**: Resolved (CON-1306). Production MuSig2-based Taproot tree aggregation and BitVM2 verification are owned by `conxius-enclave-sdk`; this crate no longer carries the Vault implementation.
-3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
-4. **FROST Round 2**: Resolved (CON-1329). Moving from skeletal generation to encrypted share distribution.
+3. **BIP-322**: Fail-closed in core (CON-1509). Strictly parses supported input shapes but advertises no script verifier until an audited implementation is available.
+4. **FROST Round 2**: Fail-closed in core (CON-1509). Production DKG and signing remain SDK-owned; placeholder operations cannot succeed.
 5. **Hardware Attestation**: Resolved (CON-1329). Implementing X.509 DER parsing for enclave certificate chains.
 6. **MuSig2 Signature Aggregation**: Resolved (G-10). Production signing and session aggregation are owned by `conxius-enclave-sdk`; this crate retains only protocol primitives and direct dependency-level fuzz coverage.
 7. **Fedimint**: Resolved (G-16). Transitioning to real cryptographic blinding via `fedimint-client-wasm`.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
-9. **DLC**: Resolved (G-06). Hardened oracle attestation verification.
-10. **RGB**: Resolved (CON-1407). Expanded integration with Stock persistence support.
+9. **DLC**: Equation verification retained and bound execution helper added (CON-1509); shallow execution and funding/CET/finality remain downstream.
+10. **RGB**: Fail-closed adapter boundary (CON-1509); Stock/node-backed verification remains follow-up work and Shadow mode is non-authoritative.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 

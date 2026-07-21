@@ -12,7 +12,7 @@ expected for the validation targets.
 | --- | --- | --- |
 | `parse_intent` | `IntentManager::resolve_fdc3_intent` with bounded UTF-8 input | Core protocol API |
 | `anchoring_receipt` | `serde_json::from_slice::<AnchoringReceipt>` with bounded bytes | Core data model deserialization |
-| `bip322_verify` | Bounded `Bip322Message` construction and `Bip322Bridge::verify_message` | Core BIP-322 API; malformed addresses/base64 are expected |
+| `bip322_verify` | Bounded `Bip322Message` construction and `Bip322Bridge::verify_message` | Core BIP-322 parser boundary; malformed addresses/base64/witnesses and typed unsupported results are expected |
 | `bitcoin_psbt_deserialize` | `bitcoin::psbt::Psbt::deserialize` | Direct upstream `bitcoin` parser coverage, not a removed core orchestration API |
 | `musig2_aggregate` | `musig2::KeyAggContext` over bounded public-key input | Direct upstream `musig2` dependency-level key aggregation coverage |
 
