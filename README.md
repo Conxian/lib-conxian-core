@@ -30,6 +30,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 - **Chain Adapters:** Universal adapter trait for Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint
 - **Anchoring:** State root persistence models
 - **Deployment:** Deployment manifests and verification types
+- **Risk profiles:** Versioned static chain-family metadata and fail-closed invariants
 
 ## Status
 
