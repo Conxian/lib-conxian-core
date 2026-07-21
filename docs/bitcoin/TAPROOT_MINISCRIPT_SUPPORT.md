@@ -101,7 +101,7 @@ The integration vectors are in
 | Script-path witness with arguments, leaf, control block, and annex | Positions and stack-argument count are deterministic. |
 | Empty witness | `malformed / empty_witness`. |
 | `thresh(2, ...)`-style public metadata | Supported static handoff when context/capabilities are valid. |
-| Timelock-only metadata | Supported when timelock flag and zero signer counts agree. |
+| Timelock-only metadata | Supported only when `uses_timelock` is true and `required_signatures`, `candidate_signers`, and `max_satisfaction_elements` are all zero. Pure `after`/`older` conditions contribute no witness stack elements; combined signature+timelock policies must use an appropriate non-`Timelock` policy kind. |
 | Required signatures greater than candidate signers, or max satisfaction elements less than required signatures | `malformed / invalid_miniscript_metadata`. |
 | `CHECKSIGADD` metadata in SegWit v0 context | `malformed / miniscript_context_mismatch`. |
 | Compilation, satisfaction, execution, or cryptographic-verification request | `downstream_owned / downstream_owned_miniscript_capability`. |

@@ -265,6 +265,18 @@ fn single_key_metadata() -> MiniscriptPolicyMetadata {
     }
 }
 
+fn timelock_metadata() -> MiniscriptPolicyMetadata {
+    MiniscriptPolicyMetadata {
+        policy_kind: MiniscriptPolicyKind::Timelock,
+        required_signatures: 0,
+        candidate_signers: 0,
+        max_satisfaction_elements: 0,
+        uses_timelock: true,
+        uses_hashlock: false,
+        uses_checksigadd: false,
+    }
+}
+
 fn assert_invalid_miniscript_metadata_error(error: BitcoinBoundaryError) {
     assert_eq!(error.category, BitcoinBoundaryErrorCategory::Malformed);
     assert_eq!(
@@ -402,6 +414,41 @@ fn miniscript_metadata_rejects_undersized_satisfaction_bounds_for_threshold_and_
 }
 
 #[test]
+fn miniscript_timelock_metadata_requires_zero_signers_and_satisfaction_elements() {
+    let mut nonzero_required_signatures = timelock_metadata();
+    nonzero_required_signatures.required_signatures = 1;
+    nonzero_required_signatures.candidate_signers = 1;
+    nonzero_required_signatures.max_satisfaction_elements = 1;
+    let error = validate_miniscript_policy_metadata(
+        &MiniscriptContext::SegwitV0,
+        &nonzero_required_signatures,
+    )
+    .expect_err("timelock-only metadata cannot require signatures");
+    assert_invalid_miniscript_metadata_error(error);
+
+    let mut nonzero_candidate_signers = timelock_metadata();
+    nonzero_candidate_signers.candidate_signers = 1;
+    let error = validate_miniscript_policy_metadata(
+        &MiniscriptContext::SegwitV0,
+        &nonzero_candidate_signers,
+    )
+    .expect_err("timelock-only metadata cannot advertise candidate signers");
+    assert_invalid_miniscript_metadata_error(error);
+
+    let mut nonzero_satisfaction_elements = timelock_metadata();
+    nonzero_satisfaction_elements.max_satisfaction_elements = 1;
+    let error = validate_miniscript_policy_metadata(
+        &MiniscriptContext::SegwitV0,
+        &nonzero_satisfaction_elements,
+    )
+    .expect_err("timelock-only metadata cannot require satisfaction elements");
+    assert_invalid_miniscript_metadata_error(error);
+
+    validate_miniscript_policy_metadata(&MiniscriptContext::SegwitV0, &timelock_metadata())
+        .expect("zero-signer, zero-element timelock-only metadata is valid");
+}
+
+#[test]
 fn boundary_errors_and_shared_types_have_stable_serde_shapes() {
     let error = BitcoinBoundaryError {
         category: BitcoinBoundaryErrorCategory::Malformed,
@@ -420,15 +467,7 @@ fn boundary_errors_and_shared_types_have_stable_serde_shapes() {
         serde_json::to_string(&ValidationClaim::StructuralOnly).expect("claim serializes");
     assert_eq!(claim_json, r#""structural_only""#);
 
-    let policy = MiniscriptPolicyMetadata {
-        policy_kind: MiniscriptPolicyKind::Timelock,
-        required_signatures: 0,
-        candidate_signers: 0,
-        max_satisfaction_elements: 0,
-        uses_timelock: true,
-        uses_hashlock: false,
-        uses_checksigadd: false,
-    };
+    let policy = timelock_metadata();
     validate_miniscript_policy_metadata(&MiniscriptContext::SegwitV0, &policy)
         .expect("timelock-only metadata is structurally valid");
     let policy_json = serde_json::to_string(&policy).expect("policy metadata serializes");

@@ -684,7 +684,12 @@ pub fn validate_miniscript_policy_metadata(
                 BitcoinBoundaryErrorCode::InvalidMiniscriptMetadata,
             ));
         }
-        MiniscriptPolicyKind::Timelock if !metadata.uses_timelock => {
+        MiniscriptPolicyKind::Timelock
+            if !metadata.uses_timelock
+                || metadata.required_signatures != 0
+                || metadata.candidate_signers != 0
+                || metadata.max_satisfaction_elements != 0 =>
+        {
             return Err(BitcoinBoundaryError::malformed(
                 BitcoinBoundaryErrorCode::InvalidMiniscriptMetadata,
             ));
