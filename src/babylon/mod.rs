@@ -1,7 +1,10 @@
 //! Babylon Bitcoin Staking Adapter
 //! Aligned with CXIP-21 and G-43
 
-use crate::adapters::{TxParams, UniversalChainAdapter};
+use crate::adapters::{
+    reject_unverified_state_proof, unavailable_state_root, StateProofError, TxParams,
+    UniversalChainAdapter,
+};
 use crate::control_model::{Chain, ChainFamily, TrustTier};
 use serde::{Deserialize, Serialize};
 
@@ -45,27 +48,13 @@ impl UniversalChainAdapter for BabylonAdapter {
         TrustTier::Strict
     }
 
-    /// Verifies the Babylon finality gadget proof (EOTS signature).
-    /// CON-1335: Transitioning from trivial stub to structural validation.
-    fn verify_state_proof(&self, _state_root: &str, proof: &str) -> Result<bool, String> {
-        if proof.is_empty() {
-            return Err("Empty Babylon proof".to_string());
-        }
-
-        // Structural validation of Babylon EOTS proof
-        // Standard format: [height]:[sig_hex]
-        if !proof.contains(':') {
-            return Err("Invalid Babylon proof format: Missing height separator".to_string());
-        }
-
-        if proof.contains("invalid") {
-            return Ok(false);
-        }
-        Ok(true)
+    /// No audited Babylon EOTS/header verifier lives in Core.
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("babylon", state_root, proof)
     }
 
-    fn get_state_root(&self) -> Result<String, String> {
-        Ok("babylon_finality_root".to_string())
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("babylon")
     }
 }
 
@@ -83,12 +72,21 @@ mod tests {
     #[test]
     fn test_babylon_verify_state_proof_hardened() {
         let adapter = BabylonAdapter;
-        assert!(adapter
-            .verify_state_proof("root", "840000:abc123def")
-            .is_ok());
-        assert!(adapter.verify_state_proof("root", "").is_err());
-        assert!(adapter
-            .verify_state_proof("root", "invalid_format")
-            .is_err());
+        assert!(matches!(
+            adapter.verify_state_proof("root", "840000:abc123def"),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("wrong-root", "840000:abc123def"),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("root", ""),
+            Err(StateProofError::MalformedInput(_))
+        ));
+        assert!(matches!(
+            adapter.get_state_root(),
+            Err(StateProofError::Unavailable { .. })
+        ));
     }
 }

@@ -3,10 +3,10 @@
 ## Scope and current support status
 
 This guide covers Liquid/Elements peg-in and peg-out ownership, sidechain
-signing handoffs, and the boundary between structural Core checks and
+signing handoffs, and the boundary between Core's typed input checks and
 production federation/proof logic. Core currently exposes `LiquidAdapter` with
-Bitcoin-family mapping, prefix/length address checks, a fee stub, and
-structural proof checks. It does not contain Liquid peg DTOs, federation
+Bitcoin-family mapping, prefix/length address checks, a fee stub, and a typed
+unsupported proof boundary. It does not contain Liquid peg DTOs, federation
 quorum/signing logic, an Elements transaction builder, confidential-asset proof
 verification, RPC clients, or a production Liquid signer.
 
@@ -86,11 +86,11 @@ validates capabilities, request/result identity, state roots, provenance,
 evidence binding, trust policy, and finality requirements. A finality request
 that requires finality must not be satisfied by a merely observed block.
 
-The current `LiquidAdapter::verify_state_proof` only checks non-empty input,
-the presence of at least three colon-separated components, and the literal
-`invalid` marker. `LiquidAdapter::validate_address` checks only `ex1`/`tlq1`
-prefix and minimum length. These are structural checks, not confidential proof,
-Merkle proof, Elements consensus, or federation verification.
+The current `LiquidAdapter::verify_state_proof` rejects empty input as malformed
+and returns typed `StateProofError::Unsupported` for non-empty input. Its
+`get_state_root` result is typed unavailable. `LiquidAdapter::validate_address`
+still checks only `ex1`/`tlq1` prefix and minimum length. These APIs are not
+confidential proof, Merkle proof, Elements consensus, or federation verification.
 
 BIP-110 applies to a Bitcoin L1 peg transaction only when its actual outputs,
 scripts, and applicable witness elements are serialized on Bitcoin. Liquid
@@ -109,14 +109,14 @@ because the system is Bitcoin-family mapped.
   waited through.
 
 Operational retry classification is downstream policy owned by Gateway. Core
-does not retry federation members, poll sidechain nodes, or turn a structural
-`Ok(true)` into cryptographic proof.
+does not retry federation members, poll sidechain nodes, or turn a typed
+unsupported result into cryptographic proof.
 
 ## Fail-closed boundaries
 
 - Keep Liquid-side and Bitcoin-L1 signing targets separate.
 - Do not treat `ex1`/`tlq1` prefix validation as complete address validation.
-- Do not treat the current structural proof check as verification of Merkle,
+- Do not treat `StateProofError::Unsupported` as verification of Merkle,
   confidential-asset, federation, or Elements consensus evidence.
 - Require a policy-compatible `ProtocolVerifier` result and required Bitcoin
   finality before a peg release or irreversible side effect.
@@ -129,8 +129,9 @@ does not retry federation members, poll sidechain nodes, or turn a structural
 - Core defines no peg-in/peg-out DTOs, federation threshold protocol, Elements
   transaction builder, confidential proof implementation, or Liquid broadcast
   integration.
-- `LiquidAdapter` address and proof checks are structural and its state root is
-  static; it is not a production verifier.
+- `LiquidAdapter` address checks are structural, proof verification is typed
+  unsupported, and its state root is unavailable; it is not a production
+  verifier.
 - No production Liquid `UniversalChainSigner` or
   `ProtocolVerifierBackend` is implemented in this repository.
 - The coarse `BitcoinUtxo` family mapping does not provide Liquid transaction
