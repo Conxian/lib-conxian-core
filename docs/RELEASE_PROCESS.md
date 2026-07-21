@@ -1,4 +1,4 @@
-# lib-conxian-core Release Process (CON-218)
+# lib-conxian-core Release Process (CON-218, CON-1508)
 
 This document defines the fail-closed release process for the protocol
 primitives crate. The source tree may intentionally contain a version that has
@@ -94,6 +94,8 @@ The publishing workflow follows this order and stops on any failed step:
 2. Run local source parity and SemVer-aware tag/source identity checks.
 3. In `pre-publish`, reject an existing crates.io candidate or GitHub Release.
 4. Require `CARGO_REGISTRY_TOKEN`, then run `cargo publish --locked` exactly once.
+   If Cargo exits non-zero, the workflow checks the exact candidate before
+   failing; only a confirmed published candidate may continue to recovery.
 5. In `post-publish`, poll until the exact crate version is visible.
 6. Create the GitHub Release only after registry verification. The creation
    step is idempotent when the matching release already exists.
