@@ -87,6 +87,12 @@ The optional `enclave` feature
 has a known downstream MSRV/dependency mismatch and is not required by this test layer. The tests
 run against default features and do not require `--all-features`.
 
+This document describes the Core-only fixture layer. Direct compile and
+serde-boundary evidence against the exact SDK release is intentionally kept in
+the separate opt-in [`SDK v2.0.11 compatibility evidence`](COMPATIBILITY.md#opt-in-sdk-v2011-compatibility-evidence)
+harness. That harness does not change the ownership or production-readiness
+claims of these deterministic Core fixtures.
+
 Downstream CI fan-out is deliberately deferred. SDK, Nexus, Gateway, and Wallet should adopt the
 contract versions and pins explicitly before repository-to-repository CI is added. Until then,
 this repository validates only its local public contract surface and does not imply that a

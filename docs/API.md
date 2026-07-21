@@ -225,14 +225,16 @@ preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
 The compatibility assumptions recorded by this checkpoint are limited to the
-Core package `lib-conxian-core` `0.3.0`, Rust `1.85`, the default feature set
+Core package `lib-conxian-core` `0.3.0`, Rust `1.91`, the default feature set
 (`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and
 `PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
 domain constant. The known optional production SDK assumption is the existing
-`conxius-enclave-sdk` `2.0.11` declaration; this fixture layer deliberately does
-not compile or force that optional SDK path. The current `Conxian/conxian-nexus`
+`conxius-enclave-sdk` `2.0.11` declaration; this Core-only fixture layer deliberately does
+not compile or force that optional SDK path. Direct release compatibility evidence is
+provided by the separate opt-in harness in
+[`docs/COMPATIBILITY.md`](COMPATIBILITY.md). The current `Conxian/conxian-nexus`
 default branch is `main`, and its root `Cargo.toml` records the exact
 `lib-conxian-core` git revision pin
 `3b091d2700d840514427e4190c40d631b6d8132c`. That is a manifest-level
