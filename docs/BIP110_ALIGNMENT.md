@@ -282,6 +282,10 @@ bytes as Bitcoin pushdata merely because the protocol ultimately settles or anch
    Gateway and Nexus own orchestration and observation. See [issue #175](https://github.com/Conxian/lib-conxian-core/issues/175).
 4. Taproot, Tapscript, and Miniscript invariants remain a separate audit and handoff. See [issue
    #178](https://github.com/Conxian/lib-conxian-core/issues/178).
+5. The neutral structural contract for that handoff is documented in
+   [`docs/bitcoin/TAPROOT_MINISCRIPT_SUPPORT.md`](bitcoin/TAPROOT_MINISCRIPT_SUPPORT.md). Its
+   BIP-341 control-block bound (`33 + 32m`, `m <= 128`) is distinct from this document's separate
+   BIP-110 `257`-byte policy measurement.
 
 This matrix does **not** implement transaction parsing, BIP-341 cryptography, BIP-342 execution,
 Miniscript compilation, BIP-322 verification, transaction builders, signing, fee routing, network
