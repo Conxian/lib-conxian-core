@@ -206,6 +206,11 @@ pub fn validate_trust_tier_policy(
     Ok(())
 }
 
+/// Legacy, unversioned risk-assessment wire/source shape retained for compatibility.
+///
+/// New canonical metadata must use the additive schema-v1 API in [`super::risk`]. This type is
+/// intentionally neither deprecated nor extended so existing downstream JSON and Rust sources
+/// continue to compile and deserialize unchanged.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RiskAssessment {
     pub overall_level: String,
@@ -252,6 +257,11 @@ pub struct RailOperationalCapabilities {
     pub resilience_features: Vec<String>,
 }
 
+/// Legacy, unversioned rail metadata shape retained for compatibility.
+///
+/// Canonical profiles may carry this shape only through the versioned
+/// [`super::risk::VersionedRailMetadata`] wrapper, which validates its schema version and target
+/// family. The fields below remain unchanged for existing consumers.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RailMetadata {
     pub rail_family: ChainFamily,

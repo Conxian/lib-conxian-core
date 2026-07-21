@@ -32,3 +32,25 @@ This document maps security and operational controls across the public repositor
 
 - **Manual Enforcement:** Release tagging for app-layer shims remains manual.
 - **Visibility Audit:** Periodic review of private/public boundaries is ongoing (CON-1183).
+
+## 5. Canonical risk-profile controls (CORE-007)
+
+The schema-v1 canonical risk-profile contract is a protocol control, not a live risk engine.
+`lib-conxian-core` owns the checked-in `data/risk_profiles/v1.json` artifact, schema/version
+validation, score bounds and polarity, explicit unknown/not-assessed states, exact target
+coverage, chain-to-family reconciliation, trust-tier policy invariants, and the versioned rail
+metadata compatibility wrapper. See
+[`docs/architecture/RISK_PROFILES.md`](RISK_PROFILES.md).
+
+| Control | Core | Nexus | Gateway | Wallet/adapters |
+| --- | --- | --- | --- | --- |
+| Schema/set/profile revision | Define and validate | Track compatible observations | Expose and persist compatible versions | Pin and preserve versions |
+| Static six-dimension metadata | Store only approved artifact values | Compare with live evidence | Apply separate runtime policy | Display/pass through as static |
+| Evidence and provenance | Require evidence for assessed/partial states | Acquire and verify empirical evidence | Persist/audit references | Preserve provenance |
+| Trust/verification/finality assumptions | Reuse `validate_trust_tier_policy`; no universal finality rule | Check against verifier capabilities | Decide runtime eligibility | Reject incompatible declarations |
+| Routing and live status | Explicitly out of scope | Observe/verify | Own orchestration and route selection | Request/sign under caller policy |
+
+The initial set intentionally marks every family and chain profile `not_assessed`; the issue and
+repository docs are governance references, not evidence. Any profile change must update the data
+artifact, affected revision, set version when applicable, evidence/change reference, tests,
+documentation, and release notes in one reviewable change.

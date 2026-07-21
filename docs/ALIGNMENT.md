@@ -141,14 +141,20 @@ pub enum TrustTier {
 
 ```rust
 pub enum ChainFamily {
-    BitcoinUtxo,  // Bitcoin, Liquid, Rootstock
-    Evm,         // Ethereum, Base, Arbitrum, Optimism, Polygon
+    BitcoinUtxo, // Bitcoin, Stacks, Liquid, Lightning, Babylon
+    Evm,         // Bob, Mezo, Citrea, Botanix, Ethereum, Base, Arbitrum, Optimism, Polygon
     CosmosIbc,   // CosmosHub, Osmosis, Celestia
     SolanaSvm,   // Solana, Eclipse
     Move,        // Aptos, Sui
     Substrate,   // Polkadot, Kusama
 }
 ```
+
+The current taxonomy contains exactly 6 families and 23 chain variants. The versioned canonical
+risk-profile artifact records an explicit `not_assessed` decision for every entry; it does not
+promote the historical example scores in the Phase 1 roadmap. See
+[`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md) for the field-level contract,
+static-vs-live ownership, and profile review process.
 
 ### Lifecycle States
 
