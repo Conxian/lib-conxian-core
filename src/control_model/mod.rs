@@ -2,6 +2,7 @@ pub mod bip110;
 pub mod bip110_preflight;
 pub mod lifecycle;
 pub mod ops;
+pub mod risk_profile;
 pub mod trust;
 
 pub use bip110::{Bip110Limits, Bip110TransactionShape};
@@ -15,6 +16,14 @@ pub use bip110_preflight::{
 };
 pub use lifecycle::*;
 pub use ops::*;
+pub use risk_profile::{
+    enumerated_chain_families, enumerated_chains, AssessmentStatus, CanonicalRiskProfile,
+    GovernanceReference, ResolvedRiskProfile, RiskDimension, RiskEvidence, RiskEvidenceKind,
+    RiskProfileLookupError, RiskProfilePosture, RiskProfileRegistry, RiskProfileSchemaVersion,
+    RiskProfileSubject, RiskProfileSupersession, RiskProfileValidationError, RiskScore,
+    RiskScoreScale, RiskScoreUnit, CANONICAL_RISK_PROFILE_GOVERNANCE_REFERENCE,
+    CANONICAL_RISK_PROFILE_POLICY_REFERENCE, CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
+};
 pub use trust::{
     chain_family_for, validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult,
     Bip110Violation, BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope,

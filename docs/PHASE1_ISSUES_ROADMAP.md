@@ -200,17 +200,28 @@ This item does not close CORE-007 or other unrelated roadmap work.
 **Priority**: 🟠 HIGH  
 **Depends On**: [CORE-006]  
 
+**Implementation status**: The additive, versioned schema and deterministic
+all-not-assessed registry are implemented in
+[`src/control_model/risk_profile.rs`](../src/control_model/risk_profile.rs).
+The initial registry deliberately contains no approved chain scores; see
+[`docs/CANONICAL_RISK_PROFILES.md`](CANONICAL_RISK_PROFILES.md).
+
 **Description**:
-For each chain family, document risk assessment scores (DA, settlement, bridge, etc.) and their implications for UCV routing.
+Define the static, evidence-backed schema for chain-family risk metadata and
+document its downstream ownership. Static metadata must not become an implicit
+UCV routing policy.
 
 **Acceptance Criteria**:
-- [ ] Risk score definitions for all dimensions
-- [ ] Chain-specific profiles:
-  - Bitcoin: DA=100, Settlement=100
-  - Stacks: DA=85, Settlement=80 (Nakamoto)
-  - Babylon: DA=90, Settlement=70
-  - Liquid: DA=60, Settlement=75
-- [ ] Implications for routing logic
+- [x] Risk score definitions for all dimensions, with explicit units and bounds
+- [x] Explicit family and chain subjects, including Bitcoin, Stacks, Babylon,
+  and Liquid
+- [x] Unknown/not-assessed handling, public evidence, governance references,
+  and versioned revisions
+- [x] Ownership boundary: Core metadata, Nexus observations, Gateway routing
+
+The numeric examples that were previously listed in this planning section are
+historical, unapproved examples. They are not canonical input and were not
+copied into the registry.
 
 ---
 
@@ -263,7 +274,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-004 | BIP-110 Compliance Matrix | 🟠 | 🟡 In progress in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
 | CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Initial contract in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardening in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
-| CORE-007 | Chain Risk Profiles | 🟠 | ⏳ Create |
+| CORE-007 | Chain Risk Profiles | 🟠 | Implemented in [CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md) |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |
 
