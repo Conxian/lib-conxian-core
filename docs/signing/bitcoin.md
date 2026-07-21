@@ -169,7 +169,9 @@ Message verification has a separate BIP-322 caveat: `Bip322Bridge` in
 the current implementation. It can accept a `bc1`-prefixed address before full
 validation and ultimately checks that a witness is non-empty; it does not
 execute the constructed `to_spend`/`to_sign` script validation. Do not use it as
-proof of message-signature authenticity.
+proof of message-signature authenticity. Production BIP-322 signing and
+message-authenticity verification belong to `conxius-enclave-sdk`; keep this
+structural-only bridge out of authenticity decisions.
 
 ## Retry versus terminal semantics
 

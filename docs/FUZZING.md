@@ -2,7 +2,8 @@
 
 This document is the authoritative inventory and operating guide for the
 `lib-conxian-core` fuzz suite. The suite is intentionally limited to parsing,
-structural validation, and the currently supported MuSig2 aggregation path.
+structural/policy/evidence-binding validation, and the currently supported
+dependency-level MuSig2 aggregation path.
 
 ## Target inventory
 
@@ -11,17 +12,18 @@ structural validation, and the currently supported MuSig2 aggregation path.
 | `parse_intent` | `fuzz/fuzz_targets/parse_intent.rs` | `src/protocol/intent.rs`: `Fdc3Instrument` and `IntentManager::resolve_fdc3_intent` | UTF-8 intent input and FDC3 instrument resolution |
 | `musig2_aggregate` | `fuzz/fuzz_targets/musig2_aggregate.rs` | `musig2::KeyAggContext`, `musig2::secp::Point`, and `secp256k1::PublicKey` | Compressed public-key parsing and aggregation through the external `musig2` crate; production Vault SDK flows remain in `conxius-enclave-sdk` |
 | `anchoring_receipt` | `fuzz/fuzz_targets/anchoring_receipt.rs` | `src/anchoring.rs`: `AnchoringReceipt` and its `serde` representation | JSON deserialization of anchoring receipts, including timestamps, enum values, publications, and optional metadata |
-| `proof_request_validate` | `fuzz/fuzz_targets/proof_request_validate.rs` | `src/verifier.rs`: `ProofVerificationRequest` and its inherent `validate()` method | JSON deserialization followed by structural validation for successfully decoded requests; when an optional proof envelope is present, its fail-closed contract and policy validation also runs; this is **not** cryptographic BitVM2 proof verification |
+| `proof_request_validate` | `fuzz/fuzz_targets/proof_request_validate.rs` | `src/verifier.rs`: `ProofVerificationRequest` and its inherent `validate()` method | JSON deserialization followed by structural validation; when an optional proof envelope is present, policy and evidence-binding validation also run; it does **not** perform Groth16, BitVM2, or message-signature cryptographic verification |
 
 The removed `psbt_parse`, Core-owned `key_aggregate`, and BitVM2 `proof_verify`
 targets are intentionally not restored. Their APIs no longer belong to this
 crate's current fuzz surface.
 
 BIP-322 is also intentionally not a dedicated target in the current
-four-target suite. The current core `Bip322Bridge` implementation performs
-structural checks only; it does not establish message-signature authenticity or
-provide cryptographic verification coverage. No such authenticity or
-cryptographic coverage should be inferred from this fuzz suite.
+four-target suite. Production BIP-322 signing and message-authenticity
+verification belong to `conxius-enclave-sdk`. The current core `Bip322Bridge`
+implementation is structural-only and must not be used as an authenticity
+decision; it does not provide cryptographic verification coverage. No BIP-322
+authenticity or cryptographic coverage should be inferred from this fuzz suite.
 
 ## Local usage
 
@@ -50,8 +52,10 @@ cargo +nightly fuzz run <target> -- \
 
 Replace `<target>` with one of `parse_intent`, `musig2_aggregate`,
 `anchoring_receipt`, or `proof_request_validate`. The proof-request target
-performs structural and policy validation only; it does not verify Groth16 or
-BitVM2 cryptographic proofs.
+performs JSON deserialization followed by structural validation and, when an
+optional proof envelope is present, policy and evidence-binding validation; it
+does not perform Groth16, BitVM2, or message-signature cryptographic
+verification.
 
 ## CI regression policy
 

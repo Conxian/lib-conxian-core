@@ -109,7 +109,8 @@ Models for decentralized state persistence.
 Advanced Bitcoin-native primitives.
 - `MuSig2`: BIP327-compliant key aggregation, signature aggregation, and signing (CON-145, CON-1270).
 - `BitVM2`: Segment generation and optimistic fraud-proof verification (CON-464).
-- `BIP-322`: Universal message signing and verification (G-09).
+- `BIP-322`: `Bip322Bridge` provides structural-only checks; production signing
+  and message-authenticity verification belong to `conxius-enclave-sdk` (G-09).
 
 ## 3. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:

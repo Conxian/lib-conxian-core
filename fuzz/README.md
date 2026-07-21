@@ -13,7 +13,7 @@ unexpected aborts, and dependency regressions; malformed input and a normal
 | `parse_intent` | `IntentManager::resolve_fdc3_intent` with bounded UTF-8 input | Core protocol API |
 | `anchoring_receipt` | `serde_json::from_slice::<AnchoringReceipt>` with bounded bytes | Core data model deserialization |
 | `musig2_aggregate` | `musig2::KeyAggContext` over bounded public-key input | Direct upstream `musig2` dependency-level key aggregation coverage |
-| `proof_request_validate` | `ProofVerificationRequest` JSON deserialization followed by structural and policy validation | Core protocol model; not Groth16 or BitVM2 cryptographic verification |
+| `proof_request_validate` | `ProofVerificationRequest` JSON deserialization followed by structural validation and, when an optional proof envelope is present, policy and evidence-binding validation | Core protocol model; no Groth16, BitVM2, or message-signature cryptographic verification |
 
 The targets cap input size and key count before invoking the parser or
 aggregator. `proof_request_validate` rejects inputs larger than 16 KiB before
@@ -22,7 +22,11 @@ bounded input. They do not reintroduce the removed `src/bitvm2.rs`,
 `src/musig2.rs`, or historical Bitcoin orchestrator PSBT APIs. Production
 MuSig2 and BitVM2 coverage, including cryptographic proof verification, belongs
 to [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk), not
-this crate.
+this crate. Production BIP-322 signing and message-authenticity verification
+also belong to `conxius-enclave-sdk`; this crate's `Bip322Bridge` is
+structural-only and must not be used as an authenticity decision. There is no
+PSBT fuzz target in this repository, and BIP-322 and BitVM2 are not current
+fuzz targets here.
 
 ## Local prerequisites
 
@@ -105,4 +109,4 @@ For a longer local reproduction matching scheduled CI, replace
 manual dispatch. Each matrix job runs for 30 seconds with a 2 GiB RSS limit,
 an explicit five-second per-input timeout, and a 16 KiB maximum input length.
 It fails on fuzz-run errors and uploads target-specific corpus/artifact output
-when a job fails.
+after every run, including failed runs (`if: always()`).
