@@ -35,7 +35,8 @@ is the cycle-safe adapter boundary for the exact published
 `conxius-enclave-sdk =2.0.11` API. It depends on Core and the SDK directly while
 Core's default features remain SDK-independent. Applications inject an
 `Arc<dyn EnclaveManager>`; the adapter does not construct a provider or own its
-lifecycle.
+lifecycle. The published SDK `2.0.11` remains standalone and does not depend on
+Core; any future reverse edge requires a separate dependency-graph review.
 
 | Contract surface | Implemented behavior | Fail-closed boundary |
 | --- | --- | --- |
@@ -44,6 +45,8 @@ lifecycle.
 | Derivation | Structured Core indices render deterministically as `m/<index>` with `'` for hardened components | Core purpose is not invented as a path component because the SDK request has no purpose field. |
 | Public response | Exact SDK hex fields map to Core signatures and public verification keys after length checks | Malformed hex, unsupported lengths, missing fields, and invalid attestation JSON produce typed errors without raw provider values. |
 | Trust policy | `Strict` requires hardware-backed StrongBox/CloudTEE; `Managed` and `Expedient` require TEE or stronger; `ObserverOnly` cannot sign | Software attestation is never accepted for signing; cryptographic attestation verification remains SDK/downstream-owned. |
+| Rail/network policy | The adapter owns explicit Core-to-SDK rail checks and a fallible wire mapping for SDK `Network::{Mainnet,Testnet,Devnet}` | Weaker observed rail tiers and unknown serialized values fail closed; SDK `T4` is observation-only and is never a sign-capable Core `ObserverOnly` mapping. |
+| Replay/idempotency binding | A typed adapter binding commits Core `SignedEnvelopeDescriptor` idempotency key/sequence and the original digest to the digest sent to SDK `2.0.11` | Missing or mismatched bindings are rejected before provider invocation. Duplicate storage, replay cache TTL, and persistence remain SDK/higher-runtime-owned. |
 | Bitcoin gate | Core's canonical `validate_bip110_preflight` runs before `EnclaveManager::sign` | Non-compliant, missing, unsupported, or mismatched preflight results cannot reach the provider. The adapter does not parse or serialize Bitcoin transactions. |
 
 The adapter supports the safe shared contract surface only. It does not claim
@@ -117,8 +120,8 @@ not accept an underspecified `(chain, signature)` pair.
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | Core (`lib-conxian-core`) | Canonical DTOs, capability checks, validation, and the `UniversalChainSigner` contract | Private keys, key generation, hardware, RPC, persistence, retries, or provider behavior |
-| Enclave/Wallet SDK | Hardware-backed custody, key derivation, signing backends, attestation, and concrete `UniversalChainSigner` implementations | Gateway routing and cross-provider orchestration |
-| Core/SDK companion adapter | Exact Core/SDK mapping, typed request/response boundary, trust gates, and Core-first BIP-110 preflight | Provider runtime, attestation verification, replay state, networking, persistence, telemetry, or environment-specific behavior |
+| Enclave/Wallet SDK | Hardware-backed custody, key derivation, signing backends, attestation, and concrete `UniversalChainSigner` implementations | Core dependency, gateway routing, and cross-provider orchestration; published SDK `2.0.11` remains standalone |
+| Core/SDK companion adapter | Exact Core/SDK mapping, adapter-owned rail/network policy, typed replay binding, typed request/response boundary, trust gates, and Core-first BIP-110 preflight | Provider runtime, attestation verification, replay storage/cache TTL, networking, persistence, telemetry, or environment-specific behavior |
 | Gateway | Runtime coordination, policy/workflow enforcement, provider selection, retries, persistence, and external side effects | Canonical signing DTO definitions and private-key custody |
 | Nexus | Chain observation, proof/state verification, and evidence used by higher-level routing | Signing key custody or core runtime orchestration |
 

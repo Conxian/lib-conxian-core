@@ -140,8 +140,10 @@ development features are never forwarded through Core's production features.
 
 The harness provides compile-time and deterministic offline evidence for:
 
-- an explicit Core `TrustTier` ↔ SDK v2.0.11 rail `TrustTier` representation
-  mapping (`Strict`/`Managed`/`Expedient`/`ObserverOnly` ↔ `T1`/`T2`/`T3`/`T4`);
+- explicit adapter-owned Core signing-tier requirements for SDK v2.0.11 rail
+  `TrustTier` (`Strict`/`Managed`/`Expedient` require `T1`/`T2`/`T3` or
+  stronger); SDK `T4` is observation-only and is not a sign-capable
+  `ObserverOnly` mapping;
 - serde round trips for both sides' trust types, SDK signing/attestation DTOs,
   Core signing fixtures, and Core BIP-110 preflight fixtures;
 - Core canonical BIP-110 limits paired with the SDK's independent
@@ -149,9 +151,9 @@ The harness provides compile-time and deterministic offline evidence for:
   non-canonical Core policies and invalid SDK policy values fail closed;
 - the existing deterministic Core signer and BIP-110 fixture boundaries.
 
-The trust mapping is a representation adapter only. It does not make SDK `T4`
-production-eligible when Core maps it to `ObserverOnly`, and it does not
-authorize a signing or settlement operation. The v2.0.11 SDK exposes no
+The trust mapping is an adapter-owned policy check, not an SDK or Core enum
+mutation. It does not make SDK `T4` production-eligible or authorize a signing
+or settlement operation. The v2.0.11 SDK exposes no
 BIP-110 module, validator, or `bip110_compliant` feature. Accordingly, the
 local BIP-110 evidence record is deliberately not an SDK enforcement claim;
 transaction parsing, classification, policy enforcement, signing, and
@@ -183,8 +185,9 @@ and the deterministic downstream fixture work
 
 `addons/lib-conxian-core-enclave` targets the exact published
 `conxius-enclave-sdk =2.0.11` release. It is a separate workspace member so the
-Core default feature graph remains SDK-independent and no Core-to-SDK-to-Core
-dependency cycle is introduced.
+Core default feature graph remains SDK-independent and no SDK-to-Core
+dependency is introduced. The companion adapter depends on both Core and the
+published SDK; the SDK package itself remains standalone.
 
 The `2.0.12` value associated with the SDK's unreleased upstream `main` line is
 metadata only. The latest published SDK target for this workspace and its
@@ -199,9 +202,11 @@ The companion adapter is intentionally narrower than the SDK. It supports
 explicit algorithm conversion, a deny-by-default chain/algorithm allowlist,
 deterministic derivation-path rendering, digest-only SHA-256 request
 construction, conservative trust-tier gates, request-bound attestation evidence
-retention, typed public response mapping, and Core-first BIP-110 preflight for
+retention, adapter-owned rail/network policy, typed Core envelope replay
+binding, typed public response mapping, and Core-first BIP-110 preflight for
 Bitcoin signing. Provider lifecycle, cryptographic signature/attestation
-verification, replay state, networking, persistence, telemetry, and
-environment-specific policy remain outside Core and this adapter. See
+verification, replay storage/cache TTL, networking, persistence, telemetry, and
+environment-specific policy remain outside Core and this adapter. Core's
+canonical BIP-110 validator remains authoritative. See
 [`addons/lib-conxian-core-enclave/README.md`](../addons/lib-conxian-core-enclave/README.md)
 and [`SIGNING_ARCHITECTURE.md`](SIGNING_ARCHITECTURE.md).

@@ -58,8 +58,12 @@ not add runtime, network, persistence, or cross-repository dependencies.
 - Biometric auth and Passkey (FIDO2) implementation.
 
 **Constraints**:
-- Depends on `lib-conxian-core` for data models and protocol rules.
-- Contains the "How" of secure execution, while Core contains the "What".
+- The published `conxius-enclave-sdk =2.0.11` package is standalone and does
+  **not** depend on `lib-conxian-core`.
+- The SDK contains the "How" of secure execution. Core contains the canonical
+  "What"; the companion adapter is the integration layer that depends on both.
+- Any future SDK-to-Core dependency edge requires a separate dependency-graph
+  review; this change does not add one.
 
 ### 2.1 Core/SDK companion adapter (`lib-conxian-core-enclave`)
 
@@ -69,8 +73,12 @@ the exact published `conxius-enclave-sdk =2.0.11` API. It is an adapter boundary
 not a second SDK implementation. It owns only:
 
 - explicit conversion for the three overlapping signing algorithms;
+- adapter-owned rail trust and `Network::{Mainnet,Testnet,Devnet}` policy
+  mappings for the exact SDK release;
 - deterministic rendering of Core derivation metadata into the SDK path string;
 - fail-closed extraction of explicit 32-byte SHA-256 digests;
+- a typed binding of Core signed-envelope idempotency identity to the digest
+  sent to the SDK, without owning duplicate storage or cache TTLs;
 - typed, secret-safe public response mapping and conservative attestation-level
   policy gates; and
 - Core-first BIP-110 preflight enforcement before Bitcoin provider invocation.
@@ -78,9 +86,13 @@ not a second SDK implementation. It owns only:
 The adapter uses an injected `Arc<dyn EnclaveManager>` and leaves hardware
 providers, key lifecycle, attestation cryptographic verification, replay state,
 networking, persistence, telemetry, and environment-specific behavior in the
-SDK or downstream application. Its default feature surface is empty, it does
-not enable simulator/mock/dev bypasses, and it does not make a production-
-readiness claim for every SDK protocol/provider.
+SDK or downstream application. The adapter's replay binding commits Core's
+`SignedEnvelopeDescriptor` identity to the provider digest, while duplicate
+detection, storage, and TTL remain SDK/higher-runtime responsibilities. Core's
+canonical BIP-110 validator remains authoritative for the preflight gate. Its
+default feature surface is empty, it does not enable simulator/mock/dev
+bypasses, and it does not make a production-readiness claim for every SDK
+protocol/provider.
 
 ## 3. Unified standalone Conxian Gateway (`conxian-gateway`)
 
@@ -98,8 +110,9 @@ readiness claim for every SDK protocol/provider.
 
 1. **standalone Conxian Gateway** uses **lib-conxian-core** for state and control-model types.
 2. **standalone Conxian Gateway** implements runtime adapters and provider workflows against core traits.
-3. **Wallet** uses **conxius-enclave-sdk** through the companion adapter for enclave-anchored signing.
-4. **conxius-enclave-sdk** uses **lib-conxian-core** to ensure signed intents align with protocol rules.
+3. **Wallet/application runtime** uses **conxius-enclave-sdk** through the companion adapter for enclave-anchored signing.
+4. **lib-conxian-core-enclave** depends on both Core and the published SDK; the published `conxius-enclave-sdk =2.0.11` remains standalone and does not depend on Core.
+5. Any future SDK-to-Core edge is a separate graph-review decision, not an implicit adapter dependency.
 
 ## 5. Core-vs-standalone Conxian Gateway guardrail (CON-700)
 
