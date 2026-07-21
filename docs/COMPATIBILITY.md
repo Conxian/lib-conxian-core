@@ -96,11 +96,11 @@ harness's `run` feature and exercises its DTO-only SDK feature checks. That is
 a broad workspace smoke test, not a substitute for this dedicated eight-command
 matrix.
 
-The individual locked commands use the following shape (the script expands the
-full Core/SDK matrix):
+The individual locked offline commands use the following shape (the script
+expands the full Core/SDK matrix):
 
 ```text
-cargo +1.91.0 test --manifest-path tests/sdk-compat/Cargo.toml --locked \
+cargo +1.91.0 test --offline --manifest-path tests/sdk-compat/Cargo.toml --locked \
   --no-default-features --features run,core-enclave,all-supported
 ```
 
