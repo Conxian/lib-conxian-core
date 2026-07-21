@@ -10,7 +10,7 @@
 > implementation, or deployment, not proof that the proposed consensus rules are active on a
 > network. This repository does not infer activation, activation height, signaling, or expiry.
 >
-> **Last updated:** 2026-07-20
+> **Last updated:** 2026-07-21
 
 ## Executive summary
 
@@ -58,7 +58,7 @@ The matrix follows the current canonical texts, not an inferred activation polic
 | `Bip110Limits::max_op_return_bytes` / `op_return_script_pubkey_sizes_bytes` | Full serialized output ScriptPubKey bytes for each classified OP_RETURN output; `<= 83` passes. | Whether the output is new, whether its first opcode is OP_RETURN, and whether the output is covered by activation or grandfathering. |
 | `Bip110Limits::max_script_pubkey_bytes` / `non_op_return_script_pubkey_sizes_bytes` | Full serialized ScriptPubKey bytes for each classified non-OP_RETURN output; `<= 34` passes. | Output classification, transaction validity, and deployment state. |
 | `Bip110Limits::max_witness_element_bytes` / `witness_element_sizes_bytes` | Bytes in each applicable script-argument witness item; `<= 256` passes. | Witness version, key-path versus script-path selection, annex/control-block identification, and script execution. |
-| `Bip110Compliance::new()` / `Bip110Compliance::disabled()` | Enables the canonical size contract or explicitly disables it. | Network consensus activation. Enabling this Rust validator is a caller choice, not a claim about Bitcoin network state. |
+| `Bip110Compliance::new()` / `Bip110Compliance::default()` / `Bip110Compliance::disabled()` | `new()` enables the canonical size contract; `default()` and `disabled()` intentionally disable it. | Network consensus activation. Enabling this Rust validator is a caller choice, not a claim about Bitcoin network state. |
 | `Bip110PreflightMeasurements::taproot_control_block_sizes_bytes` | Complete serialized control-block witness-item sizes, kept separate from script-argument witness items; `<= 257` passes. | BIP-341 control-block shape, witness position, Merkle commitment, internal-key parity, and cryptographic validity. |
 | `Bip110PreflightRequest` / `Bip110PreflightResult` | Versioned request/result envelope with explicit phase/source provenance, context, fixed-width `u64` measurements, and indexed findings. | Transaction construction, serialization, parsing, script execution, deployment state, and downstream rejection policy. |
 
@@ -131,15 +131,18 @@ size violations all fail closed.
 The following are integration handoffs, not claims that those consumers currently enforce this
 contract:
 
-1. **SDK #179 (`conxius-enclave-sdk`)** should use the pre-construction result as a rejection
-   gate before signing and preserve post-serialization findings for final-byte verification.
+1. **SDK #194 (`conxius-enclave-sdk`)** owns the remaining Core/SDK type and adapter alignment;
+   its downstream signing work should use the pre-construction result as a rejection gate and
+   preserve post-serialization findings for final-byte verification. The separate SDK #179
+   BIP-322/BIP-110 signing work remains outside this Core change.
 2. **Gateway #245 (`conxian-gateway`)** should carry the version, phase, context, and ordered
    findings through orchestration without converting them into warnings-only status.
 3. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
    and reject any non-compliant or unsupported result before broadcast.
 
 Core defines these request/result types and their fail-closed semantics only; it does not claim
-that SDK #179, Gateway #245, or Wallet #381 have implemented enforcement.
+that SDK #194 (or its related SDK #179 signing work), Gateway #245, or Wallet #381 have implemented
+enforcement.
 
 ## Proposed-rule matrix
 
@@ -293,8 +296,11 @@ I/O, activation-height logic, UTXO persistence, or downstream policy.
 - [Issue #168](https://github.com/Conxian/lib-conxian-core/issues/168) and [PR #169](https://github.com/Conxian/lib-conxian-core/pull/169) introduced the original Core BIP-110 constants and validator.
 - [PR #184](https://github.com/Conxian/lib-conxian-core/pull/184) added the current serializable limits and transaction-shape contract.
 - [PR #189](https://github.com/Conxian/lib-conxian-core/pull/189) hardened the merged contract coverage.
+- [PR #194](https://github.com/Conxian/lib-conxian-core/pull/194) added the evidence-backed compliance matrix and clarified proposal/deployment status.
+- [PR #201](https://github.com/Conxian/lib-conxian-core/pull/201) added the versioned, fail-closed preflight contract.
+- [SDK issue #194](https://github.com/Conxian/conxius-enclave-sdk/issues/194) records the remaining SDK/Core alignment and adapter work; it is downstream of this protocol contract.
 - [Parent issue #173](https://github.com/Conxian/lib-conxian-core/issues/173) tracks the broader research umbrella.
-- [Issue #179](https://github.com/Conxian/lib-conxian-core/issues/179) tracks this compliance-matrix follow-up and remains open until its broader acceptance criteria are independently completed.
+- [Issue #179](https://github.com/Conxian/lib-conxian-core/issues/179) tracks this compliance-matrix follow-up. This completion change supplies the remaining legacy optional-OP_RETURN regression coverage; issue status is tracked independently.
 
 ## References
 
