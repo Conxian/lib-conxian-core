@@ -12,10 +12,13 @@ staking/delegation/unbonding or withdrawal transactions, own EOTS keys, verify
 EOTS signatures in production, run a light client, or broadcast Bitcoin
 transactions.
 
-`BabylonAdapter::verify_state_proof` performs structural checks only: it rejects
-empty strings, expects a colon separator, and treats a proof containing
-`invalid` as negative. It does not validate a BTC header, height, EOTS
-signature, checkpoint, or cryptographic commitment.
+The `BabylonAdapter` support described here is structural only; it does not
+establish BTC-header, checkpoint, or EOTS verification.
+
+`BabylonAdapter::verify_state_proof` does not implement BTC header, height,
+EOTS signature, checkpoint, or cryptographic commitment verification. It returns
+typed `StateProofError::MalformedInput` for empty evidence and
+`StateProofError::Unsupported` for otherwise shaped input.
 
 ## Canonical target and UCS boundary
 
@@ -61,7 +64,7 @@ and EOTS proof production are outside the Core signer contract.
 | 3 | Wallet + SDK | `SignRequest`, capability advertisement, attestation/policy evidence | UCS fail-closed request/response validation | `SignResponse` for the actual Bitcoin transaction | Target mismatch, unsupported operation, malformed payload, or backend failure |
 | 4 | Nexus | Transaction id, block header chain, confirmations, proof provenance | `ProtocolVerifier` validates state/finality evidence around a Nexus backend | Verified Bitcoin header/finality result | Stale/malformed proof, unverified header, evidence mismatch, or non-final required state |
 | 5 | Nexus | BTC header context, EOTS proof, checkpoint/evidence binding | Core can carry `ProofData` and policy metadata; the façade does not implement EOTS math | Verified Babylon evidence or typed failure | No production EOTS verifier, invalid signature, wrong height, wrong checkpoint, or policy block |
-| 6 | Gateway | Verified evidence, signer/provider acknowledgements, expiry/unbonding policy | Core state/invariant types remain the contract; Gateway owns persistence and side effects | Staking status and, later, withdrawal/unbonding transaction request | Never finalize or release from structural adapter `Ok(true)` alone |
+| 6 | Gateway | Verified evidence, signer/provider acknowledgements, expiry/unbonding policy | Core state/invariant types remain the contract; Gateway owns persistence and side effects | Staking status and, later, withdrawal/unbonding transaction request | Never finalize or release from `StateProofError::Unsupported` or structural input alone |
 
 ## Required inputs
 
@@ -89,14 +92,16 @@ and EOTS proof production are outside the Core signer contract.
 ## Verification and finality boundary
 
 BTC headers, chain history, checkpoint binding, and EOTS proof verification are
-Nexus responsibilities. Gateway consumes them through a `ProtocolVerifier`
-façade backed by a concrete Nexus verifier. The façade checks advertised chain,
+Nexus responsibilities. The Babylon adapter's proof boundary is structural
+only, so it cannot substitute for those checks. Gateway consumes them through
+a `ProtocolVerifier` façade backed by a concrete Nexus verifier. The façade
+checks advertised chain,
 proof format, state/block identity, evidence binding, provenance, trust tier,
 verification class, finality class, and verifier identity. It does not implement
 the EOTS cryptographic verifier.
 
 `BabylonAdapter` is not a substitute: its `chain()` returns `Chain::Bitcoin`
-and its proof check is structural-only. A production `Strict` result must meet
+and its proof check is unavailable without a downstream verifier. A production `Strict` result must meet
 the verifier capability policy, including the required light-client class where
 applicable. BTC finality for a staking transaction must be evaluated on the
 Bitcoin transaction/header evidence, not inferred from a Babylon intent or a
@@ -142,8 +147,9 @@ an observation-only success.
 - No production Babylon signer, staking transaction builder, EOTS key/proof
   implementation, Babylon light client, checkpoint verifier, or broadcast path
   exists in Core.
-- `BabylonAdapter::verify_state_proof` is structural-only and returns a static
-  state root; it is not a production EOTS verifier.
+- `BabylonAdapter::verify_state_proof` is unavailable without a downstream EOTS
+  and header verifier, and `get_state_root` returns a typed unavailable error;
+  it is not a production EOTS verifier.
 - `BabylonAdapter::chain() == Chain::Bitcoin` conflicts with the distinct
   `Chain::Babylon` taxonomy variant; downstream capability and verifier
   contracts must resolve that identity explicitly.

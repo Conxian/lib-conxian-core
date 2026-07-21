@@ -1,0 +1,132 @@
+{
+  "api_version": 1,
+  "success": {
+    "request": {
+      "api_version": 1,
+      "phase": "post_serialization",
+      "context": "bitcoin_transaction",
+      "measurements": {
+        "source": "serialized_transaction",
+        "pushdata_sizes_bytes": [32],
+        "op_return_script_pubkey_sizes_bytes": [83],
+        "non_op_return_script_pubkey_sizes_bytes": [34],
+        "witness_element_sizes_bytes": [64],
+        "taproot_control_block_sizes_bytes": [257]
+      }
+    },
+    "expected": {
+      "api_version": 1,
+      "phase": "post_serialization",
+      "context": "bitcoin_transaction",
+      "measurement_source": "serialized_transaction",
+      "is_compliant": true,
+      "findings": []
+    }
+  },
+  "failure": {
+    "request": {
+      "api_version": 1,
+      "phase": "post_serialization",
+      "context": "bitcoin_transaction",
+      "measurements": {
+        "source": "serialized_transaction",
+        "pushdata_sizes_bytes": [257],
+        "op_return_script_pubkey_sizes_bytes": [84],
+        "non_op_return_script_pubkey_sizes_bytes": [35],
+        "witness_element_sizes_bytes": [257],
+        "taproot_control_block_sizes_bytes": [258]
+      }
+    },
+    "expected": {
+      "api_version": 1,
+      "phase": "post_serialization",
+      "context": "bitcoin_transaction",
+      "measurement_source": "serialized_transaction",
+      "is_compliant": false,
+      "findings": [
+        {
+          "kind": "violation",
+          "detail": {
+            "code": "pushdata_exceeds_limit",
+            "field": "pushdata",
+            "index": 0,
+            "actual_bytes": 257,
+            "max_bytes": 256
+          }
+        },
+        {
+          "kind": "violation",
+          "detail": {
+            "code": "op_return_exceeds_limit",
+            "field": "op_return_script_pubkey",
+            "index": 0,
+            "actual_bytes": 84,
+            "max_bytes": 83
+          }
+        },
+        {
+          "kind": "violation",
+          "detail": {
+            "code": "script_pubkey_exceeds_limit",
+            "field": "non_op_return_script_pubkey",
+            "index": 0,
+            "actual_bytes": 35,
+            "max_bytes": 34
+          }
+        },
+        {
+          "kind": "violation",
+          "detail": {
+            "code": "witness_element_exceeds_limit",
+            "field": "witness_element",
+            "index": 0,
+            "actual_bytes": 257,
+            "max_bytes": 256
+          }
+        },
+        {
+          "kind": "violation",
+          "detail": {
+            "code": "taproot_control_block_exceeds_limit",
+            "field": "taproot_control_block",
+            "index": 0,
+            "actual_bytes": 258,
+            "max_bytes": 257
+          }
+        }
+      ]
+    }
+  },
+  "unsupported_version": {
+    "request": {
+      "api_version": 2,
+      "phase": "pre_construction",
+      "context": "bitcoin_transaction",
+      "measurements": {
+        "source": "caller_classified",
+        "pushdata_sizes_bytes": [32],
+        "op_return_script_pubkey_sizes_bytes": [],
+        "non_op_return_script_pubkey_sizes_bytes": [],
+        "witness_element_sizes_bytes": [],
+        "taproot_control_block_sizes_bytes": []
+      }
+    },
+    "expected": {
+      "api_version": 2,
+      "phase": "pre_construction",
+      "context": "bitcoin_transaction",
+      "measurement_source": "caller_classified",
+      "is_compliant": false,
+      "findings": [
+        {
+          "kind": "error",
+          "detail": {
+            "kind": "unsupported_api_version",
+            "requested": 2,
+            "supported": 1
+          }
+        }
+      ]
+    }
+  }
+}

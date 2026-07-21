@@ -140,6 +140,73 @@ Platform-neutral contracts for downstream chain verifiers.
 
 Runtime proof acquisition, chain observation, light clients, persistence, and orchestration remain in Nexus, Gateway, or downstream adapters. The structural binding is not authenticity; downstream signatures, attestations, light clients, or verifier-set proofs remain required. See [docs/architecture/PROTOCOL_VERIFIER.md](architecture/PROTOCOL_VERIFIER.md).
 
+### Fail-closed verifier inventory
+The chain-specific verifier helpers in this crate are not interchangeable with
+production proof providers. See [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
+for the authoritative status, supported evidence, typed errors, and compatibility
+wrappers for adapters, Babylon, Liquid, RGB, BIP-322, DLC, FROST, enclave
+attestation/AML, Stacks, and Fedimint.
+
+In particular, a non-empty proof, a valid string shape, a parseable DER
+sequence, a static state root, a positive block number, or an RGB Shadow
+observation is not verification. Core returns typed unsupported/unavailable or
+non-authoritative outcomes until an audited downstream provider supplies the
+missing evidence. Deprecated bare-boolean wrappers return `false` rather than
+fabricating success.
+
+## 5. Deterministic Core-to-Downstream Fixtures (CON-1505)
+
+This is the initial Core-owned serialized-contract checkpoint. The first
+repository-local integration layer is owned by Core and lives under
+`tests/fixtures/` with its harness in `tests/core_to_downstream_integration.rs`:
+
+- `signing_boundary.json` covers the versioned signer capability advertisement,
+  `SignRequest`/`SignResponse` shapes, and unsupported chain, algorithm, and
+  operation errors.
+- `verifier_boundary.json` covers proof and finality request/result shapes,
+  capability advertisements, malformed proof input, stale evidence returned by
+  a named test-only backend, and policy rejection of degraded evidence.
+- `bip110_preflight.json` covers compliant and non-compliant measurements plus
+  rejection of an unsupported API version.
+- `adapter_contracts.json` covers representative `TxParams`, chain-family, trust,
+  address, and fee contract metadata for local adapter doubles/implementations.
+
+Fixtures are synthetic, deterministic, and safe to commit. They contain no
+credentials, private key material, production principals, RPC data, network
+calls, environment requirements, hardware behavior, or downstream checkouts.
+The verifier and adapter cases assert structural Core contracts only; they do
+not claim authoritative cryptographic verification. The stale-evidence case
+preserves the typed `ProtocolVerifierError::StaleReference` shape through a
+test-only backend because the current Core façade does not acquire live evidence.
+
+The compatibility assumptions recorded by this checkpoint are limited to the
+Core package `lib-conxian-core` `0.2.12`, Rust `1.85`, the default feature set
+(`default = []`),
+`UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
+`BIP110_PREFLIGHT_API_VERSION = 1`, and
+`PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
+domain constant. The known optional production SDK assumption is the existing
+`conxius-enclave-sdk` `2.0.11` declaration; this fixture layer deliberately does
+not compile or force that optional SDK path. This checkpoint does not claim
+direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+`conxian-gateway`, or `conxian-nexus`. Per CON-1505, pinned downstream fan-out
+is intentionally deferred until the UCS and ProtocolVerifier APIs stabilize;
+no Gateway or Nexus pin is asserted here.
+
+Run the focused layer locally with:
+
+```text
+cargo fmt --all -- --check
+cargo test --locked --test core_to_downstream_integration
+cargo test --locked --test universal_chain_signer
+cargo test --locked --test protocol_verifier
+cargo test --locked --test bip110_preflight
+```
+
+The existing workspace CI remains the broader validation path. Live downstream
+CI fan-out is intentionally deferred, opt-in, and expected to use pinned
+consumer revisions until these Core contracts stabilize.
+
 ### Anchoring (`anchoring`)
 Models for decentralized state persistence.
 - `AnchoringRequest`: Payload for committing state roots to Tableland or L1.
@@ -149,7 +216,7 @@ Models for decentralized state persistence.
 Advanced Bitcoin-native primitives.
 - `MuSig2`: BIP327-compliant key aggregation, signature aggregation, and signing (CON-145, CON-1270).
 - `BitVM2`: Segment generation and optimistic fraud-proof verification (CON-464).
-- `BIP-322`: Universal message signing and verification (G-09).
+- `Bip322Bridge::verify_message_checked`: Structural address/base64/witness validation with a typed `Unsupported` result until audited script and signature verification is available. The deprecated `verify_message` wrapper fails closed.
 
 ## 3. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:
@@ -164,13 +231,17 @@ Implementation details for runtime orchestration, network IO, and database persi
 ### Protocol Primitives (`protocol`)
 Advanced protocol support for multi-party and cross-chain coordination.
 - `IntentManager::rank_bids(bids: &[Bid])`: Ranks ERC-7683 intent solver bids.
-- `FrostManager::generate_shares(threshold: u32, total: u32)`: Generates FROST key shares.
+- `FrostManager`: Typed fail-closed boundary for FROST DKG, distribution, and aggregation; no fabricated shares or signatures are emitted without an audited provider.
 - `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.
 - `DlcManager::create_intent(oracle_pubkey: &[u8], collateral: u64, outcome: [u8; 32], expiry: u32)`: Creates DLC intents for native Bitcoin finance (G-06).
+- `DlcManager::verify_oracle_attestation_for_intent`: Performs typed intent/outcome/expiry checks but returns `UnsupportedIntentBinding` for a valid tuple because the existing oracle signature does not commit to collateral and expiry. `verify_execution_checked` remains explicitly unsupported because its compatibility inputs omit the required execution evidence.
+- `FedimintAdapter::blind_note` and `verify_unblinded_checked`: Deterministic secp256k1 point reconstruction/equality primitives, not provider-backed mint or note verification.
+- `FedimintAdapter::get_mint_status`: Rejects an empty/whitespace ID with `FedimintError::MalformedMintId`; every non-empty ID returns `FedimintError::StatusUnavailable` until an authenticated provider supplies status. Core does not fabricate community or liquidity data.
 
 ### Universal Chain Adapters (`adapters`)
 CXIP-21 interface for cross-chain orchestration.
 - `UniversalChainAdapter`: Trait for uniform multi-chain support.
+- `StateProofError`: Typed malformed, failed, unsupported, and unavailable outcomes; no adapter returns a static root or `Ok(true)` without a real verifier.
 - `BitcoinAdapter`: Native UTXO support.
 - `EvmAdapter`: Ethereum, Base, etc.
 - `CosmosAdapter`: IBC-enabled networks.
