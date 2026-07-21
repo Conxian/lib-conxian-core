@@ -3,18 +3,18 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from urllib.error import URLError
 
-
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-import verify_release_hygiene as guard  # noqa: E402
+from scripts import verify_release_hygiene as hygiene
 
 
 class FakeResponse:
@@ -91,15 +91,92 @@ def fixture_root() -> TemporaryDirectory[str]:
 
 
 class ReleaseHygieneTests(unittest.TestCase):
+    def verify_workflow(self, workflow_text: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workflow_path = root / "crates-publish.yml"
+            main_workflow_path = root / "main.yml"
+            workflow_path.write_text(workflow_text, encoding="utf-8")
+            main_workflow_path.write_text(
+                hygiene.DEFAULT_MAIN_WORKFLOW.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            return hygiene.verify(workflow_path, main_workflow_path)
+
+    def test_repository_workflow_passes(self) -> None:
+        violations = hygiene.verify(
+            hygiene.DEFAULT_WORKFLOW,
+            hygiene.DEFAULT_MAIN_WORKFLOW,
+        )
+
+        self.assertEqual(violations, [])
+
+    def test_contents_write_permission_is_required(self) -> None:
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "  contents: write", "  contents: read", 1
+        )
+
+        violations = self.verify_workflow(workflow)
+
+        self.assertTrue(
+            any("contents: write permission" in violation for violation in violations)
+        )
+
+    def test_explicit_gh_token_wiring_is_required(self) -> None:
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n", "", 1
+        )
+
+        violations = self.verify_workflow(workflow)
+
+        self.assertTrue(any("GH_TOKEN" in violation for violation in violations))
+
+    def test_release_race_recheck_and_post_release_gate_are_required(self) -> None:
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
+        workflow = workflow.replace("post_create_view_output", "post_create_output")
+        workflow = workflow.replace("--phase post-release", "--phase post-release-removed", 1)
+
+        violations = self.verify_workflow(workflow)
+
+        self.assertTrue(
+            any("re-check for an already-existing release" in violation for violation in violations)
+        )
+        self.assertTrue(
+            any("post-release verification" in violation for violation in violations)
+        )
+
+    def test_publish_commands_require_locked_resolutions(self) -> None:
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "cargo publish --dry-run --locked", "cargo publish --dry-run"
+        )
+
+        violations = self.verify_workflow(workflow)
+
+        self.assertTrue(
+            any("cargo publish --dry-run --locked" in violation for violation in violations)
+        )
+
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "cargo publish --locked", "cargo publish"
+        )
+
+        violations = self.verify_workflow(workflow)
+
+        self.assertTrue(
+            any("cargo publish --locked" in violation for violation in violations)
+        )
+
+
+class ParityAndRemoteReleaseHygieneTests(unittest.TestCase):
     def _verify_workflow_variant(self, workflow: str) -> list[str]:
         with TemporaryDirectory() as directory:
             workflow_path = Path(directory) / "crates-publish.yml"
             workflow_path.write_text(workflow, encoding="utf-8")
-            return guard.verify(workflow_path)
+            return hygiene.verify(workflow_path)
 
     def test_positive_local_parity_allows_historical_references(self) -> None:
         with fixture_root() as directory:
-            self.assertEqual(guard.check_local_parity(Path(directory)), [])
+            self.assertEqual(hygiene.check_local_parity(Path(directory)), [])
 
     def test_readme_checks_current_usage_but_ignores_historical_examples(self) -> None:
         readme = "\n".join(
@@ -115,7 +192,7 @@ class ReleaseHygieneTests(unittest.TestCase):
             ]
         )
         self.assertEqual(
-            guard._check_readme_versions(readme, "lib-conxian-core", "1.2.3"),
+            hygiene._check_readme_versions(readme, "lib-conxian-core", "1.2.3"),
             [],
         )
 
@@ -123,7 +200,7 @@ class ReleaseHygieneTests(unittest.TestCase):
             'lib-conxian-core = "1.2.3"',
             'lib-conxian-core = "1.2.2"',
         )
-        violations = guard._check_readme_versions(
+        violations = hygiene._check_readme_versions(
             mismatched_current,
             "lib-conxian-core",
             "1.2.3",
@@ -150,14 +227,14 @@ class ReleaseHygieneTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            violations = guard.check_local_parity(root)
+            violations = hygiene.check_local_parity(root)
             self.assertTrue(any("Cargo.lock root package version" in item for item in violations))
             self.assertTrue(any("README.md" in item for item in violations))
             self.assertTrue(any("CHANGELOG.md" in item for item in violations))
 
     def test_mismatched_tag_is_rejected(self) -> None:
         with fixture_root() as directory:
-            violations = guard.check_tag("v1.2.4", Path(directory))
+            violations = hygiene.check_tag("v1.2.4", Path(directory))
             self.assertEqual(len(violations), 1)
             self.assertIn("v1.2.3", violations[0])
 
@@ -166,64 +243,64 @@ class ReleaseHygieneTests(unittest.TestCase):
             200,
             {"crate": {"name": "demo-crate"}, "version": {"num": "1.2.3"}},
         )
-        result = guard.fetch_crates_io_state(
+        result = hygiene.fetch_crates_io_state(
             "demo-crate", "1.2.3", opener=lambda request, timeout: response
         )
-        self.assertEqual(result.state, guard.REMOTE_PRESENT)
-        self.assertEqual(guard.publication_decision(result), "skip-republish")
+        self.assertEqual(result.state, hygiene.REMOTE_PRESENT)
+        self.assertEqual(hygiene.publication_decision(result), "skip-republish")
         self.assertTrue(response.closed)
 
     def test_missing_and_failed_remote_state_are_distinct(self) -> None:
-        missing = guard.fetch_crates_io_state(
+        missing = hygiene.fetch_crates_io_state(
             "demo-crate",
             "1.2.3",
             opener=lambda request, timeout: FakeResponse(404, {"errors": []}),
         )
-        self.assertEqual(missing.state, guard.REMOTE_MISSING)
-        self.assertEqual(guard.publication_decision(missing), "publish")
+        self.assertEqual(missing.state, hygiene.REMOTE_MISSING)
+        self.assertEqual(hygiene.publication_decision(missing), "publish")
 
-        failed = guard.fetch_crates_io_state(
+        failed = hygiene.fetch_crates_io_state(
             "demo-crate",
             "1.2.3",
             opener=lambda request, timeout: FakeResponse(503, {"message": "unavailable"}),
         )
-        self.assertEqual(failed.state, guard.REMOTE_ERROR)
-        self.assertEqual(guard.publication_decision(failed), "fail-closed")
+        self.assertEqual(failed.state, hygiene.REMOTE_ERROR)
+        self.assertEqual(hygiene.publication_decision(failed), "fail-closed")
 
-        network_failed = guard.fetch_crates_io_state(
+        network_failed = hygiene.fetch_crates_io_state(
             "demo-crate",
             "1.2.3",
             opener=lambda request, timeout: (_ for _ in ()).throw(URLError("offline")),
         )
-        self.assertEqual(network_failed.state, guard.REMOTE_ERROR)
-        self.assertEqual(guard.publication_decision(network_failed), "fail-closed")
+        self.assertEqual(network_failed.state, hygiene.REMOTE_ERROR)
+        self.assertEqual(hygiene.publication_decision(network_failed), "fail-closed")
 
     def test_missing_http_status_fails_closed_for_crates_io_and_github(self) -> None:
         crates_response = StatuslessResponse(
             {"crate": {"name": "demo-crate"}, "version": {"num": "1.2.3"}}
         )
-        crates_result = guard.fetch_crates_io_state(
+        crates_result = hygiene.fetch_crates_io_state(
             "demo-crate",
             "1.2.3",
             opener=lambda request, timeout: crates_response,
         )
-        self.assertEqual(crates_result.state, guard.REMOTE_ERROR)
+        self.assertEqual(crates_result.state, hygiene.REMOTE_ERROR)
         self.assertIn("unverifiable HTTP status", crates_result.detail)
         self.assertTrue(crates_response.closed)
 
         github_response = StatuslessResponse({"tag_name": "v1.2.3"})
-        github_result = guard.fetch_github_release_state(
+        github_result = hygiene.fetch_github_release_state(
             "Conxian/lib-conxian-core",
             "v1.2.3",
             "fixture-token",
             opener=lambda request, timeout: github_response,
         )
-        self.assertEqual(github_result.state, guard.REMOTE_ERROR)
+        self.assertEqual(github_result.state, hygiene.REMOTE_ERROR)
         self.assertIn("unverifiable HTTP status", github_result.detail)
         self.assertTrue(github_response.closed)
 
     def test_crates_io_identity_mismatch_is_not_treated_as_published(self) -> None:
-        result = guard.fetch_crates_io_state(
+        result = hygiene.fetch_crates_io_state(
             "demo-crate",
             "1.2.3",
             opener=lambda request, timeout: FakeResponse(
@@ -231,8 +308,8 @@ class ReleaseHygieneTests(unittest.TestCase):
                 {"crate": {"name": "other-crate"}, "version": {"num": "1.2.3"}},
             ),
         )
-        self.assertEqual(result.state, guard.REMOTE_MISMATCH)
-        self.assertEqual(guard.publication_decision(result), "fail-closed")
+        self.assertEqual(result.state, hygiene.REMOTE_MISMATCH)
+        self.assertEqual(hygiene.publication_decision(result), "fail-closed")
 
     def test_bounded_polling_handles_delayed_propagation(self) -> None:
         responses = iter(
@@ -246,7 +323,7 @@ class ReleaseHygieneTests(unittest.TestCase):
             ]
         )
         sleeps: list[float] = []
-        result = guard.wait_for_crates_io(
+        result = hygiene.wait_for_crates_io(
             "demo-crate",
             "1.2.3",
             attempts=3,
@@ -254,52 +331,52 @@ class ReleaseHygieneTests(unittest.TestCase):
             opener=lambda request, timeout: next(responses),
             sleep=sleeps.append,
         )
-        self.assertEqual(result.state, guard.REMOTE_PRESENT)
+        self.assertEqual(result.state, hygiene.REMOTE_PRESENT)
         self.assertEqual(sleeps, [0.25, 0.25])
 
     def test_github_release_state_and_creation_gate_are_fail_closed(self) -> None:
-        missing = guard.fetch_github_release_state(
+        missing = hygiene.fetch_github_release_state(
             "Conxian/lib-conxian-core",
             "v1.2.3",
             "fixture-token",
             opener=lambda request, timeout: FakeResponse(404, {}),
         )
-        self.assertEqual(missing.state, guard.REMOTE_MISSING)
+        self.assertEqual(missing.state, hygiene.REMOTE_MISSING)
         self.assertTrue(
-            guard.release_creation_allowed(
+            hygiene.release_creation_allowed(
                 local_parity_ok=True,
                 publication_confirmed=True,
                 github_release_state=missing,
             )
         )
 
-        existing = guard.fetch_github_release_state(
+        existing = hygiene.fetch_github_release_state(
             "Conxian/lib-conxian-core",
             "v1.2.3",
             "fixture-token",
             opener=lambda request, timeout: FakeResponse(200, {"tag_name": "v1.2.3"}),
         )
-        self.assertEqual(existing.state, guard.REMOTE_PRESENT)
+        self.assertEqual(existing.state, hygiene.REMOTE_PRESENT)
         self.assertFalse(
-            guard.release_creation_allowed(
+            hygiene.release_creation_allowed(
                 local_parity_ok=True,
                 publication_confirmed=True,
                 github_release_state=existing,
             )
         )
-        mismatched = guard.fetch_github_release_state(
+        mismatched = hygiene.fetch_github_release_state(
             "Conxian/lib-conxian-core",
             "v1.2.3",
             "fixture-token",
             opener=lambda request, timeout: FakeResponse(200, {"tag_name": "v1.2.2"}),
         )
-        self.assertEqual(mismatched.state, guard.REMOTE_MISMATCH)
+        self.assertEqual(mismatched.state, hygiene.REMOTE_MISMATCH)
         self.assertEqual(
-            guard.fetch_github_release_state("Conxian/lib-conxian-core", "v1.2.3", None).state,
-            guard.REMOTE_ERROR,
+            hygiene.fetch_github_release_state("Conxian/lib-conxian-core", "v1.2.3", None).state,
+            hygiene.REMOTE_ERROR,
         )
         self.assertFalse(
-            guard.release_creation_allowed(
+            hygiene.release_creation_allowed(
                 local_parity_ok=False,
                 publication_confirmed=True,
                 github_release_state=missing,
@@ -307,43 +384,42 @@ class ReleaseHygieneTests(unittest.TestCase):
         )
 
     def test_workflow_guards_reject_fail_open_condition_drift(self) -> None:
-        workflow = guard.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
-        real_event_if = (
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
+        pre_publish_if = (
             "if: ${{ github.event_name == 'push' || "
-            "(github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}"
+            "(github.event_name == 'workflow_dispatch' && inputs.mode == 'publish') }}"
         )
-        publish_if = (
-            "if: ${{ (github.event_name == 'push' || "
-            "(github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && "
-            "steps.crates_state.outputs.already_published != 'true' }}"
-        )
-        dry_run_if = "if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}"
+        publish_if = pre_publish_if
+        dry_run_if = "if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run' }}"
 
         variants = (
             (
-                "crates.io preflight event gate",
-                workflow.replace(real_event_if, "if: ${{ github.event_name == 'push' }}", 1),
-                "Check crates.io version must run",
+                "pre-publish manual event gate",
+                workflow.replace(pre_publish_if, "if: ${{ github.event_name == 'push' }}", 1),
+                "pre-publish guard must run for manual publish mode",
             ),
             (
                 "real publish publication gate",
                 workflow.replace(
-                    publish_if,
-                    "if: ${{ github.event_name == 'push' || "
-                    "(github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}",
+                    publish_if + "\n        env:\n          CARGO_REGISTRY_TOKEN:",
+                    "if: ${{ github.event_name == 'push' }}\n        env:\n          CARGO_REGISTRY_TOKEN:",
                     1,
                 ),
-                "Publish to crates.io must require",
+                "manual real publication must require mode == publish",
             ),
             (
                 "dry-run event gate",
-                workflow.replace(dry_run_if, "if: ${{ github.event_name == 'push' }}", 1),
-                "Publish to crates.io (dry run) must be limited",
+                workflow.replace(
+                    dry_run_if + "\n        run: cargo publish --dry-run --locked",
+                    "if: ${{ github.event_name == 'push' }}\n        run: cargo publish --dry-run --locked",
+                    1,
+                ),
+                "dry-run publication must require mode == dry-run",
             ),
             (
                 "tag ref forwarding",
-                workflow.replace('--tag "$GITHUB_REF_NAME"', '--tag "$GITHUB_REF"', 1),
-                "GITHUB_REF_NAME",
+                workflow.replace("github.ref_name", "github.ref", 1),
+                "job must derive RELEASE_TAG",
             ),
         )
         for label, variant, expected in variants:
@@ -352,8 +428,8 @@ class ReleaseHygieneTests(unittest.TestCase):
                 self.assertTrue(any(expected in item for item in violations), violations)
 
     def test_workflow_concurrency_is_ref_scoped_and_non_cancelling(self) -> None:
-        workflow = guard.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
-        self.assertEqual(guard.verify(guard.DEFAULT_WORKFLOW), [])
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
+        self.assertEqual(hygiene.verify(hygiene.DEFAULT_WORKFLOW), [])
 
         missing_concurrency = workflow.replace(
             "concurrency:\n"
@@ -383,31 +459,31 @@ class ReleaseHygieneTests(unittest.TestCase):
 
     def test_cli_tag_mismatch_returns_failure_without_network(self) -> None:
         with fixture_root() as directory:
-            status = guard.main(["--root", directory, "--tag", "v1.2.4"])
+            status = hygiene.main(["--root", directory, "--tag", "v1.2.4"])
             self.assertEqual(status, 1)
 
     def test_cli_crates_io_exit_semantics(self) -> None:
         with fixture_root() as directory:
             for state, expected_status in (
-                (guard.REMOTE_PRESENT, 0),
-                (guard.REMOTE_MISSING, guard.REMOTE_STATE_MISSING_EXIT),
-                (guard.REMOTE_ERROR, 1),
+                (hygiene.REMOTE_PRESENT, 0),
+                (hygiene.REMOTE_MISSING, hygiene.REMOTE_STATE_MISSING_EXIT),
+                (hygiene.REMOTE_ERROR, 1),
             ):
                 with self.subTest(state=state), patch.object(
-                    guard,
+                    hygiene,
                     "fetch_crates_io_state",
-                    return_value=guard.RemoteCheck(state, "fixture crates.io result"),
+                    return_value=hygiene.RemoteCheck(state, "fixture crates.io result"),
                 ):
-                    status = guard.main(["--root", directory, "--crates-io-state"])
+                    status = hygiene.main(["--root", directory, "--crates-io-state"])
                     self.assertEqual(status, expected_status)
 
     def test_cli_wait_timeout_returns_failure(self) -> None:
         with fixture_root() as directory, patch.object(
-            guard,
+            hygiene,
             "wait_for_crates_io",
-            return_value=guard.RemoteCheck(guard.REMOTE_ERROR, "bounded polling timeout"),
+            return_value=hygiene.RemoteCheck(hygiene.REMOTE_ERROR, "bounded polling timeout"),
         ):
-            status = guard.main(
+            status = hygiene.main(
                 [
                     "--root",
                     directory,
@@ -425,21 +501,21 @@ class ReleaseHygieneTests(unittest.TestCase):
             os.environ,
             {
                 "GITHUB_REPOSITORY": "Conxian/lib-conxian-core",
-                "GITHUB_TOKEN": "fixture-token",
+                "GITHUB_TOKEN": "[REDACTED_GITHUB_TOKEN]",
             },
             clear=False,
         ):
             for state, expected_status in (
-                (guard.REMOTE_PRESENT, 0),
-                (guard.REMOTE_MISSING, guard.REMOTE_STATE_MISSING_EXIT),
-                (guard.REMOTE_ERROR, 1),
+                (hygiene.REMOTE_PRESENT, 0),
+                (hygiene.REMOTE_MISSING, hygiene.REMOTE_STATE_MISSING_EXIT),
+                (hygiene.REMOTE_ERROR, 1),
             ):
                 with self.subTest(state=state), patch.object(
-                    guard,
+                    hygiene,
                     "fetch_github_release_state",
-                    return_value=guard.RemoteCheck(state, "fixture GitHub result"),
+                    return_value=hygiene.RemoteCheck(state, "fixture GitHub result"),
                 ):
-                    status = guard.main(
+                    status = hygiene.main(
                         [
                             "--root",
                             directory,
@@ -451,7 +527,7 @@ class ReleaseHygieneTests(unittest.TestCase):
                     self.assertEqual(status, expected_status)
 
     def test_current_workflow_contains_release_gates(self) -> None:
-        self.assertEqual(guard.verify(guard.DEFAULT_WORKFLOW), [])
+        self.assertEqual(hygiene.verify(hygiene.DEFAULT_WORKFLOW), [])
 
 
 if __name__ == "__main__":
