@@ -175,6 +175,98 @@ def _if_expression(step: Step) -> str | None:
     return None
 
 
+def _normalize_if_expression(expression: str) -> str:
+    """Normalize YAML scalar formatting without weakening the expression check."""
+
+    normalized = re.sub(r"\s+", " ", expression).strip()
+    if normalized.startswith("${{") and normalized.endswith("}}"):
+        normalized = normalized[3:-2].strip()
+    return normalized
+
+
+_PUSH_EVENT_CONDITION = r"github\.event_name\s*==\s*['\"]push['\"]"
+_MANUAL_REAL_PUBLISH_CONDITION = (
+    r"github\.event_name\s*==\s*['\"]workflow_dispatch['\"]"
+    r"\s*&&\s*inputs\.dry_run\s*==\s*false"
+)
+_REAL_PUBLISH_EVENT_CONDITION = re.compile(
+    rf"^\(?\s*{_PUSH_EVENT_CONDITION}\s*\|\|\s*"
+    rf"\(?\s*{_MANUAL_REAL_PUBLISH_CONDITION}\s*\)?\s*\)?$"
+)
+_REAL_PUBLISH_STEP_CONDITION = re.compile(
+    rf"^\(?\s*{_PUSH_EVENT_CONDITION}\s*\|\|\s*"
+    rf"\(?\s*{_MANUAL_REAL_PUBLISH_CONDITION}\s*\)?\s*\)?\s*&&\s*"
+    r"steps\.crates_state\.outputs\.already_published\s*!=\s*['\"]true['\"]$"
+)
+_DRY_RUN_STEP_CONDITION = re.compile(
+    r"^github\.event_name\s*==\s*['\"]workflow_dispatch['\"]\s*&&\s*"
+    r"inputs\.dry_run\s*==\s*true$"
+)
+
+
+def _top_level_block(lines: list[str], key: str) -> tuple[str, ...] | None:
+    """Extract a top-level YAML mapping block using indentation only."""
+
+    start_index: int | None = None
+    for index, line in enumerate(lines):
+        match = KEY_VALUE.match(line)
+        if match and _indent_width(match.group("indent")) == 0 and match.group("key") == key:
+            start_index = index
+            break
+    if start_index is None:
+        return None
+
+    block: list[str] = []
+    for line in lines[start_index + 1 :]:
+        if line.strip() and not line.lstrip().startswith("#"):
+            match = KEY_VALUE.match(line)
+            if match and _indent_width(match.group("indent")) == 0:
+                break
+        block.append(line)
+    return tuple(block)
+
+
+def _workflow_concurrency_violations(workflow: str) -> list[str]:
+    block = _top_level_block(workflow.splitlines(), "concurrency")
+    if block is None:
+        return ["release workflow must define top-level concurrency protection"]
+
+    group_values = list(_key_values(block, "group"))
+    if not group_values:
+        errors = ["release workflow concurrency must define a group"]
+    else:
+        group = group_values[0][1]
+        errors = []
+        if not re.search(r"\bgithub\.workflow\b", group) or not re.search(r"\bgithub\.ref\b", group):
+            errors.append("release workflow concurrency group must be scoped to github.workflow and github.ref")
+
+    cancel_values = list(_key_values(block, "cancel-in-progress"))
+    if not cancel_values or cancel_values[0][1].strip().strip("'\"") != "false":
+        errors.append("release workflow concurrency must set cancel-in-progress: false")
+    return errors
+
+
+def _verify_tag_push_path(step: Step, violations: list[str]) -> None:
+    """Require push-triggered parity validation to use the exact ref name."""
+
+    normalized = re.sub(r"\s+", " ", "\n".join(step.lines)).strip()
+    event_variable = r"[\"']?\$(?:\{)?GITHUB_EVENT_NAME(?:\})?[\"']?"
+    push_branch = re.search(
+        rf"if\s+\[\[?\s*{event_variable}\s*(?:==|=)\s*[\"']push[\"']\s*\]\]?\s*;\s*then\s*"
+        rf"(?P<body>.*?)(?:\s+else\b|\s+fi\b)",
+        normalized,
+        re.IGNORECASE,
+    )
+    tag_argument = re.compile(
+        r"python(?:3)?\s+scripts/verify_release_hygiene\.py\s+--tag\s+"
+        r"[\"']?\$(?:\{)?GITHUB_REF_NAME(?:\})?[\"']?"
+    )
+    if push_branch is None or not tag_argument.search(push_branch.group("body")):
+        violations.append(
+            "Verify release parity must pass GITHUB_REF_NAME to exact tag validation on tag pushes"
+        )
+
+
 def _workflow_has_dry_run_input(workflow: str) -> list[str]:
     errors: list[str] = []
     if not re.search(
@@ -213,6 +305,7 @@ def _verify_release_flow(workflow: str, steps: list[Step], violations: list[str]
     expected_step_names = {
         "Verify release parity",
         "Check crates.io version",
+        "Publish to crates.io (dry run)",
         "Verify crates.io publication",
         "Check GitHub Release state",
     }
@@ -223,6 +316,7 @@ def _verify_release_flow(workflow: str, steps: list[Step], violations: list[str]
     ordered_names = (
         "Verify release parity",
         "Check crates.io version",
+        "Publish to crates.io (dry run)",
         "Publish to crates.io",
         "Verify crates.io publication",
         "Check GitHub Release state",
@@ -246,6 +340,35 @@ def _verify_release_flow(workflow: str, steps: list[Step], violations: list[str]
         if step is not None and not any(value == expected_id for _, value in _key_values(step.lines, "id")):
             violations.append(f"release workflow step '{step_name}' must have id '{expected_id}'")
 
+    parity_step = _step_by_name(steps, "Verify release parity")
+    if parity_step is not None:
+        _verify_tag_push_path(parity_step, violations)
+
+    crates_state_step = _step_by_name(steps, "Check crates.io version")
+    if crates_state_step is not None:
+        condition = _if_expression(crates_state_step)
+        if condition is None or not _REAL_PUBLISH_EVENT_CONDITION.fullmatch(_normalize_if_expression(condition)):
+            violations.append(
+                "Check crates.io version must run for tag pushes and manual real publishing only"
+            )
+
+    dry_run_step = _step_by_name(steps, "Publish to crates.io (dry run)")
+    if dry_run_step is not None:
+        condition = _if_expression(dry_run_step)
+        if condition is None or not _DRY_RUN_STEP_CONDITION.fullmatch(_normalize_if_expression(condition)):
+            violations.append(
+                "Publish to crates.io (dry run) must be limited to workflow_dispatch with inputs.dry_run == true"
+            )
+
+    publish_step = _step_by_name(steps, "Publish to crates.io")
+    if publish_step is not None:
+        condition = _if_expression(publish_step)
+        if condition is None or not _REAL_PUBLISH_STEP_CONDITION.fullmatch(_normalize_if_expression(condition)):
+            violations.append(
+                "Publish to crates.io must require the tag/manual-real event gate and "
+                "steps.crates_state.outputs.already_published != 'true'"
+            )
+
 
 def verify(workflow_path: Path) -> list[str]:
     """Return all release-workflow safety violations found in ``workflow_path``."""
@@ -261,6 +384,7 @@ def verify(workflow_path: Path) -> list[str]:
         violations.append("unsupported `cargo publish --tokenless` is present")
 
     violations.extend(_workflow_has_dry_run_input(workflow))
+    violations.extend(_workflow_concurrency_violations(workflow))
 
     steps = _steps(workflow)
     _verify_release_flow(workflow, steps, violations)
@@ -393,7 +517,55 @@ def load_release_metadata(root: Path = REPOSITORY_ROOT) -> tuple[ReleaseMetadata
     return ReleaseMetadata(crate_name=crate_name, version=version), []
 
 
+def _markdown_heading(line: str) -> tuple[int, str] | None:
+    match = re.match(r"^(?P<marks>#{1,6})\s+(?P<title>.+?)\s*$", line)
+    if not match:
+        return None
+    title = match.group("title").rstrip("#").strip()
+    return len(match.group("marks")), title
+
+
+def _markdown_section(readme: str, title: str) -> str | None:
+    """Return one heading section, excluding later same-level sections."""
+
+    lines = readme.splitlines()
+    section_start: int | None = None
+    section_level = 0
+    for index, line in enumerate(lines):
+        heading = _markdown_heading(line)
+        if heading is None:
+            continue
+        level, heading_title = heading
+        if heading_title.casefold() == title.casefold():
+            section_start = index + 1
+            section_level = level
+            break
+    if section_start is None:
+        return None
+
+    section_end = len(lines)
+    for index in range(section_start, len(lines)):
+        heading = _markdown_heading(lines[index])
+        if heading is not None and heading[0] <= section_level:
+            section_end = index
+            break
+    return "\n".join(lines[section_start:section_end])
+
+
+def _markdown_header(readme: str) -> str:
+    """Return the README preamble before the first level-two section."""
+
+    lines = readme.splitlines()
+    for index, line in enumerate(lines):
+        heading = _markdown_heading(line)
+        if heading is not None and heading[0] == 2:
+            return "\n".join(lines[:index])
+    return readme
+
+
 def _check_readme_versions(readme: str, crate_name: str, expected: str) -> list[str]:
+    status_section = _markdown_section(readme, "Status")
+    usage_section = _markdown_section(readme, "Usage")
     markers: tuple[tuple[str, re.Pattern[str]], ...] = (
         (
             "version badge",
@@ -410,11 +582,13 @@ def _check_readme_versions(readme: str, crate_name: str, expected: str) -> list[
             ),
         ),
     )
+    scopes = (_markdown_header(readme), status_section or "", usage_section or "")
+    section_names = ("README header", "Status section", "Usage section")
     violations: list[str] = []
-    for label, pattern in markers:
-        matches = [match.group("version") for match in pattern.finditer(readme)]
+    for (label, pattern), scope, section_name in zip(markers, scopes, section_names):
+        matches = [match.group("version") for match in pattern.finditer(scope)]
         if not matches:
-            violations.append(f"README.md is missing the current {label} marker")
+            violations.append(f"README.md is missing the current {label} marker in the {section_name}")
             continue
         for marker_version in matches:
             if marker_version != expected:
@@ -507,14 +681,30 @@ def check_tag(tag: str, root: Path = REPOSITORY_ROOT) -> list[str]:
     return violations
 
 
-def _response_status(response: object) -> int:
-    status = getattr(response, "status", None)
+def _response_status(response: object) -> int | None:
+    """Read HTTP status metadata, returning ``None`` when it is unverifiable."""
+
+    try:
+        status = getattr(response, "status", None)
+    except Exception:
+        return None
     if status is not None:
-        return int(status)
-    getcode = getattr(response, "getcode", None)
-    if callable(getcode):
-        return int(getcode())
-    return 200
+        try:
+            return int(status)
+        except (TypeError, ValueError):
+            return None
+
+    try:
+        getcode = getattr(response, "getcode", None)
+    except Exception:
+        return None
+    if not callable(getcode):
+        return None
+    try:
+        status = getcode()
+        return int(status) if status is not None else None
+    except Exception:
+        return None
 
 
 def _read_response(response: object) -> bytes:
@@ -531,7 +721,7 @@ def _close_response(response: object) -> None:
         closer()
 
 
-def _json_response(response: object) -> tuple[int, Mapping[str, object]]:
+def _json_response(response: object) -> tuple[int | None, Mapping[str, object]]:
     status = _response_status(response)
     try:
         payload = json.loads(_read_response(response).decode("utf-8"))
@@ -559,6 +749,12 @@ def fetch_crates_io_state(
     try:
         response = opener(request, timeout=timeout)
         response_status = _response_status(response)
+        if response_status is None:
+            _close_response(response)
+            return RemoteCheck(
+                REMOTE_ERROR,
+                "crates.io response omitted or had unverifiable HTTP status",
+            )
         if response_status != 200:
             _close_response(response)
             if response_status == 404:
@@ -652,6 +848,12 @@ def fetch_github_release_state(
     try:
         response = opener(request, timeout=timeout)
         response_status = _response_status(response)
+        if response_status is None:
+            _close_response(response)
+            return RemoteCheck(
+                REMOTE_ERROR,
+                "GitHub response omitted or had unverifiable HTTP status",
+            )
         if response_status != 200:
             _close_response(response)
             if response_status == 404:
