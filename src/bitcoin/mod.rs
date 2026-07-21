@@ -3,6 +3,9 @@
 
 pub mod bip322;
 pub mod liquid_adapter;
+pub mod taproot;
+
+pub use taproot::*;
 
 use secp256k1::{PublicKey, Scalar, Secp256k1, SecretKey};
 use sha2::{Digest, Sha256};
