@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "contract": "protocol_verifier",
+  "contract_version": 1,
+  "evidence_binding_version": 1,
+  "fixed_now": "1970-01-01T00:33:20Z",
+  "capabilities": {
+    "verifier_id": "fixture-verifier",
+    "version": "1",
+    "supported_chains": [
+      {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"}
+    ],
+    "supported_families": ["bitcoin_utxo"],
+    "capabilities": ["state_proof_verification", "latest_verified_block", "transaction_finality"],
+    "proof_formats": ["header_chain", "merkle"],
+    "verification_classes": ["light_client"],
+    "finality_classes": ["probabilistic"],
+    "trust_tiers": ["strict"]
+  },
+  "state_request": {
+    "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+    "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": "fixture-state-root"},
+    "proof": {"format": "header_chain", "bytes": [1, 2, 3], "evidence_hash": null},
+    "envelope": null
+  },
+  "state_result": {
+    "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+    "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": "fixture-state-root"},
+    "proof_format": "header_chain",
+    "verified_block": {
+      "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+      "header": {
+        "hash": "fixture-block-100",
+        "parent_hash": "fixture-block-99",
+        "height": 100,
+        "timestamp": "1970-01-01T00:16:40Z",
+        "state_root": "fixture-state-root"
+      },
+      "finality_class": "probabilistic",
+      "confirmations": 6,
+      "verification_class": "light_client",
+      "trust_tier": "strict",
+      "verification_status": "verified",
+      "provenance": {
+        "verifier_id": "fixture-verifier",
+        "evidence_ref": "fixture-proof-100",
+        "verified_at": "1970-01-01T00:16:50Z"
+      }
+    }
+  },
+  "finality_request": {
+    "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+    "transaction_id": "fixture-tx-1",
+    "min_confirmations": 6,
+    "require_finality": true
+  },
+  "finality_result": {
+    "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+    "transaction_id": "fixture-tx-1",
+    "status": {"finalized": {"confirmations": 6}},
+    "finality_class": "probabilistic",
+    "required_confirmations": 6,
+    "observed_confirmations": 6,
+    "latest_block": {
+      "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+      "header": {
+        "hash": "fixture-block-100",
+        "parent_hash": "fixture-block-99",
+        "height": 100,
+        "timestamp": "1970-01-01T00:16:40Z",
+        "state_root": "fixture-state-root"
+      },
+      "finality_class": "probabilistic",
+      "confirmations": 6,
+      "verification_class": "light_client",
+      "trust_tier": "strict",
+      "verification_status": "verified",
+      "provenance": {
+        "verifier_id": "fixture-verifier",
+        "evidence_ref": "fixture-finality-100",
+        "verified_at": "1970-01-01T00:16:50Z"
+      }
+    },
+    "verification_class": "light_client",
+    "trust_tier": "strict",
+    "verification_status": "verified",
+    "provenance": {
+      "verifier_id": "fixture-verifier",
+      "evidence_ref": "fixture-finality-1",
+      "verified_at": "1970-01-01T00:16:50Z"
+    }
+  },
+  "cases": [
+    {"id": "verifier.success.proof", "kind": "proof"},
+    {"id": "verifier.success.finality", "kind": "finality"}
+  ]
+}

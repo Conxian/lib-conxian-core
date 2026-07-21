@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "contract": "adapter_structural_conformance",
+  "contract_version": 1,
+  "cases": [
+    {
+      "id": "adapters.bitcoin_tx_params",
+      "kind": "bitcoin_tx_params",
+      "value": {"amount_sats": 1000, "destination": "bc1qfixture", "data": [0, 1, 2]},
+      "expected": {"family": "bitcoin_utxo", "chain": "bitcoin", "trust_tier": "strict", "fee": 1030}
+    },
+    {
+      "id": "adapters.babylon_staking_intent",
+      "kind": "babylon_staking_intent",
+      "value": {"staker_pubkey": [2, 2, 2], "finality_provider_pubkey": [3, 3, 3], "amount_sats": 100000, "lock_time_blocks": 144},
+      "expected": {"family": "bitcoin_utxo", "chain": "bitcoin", "trust_tier": "strict", "proof": "840000:dummy-proof"}
+    },
+    {
+      "id": "adapters.liquid_proof",
+      "kind": "liquid_proof",
+      "address": "ex1fixtureaddresswithmorethanthirtyninecharacters",
+      "proof": "fixture-block:fixture-root:fixture-blinded-proof",
+      "malformed_proof": "incomplete-proof",
+      "expected": {"family": "bitcoin_utxo", "chain": "liquid", "trust_tier": "managed"}
+    },
+    {
+      "id": "adapters.stacks_sbtc_intent",
+      "kind": "stacks_sbtc_intent",
+      "value": {"intent_id": "sbtc-fixture-1", "amount_sats": 500000, "stacks_address": "STfixtureaddress", "bitcoin_txid": "fixture-btc-txid", "state": "bitcoin_confirmed", "created_at_epoch": 1718363200},
+      "expected": {"created_at_epoch": 1718363200, "invalid_peg_in": "invalid_transaction", "invalid_peg_out": "invalid_address"}
+    },
+    {
+      "id": "adapters.rgb_rollout",
+      "kind": "rgb_rollout",
+      "cases": [
+        {"mode": "disabled", "transition_hex": "00", "expected": "gated_by_rollout_mode"},
+        {"mode": "shadow", "transition_hex": "", "expected": "ok"},
+        {"mode": "active", "transition_hex": "", "expected": "transition_validation_failed"}
+      ]
+    },
+    {
+      "id": "adapters.dlc_intent",
+      "kind": "dlc_intent",
+      "value": {"oracle_pubkey": [2, 2, 2], "collateral_sats": 100000, "outcome_hash": [170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170], "expiry_block": 840000},
+      "attestation": {"nonce_point": [3, 3, 3], "outcome_msg": [111, 117, 116, 99, 111, 109, 101], "signature_scalar": [0, 0, 0, 0]},
+      "expected_attestation": false
+    }
+  ]
+}

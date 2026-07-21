@@ -1,5 +1,9 @@
 # lib-conxian-core API Reference v0.2.12
 
+For the deterministic, offline core-to-downstream contract fixture layer, see
+[`INTEGRATION_TESTING.md`](INTEGRATION_TESTING.md). It records the exact contract pins, fixture
+manifest policy, test-only doubles, and downstream adoption boundary.
+
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
 

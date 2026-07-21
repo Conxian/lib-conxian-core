@@ -2,6 +2,10 @@
 
 This document clarifies ownership and responsibility boundaries between core libraries and service layers in the Conxian ecosystem.
 
+The deterministic, offline contract-test layer that exercises these boundaries is documented in
+[`docs/INTEGRATION_TESTING.md`](INTEGRATION_TESTING.md). It uses only test-local doubles and does
+not add runtime, network, persistence, or cross-repository dependencies.
+
 ## 1. Core Primitives (`lib-conxian-core`)
 
 **Role**: Root dependency for protocol-bearing components.
