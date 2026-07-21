@@ -72,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guidance for `conxius-enclave-sdk 2.0.11`.
 
 ### Added
-- **Fuzz Regression Coverage** (#147): Expanded the current suite to five bounded targets with weekly/manual CI. MuSig2 aggregation and PSBT deserialization targets intentionally cover upstream dependencies, while BitVM2 proof verification remains owned by `conxius-enclave-sdk`.
+- **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.
 
 ---
 

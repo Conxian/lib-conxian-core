@@ -34,7 +34,7 @@ Golden JSON files are under [`../tests/fixtures/`](../tests/fixtures/) and are i
 `manifest.json`. The manifest requires:
 
 - fixture schema version `1`;
-- package `lib-conxian-core` version `0.2.12`;
+- package `lib-conxian-core` version `0.3.0`;
 - UCS API version `1`;
 - BIP-110 preflight API version `1`;
 - ProtocolVerifier evidence-binding version `1` and domain
@@ -69,7 +69,7 @@ The exact pins represented by this checkpoint are:
 
 | Surface | Current checkpoint |
 | --- | --- |
-| Core package | `lib-conxian-core` `0.2.12` |
+| Core package | `lib-conxian-core` `0.3.0` |
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
@@ -98,6 +98,7 @@ Run from the repository root:
 
 ```text
 cargo fmt --all -- --check
+cargo test --test core_to_downstream_integration --locked
 cargo test --test golden_serialization --locked
 cargo test --test deterministic_contracts --locked
 cargo test --test adapter_conformance --locked

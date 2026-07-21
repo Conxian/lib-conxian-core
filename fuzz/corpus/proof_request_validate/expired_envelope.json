@@ -1,0 +1,36 @@
+{
+  "chain": {
+    "family": "bitcoin_utxo",
+    "chain": null,
+    "network": "mainnet"
+  },
+  "state": {
+    "block_hash": "synthetic-block",
+    "block_height": 42,
+    "state_root": null
+  },
+  "proof": {
+    "format": "header_chain",
+    "bytes": [1],
+    "evidence_hash": null
+  },
+  "envelope": {
+    "system": "ibc",
+    "system_version": "v1",
+    "trust_tier": "strict",
+    "verification_class": "light_client",
+    "source_chain_id": "synthetic-source",
+    "destination_chain_id": "bitcoin_utxo:mainnet",
+    "finality_class": "probabilistic",
+    "min_confirmations": 6,
+    "observed_at": "2020-01-01T00:00:00Z",
+    "expires_at": "2020-01-02T00:00:00Z",
+    "proof_ref": "synthetic-proof",
+    "evidence_hash": "synthetic-hash",
+    "evidence_uri": null,
+    "verifier_set_ref": "synthetic-set",
+    "security_params": {},
+    "verification_status": "verified",
+    "verification_reason": null
+  }
+}

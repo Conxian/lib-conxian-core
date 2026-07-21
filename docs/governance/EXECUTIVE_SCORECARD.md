@@ -16,7 +16,11 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 - **Core Tests**: 74 Passing (100% success)
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, and scheduled/manual fuzz regression active)
-- **Fuzz Regression Suite**: 5 bounded targets; upstream PSBT/MuSig2 coverage is dependency-level, and BitVM2 proof verification remains SDK-owned.
+- **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
+  `musig2_aggregate`, and `proof_request_validate`. MuSig2 coverage is direct
+  dependency-level key aggregation only; this repository has no PSBT, BIP-322,
+  or BitVM2 fuzz target. Production BIP-322 signing/message-authenticity
+  verification and BitVM2 proof verification belong to `conxius-enclave-sdk`.
 - **Active CXIPs**: 3 (Drafting: 26, 27, 28)
 
 ## 3. High-Priority Actions
