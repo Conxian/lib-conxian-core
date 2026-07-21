@@ -1,0 +1,81 @@
+{
+  "cargo_llvm_cov": {
+    "version": "0.8.7"
+  },
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "src/signing.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0
+            },
+            "functions": {
+              "count": 4,
+              "covered": 3
+            },
+            "lines": {
+              "count": 100,
+              "covered": 70
+            },
+            "mcdc": {
+              "count": 0,
+              "covered": 0
+            },
+            "regions": {
+              "count": 120,
+              "covered": 80
+            }
+          }
+        },
+        {
+          "filename": "src/control_model/trust.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0
+            },
+            "functions": {
+              "count": 2,
+              "covered": 2
+            },
+            "lines": {
+              "count": 20,
+              "covered": 20
+            },
+            "mcdc": {
+              "count": 0,
+              "covered": 0
+            },
+            "regions": {
+              "count": 25,
+              "covered": 25
+            }
+          }
+        },
+        {
+          "filename": "tests/ignored.rs",
+          "summary": {
+            "lines": {
+              "count": 1000,
+              "covered": 0
+            }
+          }
+        },
+        {
+          "filename": "fuzz/ignored.rs",
+          "summary": {
+            "lines": {
+              "count": 1000,
+              "covered": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}
