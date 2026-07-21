@@ -88,12 +88,17 @@ fn representative_adapter_dtos_round_trip_and_remain_structural_only() {
                     Err(StateProofError::Unsupported { chain }) => assert_eq!(chain, "liquid"),
                     other => panic!("expected Liquid state proof to be unsupported, got {other:?}"),
                 }
-                assert!(adapter
-                    .verify_state_proof(
-                        "fixture-root",
-                        case["malformed_proof"].as_str().expect("malformed proof")
-                    )
-                    .is_err());
+                match adapter.verify_state_proof(
+                    "fixture-root",
+                    case["malformed_proof"].as_str().expect("malformed proof"),
+                ) {
+                    Err(StateProofError::MalformedInput(message)) => {
+                        assert_eq!(message, "proof must not be empty")
+                    }
+                    other => panic!(
+                        "expected Liquid malformed proof to return MalformedInput, got {other:?}"
+                    ),
+                }
             }
             "stacks_sbtc_intent" => {
                 let intent: SBTCIntent =
