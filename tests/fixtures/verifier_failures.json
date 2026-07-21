@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "contract": "protocol_verifier",
+  "contract_version": 1,
+  "evidence_binding_version": 1,
+  "fixed_now": "1970-01-01T00:33:20Z",
+  "cases": [
+    {
+      "id": "verifier.failure.malformed_proof",
+      "kind": "malformed_proof",
+      "state_request": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": null},
+        "proof": {"format": "header_chain", "bytes": [], "evidence_hash": null},
+        "envelope": null
+      },
+      "expected_error": "insufficient_proof_data"
+    },
+    {
+      "id": "verifier.failure.stale_evidence",
+      "kind": "stale_evidence",
+      "state_request": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": null},
+        "proof": {"format": "header_chain", "bytes": [1, 2, 3], "evidence_hash": null},
+        "envelope": {
+          "system": "ibc",
+          "system_version": "v1",
+          "trust_tier": "managed",
+          "verification_class": "external_quorum",
+          "source_chain_id": "source:mainnet",
+          "destination_chain_id": "bitcoin:mainnet",
+          "finality_class": "probabilistic",
+          "min_confirmations": 6,
+          "observed_at": "1970-01-01T00:16:40Z",
+          "expires_at": "1970-01-01T00:25:00Z",
+          "proof_ref": "stale-proof",
+          "evidence_hash": "stale-evidence",
+          "evidence_uri": "fixture://stale-proof",
+          "verifier_set_ref": "fixture-set",
+          "security_params": {"threshold": 2},
+          "verification_status": "verified",
+          "verification_reason": "fixture stale evidence"
+        }
+      },
+      "expected_error": "expired_evidence"
+    },
+    {
+      "id": "verifier.failure.observer_only_evidence",
+      "kind": "policy_blocked",
+      "state_request": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": null},
+        "proof": {"format": "header_chain", "bytes": [1, 2, 3], "evidence_hash": null},
+        "envelope": {
+          "system": "ibc",
+          "system_version": "v1",
+          "trust_tier": "observer_only",
+          "verification_class": "native_observation",
+          "source_chain_id": "source:mainnet",
+          "destination_chain_id": "bitcoin:mainnet",
+          "finality_class": "probabilistic",
+          "min_confirmations": 6,
+          "observed_at": "1970-01-01T00:16:40Z",
+          "expires_at": "1970-01-01T01:06:40Z",
+          "proof_ref": "observer-proof",
+          "evidence_hash": "observer-evidence",
+          "evidence_uri": "fixture://observer-proof",
+          "verifier_set_ref": "fixture-set",
+          "security_params": {"observation_only": true},
+          "verification_status": "verified",
+          "verification_reason": "fixture observer-only evidence"
+        }
+      },
+      "expected_error": "policy_blocked"
+    },
+    {
+      "id": "verifier.failure.non_final",
+      "kind": "non_final",
+      "finality_request": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "transaction_id": "fixture-tx-pending",
+        "min_confirmations": 6,
+        "require_finality": true
+      },
+      "finality_result": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "transaction_id": "fixture-tx-pending",
+        "status": {"confirmed": {"confirmations": 3}},
+        "finality_class": "probabilistic",
+        "required_confirmations": 6,
+        "observed_confirmations": 3,
+        "latest_block": null,
+        "verification_class": "light_client",
+        "trust_tier": "strict",
+        "verification_status": "verified",
+        "provenance": {
+          "verifier_id": "fixture-verifier",
+          "evidence_ref": "fixture-pending-1",
+          "verified_at": "1970-01-01T00:16:50Z"
+        }
+      },
+      "expected_error": "non_final_state"
+    },
+    {
+      "id": "verifier.failure.unsupported_capability",
+      "kind": "unsupported_capability",
+      "state_request": {
+        "chain": {"family": "bitcoin_utxo", "chain": "bitcoin", "network": "mainnet"},
+        "state": {"block_hash": "fixture-block-100", "block_height": 100, "state_root": null},
+        "proof": {"format": "header_chain", "bytes": [1, 2, 3], "evidence_hash": null},
+        "envelope": null
+      },
+      "expected_error": "unsupported_capability"
+    }
+  ]
+}

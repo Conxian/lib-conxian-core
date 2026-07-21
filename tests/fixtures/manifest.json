@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "package_name": "lib-conxian-core",
+  "package_version": "0.2.12",
+  "contract_versions": {
+    "universal_chain_signer_api_version": 1,
+    "bip110_preflight_api_version": 1,
+    "protocol_verifier_evidence_binding_version": 1
+  },
+  "evidence_binding_domain": "lib-conxian-core/protocol-verifier/evidence-binding",
+  "fixtures": [
+    {"id": "signing.success.bitcoin_message", "file": "signing_success.json", "outcome": "success"},
+    {"id": "signing.failure.unsupported_chain", "file": "signing_failures.json", "outcome": "failure"},
+    {"id": "signing.failure.unsupported_algorithm", "file": "signing_failures.json", "outcome": "failure"},
+    {"id": "signing.failure.invalid_target", "file": "signing_failures.json", "outcome": "failure"},
+    {"id": "signing.failure.empty_message", "file": "signing_failures.json", "outcome": "failure"},
+    {"id": "signing.failure.malformed_response", "file": "signing_failures.json", "outcome": "failure"},
+    {"id": "verifier.success.proof", "file": "verifier_success.json", "outcome": "success"},
+    {"id": "verifier.success.finality", "file": "verifier_success.json", "outcome": "success"},
+    {"id": "verifier.failure.malformed_proof", "file": "verifier_failures.json", "outcome": "failure"},
+    {"id": "verifier.failure.stale_evidence", "file": "verifier_failures.json", "outcome": "failure"},
+    {"id": "verifier.failure.observer_only_evidence", "file": "verifier_failures.json", "outcome": "failure"},
+    {"id": "verifier.failure.non_final", "file": "verifier_failures.json", "outcome": "failure"},
+    {"id": "verifier.failure.unsupported_capability", "file": "verifier_failures.json", "outcome": "failure"},
+    {"id": "bip110.boundaries", "file": "bip110_cases.json", "outcome": "success"},
+    {"id": "bip110.limit_plus_one", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "bip110.multiple_violations", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "bip110.unsupported_context", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "bip110.unknown_context", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "bip110.missing_measurements", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "bip110.phase_mismatch", "file": "bip110_cases.json", "outcome": "failure"},
+    {"id": "adapters.bitcoin_tx_params", "file": "adapter_cases.json", "outcome": "success"},
+    {"id": "adapters.babylon_staking_intent", "file": "adapter_cases.json", "outcome": "success"},
+    {"id": "adapters.liquid_proof", "file": "adapter_cases.json", "outcome": "mixed"},
+    {"id": "adapters.stacks_sbtc_intent", "file": "adapter_cases.json", "outcome": "mixed"},
+    {"id": "adapters.rgb_rollout", "file": "adapter_cases.json", "outcome": "mixed"},
+    {"id": "adapters.dlc_intent", "file": "adapter_cases.json", "outcome": "mixed"}
+  ]
+}
