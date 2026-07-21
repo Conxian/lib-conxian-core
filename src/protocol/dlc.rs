@@ -26,6 +26,45 @@ pub enum DlcStatus {
 
 pub struct DlcManager;
 
+/// Typed failures for DLC attestation and execution checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DlcVerificationError {
+    /// The intent does not contain the minimum policy-bearing fields.
+    MalformedIntent,
+    /// The attestation/signature input is structurally invalid.
+    MalformedAttestation,
+    /// The outcome message does not match the intent commitment.
+    OutcomeMismatch,
+    /// The intent is no longer within its expiry block.
+    Expired,
+    /// The real cryptographic equation rejected the attestation.
+    VerificationFailed,
+    /// Existing oracle tuple inputs do not cryptographically bind the full intent.
+    UnsupportedIntentBinding,
+    /// The compatibility API lacks the context required to verify execution.
+    UnsupportedExecutionContext,
+}
+
+impl std::fmt::Display for DlcVerificationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MalformedIntent => write!(f, "malformed DLC intent"),
+            Self::MalformedAttestation => write!(f, "malformed DLC oracle attestation"),
+            Self::OutcomeMismatch => write!(f, "DLC outcome does not match intent commitment"),
+            Self::Expired => write!(f, "DLC intent has expired"),
+            Self::VerificationFailed => write!(f, "DLC oracle attestation verification failed"),
+            Self::UnsupportedIntentBinding => {
+                write!(f, "DLC attestation is not bound to the complete intent")
+            }
+            Self::UnsupportedExecutionContext => {
+                write!(f, "DLC execution verification context is unsupported")
+            }
+        }
+    }
+}
+
+impl std::error::Error for DlcVerificationError {}
+
 impl DlcManager {
     /// Creates a new DLC Intent.
     pub fn create_intent(
@@ -102,15 +141,81 @@ impl DlcManager {
         lhs == rhs
     }
 
-    /// Verifies if a DLC execution matches the signed outcome (G-06).
-    /// Kept for compatibility, but prefer verify_oracle_attestation for granular checks.
-    pub fn verify_execution(intent: &DlcIntent, oracle_signature: &[u8]) -> bool {
-        if oracle_signature.is_empty() || oracle_signature.len() < 32 {
-            return false;
+    /// Verifies an oracle attestation against the intent's oracle key, outcome
+    /// commitment, collateral policy, and expiry boundary.
+    pub fn verify_oracle_attestation_for_intent(
+        intent: &DlcIntent,
+        current_block: u32,
+        nonce_point: &[u8],
+        outcome_msg: &[u8],
+        signature_scalar: &[u8],
+    ) -> Result<bool, DlcVerificationError> {
+        if intent.oracle_pubkey.is_empty()
+            || intent.collateral_sats == 0
+            || intent.expiry_block == 0
+        {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+        if current_block > intent.expiry_block {
+            return Err(DlcVerificationError::Expired);
+        }
+        if nonce_point.is_empty() || signature_scalar.len() != 32 {
+            return Err(DlcVerificationError::MalformedAttestation);
         }
 
-        // Simplified check for compatibility: ensure it's not a dummy all-zero signature
-        !oracle_signature.iter().all(|&b| b == 0) && intent.collateral_sats > 0
+        let outcome_hash: [u8; 32] = Sha256::digest(outcome_msg).into();
+        if outcome_hash != intent.outcome_hash {
+            return Err(DlcVerificationError::OutcomeMismatch);
+        }
+
+        if !Self::verify_oracle_attestation(
+            &intent.oracle_pubkey,
+            nonce_point,
+            outcome_msg,
+            signature_scalar,
+        ) {
+            Err(DlcVerificationError::VerificationFailed)
+        } else {
+            // The existing oracle tuple signs only `outcome_msg`; it does not
+            // cryptographically commit to collateral, expiry, or the complete
+            // intent. Do not promote the valid primitive into intent authority.
+            Err(DlcVerificationError::UnsupportedIntentBinding)
+        }
+    }
+
+    /// Checked compatibility API for execution verification.
+    ///
+    /// The legacy input contains no nonce point, outcome message, CET, expiry
+    /// height, or transaction binding, so a well-shaped byte string is not
+    /// enough to authorize execution. This method reports that limitation
+    /// explicitly instead of accepting random signatures.
+    pub fn verify_execution_checked(
+        intent: &DlcIntent,
+        oracle_signature: &[u8],
+    ) -> Result<bool, DlcVerificationError> {
+        if intent.oracle_pubkey.is_empty()
+            || intent.collateral_sats == 0
+            || intent.expiry_block == 0
+        {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+        if oracle_signature.len() < 32 {
+            return Err(DlcVerificationError::MalformedAttestation);
+        }
+
+        Err(DlcVerificationError::UnsupportedExecutionContext)
+    }
+
+    /// Compatibility wrapper. It is intentionally fail-closed until callers
+    /// provide the complete attestation and execution context.
+    #[deprecated(
+        note = "use verify_execution_checked or verify_oracle_attestation_for_intent; this wrapper returns false"
+    )]
+    pub fn verify_execution(intent: &DlcIntent, oracle_signature: &[u8]) -> bool {
+        matches!(
+            Self::verify_execution_checked(intent, oracle_signature),
+            Ok(true)
+        )
     }
 }
 
@@ -169,5 +274,68 @@ mod tests {
             msg,
             &s_bytes
         ));
+
+        let outcome_hash: [u8; 32] = Sha256::digest(msg).into();
+        let intent = DlcManager::create_intent(&oracle_pk.serialize(), 100_000, outcome_hash, 100);
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &intent,
+                50,
+                &nonce_pk.serialize(),
+                msg,
+                &s_bytes
+            ),
+            Err(DlcVerificationError::UnsupportedIntentBinding)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &intent,
+                50,
+                &nonce_pk.serialize(),
+                b"outcome-b",
+                &s_bytes
+            ),
+            Err(DlcVerificationError::OutcomeMismatch)
+        );
+        let mut mutated_signature = s_bytes;
+        mutated_signature[31] ^= 1;
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &intent,
+                50,
+                &nonce_pk.serialize(),
+                msg,
+                &mutated_signature
+            ),
+            Err(DlcVerificationError::VerificationFailed)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &intent,
+                101,
+                &nonce_pk.serialize(),
+                msg,
+                &s_bytes
+            ),
+            Err(DlcVerificationError::Expired)
+        );
+    }
+
+    #[test]
+    fn test_execution_verification_rejects_random_signature() {
+        let intent = DlcManager::create_intent(&[0x02; 33], 50_000, [0xbb; 32], 2_000);
+
+        assert_eq!(
+            DlcManager::verify_execution_checked(&intent, &[0x01; 32]),
+            Err(DlcVerificationError::UnsupportedExecutionContext)
+        );
+        assert_eq!(
+            DlcManager::verify_execution_checked(&intent, &[0x01; 31]),
+            Err(DlcVerificationError::MalformedAttestation)
+        );
+        #[allow(deprecated)]
+        {
+            assert!(!DlcManager::verify_execution(&intent, &[0x01; 32]));
+        }
     }
 }

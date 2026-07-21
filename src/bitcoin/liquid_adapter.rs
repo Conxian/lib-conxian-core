@@ -1,7 +1,10 @@
 //! Liquid (Elements) Sidechain Adapter
 //! Aligned with CXIP-21 and CON-710
 
-use crate::adapters::{TxParams, UniversalChainAdapter};
+use crate::adapters::{
+    reject_unverified_state_proof, unavailable_state_root, StateProofError, TxParams,
+    UniversalChainAdapter,
+};
 use crate::control_model::{Chain, ChainFamily, TrustTier};
 
 /// Adapter for the Liquid Network (Elements sidechain).
@@ -33,30 +36,13 @@ impl UniversalChainAdapter for LiquidAdapter {
         TrustTier::Managed
     }
 
-    /// Verifies Liquid state proofs including confidential metadata.
-    /// CON-1334: Addressing the unconditional Ok(true) gap with structural checks.
-    fn verify_state_proof(&self, _state_root: &str, proof: &str) -> Result<bool, String> {
-        if proof.is_empty() {
-            return Err("Empty Liquid state proof".to_string());
-        }
-
-        // Structural validation for Elements inclusion proof
-        // Standard format: [block_hash]:[merkle_root]:[blinded_proof]
-        if proof.split(':').count() < 3 {
-            return Err(
-                "Invalid Liquid proof format: Missing Elements consensus components".to_string(),
-            );
-        }
-
-        if proof.contains("invalid") {
-            return Ok(false);
-        }
-
-        Ok(true)
+    /// No audited Elements/confidential proof verifier lives in Core.
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("liquid", state_root, proof)
     }
 
-    fn get_state_root(&self) -> Result<String, String> {
-        Ok("liquid_merkle_root".to_string())
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("liquid")
     }
 }
 
@@ -77,10 +63,21 @@ mod tests {
     fn test_liquid_verify_state_proof_hardened() {
         let adapter = LiquidAdapter;
         let valid_proof = "hash:root:blinded";
-        assert!(adapter.verify_state_proof("root", valid_proof).is_ok());
-        assert!(adapter.verify_state_proof("root", "").is_err());
-        assert!(adapter
-            .verify_state_proof("root", "incomplete_proof")
-            .is_err());
+        assert!(matches!(
+            adapter.verify_state_proof("root", valid_proof),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("wrong-root", valid_proof),
+            Err(StateProofError::Unsupported { .. })
+        ));
+        assert!(matches!(
+            adapter.verify_state_proof("root", ""),
+            Err(StateProofError::MalformedInput(_))
+        ));
+        assert!(matches!(
+            adapter.get_state_root(),
+            Err(StateProofError::Unavailable { .. })
+        ));
     }
 }
