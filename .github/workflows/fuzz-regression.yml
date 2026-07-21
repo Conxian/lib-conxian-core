@@ -38,7 +38,18 @@ jobs:
         run: cargo +nightly fuzz check ${{ matrix.target }}
 
       - name: Run bounded fuzz smoke
-        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=30 -rss_limit_mb=2048
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          corpus_dir="fuzz/corpus/${TARGET}"
+          artifact_dir="fuzz/artifacts/${TARGET}"
+          mkdir -p "${artifact_dir}"
+          cargo +nightly fuzz run "${TARGET}" "${corpus_dir}" -- \
+            -max_total_time=30 \
+            -timeout=5 \
+            -rss_limit_mb=2048 \
+            -max_len=16384 \
+            -artifact_prefix="${artifact_dir}/"
 
       - name: Upload crash and corpus artifacts
         if: always()

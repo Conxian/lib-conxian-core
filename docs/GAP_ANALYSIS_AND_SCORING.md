@@ -31,7 +31,7 @@ The SDK and proposal scores below must not be read as claims that
 | Crate | Version | Purpose | Status |
 |-------|---------|---------|--------|
 | `conxius-enclave-sdk` | 2.0.11 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
-| `lib-conxian-core` | 0.2.10 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Prototype |
+| `lib-conxian-core` | 0.2.12 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Prototype |
 | `conxian-gateway` | 0.1.4 | Runtime orchestration and middleware | ⚠️ WIP |
 
 ### Local Implementations vs SDK
@@ -74,6 +74,13 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 - **Strategic Alignment (40%)**: Core sovereignty, Bitcoin-native, Vault SDK boundary.
 - **Technical Readiness (30%)**: Specification stability, dependency availability.
 - **Ecosystem Demand (30%)**: Partner requirements, TVL potential.
+
+> **Canonical risk-profile boundary (CORE-007):** This planning rubric and the
+> candidate matrix below are not the canonical chain-family risk-profile input.
+> Their scores are historical prioritization material, not approved chain risk
+> assessments. The Core registry intentionally contains no scores until a
+> separate governance decision supplies public evidence and a versioned data
+> revision. See [CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md).
 
 ## Candidate Matrix
 
