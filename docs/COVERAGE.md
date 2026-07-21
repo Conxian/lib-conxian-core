@@ -8,26 +8,28 @@ only after the baseline and exclusions have been reviewed.
 
 ## Tooling and reproducible commands
 
-The selected collector is `cargo-llvm-cov` **0.8.7**, using the LLVM source
-coverage tools supplied by the active Rust toolchain. The version is pinned in
-`config/core_coverage.json` and in CI. No optional features are enabled for
-this gate; the optional enclave/MSRV concern remains outside the default
-feature baseline.
+The selected collector is `cargo-llvm-cov` **0.8.7**, using
+`llvm-tools-preview` from the exact Rust **1.89.0** toolchain. Both versions are
+pinned in CI and in the checked-in baseline provenance. No optional features
+are enabled for this gate: coverage uses the workspace's default features and
+does not pass `--all-features`. The optional enclave/MSRV concern remains
+outside the default feature baseline.
 
 ```bash
-rustup component add llvm-tools-preview
-cargo install cargo-llvm-cov --version 0.8.7 --locked
-cargo llvm-cov --version
+rustup toolchain install 1.89.0 --profile minimal
+rustup +1.89.0 component add llvm-tools-preview
+cargo +1.89.0 install cargo-llvm-cov --version 0.8.7 --locked
+cargo +1.89.0 llvm-cov --version
 
 mkdir -p target/coverage
 ignore='(^|/)(tests|fuzz|target|generated|vendor|examples)/'
-cargo llvm-cov --workspace --locked \
+cargo +1.89.0 llvm-cov --workspace --locked \
   --ignore-filename-regex "$ignore" \
   --json --output-path target/coverage/coverage.json
-cargo llvm-cov report --locked \
+cargo +1.89.0 llvm-cov report --locked \
   --ignore-filename-regex "$ignore" \
   --lcov --output-path target/coverage/coverage.lcov
-cargo llvm-cov report --locked \
+cargo +1.89.0 llvm-cov report --locked \
   --ignore-filename-regex "$ignore" \
   --html --output-dir target/coverage/html
 
@@ -40,10 +42,12 @@ python3 scripts/core_coverage.py \
 ```
 
 The JSON parser is deliberately defensive about the observed LLVM shape
-(`data[].files[].summary`) and refuses ambiguous duplicate file entries rather
-than silently producing a misleading denominator. The evaluator supports
-`report-only` and `enforce` modes. In enforce mode, every failure includes the
-actual metric, required threshold, affected target, and a next action.
+(`data[].files[].summary`) and refuses conflicting duplicate file entries rather
+than silently producing a misleading denominator. Identical duplicates are
+accepted deterministically because LLVM can emit more than one `data[]` entry.
+The evaluator supports `report-only` and `enforce` modes. In enforce mode, every
+failure includes the actual metric, required threshold, affected target, a next
+action, and pointers to the uploaded HTML report and JSON summary.
 
 ## Measured dimensions
 
@@ -87,6 +91,17 @@ Production files that LLVM reports without any measurable executable item are
 kept in the machine-readable inventory as `unmeasured_files`; they contribute
 zero LLVM line/region/function items rather than being assigned synthetic
 coverage.
+
+### Unreachable and compiler-elided production code
+
+Instrumentable production code remains in the denominator even when tests never
+execute its paths. It is reported as uncovered; it is not relabeled as
+unmeasured and is not excluded merely because the path is difficult to reach.
+Any proposed denominator exclusion requires a reviewed invariant or path
+justification, a named owner, and a review date recorded with the exclusion
+decision. Files or regions that the compiler truly elides and that therefore
+have no executable LLVM items remain inventoried as `unmeasured_files`; they are
+not counted as covered and do not receive synthetic coverage.
 
 Generated JSON, LCOV, HTML, and metadata are written only below `target/coverage`
 and CI artifact storage. They are ignored by Git and must not contain
@@ -140,16 +155,28 @@ predates the finalized `src/signing.rs`, `src/verifier.rs`, and BIP-110
 preflight modules, so its missing named scopes are labeled **historical
 pre-critical-module** rather than treated as current enforcement evidence.
 
-The current enforcement candidate is the latest `origin/main` used for this
-rollout: `604ec2be569e2862acaaa400d5d2b90824b13fd3`. The distinction is
-important: the historical report is reproducible context, while current main
-is the candidate for future threshold enforcement.
+The current candidate snapshot is the exact PR base commit from GitHub at the
+time of this repair: `73143c2b916a6c0f3cf9117ea36c0ae1e170d9d4`. It is labeled
+`current-candidate-snapshot`, not "latest" or "current", so the artifact is
+stable even after `origin/main` advances. It was measured separately from the
+PR head with Rust/Cargo `1.89.0`, `llvm-tools-preview`, and
+`cargo-llvm-cov 0.8.7`; the complete commands, policy schema/hash, ignore
+regex, and measurement date are recorded in `docs/coverage/baselines.json`.
 
-To reproduce the historical artifact without changing that commit, create a
+GitHub `pull_request` CI intentionally measures the checked-out GitHub merge
+ref/commit for integration safety. That synthetic merge source is recorded in
+the uploaded `metadata.txt` as both the checked-out `source_sha` and
+`GITHUB_SHA`. Checked-in baseline snapshots are different: they are tied to
+explicit source SHAs and must never use a synthetic merge commit or a
+self-referential PR head.
+
+To reproduce either artifact without changing its source commit, create a
 temporary worktree at the exact SHA, copy this script and the policy into the
-worktree, run the same coverage commands, and pass
-`--commit-sha 4065271bf6d9b035aa17f1c454f6a1db0c54754c` to the evaluator. The
-temporary files and raw reports stay outside version control.
+worktree, run the same pinned coverage commands, and pass the matching explicit
+source SHA to the evaluator: `4065271bf6d9b035aa17f1c454f6a1db0c54754c` for
+the historical artifact or `73143c2b916a6c0f3cf9117ea36c0ae1e170d9d4` for the
+candidate snapshot. The temporary files and raw reports stay outside version
+control.
 
 ## Gap inventory
 

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core_coverage import evaluate, parse_report, render_markdown
+from core_coverage import CoverageReportError, evaluate, parse_report, render_markdown
 
 
 FIXTURE = Path(__file__).parent / "testdata" / "core_coverage_sample.json"
@@ -72,6 +72,8 @@ class CoreCoverageTests(unittest.TestCase):
         below = next(issue for issue in result["issues"] if issue["target"] == "signing")
         self.assertEqual(below["kind"], "below_threshold")
         self.assertIn("add focused tests", below["action"])
+        self.assertIn("target/coverage/html", below["action"])
+        self.assertIn("target/coverage/core-coverage.json", below["action"])
 
     def test_zero_branch_dimension_is_reported_as_unsupported(self) -> None:
         result = evaluate(self.report, POLICY, self.repo_root, mode="enforce")
@@ -82,6 +84,26 @@ class CoreCoverageTests(unittest.TestCase):
             "branch_probe",
             {issue["target"] for issue in result["issues"] if issue["kind"] == "below_threshold"},
         )
+
+    def test_parser_accepts_identical_duplicate_files_across_data_entries(self) -> None:
+        report = json.loads(json.dumps(self.report))
+        report["data"].append(json.loads(json.dumps(report["data"][0])))
+
+        files, _ = parse_report(report, self.repo_root)
+
+        self.assertEqual(
+            [file.path for file in files],
+            ["fuzz/ignored.rs", "src/control_model/trust.rs", "src/signing.rs", "tests/ignored.rs"],
+        )
+
+    def test_parser_rejects_conflicting_duplicate_files_across_data_entries(self) -> None:
+        report = json.loads(json.dumps(self.report))
+        duplicate = json.loads(json.dumps(report["data"][0]))
+        duplicate["files"][0]["summary"]["lines"]["covered"] += 1
+        report["data"].append(duplicate)
+
+        with self.assertRaisesRegex(CoverageReportError, "duplicate report entries for src/signing\\.rs"):
+            parse_report(report, self.repo_root)
 
     def test_missing_scope_is_reported(self) -> None:
         policy = json.loads(json.dumps(POLICY))

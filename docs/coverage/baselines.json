@@ -4,10 +4,12 @@
   "toolchain": {
     "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
     "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "llvm": "20.1.7",
+    "llvm_tools_component": "llvm-tools-preview",
     "cargo_llvm_cov": "cargo-llvm-cov 0.8.7"
   },
-  "collection_command": "cargo llvm-cov --workspace --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --json --output-path target/coverage/coverage.json",
-  "evaluation_command": "python3 scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha <source-sha>",
+  "collection_command": "cargo +1.89.0 llvm-cov --workspace --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --json --output-path target/coverage/coverage.json",
+  "evaluation_command": "python3 scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha <source-sha> --label <baseline-label> --output-json target/coverage/core-coverage.json --output-markdown target/coverage/core-coverage.md",
   "baselines": {
     "historical-pre-critical-module": {
       "source_sha": "4065271bf6d9b035aa17f1c454f6a1db0c54754c",
@@ -80,11 +82,34 @@
           ]
         }
       },
-      "caveat": "This SHA predates finalized signing, verifier, and BIP-110 preflight modules. It is historical context, not a current enforcement candidate."
+      "caveat": "This SHA predates finalized signing, verifier, and BIP-110 preflight modules. It is historical context, not a current enforcement candidate.",
+      "provenance": {
+        "measured_on_utc": "2026-07-21",
+        "rust_toolchain": "1.89.0",
+        "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+        "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+        "llvm": "20.1.7",
+        "llvm_tools_component": "llvm-tools-preview",
+        "cargo_llvm_cov": "cargo-llvm-cov 0.8.7",
+        "cargo_features": "default features (no --all-features)",
+        "coverage_mode": "workspace; locked dependencies",
+        "policy": "config/core_coverage.json",
+        "policy_schema_version": 1,
+        "policy_sha256": "7b8c409a73aeb7339cfd3890829b362d0ef97210e5ed0b408d072db72bb156ec",
+        "ignore_filename_regex": "(^|/)(tests|fuzz|target|generated|vendor|examples)/",
+        "collection_command": "cargo +1.89.0 llvm-cov --workspace --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --json --output-path target/coverage/coverage.json",
+        "lcov_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --lcov --output-path target/coverage/coverage.lcov",
+        "html_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --html --output-dir target/coverage/html",
+        "evaluation_command": "python3 scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha <source-sha> --label <baseline-label> --output-json target/coverage/core-coverage.json --output-markdown target/coverage/core-coverage.md",
+        "report_format": "llvm.coverage.json.export 2.0.1",
+        "source_sha": "4065271bf6d9b035aa17f1c454f6a1db0c54754c",
+        "label": "historical-pre-critical-module",
+        "measurement_status": "reproduced and confirmed under pinned toolchain"
+      }
     },
-    "current-enforcement-candidate": {
-      "source_sha": "604ec2be569e2862acaaa400d5d2b90824b13fd3",
-      "label": "current-enforcement-candidate",
+    "current-candidate-snapshot": {
+      "source_sha": "73143c2b916a6c0f3cf9117ea36c0ae1e170d9d4",
+      "label": "current-candidate-snapshot",
       "status": "thresholds_below_target",
       "denominator": {
         "file_count": 29,
@@ -93,35 +118,38 @@
           "src/protocol/mod.rs"
         ],
         "lines": {
-          "covered": 3573,
-          "total": 4885,
-          "percent": 73.14
+          "covered": 3604,
+          "percent": 73.31,
+          "supported": true,
+          "total": 4916
         },
         "regions": {
-          "covered": 4463,
-          "total": 6107,
-          "percent": 73.08
+          "covered": 4493,
+          "percent": 73.21,
+          "supported": true,
+          "total": 6137
         },
         "functions": {
-          "covered": 376,
-          "total": 518,
-          "percent": 72.59
+          "covered": 377,
+          "percent": 72.64,
+          "supported": true,
+          "total": 519
         },
         "branches": {
           "covered": 0,
-          "total": 0,
           "percent": null,
+          "reason": "LLVM reported no measurable items",
           "supported": false,
-          "reason": "LLVM reported no measurable items"
+          "total": 0
         }
       },
       "targets": {
         "overall": {
           "metric": "lines",
           "status": "fail",
-          "covered": 3573,
-          "total": 4885,
-          "percent": 73.14
+          "covered": 3604,
+          "total": 4916,
+          "percent": 73.31
         },
         "signing": {
           "metric": "lines",
@@ -147,12 +175,43 @@
         "bip110": {
           "metric": "lines",
           "status": "fail",
-          "covered": 727,
-          "total": 887,
-          "percent": 81.96
+          "covered": 758,
+          "total": 918,
+          "percent": 82.57
         }
       },
-      "caveat": "This is the latest origin/main observed for the rollout and is the candidate for future enforcement after exclusions and gap review."
+      "caveat": "This exact PR-base source snapshot is stable candidate evidence for future enforcement. It is not the PR head or a synthetic merge commit; GitHub pull_request CI measures its merge ref separately for integration safety.",
+      "provenance": {
+        "measured_on_utc": "2026-07-21",
+        "rust_toolchain": "1.89.0",
+        "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+        "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+        "llvm": "20.1.7",
+        "llvm_tools_component": "llvm-tools-preview",
+        "cargo_llvm_cov": "cargo-llvm-cov 0.8.7",
+        "cargo_features": "default features (no --all-features)",
+        "coverage_mode": "workspace; locked dependencies",
+        "policy": "config/core_coverage.json",
+        "policy_schema_version": 1,
+        "policy_sha256": "7b8c409a73aeb7339cfd3890829b362d0ef97210e5ed0b408d072db72bb156ec",
+        "ignore_filename_regex": "(^|/)(tests|fuzz|target|generated|vendor|examples)/",
+        "collection_command": "cargo +1.89.0 llvm-cov --workspace --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --json --output-path target/coverage/coverage.json",
+        "lcov_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --lcov --output-path target/coverage/coverage.lcov",
+        "html_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --html --output-dir target/coverage/html",
+        "evaluation_command": "python3 scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha <source-sha> --label <baseline-label> --output-json target/coverage/core-coverage.json --output-markdown target/coverage/core-coverage.md",
+        "report_format": "llvm.coverage.json.export 2.0.1",
+        "source_sha": "73143c2b916a6c0f3cf9117ea36c0ae1e170d9d4",
+        "label": "current-candidate-snapshot",
+        "measurement_status": "measured from exact PR base SHA; not a PR head or merge ref"
+      }
     }
-  }
+  },
+  "policy_schema_version": 1,
+  "policy_sha256": "7b8c409a73aeb7339cfd3890829b362d0ef97210e5ed0b408d072db72bb156ec",
+  "measurement_date_utc": "2026-07-21",
+  "lcov_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --lcov --output-path target/coverage/coverage.lcov",
+  "html_command": "cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '(^|/)(tests|fuzz|target|generated|vendor|examples)/' --html --output-dir target/coverage/html",
+  "coverage_ignore_filename_regex": "(^|/)(tests|fuzz|target|generated|vendor|examples)/",
+  "cargo_features": "default features (no --all-features)",
+  "coverage_mode": "workspace; locked dependencies"
 }

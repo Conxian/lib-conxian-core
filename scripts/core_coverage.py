@@ -410,7 +410,8 @@ def _target_result(
                 "required_percent": round(float(minimum), 2),
                 "action": (
                     "add focused tests for the uncovered production paths, then rerun the report and review "
-                    "the generated missing-line details"
+                    "the uploaded HTML report at target/coverage/html and JSON summary at "
+                    "target/coverage/core-coverage.json"
                 ),
             }
         )
