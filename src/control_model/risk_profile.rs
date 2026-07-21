@@ -138,16 +138,18 @@ impl RiskDimension {
     }
 }
 
-/// The transport unit for a future approved score. It is not a probability,
-/// market score, or routing recommendation.
+/// The transport unit for a future approved score. `NormalizedPoints` always
+/// uses the exact inclusive `0..=100` scale. It is not a probability, market
+/// score, or routing recommendation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RiskScoreUnit {
     NormalizedPoints,
 }
 
-/// Bounds for every score in a profile. The initial registry uses the neutral
-/// 0..=100 transport scale without assigning any values.
+/// Bounds for every score in a profile. `NormalizedPoints` is intentionally
+/// fixed to the neutral `0..=100` transport scale without assigning any
+/// values.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RiskScoreScale {
     pub unit: RiskScoreUnit,
@@ -171,6 +173,17 @@ impl RiskScoreScale {
                 upper_bound: self.upper_bound,
             });
         }
+
+        match &self.unit {
+            RiskScoreUnit::NormalizedPoints if self.lower_bound != 0 || self.upper_bound != 100 => {
+                return Err(RiskProfileValidationError::InvalidNormalizedPointsBounds {
+                    lower_bound: self.lower_bound,
+                    upper_bound: self.upper_bound,
+                });
+            }
+            RiskScoreUnit::NormalizedPoints => {}
+        }
+
         Ok(())
     }
 }
@@ -551,6 +564,9 @@ impl RiskProfileRegistry {
         &self,
         chain: &Chain,
     ) -> Result<ResolvedRiskProfile<'_>, RiskProfileLookupError> {
+        self.validate()
+            .map_err(|source| RiskProfileLookupError::InvalidRegistry { source })?;
+
         let family = chain.family();
         let family_baseline = self.family_baseline(&family).ok_or_else(|| {
             RiskProfileLookupError::MissingFamilyBaseline {
@@ -583,12 +599,16 @@ impl ResolvedRiskProfile<'_> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RiskProfileLookupError {
+    InvalidRegistry { source: RiskProfileValidationError },
     MissingFamilyBaseline { family: ChainFamily },
 }
 
 impl fmt::Display for RiskProfileLookupError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::InvalidRegistry { source } => {
+                write!(f, "invalid risk-profile registry: {source}")
+            }
             Self::MissingFamilyBaseline { family } => {
                 write!(f, "missing risk-profile family baseline for {family:?}")
             }
@@ -596,7 +616,14 @@ impl fmt::Display for RiskProfileLookupError {
     }
 }
 
-impl std::error::Error for RiskProfileLookupError {}
+impl std::error::Error for RiskProfileLookupError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::InvalidRegistry { source } => Some(source),
+            Self::MissingFamilyBaseline { .. } => None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RiskProfileValidationError {
@@ -622,6 +649,10 @@ pub enum RiskProfileValidationError {
         effective_from: DateTime<Utc>,
     },
     InvalidScoreBounds {
+        lower_bound: u16,
+        upper_bound: u16,
+    },
+    InvalidNormalizedPointsBounds {
         lower_bound: u16,
         upper_bound: u16,
     },
@@ -696,6 +727,13 @@ impl fmt::Display for RiskProfileValidationError {
             } => write!(
                 f,
                 "risk-score lower bound {lower_bound} exceeds upper bound {upper_bound}"
+            ),
+            Self::InvalidNormalizedPointsBounds {
+                lower_bound,
+                upper_bound,
+            } => write!(
+                f,
+                "normalized_points requires exact 0..=100 bounds, found {lower_bound}..={upper_bound}"
             ),
             Self::EmptyReference { field } => write!(f, "{field} must not be empty"),
             Self::AssessedProfileRequiresAllScores { expected, actual } => write!(

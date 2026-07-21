@@ -274,7 +274,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-004 | BIP-110 Compliance Matrix | 🟠 | 🟡 In progress in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
 | CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Initial contract in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardening in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
-| CORE-007 | Chain Risk Profiles | 🟠 | ⏳ Create |
+| CORE-007 | Chain Risk Profiles | 🟠 | Implemented in [CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md) |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |
 

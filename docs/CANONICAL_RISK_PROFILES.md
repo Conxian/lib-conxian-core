@@ -44,9 +44,10 @@ additive rather than a replacement or reinterpretation of those public types.
 
 The six dimensions (`data_availability`, `settlement`, `bridge`,
 `exit_mechanism`, `operators`, and `decentralization`) preserve the vocabulary
-of the legacy `RiskAssessment` model. `RiskScoreUnit::NormalizedPoints` with a
-declared `0..=100` range is only a transport scale. It is not a probability,
-market score, health metric, or routing recommendation.
+of the legacy `RiskAssessment` model. `RiskScoreUnit::NormalizedPoints` uses the
+exact inclusive `0..=100` range, enforced by profile validation, and is only a
+transport scale. It is not a probability, market score, health metric, or
+routing recommendation.
 
 An assessed profile must include public, reviewable `RiskEvidence` references
 and a `GovernanceReference`. Evidence references must not contain secrets,

@@ -3,10 +3,10 @@ use lib_conxian_core::control_model::{
     enumerated_chain_families, enumerated_chains, AssessmentStatus, CanonicalRiskProfile, Chain,
     ChainFamily, FinalityClass, GovernanceReference, RailComplianceConstraints, RailCustodyModel,
     RailFinalitySemantics, RailMetadata, RailOperationalCapabilities, RailTrustAssumptions,
-    RiskAssessment, RiskDimension, RiskEvidence, RiskEvidenceKind, RiskProfilePosture,
-    RiskProfileRegistry, RiskProfileSchemaVersion, RiskProfileSubject, RiskProfileSupersession,
-    RiskProfileValidationError, RiskScore, RiskScoreScale, RiskScoreUnit, TrustTier,
-    VerificationClass, CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
+    RiskAssessment, RiskDimension, RiskEvidence, RiskEvidenceKind, RiskProfileLookupError,
+    RiskProfilePosture, RiskProfileRegistry, RiskProfileSchemaVersion, RiskProfileSubject,
+    RiskProfileSupersession, RiskProfileValidationError, RiskScore, RiskScoreScale, RiskScoreUnit,
+    TrustTier, VerificationClass, CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
 };
 use serde_json::json;
 
@@ -160,6 +160,29 @@ fn score_lower_and_upper_bounds_are_checked() {
 }
 
 #[test]
+fn normalized_points_requires_exact_transport_bounds() {
+    let mut profile = assessed_profile(RiskProfileSubject::chain(Chain::Bitcoin));
+    profile.score_scale.lower_bound = 1;
+    assert!(matches!(
+        profile.validate(),
+        Err(RiskProfileValidationError::InvalidNormalizedPointsBounds {
+            lower_bound: 1,
+            upper_bound: 100,
+        })
+    ));
+
+    let mut profile = assessed_profile(RiskProfileSubject::chain(Chain::Bitcoin));
+    profile.score_scale.upper_bound = 99;
+    assert!(matches!(
+        profile.validate(),
+        Err(RiskProfileValidationError::InvalidNormalizedPointsBounds {
+            lower_bound: 0,
+            upper_bound: 99,
+        })
+    ));
+}
+
+#[test]
 fn subject_family_mapping_rejects_invalid_known_pairs() {
     let profile = assessed_profile(RiskProfileSubject {
         family: ChainFamily::Evm,
@@ -198,34 +221,40 @@ fn registry_is_complete_deterministic_and_has_required_explicit_entries() {
 }
 
 #[test]
-fn resolution_prefers_chain_override_and_falls_back_to_family_baseline_only_when_absent() {
-    let family_profile = assessed_profile(RiskProfileSubject::family_baseline(
-        ChainFamily::BitcoinUtxo,
-    ));
-    let family_only = RiskProfileRegistry::new(
-        CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
-        vec![family_profile.clone()],
-    );
-    let resolved = family_only
-        .resolve(&Chain::Bitcoin)
-        .expect("family baseline should resolve");
-    assert!(!resolved.uses_chain_override());
-    assert_eq!(resolved.effective.subject, family_profile.subject);
-
+fn resolution_prefers_chain_override_in_a_valid_registry() {
     let chain_profile = RiskProfileRegistry::canonical()
         .chain_profile(&Chain::Bitcoin)
         .expect("canonical chain profile must exist")
         .clone();
-    let with_override = RiskProfileRegistry::new(
-        CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
-        vec![family_profile, chain_profile.clone()],
-    );
-    let resolved = with_override
+    let registry = RiskProfileRegistry::canonical();
+    let resolved = registry
         .resolve(&Chain::Bitcoin)
         .expect("chain override should resolve");
     assert!(resolved.uses_chain_override());
     assert_eq!(resolved.effective.subject, chain_profile.subject);
     assert_eq!(resolved.effective.status, AssessmentStatus::NotAssessed);
+}
+
+#[test]
+fn resolve_rejects_an_invalid_registry_before_returning_an_invalid_profile() {
+    let mut registry = RiskProfileRegistry::canonical();
+    let profile_index = registry
+        .profiles
+        .iter()
+        .position(|profile| profile.subject == RiskProfileSubject::chain(Chain::Bitcoin))
+        .expect("canonical registry must contain Bitcoin");
+    registry.profiles[profile_index]
+        .scores
+        .push(RiskScore::new(RiskDimension::Settlement, 1));
+
+    assert!(matches!(
+        registry.resolve(&Chain::Bitcoin),
+        Err(RiskProfileLookupError::InvalidRegistry {
+            source: RiskProfileValidationError::UnassessedProfileHasScores {
+                status: AssessmentStatus::NotAssessed
+            }
+        })
+    ));
 }
 
 #[test]
