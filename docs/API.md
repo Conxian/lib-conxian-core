@@ -190,9 +190,11 @@ fabricating success.
 
 ## 5. Deterministic Core-to-Downstream Fixtures (CON-1505)
 
-This is the initial Core-owned serialized-contract checkpoint. The first
-repository-local integration layer is owned by Core and lives under
-`tests/fixtures/` with its harness in `tests/core_to_downstream_integration.rs`:
+This is the initial Core-owned serialized-contract checkpoint. It has two
+complementary repository-local fixture layers under `tests/fixtures/`:
+
+**Legacy boundary layer.** `tests/core_to_downstream_integration.rs` consumes
+the explicit four-file boundary allowlist:
 
 - `signing_boundary.json` covers the versioned signer capability advertisement,
   `SignRequest`/`SignResponse` shapes, and unsupported chain, algorithm, and
@@ -204,6 +206,15 @@ repository-local integration layer is owned by Core and lives under
   rejection of an unsupported API version.
 - `adapter_contracts.json` covers representative `TxParams`, chain-family, trust,
   address, and fee contract metadata for local adapter doubles/implementations.
+
+**Manifest-indexed cases layer.** `tests/fixtures/manifest.json` indexes the
+`cases` arrays in `signing_success.json`, `signing_failures.json`,
+`verifier_success.json`, `verifier_failures.json`, `bip110_cases.json`, and
+`adapter_cases.json`. `tests/golden_serialization.rs` validates the manifest
+version, row-to-case mapping, outcome classification, and complete fixture
+inventory; `tests/deterministic_contracts.rs` exercises the signer, verifier,
+and BIP-110 case expectations; and `tests/adapter_conformance.rs` exercises
+the adapter DTO, typed-error, and rollout cases.
 
 Fixtures are synthetic, deterministic, and safe to commit. They contain no
 credentials, private key material, production principals, RPC data, network
@@ -221,17 +232,23 @@ Core package `lib-conxian-core` `0.3.0`, Rust `1.85`, the default feature set
 `PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
 domain constant. The known optional production SDK assumption is the existing
 `conxius-enclave-sdk` `2.0.11` declaration; this fixture layer deliberately does
-not compile or force that optional SDK path. This checkpoint does not claim
-direct compile compatibility or revision pins for `conxius-enclave-sdk`,
-`conxian-gateway`, or `conxian-nexus`. Per CON-1505, pinned downstream fan-out
-is intentionally deferred until the UCS and ProtocolVerifier APIs stabilize;
-no Gateway or Nexus pin is asserted here.
+not compile or force that optional SDK path. The current `Conxian/conxian-nexus`
+default branch is `main`, and its root `Cargo.toml` records the exact
+`lib-conxian-core` git revision pin
+`3b091d2700d840514427e4190c40d631b6d8132c`. That is a manifest-level
+compatibility reference only: it does not claim Nexus runtime adoption,
+downstream CI, or fixture consumption. No Gateway or Wallet cross-repository
+dependency is added here, and downstream CI fan-out remains deliberately
+deferred until these Core contracts stabilize.
 
 Run the focused layer locally with:
 
 ```text
 cargo fmt --all -- --check
 cargo test --locked --test core_to_downstream_integration
+cargo test --locked --test golden_serialization
+cargo test --locked --test deterministic_contracts
+cargo test --locked --test adapter_conformance
 cargo test --locked --test universal_chain_signer
 cargo test --locked --test protocol_verifier
 cargo test --locked --test bip110_preflight
