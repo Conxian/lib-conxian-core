@@ -1,18 +1,37 @@
 #!/usr/bin/env python3
-"""Validate the crates.io publishing workflow's release safety invariants."""
+"""Validate release metadata and fail-closed publication invariants.
+
+The root package version in ``Cargo.toml`` is the release authority.  This
+guard validates the local release markers used by CI and exposes small,
+stdlib-only remote checks for the tag-triggered publication workflow.  Remote
+checks deliberately distinguish an API-confirmed 404 from every other
+network/API failure so that an unavailable service can never be interpreted as
+"not published".
+"""
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable, Iterable, Mapping
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 
-DEFAULT_WORKFLOW = (
-    Path(__file__).resolve().parents[1] / ".github" / "workflows" / "crates-publish.yml"
-)
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "crates-publish.yml"
+DEFAULT_CI_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "main.yml"
+CRATES_IO_API = "https://crates.io/api/v1/crates"
+REMOTE_STATE_MISSING_EXIT = 10
+SEMVER_BODY = r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+SEMVER_RE = re.compile(rf"^{SEMVER_BODY}$")
 STEP_HEADER = re.compile(r"^(?P<indent>[ \t]*)-[ \t]+name:[ \t]*(?P<name>.*)$")
 KEY_VALUE = re.compile(
     r"^(?P<indent>[ \t]*)(?P<key>[A-Za-z0-9_-]+):(?:\s*(?P<value>.*))?$"
@@ -26,6 +45,31 @@ class Step:
     name: str
     start_line: int
     lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ReleaseMetadata:
+    """Authoritative package identity loaded from the repository."""
+
+    crate_name: str
+    version: str
+
+
+@dataclass(frozen=True)
+class RemoteCheck:
+    """A fail-closed remote lookup result."""
+
+    state: str
+    detail: str
+
+
+REMOTE_PRESENT = "present"
+REMOTE_MISSING = "missing"
+REMOTE_ERROR = "error"
+REMOTE_MISMATCH = "mismatch"
+
+
+UrlOpen = Callable[..., object]
 
 
 def _indent_width(value: str) -> int:
@@ -105,13 +149,6 @@ def _is_real_publish_step(step: Step) -> bool:
     )
 
 
-def _step_id(step: Step) -> str | None:
-    for _, value in _key_values(step.lines, "id"):
-        if re.fullmatch(r"[A-Za-z0-9_-]+", value):
-            return value
-    return None
-
-
 def _if_expression(step: Step) -> str | None:
     """Read a one-line or folded/multiline GitHub Actions if expression."""
 
@@ -160,8 +197,58 @@ def _workflow_has_dry_run_input(workflow: str) -> list[str]:
     return errors
 
 
+def _verify_release_flow(workflow: str, steps: list[Step], violations: list[str]) -> None:
+    """Check that the release workflow contains all fail-closed gates."""
+
+    required_commands = {
+        "release parity validation": r"python(?:3)?\s+scripts/verify_release_hygiene\.py\s+--tag\b",
+        "crates.io preflight": r"python(?:3)?\s+scripts/verify_release_hygiene\.py\s+--crates-io-state\b",
+        "crates.io propagation check": r"python(?:3)?\s+scripts/verify_release_hygiene\.py\s+--wait-for-crates-io\b",
+        "GitHub Release state check": r"python(?:3)?\s+scripts/verify_release_hygiene\.py\s+--github-release-state\b",
+    }
+    for description, pattern in required_commands.items():
+        if not re.search(pattern, workflow):
+            violations.append(f"release workflow is missing {description}")
+
+    expected_step_names = {
+        "Verify release parity",
+        "Check crates.io version",
+        "Verify crates.io publication",
+        "Check GitHub Release state",
+    }
+    actual_names = {step.name for step in steps}
+    for name in sorted(expected_step_names - actual_names):
+        violations.append(f"release workflow is missing the '{name}' step")
+
+    ordered_names = (
+        "Verify release parity",
+        "Check crates.io version",
+        "Publish to crates.io",
+        "Verify crates.io publication",
+        "Check GitHub Release state",
+    )
+    positions = {step.name: index for index, step in enumerate(steps)}
+    if all(name in positions for name in ordered_names):
+        if [positions[name] for name in ordered_names] != sorted(positions[name] for name in ordered_names):
+            violations.append(
+                "release workflow must validate local parity and crates.io state before release creation"
+            )
+
+    expected_ids = {
+        "Verify release parity": "release_parity",
+        "Check crates.io version": "crates_state",
+        "Publish to crates.io": "publish",
+        "Verify crates.io publication": "crates_verify",
+        "Check GitHub Release state": "github_release_state",
+    }
+    for step_name, expected_id in expected_ids.items():
+        step = _step_by_name(steps, step_name)
+        if step is not None and not any(value == expected_id for _, value in _key_values(step.lines, "id")):
+            violations.append(f"release workflow step '{step_name}' must have id '{expected_id}'")
+
+
 def verify(workflow_path: Path) -> list[str]:
-    """Return all release-hygiene violations found in the workflow."""
+    """Return all release-workflow safety violations found in ``workflow_path``."""
 
     try:
         workflow = workflow_path.read_text(encoding="utf-8")
@@ -176,6 +263,8 @@ def verify(workflow_path: Path) -> list[str]:
     violations.extend(_workflow_has_dry_run_input(workflow))
 
     steps = _steps(workflow)
+    _verify_release_flow(workflow, steps, violations)
+
     publish_step = _step_by_name(steps, "Publish to crates.io")
     real_publish_steps = [step for step in steps if _is_real_publish_step(step)]
     if not real_publish_steps:
@@ -215,28 +304,434 @@ def verify(workflow_path: Path) -> list[str]:
                 f"(step starts on line {release_step.start_line})"
             )
         else:
-            if not re.search(r"github\.event_name\s*==\s*['\"]push['\"]", release_condition):
-                violations.append(
-                    "GitHub Release creation must remain limited to push/tag executions "
-                    f"(step starts on line {release_step.start_line})"
-                )
-
-            publish_step_id = _step_id(real_publish_steps[0]) if real_publish_steps else None
-            has_success_function = bool(re.search(r"\bsuccess\s*\(\s*\)", release_condition))
-            has_publish_outcome = bool(
-                publish_step_id
-                and re.search(
-                    rf"steps\.{re.escape(publish_step_id)}\.outcome\s*==\s*['\"]success['\"]",
-                    release_condition,
-                )
+            required_conditions = (
+                r"github\.event_name\s*==\s*['\"]push['\"]",
+                r"steps\.release_parity\.outcome\s*==\s*['\"]success['\"]",
+                r"steps\.crates_verify\.outcome\s*==\s*['\"]success['\"]",
+                r"steps\.github_release_state\.outcome\s*==\s*['\"]success['\"]",
+                r"steps\.github_release_state\.outputs\.exists\s*!=\s*['\"]true['\"]",
+                r"steps\.publish\.outcome\s*==\s*['\"]success['\"]\s*\|\|\s*steps\.crates_state\.outputs\.already_published\s*==\s*['\"]true['\"]",
             )
-            if not (has_success_function or has_publish_outcome):
-                violations.append(
-                    "GitHub Release creation must require successful publication "
-                    f"(step starts on line {release_step.start_line})"
-                )
+            for condition in required_conditions:
+                if not re.search(condition, release_condition):
+                    violations.append(
+                        "GitHub Release creation must require "
+                        f"`{condition}` (step starts on line {release_step.start_line})"
+                    )
 
     return violations
+
+
+def _parse_package_field(cargo_toml: str, field: str) -> str:
+    in_package = False
+    for line in cargo_toml.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_package = stripped == "[package]"
+            continue
+        if not in_package:
+            continue
+        match = re.match(rf"^{re.escape(field)}\s*=\s*['\"]([^'\"]+)['\"]", stripped)
+        if match:
+            return match.group(1)
+    raise ValueError(f"[package].{field} is missing")
+
+
+def _parse_lock_packages(cargo_lock: str) -> list[dict[str, str]]:
+    packages: list[dict[str, str]] = []
+    blocks = re.split(r"(?m)^\[\[package\]\]\s*$", cargo_lock)[1:]
+    for block in blocks:
+        package: dict[str, str] = {}
+        for field in ("name", "version", "source"):
+            match = re.search(rf"(?m)^{field}\s*=\s*['\"]([^'\"]+)['\"]", block)
+            if match:
+                package[field] = match.group(1)
+        if "name" in package and "version" in package:
+            packages.append(package)
+    return packages
+
+
+def _normalize_version(value: str) -> str | None:
+    candidate = value.strip()
+    if candidate.startswith("v"):
+        candidate = candidate[1:]
+    return candidate if SEMVER_RE.fullmatch(candidate) else None
+
+
+def _read_file(root: Path, name: str) -> tuple[str | None, str | None]:
+    path = root / name
+    try:
+        return path.read_text(encoding="utf-8"), None
+    except OSError as error:
+        return None, f"unable to read {path}: {error}"
+
+
+def load_release_metadata(root: Path = REPOSITORY_ROOT) -> tuple[ReleaseMetadata | None, list[str]]:
+    """Load the package name/version that define the release identity."""
+
+    cargo_toml, error = _read_file(root, "Cargo.toml")
+    if error:
+        return None, [error]
+    assert cargo_toml is not None
+
+    violations: list[str] = []
+    try:
+        crate_name = _parse_package_field(cargo_toml, "name")
+    except ValueError as parse_error:
+        violations.append(str(parse_error))
+        crate_name = ""
+    try:
+        version = _parse_package_field(cargo_toml, "version")
+    except ValueError as parse_error:
+        violations.append(str(parse_error))
+        version = ""
+
+    if version and not SEMVER_RE.fullmatch(version):
+        violations.append(f"[package].version {version!r} is not a supported semantic version")
+    if violations:
+        return None, violations
+    return ReleaseMetadata(crate_name=crate_name, version=version), []
+
+
+def _check_readme_versions(readme: str, crate_name: str, expected: str) -> list[str]:
+    markers: tuple[tuple[str, re.Pattern[str]], ...] = (
+        (
+            "version badge",
+            re.compile(rf"version-(?P<version>{SEMVER_BODY})-blue\.svg"),
+        ),
+        (
+            "stable status",
+            re.compile(rf"\*\*v(?P<version>{SEMVER_BODY}) Stable\.\*\*"),
+        ),
+        (
+            "dependency examples",
+            re.compile(
+                rf"{re.escape(crate_name)}\s*=\s*(?:\{{\s*version\s*=\s*)?['\"](?P<version>{SEMVER_BODY})['\"]"
+            ),
+        ),
+    )
+    violations: list[str] = []
+    for label, pattern in markers:
+        matches = [match.group("version") for match in pattern.finditer(readme)]
+        if not matches:
+            violations.append(f"README.md is missing the current {label} marker")
+            continue
+        for marker_version in matches:
+            if marker_version != expected:
+                violations.append(
+                    f"README.md {label} {marker_version!r} does not match authoritative version {expected!r}"
+                )
+    return violations
+
+
+def _check_changelog_version(changelog: str, expected: str) -> list[str]:
+    heading_pattern = re.compile(r"(?m)^##\s+\[([^\]]+)\]")
+    for match in heading_pattern.finditer(changelog):
+        label = match.group(1).strip()
+        if label.casefold() == "unreleased":
+            continue
+        heading_version = _normalize_version(label)
+        if heading_version is None:
+            return [
+                "CHANGELOG.md latest non-Unreleased heading "
+                f"[{label}] is not a supported semantic version"
+            ]
+        if heading_version != expected:
+            return [
+                "CHANGELOG.md latest non-Unreleased heading "
+                f"[{label}] does not match authoritative version {expected!r}"
+            ]
+        return []
+    return ["CHANGELOG.md is missing a non-Unreleased version heading"]
+
+
+def check_local_parity(root: Path = REPOSITORY_ROOT) -> list[str]:
+    """Validate Cargo, README, and changelog release markers."""
+
+    metadata, violations = load_release_metadata(root)
+    if metadata is None:
+        return violations
+
+    cargo_lock, error = _read_file(root, "Cargo.lock")
+    if error:
+        violations.append(error)
+    else:
+        assert cargo_lock is not None
+        root_packages = [
+            package
+            for package in _parse_lock_packages(cargo_lock)
+            if package.get("name") == metadata.crate_name and "source" not in package
+        ]
+        if not root_packages:
+            violations.append(
+                f"Cargo.lock is missing the root package entry for {metadata.crate_name!r}"
+            )
+        elif len(root_packages) != 1:
+            violations.append(
+                f"Cargo.lock must contain exactly one root package entry for {metadata.crate_name!r}"
+            )
+        elif root_packages[0].get("version") != metadata.version:
+            violations.append(
+                "Cargo.lock root package version "
+                f"{root_packages[0].get('version')!r} does not match authoritative version {metadata.version!r}"
+            )
+
+    readme, error = _read_file(root, "README.md")
+    if error:
+        violations.append(error)
+    else:
+        assert readme is not None
+        violations.extend(_check_readme_versions(readme, metadata.crate_name, metadata.version))
+
+    changelog, error = _read_file(root, "CHANGELOG.md")
+    if error:
+        violations.append(error)
+    else:
+        assert changelog is not None
+        violations.extend(_check_changelog_version(changelog, metadata.version))
+
+    return violations
+
+
+def check_tag(tag: str, root: Path = REPOSITORY_ROOT) -> list[str]:
+    """Require a release tag to be exactly ``v{Cargo.toml version}``."""
+
+    metadata, violations = load_release_metadata(root)
+    if metadata is None:
+        return violations
+    expected_tag = f"v{metadata.version}"
+    if tag != expected_tag:
+        violations.append(
+            f"release tag {tag!r} does not match authoritative tag {expected_tag!r}"
+        )
+    return violations
+
+
+def _response_status(response: object) -> int:
+    status = getattr(response, "status", None)
+    if status is not None:
+        return int(status)
+    getcode = getattr(response, "getcode", None)
+    if callable(getcode):
+        return int(getcode())
+    return 200
+
+
+def _read_response(response: object) -> bytes:
+    reader = getattr(response, "read", None)
+    if not callable(reader):
+        raise ValueError("remote response has no readable body")
+    body = reader()
+    return body if isinstance(body, bytes) else str(body).encode("utf-8")
+
+
+def _close_response(response: object) -> None:
+    closer = getattr(response, "close", None)
+    if callable(closer):
+        closer()
+
+
+def _json_response(response: object) -> tuple[int, Mapping[str, object]]:
+    status = _response_status(response)
+    try:
+        payload = json.loads(_read_response(response).decode("utf-8"))
+    finally:
+        _close_response(response)
+    if not isinstance(payload, dict):
+        raise ValueError("remote response JSON was not an object")
+    return status, payload
+
+
+def fetch_crates_io_state(
+    crate_name: str,
+    version: str,
+    *,
+    opener: UrlOpen = urlopen,
+    timeout: float = 20.0,
+) -> RemoteCheck:
+    """Check one exact crates.io version without fail-open interpretation."""
+
+    url = f"{CRATES_IO_API}/{quote(crate_name, safe='')}/{quote(version, safe='')}"
+    request = Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "lib-conxian-core-release-guard"},
+    )
+    try:
+        response = opener(request, timeout=timeout)
+        response_status = _response_status(response)
+        if response_status != 200:
+            _close_response(response)
+            if response_status == 404:
+                return RemoteCheck(
+                    REMOTE_MISSING,
+                    f"crates.io returned confirmed HTTP 404 for {crate_name} {version}",
+                )
+            return RemoteCheck(
+                REMOTE_ERROR,
+                f"crates.io returned HTTP {response_status}; publication state is unknown",
+            )
+        status, payload = _json_response(response)
+    except HTTPError as error:
+        if error.code == 404:
+            return RemoteCheck(
+                REMOTE_MISSING,
+                f"crates.io returned confirmed HTTP 404 for {crate_name} {version}",
+            )
+        return RemoteCheck(
+            REMOTE_ERROR,
+            f"crates.io returned HTTP {error.code}; publication state is unknown",
+        )
+    except (URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as error:
+        return RemoteCheck(
+            REMOTE_ERROR,
+            f"unable to confirm crates.io state: {error.__class__.__name__}",
+        )
+
+    crate = payload.get("crate")
+    published_version = payload.get("version")
+    if not isinstance(crate, dict) or not isinstance(published_version, dict):
+        return RemoteCheck(REMOTE_ERROR, "crates.io response omitted crate/version identity")
+    if crate.get("name") != crate_name or published_version.get("num") != version:
+        return RemoteCheck(
+            REMOTE_MISMATCH,
+            "crates.io response identity did not match the expected crate/version",
+        )
+    return RemoteCheck(REMOTE_PRESENT, f"crates.io confirms {crate_name} {version}")
+
+
+def wait_for_crates_io(
+    crate_name: str,
+    version: str,
+    *,
+    attempts: int = 12,
+    delay_seconds: float = 10.0,
+    opener: UrlOpen = urlopen,
+    sleep: Callable[[float], None] = time.sleep,
+) -> RemoteCheck:
+    """Poll a bounded number of times for an exact crates.io version."""
+
+    if attempts < 1:
+        return RemoteCheck(REMOTE_ERROR, "crates.io polling attempts must be at least one")
+    for attempt in range(1, attempts + 1):
+        result = fetch_crates_io_state(crate_name, version, opener=opener)
+        if result.state != REMOTE_MISSING:
+            return result
+        if attempt < attempts:
+            sleep(delay_seconds)
+    return RemoteCheck(
+        REMOTE_ERROR,
+        f"crates.io did not confirm {crate_name} {version} after {attempts} bounded checks",
+    )
+
+
+def fetch_github_release_state(
+    repository: str,
+    tag: str,
+    token: str | None,
+    *,
+    opener: UrlOpen = urlopen,
+    timeout: float = 20.0,
+) -> RemoteCheck:
+    """Check whether the exact GitHub release tag already has a release."""
+
+    if not token:
+        return RemoteCheck(REMOTE_ERROR, "GITHUB_TOKEN is required to validate GitHub Release state")
+    if not repository or "/" not in repository:
+        return RemoteCheck(REMOTE_ERROR, "GITHUB_REPOSITORY must be in owner/repository form")
+
+    url = f"https://api.github.com/repos/{repository}/releases/tags/{quote(tag, safe='')}"
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "lib-conxian-core-release-guard",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        response = opener(request, timeout=timeout)
+        response_status = _response_status(response)
+        if response_status != 200:
+            _close_response(response)
+            if response_status == 404:
+                return RemoteCheck(REMOTE_MISSING, f"GitHub has no release for exact tag {tag}")
+            return RemoteCheck(
+                REMOTE_ERROR,
+                f"GitHub returned HTTP {response_status}; release state is unknown",
+            )
+        status, payload = _json_response(response)
+    except HTTPError as error:
+        if error.code == 404:
+            return RemoteCheck(REMOTE_MISSING, f"GitHub has no release for exact tag {tag}")
+        return RemoteCheck(REMOTE_ERROR, f"GitHub returned HTTP {error.code}; release state is unknown")
+    except (URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as error:
+        return RemoteCheck(
+            REMOTE_ERROR,
+            f"unable to confirm GitHub Release state: {error.__class__.__name__}",
+        )
+
+    if payload.get("tag_name") != tag:
+        return RemoteCheck(REMOTE_MISMATCH, "GitHub Release tag identity did not match the requested tag")
+    return RemoteCheck(REMOTE_PRESENT, f"GitHub confirms an existing release for exact tag {tag}")
+
+
+def publication_decision(result: RemoteCheck) -> str:
+    """Return the safe preflight action for a crates.io state result."""
+
+    if result.state == REMOTE_PRESENT:
+        return "skip-republish"
+    if result.state == REMOTE_MISSING:
+        return "publish"
+    return "fail-closed"
+
+
+def release_creation_allowed(
+    *,
+    local_parity_ok: bool,
+    publication_confirmed: bool,
+    github_release_state: RemoteCheck,
+) -> bool:
+    """Return whether creating a new GitHub Release is safe."""
+
+    return (
+        local_parity_ok
+        and publication_confirmed
+        and github_release_state.state == REMOTE_MISSING
+    )
+
+
+def _print_violations(violations: Iterable[str], workflow_path: Path | None = None) -> int:
+    if violations:
+        prefix = "Release hygiene verification failed"
+        if workflow_path is not None:
+            prefix += f" for {workflow_path}"
+        print(f"{prefix}:", file=sys.stderr)
+        for violation in violations:
+            print(f"- {violation}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _remote_exit(result: RemoteCheck, *, allow_missing: bool) -> int:
+    if result.state == REMOTE_PRESENT:
+        print(result.detail)
+        return 0
+    if result.state == REMOTE_MISSING and allow_missing:
+        print(result.detail)
+        return REMOTE_STATE_MISSING_EXIT
+    print(result.detail, file=sys.stderr)
+    return 1
+
+
+def _metadata_for_remote(root: Path) -> tuple[ReleaseMetadata | None, int]:
+    metadata, violations = load_release_metadata(root)
+    if metadata is None:
+        return None, _print_violations(violations)
+    parity_violations = check_local_parity(root)
+    if parity_violations:
+        return None, _print_violations(parity_violations)
+    return metadata, 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -254,16 +749,83 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="workflow to validate (legacy option form)",
     )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=REPOSITORY_ROOT,
+        help="repository root containing Cargo.toml (default: script repository root)",
+    )
+    parser.add_argument("--tag", help="validate a release tag against Cargo.toml")
+    remote_group = parser.add_mutually_exclusive_group()
+    remote_group.add_argument(
+        "--crates-io-state",
+        action="store_true",
+        help="check the exact authoritative crate/version; exit 10 only for confirmed HTTP 404",
+    )
+    remote_group.add_argument(
+        "--wait-for-crates-io",
+        action="store_true",
+        help="poll crates.io for the exact authoritative crate/version",
+    )
+    remote_group.add_argument(
+        "--github-release-state",
+        action="store_true",
+        help="check whether the exact GitHub tag already has a release",
+    )
+    parser.add_argument("--poll-attempts", type=int, default=12)
+    parser.add_argument("--poll-delay-seconds", type=float, default=10.0)
     args = parser.parse_args(argv)
+
     workflow_path = args.workflow_option or args.workflow or DEFAULT_WORKFLOW
 
-    violations = verify(workflow_path)
-    if violations:
-        print(f"Release hygiene verification failed for {workflow_path}:", file=sys.stderr)
-        for violation in violations:
-            print(f"- {violation}", file=sys.stderr)
-        return 1
+    if args.crates_io_state or args.wait_for_crates_io:
+        metadata, status = _metadata_for_remote(args.root)
+        if metadata is None:
+            return status
+        if args.wait_for_crates_io:
+            result = wait_for_crates_io(
+                metadata.crate_name,
+                metadata.version,
+                attempts=args.poll_attempts,
+                delay_seconds=args.poll_delay_seconds,
+            )
+            return _remote_exit(result, allow_missing=False)
+        result = fetch_crates_io_state(metadata.crate_name, metadata.version)
+        return _remote_exit(result, allow_missing=True)
 
+    if args.github_release_state:
+        metadata, status = _metadata_for_remote(args.root)
+        if metadata is None:
+            return status
+        if not args.tag:
+            print("--github-release-state requires --tag", file=sys.stderr)
+            return 1
+        tag_violations = check_tag(args.tag, args.root)
+        if tag_violations:
+            return _print_violations(tag_violations)
+        repository = os.environ.get("GITHUB_REPOSITORY", "")
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        result = fetch_github_release_state(repository, args.tag, token)
+        return _remote_exit(result, allow_missing=True)
+
+    violations = verify(workflow_path)
+    violations.extend(check_local_parity(args.root))
+    if args.tag:
+        violations.extend(check_tag(args.tag, args.root))
+    if workflow_path.resolve() == DEFAULT_WORKFLOW.resolve():
+        try:
+            ci_workflow = DEFAULT_CI_WORKFLOW.read_text(encoding="utf-8")
+        except OSError as error:
+            violations.append(f"Unable to read normal CI workflow {DEFAULT_CI_WORKFLOW}: {error}")
+        else:
+            if not re.search(r"python(?:3)?\s+scripts/verify_release_hygiene\.py\b", ci_workflow):
+                violations.append(
+                    "normal CI workflow must run scripts/verify_release_hygiene.py for local parity"
+                )
+
+    status = _print_violations(violations, workflow_path)
+    if status:
+        return status
     print(f"Release hygiene verification passed for {workflow_path}.")
     return 0
 

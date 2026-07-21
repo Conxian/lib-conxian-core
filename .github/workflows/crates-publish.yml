@@ -27,6 +27,11 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.10'
+
       - name: Configure sparse Cargo registry
         run: |
           mkdir -p ~/.cargo
@@ -36,13 +41,42 @@ jobs:
           index = "sparse+https://index.crates.io/"
           EOF
 
+      - name: Verify release parity
+        id: release_parity
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            python scripts/verify_release_hygiene.py --tag "$GITHUB_REF_NAME"
+          else
+            python scripts/verify_release_hygiene.py
+          fi
+
+      - name: Check crates.io version
+        id: crates_state
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        run: |
+          set +e
+          python scripts/verify_release_hygiene.py --crates-io-state
+          status=$?
+          set -e
+
+          if [[ "$status" -eq 0 ]]; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$status" -eq 10 ]]; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Could not safely determine the crates.io publication state."
+            exit "$status"
+          fi
+
       - name: Publish to crates.io (dry run)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
         run: cargo publish --dry-run
 
       - name: Publish to crates.io
         id: publish
-        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        if: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && steps.crates_state.outputs.already_published != 'true' }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
@@ -55,10 +89,57 @@ jobs:
             exit 1
           fi
 
-          cargo publish
+          if cargo publish; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            publish_status=$?
+            echo "::warning::cargo publish exited non-zero; checking the exact crates.io version before failing closed."
+            if python scripts/verify_release_hygiene.py --crates-io-state; then
+              echo "already_published=true" >> "$GITHUB_OUTPUT"
+              echo "Publication is already confirmed on crates.io; treating this run as a safe retry."
+            else
+              echo "::error::Publication did not succeed and the expected crates.io version was not confirmed."
+              exit "$publish_status"
+            fi
+          fi
+
+      - name: Verify crates.io publication
+        id: crates_verify
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        run: |
+          set -euo pipefail
+          python scripts/verify_release_hygiene.py --wait-for-crates-io --poll-attempts 12 --poll-delay-seconds 10
+
+      - name: Check GitHub Release state
+        id: github_release_state
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python scripts/verify_release_hygiene.py --github-release-state --tag "$GITHUB_REF_NAME"
+          status=$?
+          set -e
+
+          if [[ "$status" -eq 0 ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$status" -eq 10 ]]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Could not safely determine GitHub Release state."
+            exit "$status"
+          fi
 
       - name: Create GitHub Release
-        if: ${{ success() && github.event_name == 'push' && steps.publish.outcome == 'success' }}
+        if: >-
+          ${{
+            github.event_name == 'push' &&
+            steps.release_parity.outcome == 'success' &&
+            steps.crates_verify.outcome == 'success' &&
+            (steps.publish.outcome == 'success' || steps.crates_state.outputs.already_published == 'true') &&
+            steps.github_release_state.outcome == 'success' &&
+            steps.github_release_state.outputs.exists != 'true'
+          }}
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           body: |
