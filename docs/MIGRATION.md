@@ -1,18 +1,20 @@
 # Migration Guide: lib-conxian-core v0.2.x → v0.3.0
 
-> **Status**: As of v0.2.11, the deprecated Vault SDK modules have been removed from `lib-conxian-core`.
-> All Vault SDK functionality is now available in the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
+> **Current release:** `lib-conxian-core` v0.3.0 is the intentional breaking
+> verifier/API release. The v0.2.11 Vault SDK removal described below is
+> historical; all Vault SDK functionality is available in the production
+> [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
 
 ## Overview
 
 Starting with v0.2.11, `lib-conxian-core` no longer includes Vault SDK functionality (hardware-backed signing, attestation, policy enforcement, MuSig2, BitVM2). This functionality has moved to the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
 
-## ProtocolVerifier hardening (pre-publication)
+## ProtocolVerifier hardening (v0.3.0)
 
-The verifier contract introduced by #180/PR #185 is corrected before the next
-publication. This change is intentionally documented as an unreleased API
-break; crates.io/latest release remains `0.2.11` and this work does not publish
-or tag a release.
+The verifier contract introduced by #180/PR #185 is corrected in the v0.3.0
+release baseline. This is an intentional API break from the v0.2.x consumer
+contract; publication and tag creation are separate release operations and are
+not implied by this merge.
 
 ### Replace the consumer-implemented trait
 
@@ -89,6 +91,31 @@ The SHA-256 binding is a structural consistency check only. It does not replace
 signatures, attestations, light clients, or verifier-set proofs and must not be
 described as cryptographic authenticity or production readiness.
 
+## Typed verifier boundary migration in v0.3.0
+
+Update callers that used structural or boolean verifier results:
+
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` now return
+  typed `StateProofError` results. Handle `MalformedInput`,
+  `VerificationFailed`, `Unsupported { chain }`, and `Unavailable { chain }`.
+- `Bip322Bridge::verify_message_checked` returns
+  `Result<bool, Bip322VerificationError>` after strict parsing only. The
+  deprecated `verify_message` wrapper returns `false` until an audited script
+  and witness verifier is available.
+- `FrostManager` operations return `Result<..., FrostError>`; validly shaped
+  placeholder inputs return `FrostError::Unsupported` rather than fabricated
+  shares or signatures.
+- `DlcManager::verify_oracle_attestation` remains a raw equation primitive.
+  `verify_oracle_attestation_for_intent` returns typed
+  `DlcVerificationError::UnsupportedIntentBinding` for a valid tuple that does
+  not commit to the complete intent. `verify_execution_checked` returns
+  `DlcVerificationError::UnsupportedExecutionContext`, and deprecated
+  `verify_execution` fails closed.
+- RGB, enclave/AML, Fedimint status, and Stacks finality paths remain typed
+  fail-closed boundaries. Use [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
+  to distinguish malformed input, unavailable providers, unsupported
+  operations, and non-authoritative observations.
+
 ### Why This Change?
 
 1. **Separation of Concerns**: Protocol primitives vs. production SDK capabilities
@@ -105,14 +132,14 @@ Add `conxius-enclave-sdk` to your `Cargo.toml`:
 ```toml
 [dependencies]
 conxius-enclave-sdk = "2.0.11"
-lib-conxian-core = "0.2.11"
+lib-conxian-core = "0.3.0"
 ```
 
 For Vault SDK re-exports (optional):
 
 ```toml
 [dependencies]
-lib-conxian-core = { version = "0.2.11", features = ["enclave"] }
+lib-conxian-core = { version = "0.3.0", features = ["enclave"] }
 ```
 
 ### Step 2: Migrate VaultSDK Usage
@@ -296,7 +323,7 @@ These modules remain in `lib-conxian-core`:
 |---------|------|---------|
 | v0.2.10 | 2026-07-15 | SDK marked deprecated, SDK dependency added |
 | v0.2.11 | 2026-07-15 | **Breaking**: VaultSDK, Wallet, Musig2, BitVM2 removed |
-| v0.3.0 | TBD | Full release with updated architecture |
+| v0.3.0 | 2026-07-21 | Intentional breaking release with typed fail-closed verifier APIs |
 
 ## Getting Help
 

@@ -1,9 +1,38 @@
-# lib-conxian-core API Reference v0.2.12
+# lib-conxian-core API Reference v0.3.0
+
+For the deterministic, offline core-to-downstream contract fixture layer, see
+[`INTEGRATION_TESTING.md`](INTEGRATION_TESTING.md). It records the exact contract pins, fixture
+manifest policy, test-only doubles, and downstream adoption boundary.
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
 
 ## 2. Core Modules
+
+### v0.3.0 Breaking-Release Migration
+
+Version `0.3.0` intentionally changes the fail-closed verifier APIs from the
+`0.2.12` baseline:
+
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` return typed
+  `StateProofError` outcomes. Core adapters do not claim state verification or
+  static roots without an audited provider.
+- `Bip322Bridge::verify_message_checked` returns
+  `Result<bool, Bip322VerificationError>` after structural parsing only;
+  deprecated `verify_message` returns `false` until audited script and witness
+  verification exists.
+- `FrostManager` operations return `Result<..., FrostError>` and reject
+  structurally valid placeholder operations with `FrostError::Unsupported`.
+- `DlcManager::verify_oracle_attestation` remains the raw equation primitive;
+  `verify_oracle_attestation_for_intent` returns typed
+  `DlcVerificationError::UnsupportedIntentBinding` for an otherwise valid
+  tuple, and `verify_execution_checked` returns
+  `DlcVerificationError::UnsupportedExecutionContext` when its compatibility
+  inputs omit the required execution evidence. Deprecated `verify_execution`
+  fails closed.
+- RGB, enclave/AML, Fedimint status, and Stacks finality paths remain typed
+  fail-closed boundaries; see [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
+  for the authoritative evidence and compatibility matrix.
 
 ### Universal Chain Signing (`signing`)
 The platform-neutral contract for SDK and Gateway signer adapters.
@@ -180,7 +209,7 @@ preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
 The compatibility assumptions recorded by this checkpoint are limited to the
-Core package `lib-conxian-core` `0.2.12`, Rust `1.85`, the default feature set
+Core package `lib-conxian-core` `0.3.0`, Rust `1.85`, the default feature set
 (`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and

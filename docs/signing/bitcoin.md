@@ -170,9 +170,9 @@ use a real Nexus verifier backend and retain the façade's postcondition checks.
 Message verification has a separate BIP-322 caveat: `Bip322Bridge` in
 [`src/bitcoin/bip322.rs`](../../src/bitcoin/bip322.rs) now exposes
 `verify_message_checked` for strict address/base64/witness parsing, but returns
-typed `Unsupported` before script execution and signature verification. The
-deprecated boolean wrapper returns `false`; neither API is proof of
-message-signature authenticity.
+`Bip322VerificationError::Unsupported` before script execution and signature
+verification. The deprecated boolean wrapper returns `false`; neither API is
+proof of message-signature authenticity.
 
 ## Retry versus terminal semantics
 
