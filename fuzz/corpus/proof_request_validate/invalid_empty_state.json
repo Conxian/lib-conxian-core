@@ -1,0 +1,18 @@
+{
+  "chain": {
+    "family": "bitcoin_utxo",
+    "chain": null,
+    "network": "mainnet"
+  },
+  "state": {
+    "block_hash": "",
+    "block_height": 100,
+    "state_root": "synthetic-state-root"
+  },
+  "proof": {
+    "format": "header_chain",
+    "bytes": [1, 2, 3],
+    "evidence_hash": null
+  },
+  "envelope": null
+}

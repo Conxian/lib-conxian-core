@@ -28,6 +28,10 @@ This document clarifies ownership and responsibility boundaries between core lib
   see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
 - Platform-neutral protocol verification contracts and canonical proof,
   block-reference, finality, capability, provenance, and typed-error models.
+- Versioned static chain-family risk-profile metadata, public evidence and
+  governance references, and fail-closed invariants; see
+  [docs/CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md). Core does not
+  own live risk scoring or routing policy.
 
 **Constraints**:
 - Must NOT contain hardware-specific or enclave-specific implementation logic.
@@ -57,7 +61,8 @@ This document clarifies ownership and responsibility boundaries between core lib
 **Responsibilities (managed in independent repository)**:
 - Unified REST API and MCP server.
 - Protocol monitoring and TVL aggregation.
-- Compliance and risk assessment engine.
+- Live compliance/risk observation and policy inputs; static canonical risk
+  metadata remains a Core contract and is not a live market score.
 - Runtime/provider implementations that satisfy core integration traits.
 - Routing requests to external Bitcoin layers and sidechains.
 
@@ -85,6 +90,15 @@ postcondition validation cannot be bypassed. Core's evidence-binding hash
 provides structural consistency, not cryptographic authenticity or production
 readiness.
 
+### Canonical static risk-profile ownership
+
+Core owns the additive, explicitly versioned static risk-profile schema and its
+invariants. Nexus owns live proof, finality, and freshness observations.
+Gateway owns runtime routing and policy decisions. A static risk profile is
+neither a live market score nor a routing decision. Unknown, not-assessed, or
+stale metadata must fail closed in downstream consumers. See
+[`docs/CANONICAL_RISK_PROFILES.md`](CANONICAL_RISK_PROFILES.md).
+
 ### BIP-110 preflight ownership
 
 `Bip110PreflightRequest`, `Bip110PreflightResult`, and their findings are interface contracts, not
@@ -107,6 +121,42 @@ or an unknown/unsupported context fails closed.
 The contract is a downstream handoff for SDK #179, Gateway #245, and Wallet #381. This repository
 does not claim that those consumers currently enforce the contract; their builders and routing
 flows must reject non-compliant or unsupported results rather than treating them as warnings.
+
+### Deterministic core-to-downstream fixture boundary (CON-1505)
+
+Core owns the synthetic golden fixtures in `tests/fixtures/` and the
+repository-local harness in `tests/core_to_downstream_integration.rs`. The
+fixtures deserialize into the existing public signing, verifier, BIP-110, and
+adapter contract types where those types exist, then exercise deterministic
+round trips, version constants, capability gates, request/result postconditions,
+and fail-closed error shapes.
+
+The harness uses clearly named test-only doubles for successful signing and
+verification, unsupported capabilities, malformed proofs, stale evidence, and
+policy rejection. These doubles never acquire evidence, access a node, use
+credentials, hold secret material, or stand in for hardware. Adapter coverage
+is limited to representative `TxParams`, address, family, trust, and fee
+metadata; it intentionally does not assert that an adapter's placeholder proof
+method is authoritative cryptographic verification.
+
+This is the initial Core-owned serialized-contract checkpoint. Its known
+compatibility assumptions are limited to Core `0.2.12`, Rust `1.85`, the Core
+default feature set (`default = []`), signing API version `1`, BIP-110 preflight
+API version `1`, and protocol-verifier evidence binding version `1`. The
+optional `conxius-enclave-sdk` `2.0.11` reference is recorded as a dependency
+assumption only; it is not compiled by this layer, and no optional SDK or
+`--all-features` path is enabled. This checkpoint intentionally does not claim
+direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+`conxian-gateway`, or `conxian-nexus`. Pinned downstream fan-out is deferred
+until the UCS and ProtocolVerifier APIs stabilize, so no Gateway or Nexus pin is
+asserted here. Downstream repositories remain responsible for runtime
+orchestration, parsing/classification, live evidence, cryptography, persistence,
+and external side effects.
+
+Local verification starts with `cargo fmt --all -- --check` and
+`cargo test --locked --test core_to_downstream_integration`; adjacent Core tests
+and the full workspace command remain follow-up checks. Live downstream CI
+fan-out is deferred and must remain opt-in and pinned until the APIs stabilize.
 
 
 ## 6. SDK Ownership & Version Policy (CON-1178)
