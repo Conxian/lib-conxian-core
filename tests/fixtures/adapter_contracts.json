@@ -1,0 +1,43 @@
+{
+  "fixture_scope": "synthetic-structural-only",
+  "schema_version": 1,
+  "verification_scope": "structural_contract_only",
+  "contracts": [
+    {
+      "adapter": "bitcoin",
+      "chain": "bitcoin",
+      "family": "bitcoin_utxo",
+      "trust_tier": "strict",
+      "transaction": {
+        "amount_sats": 100000,
+        "destination": "bc1qfixtureaddress",
+        "data": [1, 2, 3]
+      },
+      "expected_fee": 1030
+    },
+    {
+      "adapter": "evm",
+      "chain": "ethereum",
+      "family": "evm",
+      "trust_tier": "managed",
+      "transaction": {
+        "amount_sats": 200000,
+        "destination": "0x1111111111111111111111111111111111111111",
+        "data": [0, 1]
+      },
+      "expected_fee": 21032
+    },
+    {
+      "adapter": "cosmos",
+      "chain": "cosmos_hub",
+      "family": "cosmos_ibc",
+      "trust_tier": "strict",
+      "transaction": {
+        "amount_sats": 300000,
+        "destination": "cosmos1fixtureaddressxxxxxxxxxxxxxxxxxxxx",
+        "data": [9, 9]
+      },
+      "expected_fee": 1010
+    }
+  ]
+}
