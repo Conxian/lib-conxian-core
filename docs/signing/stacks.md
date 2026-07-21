@@ -14,9 +14,12 @@ bridge relayer, or finality service.
 The current pilot is intentionally qualified: `SBTCBridge::initiate_peg_in`
 rejects only an empty Bitcoin txid and returns a placeholder Stacks address and
 timestamp, while `SBTCBridge::initiate_peg_out` rejects only an empty Stacks
-address. `SBTCBridge::get_status` returns a hardcoded `SBTCState::Finalized`
-without looking up the intent. These helper checks and outputs are not production
+address. `SBTCBridge::get_status` returns `StacksError::StatusUnavailable` for a
+non-empty intent id and never fabricates `SBTCState::Finalized` without an
+evidence provider. These helper checks and outputs are not production
 address/transaction validation or authoritative persisted state.
+The pilot status path is not hardcoded to `SBTCState::Finalized`; it remains
+unavailable without provider-backed evidence.
 
 ## Canonical target and UCS boundary
 
@@ -121,10 +124,11 @@ postconditions, provenance, trust policy, and finality. Use
 policy requires Bitcoin finality; `NonFinalState` is an explicit not-final
 outcome.
 
-`StacksNakamoto::verify_bitcoin_finality` currently returns `true` for any block
-number greater than zero. It is not a production Bitcoin light client or a
-replacement for `ProtocolVerifier`. Likewise, `SBTCState::Finalized` is a Core
-state label, not independently verified evidence.
+`StacksNakamoto::verify_bitcoin_finality_checked` returns typed malformed or
+unsupported errors because a block number alone is not a production Bitcoin
+light-client proof and is not a replacement for `ProtocolVerifier`. The
+deprecated boolean wrapper returns `false`. Likewise, `SBTCState::Finalized` is
+a Core state label, not independently verified evidence.
 
 BIP-110 applies to serialized Bitcoin peg transaction surfaces, not to Stacks
 transactions, Clarity data, or sBTC ledger state. Bitcoin-side signing and
@@ -144,8 +148,8 @@ decision.
   transition, or a finality requirement that cannot be satisfied.
 
 Operational retry classification is downstream policy owned by Gateway. Core
-does not retry signer calls, poll sBTC providers, or reinterpret the pilot's
-hardcoded `Finalized` result.
+does not retry signer calls, poll sBTC providers, or reinterpret an unavailable
+status result as `Finalized`.
 
 ## Fail-closed boundaries
 
@@ -158,8 +162,8 @@ hardcoded `Finalized` result.
   response metadata before accepting it.
 - Do not advance an intent to a settlement state solely because a txid or
   address is non-empty.
-- Do not use `StacksNakamoto::verify_bitcoin_finality` or the pilot bridge's
-  hardcoded status as production finality.
+- Do not use `StacksNakamoto::verify_bitcoin_finality` or an unavailable bridge
+  status as production finality.
 - Require a policy-compatible `ProtocolVerifier` result before a
   finality-dependent mint, burn, release, or user-visible settlement claim.
 - Do not broadcast or release funds after a failed proof, signer, quorum,
@@ -168,7 +172,7 @@ hardcoded `Finalized` result.
 ## Known gaps and unsupported behavior
 
 - `SBTCBridge` is a pilot interface with placeholder address/time behavior and
-  a hardcoded `get_status` result.
+  an unavailable `get_status` result until a provider supplies evidence.
 - Core has no production sBTC peg DTOs, signer quorum/threshold workflow,
   Stacks transaction builder, Clarity ABI/nonce validator, bridge RPC client,
   or broadcast path.
