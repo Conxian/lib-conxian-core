@@ -22,23 +22,38 @@ crate's current fuzz surface.
 Install a nightly toolchain and the pinned cargo-fuzz release used by CI:
 
 ```sh
-rustup toolchain install nightly
+rustup toolchain install nightly --profile minimal
 cargo +nightly install cargo-fuzz --locked --version 0.13.2
 ```
 
-Compile one target without running it:
+Compile the fuzz package and one target without running it:
 
 ```sh
+cargo check -p lib-conxian-core-fuzz --bins --locked
 cargo +nightly fuzz check <target>
 ```
 
 Run a bounded local smoke test. The same bounds are used by CI:
 
 ```sh
-cargo +nightly fuzz run <target> -- \
+cargo +nightly fuzz run <target> fuzz/corpus/<target> -- \
   -max_total_time=30 \
-  -rss_limit_mb=2048
+  -timeout=5 \
+  -rss_limit_mb=2048 \
+  -max_len=16384 \
+  -artifact_prefix=fuzz/artifacts/<target>/
 ```
+
+Create the target-specific artifact directory before running the command:
+
+```sh
+mkdir -p fuzz/artifacts/<target>
+```
+
+The target implementations also apply their own narrower caps where useful:
+`parse_intent` accepts at most 4 KiB, `musig2_aggregate` at most 32
+compressed keys, and `anchoring_receipt` plus `proof_request_validate` at
+most 16 KiB. The runner-level maximum remains 16 KiB for all targets.
 
 Replace `<target>` with one of `parse_intent`, `musig2_aggregate`,
 `anchoring_receipt`, or `proof_request_validate`.
@@ -47,11 +62,12 @@ Replace `<target>` with one of `parse_intent`, `musig2_aggregate`,
 
 `.github/workflows/fuzz-regression.yml` runs every target in a matrix on a
 weekly schedule and through `workflow_dispatch`. Each matrix job compiles with
-Rust nightly and runs cargo-fuzz for a maximum of 30 seconds with a 2048 MiB
-resident-memory limit. Fuzz failures are not allowed to pass via
-`continue-on-error`; a crash or other non-zero fuzz result fails its matrix
-job. Crash artifacts and target corpus files are uploaded after every run,
-including failed runs, with a 14-day retention period.
+Rust nightly and runs cargo-fuzz for a maximum of 30 seconds, a five-second
+per-input timeout, a 16 KiB generated-input limit, and a 2048 MiB resident-
+memory limit. Fuzz failures are not allowed to pass via `continue-on-error`; a
+crash, timeout, OOM, or other non-zero fuzz result fails its matrix job. Crash
+artifacts and target corpus files are uploaded after every run, including
+failed runs, with a 14-day retention period.
 
 ## Corpus review and retention
 
