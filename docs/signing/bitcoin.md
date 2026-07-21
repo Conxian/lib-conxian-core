@@ -172,7 +172,9 @@ Message verification has a separate BIP-322 caveat: `Bip322Bridge` in
 `verify_message_checked` for strict address/base64/witness parsing, but returns
 `Bip322VerificationError::Unsupported` before script execution and signature
 verification. The deprecated boolean wrapper returns `false`; neither API is
-proof of message-signature authenticity.
+proof of message-signature authenticity. Production BIP-322 signing and
+message-authenticity verification belong to `conxius-enclave-sdk`; use an
+audited downstream script/signature verifier for authenticity decisions.
 
 ## Retry versus terminal semantics
 

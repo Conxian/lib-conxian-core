@@ -267,7 +267,7 @@ Models for decentralized state persistence.
 Advanced Bitcoin-native primitives.
 - `MuSig2`: BIP327-compliant key aggregation, signature aggregation, and signing (CON-145, CON-1270).
 - `BitVM2`: Segment generation and optimistic fraud-proof verification (CON-464).
-- `Bip322Bridge::verify_message_checked`: Structural address/base64/witness validation with a typed `Unsupported` result until audited script and signature verification is available. The deprecated `verify_message` wrapper fails closed.
+- `Bip322Bridge::verify_message_checked`: Structural address/base64/witness validation with a typed `Unsupported` result until audited script and signature verification is available. The deprecated `verify_message` wrapper fails closed. Production BIP-322 signing and message-authenticity verification belong to `conxius-enclave-sdk`; Core does not provide cryptographic authenticity verification.
 
 ## 3. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:

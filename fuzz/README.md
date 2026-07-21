@@ -1,10 +1,11 @@
 # `lib-conxian-core` fuzzing
 
-This directory contains bounded `cargo-fuzz` regression targets for the
-current `lib-conxian-core` parsing, deserialization, structural-validation,
-and dependency-level aggregation surfaces. The suite is designed to find
-panics, unexpected aborts, and dependency regressions; malformed input and a
-normal validation error are expected outcomes for the validation targets.
+This directory contains the four bounded `cargo-fuzz` regression targets for
+the current `lib-conxian-core` parsing, deserialization,
+structural/policy/evidence-binding validation, and dependency-level aggregation
+surfaces. The suite is designed to find panics, unexpected aborts, and
+dependency regressions; malformed input and a normal validation error are
+expected outcomes for the validation targets.
 
 ## Target inventory and ownership
 
@@ -13,16 +14,20 @@ normal validation error are expected outcomes for the validation targets.
 | `parse_intent` | `IntentManager::resolve_fdc3_intent` with bounded UTF-8 input | Core protocol API |
 | `musig2_aggregate` | `musig2::KeyAggContext` over bounded compressed public-key input | Dependency-level aggregation through the external `musig2` crate |
 | `anchoring_receipt` | `serde_json::from_slice::<AnchoringReceipt>` with bounded bytes | Core anchoring-receipt deserialization |
-| `proof_request_validate` | `ProofVerificationRequest` JSON deserialization followed by `validate()` | Core structural and policy/request validation only |
+| `proof_request_validate` | `ProofVerificationRequest` JSON deserialization followed by structural validation and, when an optional proof envelope is present, policy and evidence-binding validation | Core protocol model; no Groth16, BitVM2, or message-signature cryptographic verification |
 
 The four targets are intentionally the complete current inventory. Obsolete
 PSBT, BIP-322, Core-owned MuSig2, and cryptographic `proof_verify` targets are
 not restored. Production MuSig2 sessions, hardware-backed signing,
 attestation, and BitVM2 operations belong to the
 [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk), not this
-crate. In particular, `proof_request_validate` does **not** perform
-cryptographic BitVM2 proof verification; it only exercises request
-deserialization plus structural, contract, and policy validation.
+crate. Production BIP-322 signing and message-authenticity verification also
+belong to `conxius-enclave-sdk`; this crate's `Bip322Bridge` is structural-only
+and must not be used as an authenticity decision. There is no PSBT fuzz target
+in this repository, and BIP-322 and BitVM2 are not current fuzz targets here.
+In particular, `proof_request_validate` does **not** perform cryptographic
+BitVM2 proof verification; it only exercises request deserialization plus
+structural, contract, policy, and evidence-binding validation.
 
 ## Bounds and prerequisites
 
@@ -113,4 +118,5 @@ under the same zero-secret standard before retaining or sharing them.
 `workflow_dispatch`. Each matrix job compiles with Rust nightly, runs the
 bounded command above, and uploads the target-specific corpus and artifact
 directories for 14 days. A crash, timeout, OOM, or other non-zero fuzz result
-fails the matrix job.
+fails the matrix job, and artifacts are uploaded after every run, including
+failed runs (`if: always()`).
