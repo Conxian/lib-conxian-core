@@ -4,7 +4,7 @@ use lib_conxian_core::adapters::{
 };
 use lib_conxian_core::control_model::{
     Bip110PreflightRequest, Bip110PreflightResult, Chain, ChainFamily, TrustTier,
-    BIP110_PREFLIGHT_API_VERSION,
+    VerificationStatus, BIP110_PREFLIGHT_API_VERSION,
 };
 use lib_conxian_core::signing::{
     SignRequest, SignResponse, SignerCapabilities, SigningError, UniversalChainSigner,
@@ -17,23 +17,38 @@ use lib_conxian_core::verifier::{
     PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION,
 };
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
-fn fixture<T: DeserializeOwned>(name: &str) -> T {
-    let contents = match name {
+fn fixture_contents(name: &str) -> &'static str {
+    match name {
         "signing_boundary.json" => include_str!("fixtures/signing_boundary.json"),
         "verifier_boundary.json" => include_str!("fixtures/verifier_boundary.json"),
         "bip110_preflight.json" => include_str!("fixtures/bip110_preflight.json"),
         "adapter_contracts.json" => include_str!("fixtures/adapter_contracts.json"),
         unknown => panic!("unknown deterministic integration fixture: {unknown}"),
-    };
+    }
+}
+
+fn fixture<T: DeserializeOwned>(name: &str) -> T {
+    let contents = fixture_contents(name);
 
     serde_json::from_str(contents)
         .unwrap_or_else(|error| panic!("fixture {name} must deserialize: {error}"))
+}
+
+fn assert_semantic_fixture_round_trip<T: Serialize>(name: &str, fixture: &T) {
+    let source: serde_json::Value = serde_json::from_str(fixture_contents(name))
+        .unwrap_or_else(|error| panic!("fixture {name} must parse as JSON: {error}"));
+    let encoded = serde_json::to_value(fixture)
+        .unwrap_or_else(|error| panic!("fixture {name} must serialize as JSON: {error}"));
+    assert_eq!(
+        encoded, source,
+        "fixture {name} changed during JSON round trip"
+    );
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,8 +85,9 @@ impl UniversalChainSigner for DeterministicFixtureSigner {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct VerifierFixture {
+    fixture_scope: String,
     evidence_binding_version: u8,
     evidence_binding_domain: String,
     validation_time: DateTime<Utc>,
@@ -87,18 +103,18 @@ struct VerifierFixture {
     policy_rejection: PolicyRejectionCase,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct VerifierRequestErrorCase<T> {
     request: T,
     expected_error: ProtocolVerifierError,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct VerifierErrorCase {
     expected_error: ProtocolVerifierError,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct PolicyRejectionCase {
     result: ProofVerificationResult,
     expected_error: ProtocolVerifierError,
@@ -382,14 +398,15 @@ struct Bip110Case {
     expected: Bip110PreflightResult,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AdapterFixture {
+    fixture_scope: String,
     schema_version: u16,
     verification_scope: String,
     contracts: Vec<AdapterContractFixture>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AdapterContractFixture {
     adapter: String,
     chain: Chain,
@@ -450,6 +467,8 @@ fn signing_fixture_round_trips_and_fail_closed_capabilities_are_deterministic() 
 #[test]
 fn verifier_fixtures_cover_success_finality_and_structural_rejection_paths() {
     let fixture: VerifierFixture = fixture("verifier_boundary.json");
+    assert_eq!(fixture.fixture_scope, "synthetic-structural-only");
+    assert_semantic_fixture_round_trip("verifier_boundary.json", &fixture);
     assert_eq!(
         fixture.evidence_binding_version,
         PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION
@@ -489,10 +508,15 @@ fn verifier_fixtures_cover_success_finality_and_structural_rejection_paths() {
         .verify_chain_state_at(&fixture.state_request, fixture.validation_time)
         .expect("fixture state proof succeeds structurally");
     assert_eq!(state, fixture.state_result);
+    assert_eq!(
+        state.verified_block.verification_status,
+        VerificationStatus::Verified
+    );
     let finality = verifier
         .verify_transaction_finality_at(&fixture.finality_request, fixture.validation_time)
         .expect("fixture finality succeeds structurally");
     assert_eq!(finality, fixture.finality_result);
+    assert_eq!(finality.verification_status, VerificationStatus::Verified);
     assert!(finality.is_final());
     assert_eq!(backend.calls(), 2);
 
@@ -619,6 +643,8 @@ fn bip110_fixture_covers_success_failure_and_version_compatibility() {
 #[test]
 fn adapter_fixtures_validate_chain_metadata_and_request_shapes_only() {
     let fixture: AdapterFixture = fixture("adapter_contracts.json");
+    assert_eq!(fixture.fixture_scope, "synthetic-structural-only");
+    assert_semantic_fixture_round_trip("adapter_contracts.json", &fixture);
     assert_eq!(fixture.schema_version, 1);
     assert_eq!(fixture.verification_scope, "structural_contract_only");
 

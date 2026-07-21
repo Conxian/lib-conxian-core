@@ -125,11 +125,17 @@ is limited to representative `TxParams`, address, family, trust, and fee
 metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
-The current compatibility pins are Core `0.2.12` with Rust `1.85`, signing API
-version `1`, BIP-110 preflight API version `1`, and protocol-verifier evidence
-binding version `1`. The existing optional `conxius-enclave-sdk` `2.0.11`
-reference is not compiled by this layer, and no optional SDK or `--all-features`
-path is enabled. Downstream repositories remain responsible for runtime
+This is the initial Core-owned serialized-contract checkpoint. Its known
+compatibility assumptions are limited to Core `0.2.12`, Rust `1.85`, the Core
+default feature set (`default = []`), signing API version `1`, BIP-110 preflight
+API version `1`, and protocol-verifier evidence binding version `1`. The
+optional `conxius-enclave-sdk` `2.0.11` reference is recorded as a dependency
+assumption only; it is not compiled by this layer, and no optional SDK or
+`--all-features` path is enabled. This checkpoint intentionally does not claim
+direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+`conxian-gateway`, or `conxian-nexus`. Pinned downstream fan-out is deferred
+until the UCS and ProtocolVerifier APIs stabilize, so no Gateway or Nexus pin is
+asserted here. Downstream repositories remain responsible for runtime
 orchestration, parsing/classification, live evidence, cryptography, persistence,
 and external side effects.
 

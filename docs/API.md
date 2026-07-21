@@ -102,7 +102,8 @@ Runtime proof acquisition, chain observation, light clients, persistence, and or
 
 ## 5. Deterministic Core-to-Downstream Fixtures (CON-1505)
 
-The first repository-local integration layer is owned by Core and lives under
+This is the initial Core-owned serialized-contract checkpoint. The first
+repository-local integration layer is owned by Core and lives under
 `tests/fixtures/` with its harness in `tests/core_to_downstream_integration.rs`:
 
 - `signing_boundary.json` covers the versioned signer capability advertisement,
@@ -124,16 +125,19 @@ not claim authoritative cryptographic verification. The stale-evidence case
 preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
-The compatibility assumptions pinned by this checkpoint are Core package
-`lib-conxian-core` `0.2.12`, Rust `1.85`,
+The compatibility assumptions recorded by this checkpoint are limited to the
+Core package `lib-conxian-core` `0.2.12`, Rust `1.85`, the default feature set
+(`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and
 `PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
-domain constant. The existing optional production SDK reference remains
-`conxius-enclave-sdk` `2.0.11`; this fixture layer uses the default feature set
-and deliberately does not compile or force that optional SDK path. No
-cross-repository revision is claimed as compatible until the downstream APIs
-stabilize.
+domain constant. The known optional production SDK assumption is the existing
+`conxius-enclave-sdk` `2.0.11` declaration; this fixture layer deliberately does
+not compile or force that optional SDK path. This checkpoint does not claim
+direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+`conxian-gateway`, or `conxian-nexus`. Per CON-1505, pinned downstream fan-out
+is intentionally deferred until the UCS and ProtocolVerifier APIs stabilize;
+no Gateway or Nexus pin is asserted here.
 
 Run the focused layer locally with:
 

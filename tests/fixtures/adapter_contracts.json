@@ -1,4 +1,5 @@
 {
+  "fixture_scope": "synthetic-structural-only",
   "schema_version": 1,
   "verification_scope": "structural_contract_only",
   "contracts": [
