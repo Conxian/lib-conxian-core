@@ -162,17 +162,17 @@ The two verifier result shapes have different obligations:
   provenance. `latest_block` is an optional latest verified block reference, and
   no state root is universally required by this flow.
 
-The `BitcoinAdapter::verify_state_proof` implementation currently returns
-`Ok(true)` and its state root is static. That adapter behavior is not production
-Bitcoin proof verification. A production flow must use a real Nexus verifier
-backend and retain the façade's postcondition checks.
+`BitcoinAdapter::verify_state_proof` has no in-Core Bitcoin proof provider: a
+non-empty input returns typed `StateProofError::Unsupported` and
+`get_state_root` returns `StateProofError::Unavailable`. A production flow must
+use a real Nexus verifier backend and retain the façade's postcondition checks.
 
 Message verification has a separate BIP-322 caveat: `Bip322Bridge` in
-[`src/bitcoin/bip322.rs`](../../src/bitcoin/bip322.rs) is structural-only in
-the current implementation. It can accept a `bc1`-prefixed address before full
-validation and ultimately checks that a witness is non-empty; it does not
-execute the constructed `to_spend`/`to_sign` script validation. Do not use it as
-proof of message-signature authenticity.
+[`src/bitcoin/bip322.rs`](../../src/bitcoin/bip322.rs) now exposes
+`verify_message_checked` for strict address/base64/witness parsing, but returns
+typed `Unsupported` before script execution and signature verification. The
+deprecated boolean wrapper returns `false`; neither API is proof of
+message-signature authenticity.
 
 ## Retry versus terminal semantics
 
@@ -202,9 +202,10 @@ verification result into success.
 - Reject any BIP-110 violation from the enabled validator and reject unknown
   transaction context instead of treating it as compliant.
 - Require a real, policy-compatible `ProtocolVerifier` result before a
-  finality-dependent action; never treat a static root or `Ok(true)` adapter
-  stub as proof.
-- Keep BIP-322 structural checks out of an authenticity decision.
+  finality-dependent action; never treat an unavailable adapter root or
+  `StateProofError::Unsupported` as proof.
+- Keep BIP-322 parsing and typed `Unsupported` outcomes out of an authenticity
+  decision.
 - Do not broadcast or persist a successful-looking flow after any failed
   precondition, verification, or finality check.
 
@@ -220,7 +221,8 @@ verification result into success.
   size contract.
 - BIP-110 activation, expiry, UTXO grandfathering, and script-context
   exceptions remain downstream parser/deployment concerns.
-- BIP-322 verification is structural-only as described above.
+- BIP-322 verification is unavailable in Core after structural parsing as
+  described above; use an audited downstream script/signature verifier.
 
 ## Source references
 
