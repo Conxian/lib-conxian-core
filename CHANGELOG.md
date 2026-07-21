@@ -70,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Phase 1 roadmap documentation without marking unrelated work complete.
 - Added the default/enclave Rust compatibility matrix and release-coordination
   guidance for `conxius-enclave-sdk 2.0.11`.
+- Added an opt-in, non-published Core/SDK v2.0.11 compatibility evidence
+  harness with explicit release features, deterministic serde/BIP-110/trust
+  boundary checks, and a CI entry point that runs automatically on pull requests
+  targeting `main` and pushes to `main`, while remaining manually dispatchable.
 
 ### Added
 - **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.

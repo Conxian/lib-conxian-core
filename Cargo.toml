@@ -50,4 +50,4 @@ default = []
 enclave = ["conxius-enclave-sdk"]
 
 [workspace]
-members = ["fuzz"]
+members = ["fuzz", "tests/sdk-compat"]

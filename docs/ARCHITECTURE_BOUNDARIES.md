@@ -173,13 +173,15 @@ metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
 This is the initial Core-owned serialized-contract checkpoint. Its known
-compatibility assumptions are limited to Core `0.3.0`, Rust `1.85`, the Core
+compatibility assumptions are limited to Core `0.3.0`, Rust `1.91`, the Core
 default feature set (`default = []`), signing API version `1`, BIP-110 preflight
 API version `1`, and protocol-verifier evidence binding version `1`. The
 optional `conxius-enclave-sdk` `2.0.11` reference is recorded as a dependency
-assumption only; it is not compiled by this layer, and no optional SDK or
-`--all-features` path is enabled. This checkpoint intentionally does not claim
-direct compile compatibility or revision pins for `conxius-enclave-sdk`,
+assumption only for this Core-only fixture layer; it is not compiled by this
+layer, and no optional SDK or `--all-features` path is enabled here. Direct
+compile compatibility evidence is provided separately by the opt-in harness
+documented in [docs/COMPATIBILITY.md](COMPATIBILITY.md). This checkpoint does
+not claim revision pins for `conxius-enclave-sdk`,
 `conxian-gateway`, or `conxian-nexus`. Pinned downstream fan-out is deferred
 until the UCS and ProtocolVerifier APIs stabilize, so no Gateway or Nexus pin is
 asserted here. Downstream repositories remain responsible for runtime
