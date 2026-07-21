@@ -44,10 +44,22 @@ The adapter accepts only an explicit 32-byte Core `DigestAlgorithm::Sha256`
 payload. It rejects Core `Message` payloads and every other digest algorithm;
 it never silently hashes or relabels caller bytes. Bitcoin signing must use
 `sign_digest_with_bip110_preflight`, which evaluates Core's canonical preflight
-validator before invoking the injected manager. Every signing entry point also
-requires a `ReplayBinding::from_envelope` value built from Core's
-`SignedEnvelopeDescriptor`; the adapter sends the resulting bound digest to the
-SDK and rejects missing or mismatched bindings before provider invocation.
+validator before invoking the injected manager. Every signing entry point now
+requires the canonical Core `SignedEnvelopeDescriptor` plus an adapter-owned
+`RequestPolicyContext`. The adapter derives the `ReplayBinding` internally and
+sends its bound digest to the SDK; callers cannot provide a binding DTO as
+signing authority.
+
+## Pre-release signing API
+
+This addon is pre-release. The signature changes in this release are
+intentional: consumers pass the canonical descriptor and request policy
+context, while the provider signs a domain-separated digest bound to the
+descriptor, original digest, network policy, and rail trust evidence. The
+returned `ReplayBinding` is response evidence with private fields and
+read-only accessors; it is not accepted by any signing method. The colon-joined
+Core `idempotency_key()` remains a display value only and is not cryptographic
+input.
 
 ## Capability matrix for SDK `2.0.11`
 
@@ -61,8 +73,8 @@ SDK and rejects missing or mismatched bindings before provider invocation.
 | Schnorr response | 64-byte compact signatures and exactly 32-byte x-only public keys | `EnclaveManager::get_public_key` accepts only a path and is algorithm-agnostic in SDK `2.0.11`; Schnorr public-key derivation therefore fails closed and never calls the getter. Signing response validation remains separate. |
 | Ed25519 response | 64-byte raw signatures; 32-byte public keys | SDK `2.0.11`'s getter is also algorithm-agnostic, so Ed25519 public-key derivation fails closed and never calls the getter. Signing response validation remains separate. |
 | Trust policy and attestation | `Strict` requires StrongBox/CloudTEE; `Managed` and `Expedient` require TEE or stronger; `ObserverOnly` never signs | Custom/deserialized policies are validated against the canonical Core floor. The report nonce must exactly match the adapter-bound SDK digest, and the complete opaque report/evidence is retained in the response. This layer performs request binding and level gating only; it does not cryptographically verify signatures, certificates, freshness, or hardware claims. |
-| Rail/network policy | Adapter-owned Core rail checks require T1/T2/T3 for `Strict`/`Managed`/`Expedient`; SDK `Network::{Mainnet,Testnet,Devnet}` has an explicit adapter wire type | Weaker observed tiers and unknown rail/network values fail closed. SDK T4 is observation-only and never authorizes signing for Core `ObserverOnly`; URLs/configuration remain outside Core. |
-| Replay/idempotency binding | `ReplayBinding` commits Core `SignedEnvelopeDescriptor` idempotency key/sequence plus the original digest to the digest sent to SDK `2.0.11` | Missing or mismatched bindings are rejected before `EnclaveManager::sign`. Duplicate detection, storage, and cache TTL remain SDK/higher-runtime-owned; this crate has no process-global replay state. |
+| Rail/network policy | Every signing call requires `RequestPolicyContext`, which maps the explicit SDK network and observed rail tier against the adapter's Core `TrustPolicy` | Weaker observed tiers, tier mismatches, ObserverOnly signing, and unknown rail/network values fail closed. SDK T4 is observation-only; URLs/configuration remain outside Core. |
+| Replay/idempotency binding | `ReplayBinding` commits descriptor fields (`publisher`, `event_id`, `sequence`, `payload_hash`, ordered commitments), the original digest, network, and rail policy using domain separation and length prefixes | The adapter derives the binding internally before `EnclaveManager::sign`; delimiter-collision descriptors therefore remain distinct. Duplicate detection, storage, and cache TTL remain SDK/higher-runtime-owned; this crate has no process-global replay state. |
 | BIP-110 | Bitcoin signing requires a compliant Core preflight result before provider invocation | Transaction parsing, byte classification, serialization, and deployment state remain downstream-owned. |
 | Manager boundary | Injected `Arc<dyn EnclaveManager>` and exact SDK request/response types | Lifecycle, unlock policy, replay storage/cache TTL, provider selection, and runtime side effects remain SDK/application-owned. |
 
@@ -101,8 +113,9 @@ The integration tests use deterministic in-process `EnclaveManager` doubles.
 They cover mapping boundaries, digest/message rejection, derivation rendering,
 malformed responses, request-bound attestation evidence retention and nonce
 rejection, trust-tier and chain/algorithm gates, rail/network downgrade and
-unknown-value rejection, replay-binding provider gating, DTO/error serde,
-Schnorr x-only enforcement, BIP-110 provider gating, and secret-safe errors.
+unknown-value rejection, descriptor-derived replay-binding collision and
+forgery resistance, DTO/error serde including unknown-field rejection, Schnorr
+x-only enforcement, BIP-110 provider gating, and secret-safe errors.
 They do not assert simulator success as production evidence.
 
 ```text

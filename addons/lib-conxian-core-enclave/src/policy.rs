@@ -58,6 +58,16 @@ impl RailTrustTier {
         }
     }
 
+    /// Returns the canonical wire label used in the bound signing digest.
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::T1 => "t1",
+            Self::T2 => "t2",
+            Self::T3 => "t3",
+            Self::T4 => "t4",
+        }
+    }
+
     const fn strength(self) -> u8 {
         match self {
             Self::T1 => 3,
@@ -81,6 +91,7 @@ impl<'de> Deserialize<'de> for RailTrustTier {
 /// Adapter-owned validated pairing of a Core trust request and an observed SDK
 /// rail tier.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct RailTrustPolicy {
     pub requested_core_tier: TrustTier,
     pub observed_sdk_tier: RailTrustTier,
@@ -215,6 +226,15 @@ impl NetworkPolicy {
             Self::Devnet => SdkNetwork::Devnet,
         }
     }
+
+    /// Returns the canonical wire label used in the bound signing digest.
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Mainnet => "mainnet",
+            Self::Testnet => "testnet",
+            Self::Devnet => "devnet",
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for NetworkPolicy {
@@ -238,5 +258,34 @@ impl TryFrom<SdkNetwork> for NetworkPolicy {
 impl From<NetworkPolicy> for SdkNetwork {
     fn from(value: NetworkPolicy) -> Self {
         value.to_sdk()
+    }
+}
+
+/// Adapter-owned policy evidence required by every signing request.
+///
+/// The network value is intentionally an explicit enum rather than a URL or
+/// runtime endpoint. Provider selection, URLs, and network I/O remain outside
+/// Core and this adapter. The rail policy carries both the Core tier requested
+/// by the caller and the observed SDK rail tier that the adapter enforces.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RequestPolicyContext {
+    pub network: NetworkPolicy,
+    pub rail: RailTrustPolicy,
+}
+
+impl RequestPolicyContext {
+    /// Creates a request context after validating its rail mapping.
+    pub fn new(network: NetworkPolicy, rail: RailTrustPolicy) -> Result<Self, AdapterError> {
+        let context = Self { network, rail };
+        context.validate()?;
+        Ok(context)
+    }
+
+    /// Validates the adapter-owned enum mappings without invoking a provider.
+    pub fn validate(&self) -> Result<(), AdapterError> {
+        self.rail.validate()?;
+        let _ = self.network.to_sdk();
+        Ok(())
     }
 }

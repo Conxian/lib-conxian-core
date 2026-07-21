@@ -11,9 +11,15 @@
 //! and does not carry a digest-algorithm discriminator. Consequently, this
 //! adapter accepts only an explicit 32-byte Core `Sha256` digest. It rejects
 //! Core messages and other digest algorithms rather than hashing or relabeling
-//! caller data. When an envelope binding is supplied, the adapter sends a
-//! domain-separated digest that commits the Core idempotency identity and the
-//! original digest; duplicate-cache storage remains outside this crate.
+//! caller data. The adapter derives a domain-separated digest from the
+//! canonical Core descriptor, the original digest, and the validated request
+//! policy context; duplicate-cache storage remains outside this crate.
+//!
+//! This addon is pre-release. Its signing APIs intentionally require the
+//! canonical Core `SignedEnvelopeDescriptor` and an adapter-owned
+//! `RequestPolicyContext`; callers no longer supply a replay-binding DTO as
+//! signing authority. Provider signatures cover the bound digest, not the
+//! original digest.
 
 pub mod policy;
 
@@ -44,11 +50,11 @@ pub const SUPPORTED_SDK_VERSION: &str = "2.0.11";
 /// Core permits at most this many structured derivation components.
 pub const MAX_DERIVATION_COMPONENTS: usize = 255;
 
-const REPLAY_BINDING_DOMAIN: &[u8] = b"lib-conxian-core-enclave/replay-binding/v1";
+const REPLAY_BINDING_DOMAIN: &[u8] = b"lib-conxian-core-enclave/replay-binding/v2";
 
 pub use policy::{
     core_trust_to_sdk_rail_tier, sdk_rail_tier_to_core_observation, sdk_rail_tier_to_observation,
-    validate_rail_trust, NetworkPolicy, RailTrustPolicy, RailTrustTier,
+    validate_rail_trust, NetworkPolicy, RailTrustPolicy, RailTrustTier, RequestPolicyContext,
 };
 
 /// A stable adapter-owned summary of the SDK's attestation level.
@@ -93,6 +99,7 @@ pub enum MinimumAttestation {
 /// attestation is rejected for every signing tier because the published SDK
 /// documents its software path as development-only.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct TrustPolicy {
     tier: TrustTier,
     minimum_attestation: Option<MinimumAttestation>,
@@ -231,6 +238,7 @@ impl TrustPolicy {
 /// binding, and trust-level gating; it does not verify report signatures,
 /// certificate chains, freshness, or hardware claims.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct AttestationEvidence {
     pub raw_report: String,
     pub level: AttestationLevel,
@@ -247,6 +255,7 @@ pub struct AttestationEvidence {
 /// complete evidence needed by a downstream SDK/provider verifier. This layer
 /// does not claim cryptographic verification of the report.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct AttestationSummary {
     pub level: AttestationLevel,
     pub device_fingerprint: String,
@@ -262,65 +271,168 @@ pub struct AttestationSummary {
 /// rejects a missing, altered, or request-mismatched identity before provider
 /// invocation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct ReplayBinding {
-    pub idempotency_key: String,
-    pub sequence: u64,
-    pub core_digest: Vec<u8>,
-    pub bound_digest: Vec<u8>,
+    publisher: String,
+    event_id: String,
+    sequence: u64,
+    payload_hash: String,
+    commitments: Vec<String>,
+    core_digest: Vec<u8>,
+    policy_context: RequestPolicyContext,
+    bound_digest: Vec<u8>,
 }
 
 impl ReplayBinding {
     /// Creates a binding from Core's canonical signed-envelope descriptor.
-    pub fn from_envelope(
+    ///
+    /// This constructor is private by design. A binding is response evidence,
+    /// never caller-supplied signing authority.
+    fn from_envelope(
         descriptor: &SignedEnvelopeDescriptor,
         core_digest: &[u8],
+        policy_context: &RequestPolicyContext,
     ) -> Result<Self, AdapterError> {
-        validate_signed_envelope_descriptor(descriptor)
-            .map_err(|_| AdapterError::InvalidReplayBinding)?;
-        if descriptor.idempotency_key().trim().is_empty() || core_digest.is_empty() {
-            return Err(AdapterError::InvalidReplayBinding);
-        }
-
-        let idempotency_key = descriptor.idempotency_key();
-        let bound_digest =
-            replay_binding_digest(&idempotency_key, descriptor.sequence, core_digest);
+        let bound_digest = replay_binding_digest(descriptor, core_digest, policy_context)?;
         Ok(Self {
-            idempotency_key,
+            publisher: descriptor.publisher.clone(),
+            event_id: descriptor.event_id.clone(),
             sequence: descriptor.sequence,
+            payload_hash: descriptor.payload_hash.clone(),
+            commitments: descriptor.commitments.clone(),
             core_digest: core_digest.to_vec(),
+            policy_context: policy_context.clone(),
             bound_digest,
         })
     }
 
-    /// Validates that this binding belongs to the request digest and has not
-    /// been altered after construction or deserialization.
-    pub fn validate_for_digest(&self, core_digest: &[u8]) -> Result<&[u8], AdapterError> {
-        if self.idempotency_key.trim().is_empty()
-            || self.core_digest != core_digest
-            || self.bound_digest
-                != replay_binding_digest(&self.idempotency_key, self.sequence, &self.core_digest)
-        {
-            return Err(AdapterError::ReplayBindingMismatch);
-        }
-        Ok(&self.bound_digest)
+    /// Returns the descriptor publisher carried as response evidence.
+    pub fn publisher(&self) -> &str {
+        &self.publisher
+    }
+
+    /// Returns the descriptor event identifier carried as response evidence.
+    pub fn event_id(&self) -> &str {
+        &self.event_id
+    }
+
+    /// Returns the descriptor sequence carried as response evidence.
+    pub const fn sequence(&self) -> u64 {
+        self.sequence
+    }
+
+    /// Returns the descriptor payload hash carried as response evidence.
+    pub fn payload_hash(&self) -> &str {
+        &self.payload_hash
+    }
+
+    /// Returns the descriptor commitments carried as response evidence.
+    pub fn commitments(&self) -> &[String] {
+        &self.commitments
+    }
+
+    /// Returns the original Core digest carried as response evidence.
+    pub fn core_digest(&self) -> &[u8] {
+        &self.core_digest
+    }
+
+    /// Returns the validated request policy context carried as response evidence.
+    pub fn policy_context(&self) -> &RequestPolicyContext {
+        &self.policy_context
+    }
+
+    /// Returns the digest actually sent to the SDK provider.
+    pub fn bound_digest(&self) -> &[u8] {
+        &self.bound_digest
+    }
+
+    /// Returns Core's display idempotency key for compatibility and logging.
+    ///
+    /// This colon-joined value is not used as cryptographic signing input.
+    pub fn idempotency_key(&self) -> String {
+        format!(
+            "{}:{}:{}",
+            self.publisher.trim(),
+            self.event_id.trim(),
+            self.sequence
+        )
     }
 }
 
 /// Computes the domain-separated digest that is sent to SDK `2.0.11`.
-pub fn replay_binding_digest(idempotency_key: &str, sequence: u64, core_digest: &[u8]) -> Vec<u8> {
+///
+/// The canonical descriptor fields are encoded independently with explicit
+/// length prefixes. This deliberately avoids Core's human-readable,
+/// colon-joined `idempotency_key()` representation, which is not injective.
+pub fn replay_binding_digest(
+    descriptor: &SignedEnvelopeDescriptor,
+    core_digest: &[u8],
+    policy_context: &RequestPolicyContext,
+) -> Result<Vec<u8>, AdapterError> {
+    validate_signed_envelope_descriptor(descriptor)
+        .map_err(|_| AdapterError::InvalidReplayBinding)?;
+    if core_digest.is_empty() {
+        return Err(AdapterError::InvalidReplayBinding);
+    }
+    policy_context.validate()?;
+
     let mut hasher = Sha256::new();
     hasher.update(REPLAY_BINDING_DOMAIN);
-    hasher.update((idempotency_key.len() as u64).to_be_bytes());
-    hasher.update(idempotency_key.as_bytes());
-    hasher.update(sequence.to_be_bytes());
-    hasher.update((core_digest.len() as u64).to_be_bytes());
-    hasher.update(core_digest);
-    hasher.finalize().to_vec()
+    append_binding_field(&mut hasher, b"publisher", descriptor.publisher.as_bytes());
+    append_binding_field(&mut hasher, b"event_id", descriptor.event_id.as_bytes());
+    append_binding_field(&mut hasher, b"sequence", &descriptor.sequence.to_be_bytes());
+    append_binding_field(
+        &mut hasher,
+        b"payload_hash",
+        descriptor.payload_hash.as_bytes(),
+    );
+    append_binding_field(
+        &mut hasher,
+        b"commitment_count",
+        &(descriptor.commitments.len() as u64).to_be_bytes(),
+    );
+    for commitment in &descriptor.commitments {
+        append_binding_field(&mut hasher, b"commitment", commitment.as_bytes());
+    }
+    append_binding_field(&mut hasher, b"core_digest", core_digest);
+    append_binding_field(
+        &mut hasher,
+        b"network",
+        policy_context.network.wire_name().as_bytes(),
+    );
+    append_binding_field(
+        &mut hasher,
+        b"requested_core_tier",
+        trust_tier_wire_name(&policy_context.rail.requested_core_tier).as_bytes(),
+    );
+    append_binding_field(
+        &mut hasher,
+        b"observed_sdk_rail_tier",
+        policy_context.rail.observed_sdk_tier.wire_name().as_bytes(),
+    );
+    Ok(hasher.finalize().to_vec())
+}
+
+fn append_binding_field(hasher: &mut Sha256, label: &[u8], value: &[u8]) {
+    hasher.update((label.len() as u64).to_be_bytes());
+    hasher.update(label);
+    hasher.update((value.len() as u64).to_be_bytes());
+    hasher.update(value);
+}
+
+fn trust_tier_wire_name(tier: &TrustTier) -> &'static str {
+    match tier {
+        TrustTier::Strict => "strict",
+        TrustTier::Managed => "managed",
+        TrustTier::Expedient => "expedient",
+        TrustTier::ObserverOnly => "observer_only",
+    }
 }
 
 /// Adapter-owned signing result. It contains public signature material only;
 /// private keys, seeds, shares, and provider handles never cross this boundary.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct EnclaveSignResponse {
     pub target: SigningTarget,
     pub algorithm: SigningAlgorithm,
@@ -359,6 +471,10 @@ pub enum AdapterError {
         requested: TrustTier,
         observed: RailTrustTier,
     },
+    PolicyContextTierMismatch {
+        adapter: TrustTier,
+        requested: TrustTier,
+    },
     UnknownNetwork {
         value: String,
     },
@@ -386,8 +502,6 @@ pub enum AdapterError {
     InvalidAttestation,
     AttestationChallengeMismatch,
     InvalidReplayBinding,
-    ReplayBindingRequired,
-    ReplayBindingMismatch,
     InsufficientAttestation {
         required: Option<MinimumAttestation>,
         observed: AttestationLevel,
@@ -417,6 +531,10 @@ impl fmt::Display for AdapterError {
             } => write!(
                 formatter,
                 "observed SDK rail tier {observed:?} is weaker than requested Core tier {requested:?}"
+            ),
+            Self::PolicyContextTierMismatch { adapter, requested } => write!(
+                formatter,
+                "request policy tier {requested:?} does not match adapter Core tier {adapter:?}"
             ),
             Self::UnknownNetwork { value } => {
                 write!(formatter, "unknown SDK network value: {value}")
@@ -470,12 +588,6 @@ impl fmt::Display for AdapterError {
             }
             Self::InvalidReplayBinding => {
                 formatter.write_str("invalid Core envelope replay binding")
-            }
-            Self::ReplayBindingRequired => {
-                formatter.write_str("Core envelope replay binding is required for signing")
-            }
-            Self::ReplayBindingMismatch => {
-                formatter.write_str("Core envelope replay binding does not match the signing request")
             }
             Self::InsufficientAttestation { required, observed } => write!(
                 formatter,
@@ -620,6 +732,11 @@ pub struct EnclaveSdkAdapter {
     trust_policy: TrustPolicy,
 }
 
+struct PreparedSigningRequest {
+    sdk_request: SdkSignRequest,
+    binding: ReplayBinding,
+}
+
 impl EnclaveSdkAdapter {
     /// Creates an adapter with a stable SDK key identifier and Core trust tier.
     pub fn new(
@@ -654,30 +771,20 @@ impl EnclaveSdkAdapter {
         &self.trust_policy
     }
 
-    /// Builds the exact SDK request after Core-side target, payload, policy,
-    /// and derivation validation. This is a request-builder boundary; it does
-    /// not invoke the provider.
+    /// Builds the exact SDK request after Core-side target, payload, descriptor,
+    /// request-policy, and derivation validation. The replay binding is derived
+    /// internally from the canonical descriptor; callers cannot provide one as
+    /// signing authority. This is a request-builder boundary and does not
+    /// invoke the provider.
     pub fn build_sdk_sign_request(
         &self,
         request: &SignRequest,
-        replay_binding: Option<&ReplayBinding>,
+        descriptor: &SignedEnvelopeDescriptor,
+        policy_context: &RequestPolicyContext,
     ) -> Result<SdkSignRequest, AdapterError> {
-        self.trust_policy.validate()?;
-        self.trust_policy.ensure_signing_allowed()?;
-        validate_chain_algorithm(&request.target, request.algorithm)?;
-
-        let core_digest = extract_sdk_digest(&request.payload)?;
-        let replay_binding = replay_binding.ok_or(AdapterError::ReplayBindingRequired)?;
-        let message_hash = replay_binding.validate_for_digest(&core_digest)?.to_vec();
-        let derivation_path = render_derivation_path(&request.derivation)?;
-
-        Ok(SdkSignRequest {
-            algorithm: to_sdk_algorithm(request.algorithm),
-            message_hash,
-            derivation_path,
-            key_id: self.key_id.clone(),
-            taproot_tweak: None,
-        })
+        Ok(self
+            .prepare_signing_request(request, descriptor, policy_context)?
+            .sdk_request)
     }
 
     /// Signs an explicit supported digest for a non-Bitcoin target.
@@ -687,15 +794,14 @@ impl EnclaveSdkAdapter {
     pub fn sign_digest(
         &self,
         request: &SignRequest,
-        replay_binding: Option<&ReplayBinding>,
+        descriptor: &SignedEnvelopeDescriptor,
+        policy_context: &RequestPolicyContext,
     ) -> Result<EnclaveSignResponse, AdapterError> {
-        self.trust_policy.validate()?;
-        self.trust_policy.ensure_signing_allowed()?;
-        validate_chain_algorithm(&request.target, request.algorithm)?;
+        self.validate_signing_request(request, policy_context)?;
         if request.target.chain == Chain::Bitcoin {
             return Err(AdapterError::PreflightRequired);
         }
-        self.sign_digest_without_preflight(request, replay_binding)
+        self.sign_digest_without_preflight(request, descriptor, policy_context)
     }
 
     /// Runs the exact Core BIP-110 preflight validator before invoking the
@@ -705,11 +811,10 @@ impl EnclaveSdkAdapter {
         &self,
         request: &SignRequest,
         preflight: &Bip110PreflightRequest,
-        replay_binding: Option<&ReplayBinding>,
+        descriptor: &SignedEnvelopeDescriptor,
+        policy_context: &RequestPolicyContext,
     ) -> Result<EnclaveSignResponse, AdapterError> {
-        self.trust_policy.validate()?;
-        self.trust_policy.ensure_signing_allowed()?;
-        validate_chain_algorithm(&request.target, request.algorithm)?;
+        self.validate_signing_request(request, policy_context)?;
         let result = validate_bip110_preflight(preflight);
         if !result.is_compliant {
             let code = result
@@ -726,7 +831,7 @@ impl EnclaveSdkAdapter {
             return Err(AdapterError::PreflightTargetMismatch);
         }
 
-        self.sign_digest_without_preflight(request, replay_binding)
+        self.sign_digest_without_preflight(request, descriptor, policy_context)
     }
 
     /// Derives a public verification key through the exact SDK manager API.
@@ -756,19 +861,65 @@ impl EnclaveSdkAdapter {
         Ok(PublicVerificationKey::new(algorithm, public_key_bytes))
     }
 
+    fn validate_signing_request(
+        &self,
+        request: &SignRequest,
+        policy_context: &RequestPolicyContext,
+    ) -> Result<(), AdapterError> {
+        self.trust_policy.validate()?;
+        self.trust_policy.ensure_signing_allowed()?;
+        policy_context.validate()?;
+        if self.trust_policy.tier() != &policy_context.rail.requested_core_tier {
+            return Err(AdapterError::PolicyContextTierMismatch {
+                adapter: self.trust_policy.tier().clone(),
+                requested: policy_context.rail.requested_core_tier.clone(),
+            });
+        }
+        let _ = policy_context.rail.signing_sdk_tier()?;
+        let _ = policy_context.network.to_sdk();
+        validate_chain_algorithm(&request.target, request.algorithm)
+    }
+
+    fn prepare_signing_request(
+        &self,
+        request: &SignRequest,
+        descriptor: &SignedEnvelopeDescriptor,
+        policy_context: &RequestPolicyContext,
+    ) -> Result<PreparedSigningRequest, AdapterError> {
+        self.validate_signing_request(request, policy_context)?;
+        let core_digest = extract_sdk_digest(&request.payload)?;
+        let binding = ReplayBinding::from_envelope(descriptor, &core_digest, policy_context)?;
+        let derivation_path = render_derivation_path(&request.derivation)?;
+        let sdk_request = SdkSignRequest {
+            algorithm: to_sdk_algorithm(request.algorithm),
+            message_hash: binding.bound_digest().to_vec(),
+            derivation_path,
+            key_id: self.key_id.clone(),
+            taproot_tweak: None,
+        };
+
+        Ok(PreparedSigningRequest {
+            sdk_request,
+            binding,
+        })
+    }
+
     fn sign_digest_without_preflight(
         &self,
         request: &SignRequest,
-        replay_binding: Option<&ReplayBinding>,
+        descriptor: &SignedEnvelopeDescriptor,
+        policy_context: &RequestPolicyContext,
     ) -> Result<EnclaveSignResponse, AdapterError> {
-        let replay_binding = replay_binding.ok_or(AdapterError::ReplayBindingRequired)?;
-        let sdk_request = self.build_sdk_sign_request(request, Some(replay_binding))?;
+        let PreparedSigningRequest {
+            sdk_request,
+            binding,
+        } = self.prepare_signing_request(request, descriptor, policy_context)?;
         let message_hash = sdk_request.message_hash.clone();
         let sdk_response = self
             .manager
             .sign(sdk_request)
             .map_err(|_| AdapterError::ProviderFailure)?;
-        self.map_sdk_response(request, &message_hash, replay_binding, sdk_response)
+        self.map_sdk_response(request, &message_hash, &binding, sdk_response)
     }
 
     fn map_sdk_response(

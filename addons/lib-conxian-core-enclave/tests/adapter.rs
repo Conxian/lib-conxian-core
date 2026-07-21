@@ -24,9 +24,10 @@ use lib_conxian_core::{
     },
 };
 use lib_conxian_core_enclave::{
-    extract_sdk_digest, from_sdk_algorithm, render_derivation_path, to_sdk_algorithm, AdapterError,
-    AttestationLevel, EnclaveSdkAdapter, MinimumAttestation, NetworkPolicy, ProviderResponseField,
-    RailTrustPolicy, RailTrustTier, ReplayBinding, TrustPolicy,
+    extract_sdk_digest, from_sdk_algorithm, render_derivation_path, replay_binding_digest,
+    to_sdk_algorithm, AdapterError, AttestationLevel, EnclaveSdkAdapter, MinimumAttestation,
+    NetworkPolicy, ProviderResponseField, RailTrustPolicy, RailTrustTier, ReplayBinding,
+    RequestPolicyContext, TrustPolicy,
 };
 
 const TEST_DIGEST: [u8; 32] = [7; 32];
@@ -41,16 +42,30 @@ fn test_envelope() -> SignedEnvelopeDescriptor {
     }
 }
 
-fn binding_for_digest(digest: &[u8]) -> ReplayBinding {
-    ReplayBinding::from_envelope(&test_envelope(), digest).unwrap()
+fn test_policy_context() -> RequestPolicyContext {
+    policy_context_for_tier(TrustTier::Managed)
 }
 
-fn test_binding() -> ReplayBinding {
-    binding_for_digest(&TEST_DIGEST)
+fn policy_context_for_tier(tier: TrustTier) -> RequestPolicyContext {
+    let observed = match tier {
+        TrustTier::Strict => RailTrustTier::T1,
+        TrustTier::Managed => RailTrustTier::T2,
+        TrustTier::Expedient => RailTrustTier::T3,
+        TrustTier::ObserverOnly => RailTrustTier::T4,
+    };
+    RequestPolicyContext::new(
+        NetworkPolicy::Testnet,
+        RailTrustPolicy::new(tier, observed).unwrap(),
+    )
+    .unwrap()
+}
+
+fn policy_context_for_adapter(adapter: &EnclaveSdkAdapter) -> RequestPolicyContext {
+    policy_context_for_tier(adapter.trust_policy().tier().clone())
 }
 
 fn bound_test_digest() -> Vec<u8> {
-    test_binding().bound_digest
+    replay_binding_digest(&test_envelope(), &TEST_DIGEST, &test_policy_context()).unwrap()
 }
 
 #[derive(Clone)]
@@ -213,16 +228,16 @@ fn build_sdk_request(
     adapter: &EnclaveSdkAdapter,
     request: &SignRequest,
 ) -> Result<SdkSignRequest, AdapterError> {
-    let binding = binding_for_digest(&extract_sdk_digest(&request.payload).unwrap());
-    adapter.build_sdk_sign_request(request, Some(&binding))
+    let policy_context = policy_context_for_adapter(adapter);
+    adapter.build_sdk_sign_request(request, &test_envelope(), &policy_context)
 }
 
 fn sign_digest(
     adapter: &EnclaveSdkAdapter,
     request: &SignRequest,
 ) -> Result<lib_conxian_core_enclave::EnclaveSignResponse, AdapterError> {
-    let binding = binding_for_digest(&extract_sdk_digest(&request.payload).unwrap());
-    adapter.sign_digest(request, Some(&binding))
+    let policy_context = policy_context_for_adapter(adapter);
+    adapter.sign_digest(request, &test_envelope(), &policy_context)
 }
 
 fn sign_digest_with_preflight(
@@ -230,8 +245,8 @@ fn sign_digest_with_preflight(
     request: &SignRequest,
     preflight: &Bip110PreflightRequest,
 ) -> Result<lib_conxian_core_enclave::EnclaveSignResponse, AdapterError> {
-    let binding = binding_for_digest(&extract_sdk_digest(&request.payload).unwrap());
-    adapter.sign_digest_with_bip110_preflight(request, preflight, Some(&binding))
+    let policy_context = policy_context_for_adapter(adapter);
+    adapter.sign_digest_with_bip110_preflight(request, preflight, &test_envelope(), &policy_context)
 }
 
 #[test]
@@ -656,10 +671,14 @@ fn trust_policy_is_conservative_and_observer_only_never_invokes_provider() {
     ));
     assert_eq!(observer_manager.calls(), 0);
 
-    let strict_tee_manager = Arc::new(RecordingManager::new(response(
+    let strict_context = policy_context_for_tier(TrustTier::Strict);
+    let strict_bound_digest =
+        replay_binding_digest(&test_envelope(), &TEST_DIGEST, &strict_context).unwrap();
+    let strict_tee_manager = Arc::new(RecordingManager::new(response_with_nonce(
         64,
         33,
         SdkAttestationLevel::TEE,
+        strict_bound_digest.clone(),
     )));
     let strict_tee = adapter(strict_tee_manager.clone(), TrustTier::Strict);
     assert!(matches!(
@@ -674,10 +693,11 @@ fn trust_policy_is_conservative_and_observer_only_never_invokes_provider() {
     ));
     assert_eq!(strict_tee_manager.calls(), 1);
 
-    let strict_hardware = Arc::new(RecordingManager::new(response(
+    let strict_hardware = Arc::new(RecordingManager::new(response_with_nonce(
         64,
         33,
         SdkAttestationLevel::StrongBox,
+        strict_bound_digest,
     )));
     let strict = adapter(strict_hardware.clone(), TrustTier::Strict);
     assert_eq!(
@@ -971,17 +991,91 @@ fn replay_binding_success_commits_core_identity_to_sdk_digest() {
     )));
     let adapter = adapter(manager.clone(), TrustTier::Managed);
     let request = digest_request(Chain::Ethereum, SigningAlgorithm::EcdsaSecp256k1);
-    let binding = test_binding();
+    let descriptor = test_envelope();
+    let policy_context = test_policy_context();
+    let expected_bound_digest =
+        replay_binding_digest(&descriptor, &TEST_DIGEST, &policy_context).unwrap();
 
-    let result = adapter.sign_digest(&request, Some(&binding)).unwrap();
+    let result = adapter
+        .sign_digest(&request, &descriptor, &policy_context)
+        .unwrap();
     assert_eq!(manager.calls(), 1);
-    assert_eq!(manager.last_request().message_hash, binding.bound_digest);
-    assert_eq!(result.replay_binding, binding);
-    assert_ne!(result.replay_binding.bound_digest, TEST_DIGEST.to_vec());
+    assert_eq!(manager.last_request().message_hash, expected_bound_digest);
+    assert_eq!(result.replay_binding.bound_digest(), expected_bound_digest);
+    assert_eq!(result.replay_binding.core_digest(), TEST_DIGEST);
+    assert_eq!(result.replay_binding.publisher(), descriptor.publisher);
+    assert_eq!(result.replay_binding.event_id(), descriptor.event_id);
+    assert_eq!(result.replay_binding.sequence(), descriptor.sequence);
+    assert_eq!(
+        result.replay_binding.payload_hash(),
+        descriptor.payload_hash
+    );
+    assert_eq!(result.replay_binding.commitments(), descriptor.commitments);
+    assert_eq!(result.replay_binding.policy_context(), &policy_context);
+    assert_ne!(result.replay_binding.bound_digest(), TEST_DIGEST);
 }
 
 #[test]
-fn replay_binding_missing_or_mismatched_rejects_before_provider_call() {
+fn replay_binding_is_unambiguous_for_delimiters_and_descriptor_mutations() {
+    let context = test_policy_context();
+    let base = test_envelope();
+
+    let delimiter_left = SignedEnvelopeDescriptor {
+        publisher: "publisher:event".to_owned(),
+        event_id: "sequence".to_owned(),
+        ..base.clone()
+    };
+    let delimiter_right = SignedEnvelopeDescriptor {
+        publisher: "publisher".to_owned(),
+        event_id: "event:sequence".to_owned(),
+        ..base.clone()
+    };
+    assert_eq!(
+        delimiter_left.idempotency_key(),
+        delimiter_right.idempotency_key()
+    );
+    assert_ne!(
+        replay_binding_digest(&delimiter_left, &TEST_DIGEST, &context).unwrap(),
+        replay_binding_digest(&delimiter_right, &TEST_DIGEST, &context).unwrap()
+    );
+
+    let mut variants = Vec::new();
+    let mut publisher = base.clone();
+    publisher.publisher.push_str("-changed");
+    variants.push(publisher);
+    let mut event = base.clone();
+    event.event_id.push_str("-changed");
+    variants.push(event);
+    let mut sequence = base.clone();
+    sequence.sequence = 0;
+    variants.push(sequence);
+    let mut payload_hash = base.clone();
+    payload_hash.payload_hash.push_str("-changed");
+    variants.push(payload_hash);
+    let mut commitments = base.clone();
+    commitments.commitments.push("commitment-2".to_owned());
+    variants.push(commitments);
+
+    let base_digest = replay_binding_digest(&base, &TEST_DIGEST, &context).unwrap();
+    for variant in variants {
+        assert_ne!(
+            replay_binding_digest(&variant, &TEST_DIGEST, &context).unwrap(),
+            base_digest
+        );
+    }
+    assert!(replay_binding_digest(
+        &SignedEnvelopeDescriptor {
+            event_id: String::new(),
+            ..base
+        },
+        &TEST_DIGEST,
+        &context,
+    )
+    .is_err());
+}
+
+#[test]
+fn invalid_descriptor_or_policy_context_rejects_before_provider_call() {
     let manager = Arc::new(RecordingManager::new(response(
         64,
         33,
@@ -989,29 +1083,93 @@ fn replay_binding_missing_or_mismatched_rejects_before_provider_call() {
     )));
     let adapter = adapter(manager.clone(), TrustTier::Managed);
     let request = digest_request(Chain::Ethereum, SigningAlgorithm::EcdsaSecp256k1);
+    let valid_descriptor = test_envelope();
+    let valid_context = test_policy_context();
 
-    assert_eq!(
-        adapter.sign_digest(&request, None).unwrap_err(),
-        AdapterError::ReplayBindingRequired
-    );
-    assert_eq!(manager.calls(), 0);
-
-    let wrong_digest_binding = binding_for_digest(&[8; 32]);
     assert_eq!(
         adapter
-            .sign_digest(&request, Some(&wrong_digest_binding))
+            .sign_digest(
+                &request,
+                &SignedEnvelopeDescriptor {
+                    event_id: String::new(),
+                    ..valid_descriptor.clone()
+                },
+                &valid_context,
+            )
             .unwrap_err(),
-        AdapterError::ReplayBindingMismatch
+        AdapterError::InvalidReplayBinding
     );
     assert_eq!(manager.calls(), 0);
 
-    let mut tampered = test_binding();
-    tampered.bound_digest[0] ^= 1;
+    let weak_context = RequestPolicyContext {
+        network: NetworkPolicy::Testnet,
+        rail: RailTrustPolicy {
+            requested_core_tier: TrustTier::Managed,
+            observed_sdk_tier: RailTrustTier::T3,
+        },
+    };
     assert_eq!(
-        adapter.sign_digest(&request, Some(&tampered)).unwrap_err(),
-        AdapterError::ReplayBindingMismatch
+        adapter
+            .sign_digest(&request, &valid_descriptor, &weak_context)
+            .unwrap_err(),
+        AdapterError::RailTrustDowngrade {
+            requested: TrustTier::Managed,
+            observed: RailTrustTier::T3,
+        }
     );
     assert_eq!(manager.calls(), 0);
+
+    let mismatched_context = RequestPolicyContext {
+        network: NetworkPolicy::Testnet,
+        rail: RailTrustPolicy {
+            requested_core_tier: TrustTier::Strict,
+            observed_sdk_tier: RailTrustTier::T1,
+        },
+    };
+    assert_eq!(
+        adapter
+            .sign_digest(&request, &valid_descriptor, &mismatched_context)
+            .unwrap_err(),
+        AdapterError::PolicyContextTierMismatch {
+            adapter: TrustTier::Managed,
+            requested: TrustTier::Strict,
+        }
+    );
+    assert_eq!(manager.calls(), 0);
+}
+
+#[test]
+fn deserialized_or_forged_binding_cannot_authorize_signing() {
+    let manager = Arc::new(RecordingManager::new(response(
+        64,
+        33,
+        SdkAttestationLevel::TEE,
+    )));
+    let adapter = adapter(manager.clone(), TrustTier::Managed);
+    let request = digest_request(Chain::Ethereum, SigningAlgorithm::EcdsaSecp256k1);
+    let descriptor = test_envelope();
+    let policy_context = test_policy_context();
+    let response = adapter
+        .sign_digest(&request, &descriptor, &policy_context)
+        .unwrap();
+
+    let mut forged_value = serde_json::to_value(&response.replay_binding).unwrap();
+    forged_value["bound_digest"][0] = serde_json::json!(0);
+    let forged: ReplayBinding = serde_json::from_value(forged_value).unwrap();
+    assert_ne!(
+        forged.bound_digest(),
+        response.replay_binding.bound_digest()
+    );
+
+    let second = adapter
+        .sign_digest(&request, &descriptor, &policy_context)
+        .unwrap();
+    assert_eq!(manager.calls(), 2);
+    assert_eq!(
+        manager.last_request().message_hash,
+        second.replay_binding.bound_digest()
+    );
+    assert_ne!(manager.last_request().message_hash, forged.bound_digest());
 }
 
 #[test]
@@ -1042,7 +1200,10 @@ fn adapter_dtos_and_representative_errors_serde_round_trip() {
         AdapterError::UnknownNetwork {
             value: "unknown".to_owned(),
         },
-        AdapterError::ReplayBindingMismatch,
+        AdapterError::PolicyContextTierMismatch {
+            adapter: TrustTier::Managed,
+            requested: TrustTier::Strict,
+        },
         AdapterError::MalformedProviderResponse(ProviderResponseField::Signature),
     ];
 
@@ -1051,4 +1212,46 @@ fn adapter_dtos_and_representative_errors_serde_round_trip() {
         let decoded: AdapterError = serde_json::from_value(encoded).unwrap();
         assert_eq!(decoded, error);
     }
+}
+
+#[test]
+fn security_policy_and_binding_dtos_reject_unknown_fields() {
+    assert!(serde_json::from_str::<TrustPolicy>(
+        r#"{"tier":"managed","minimum_attestation":"tee","extra":true}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<TrustPolicy>(
+        r#"{"tier":"future","minimum_attestation":"tee"}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<RailTrustPolicy>(
+        r#"{"requested_core_tier":"managed","observed_sdk_tier":"t2","extra":true}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<RequestPolicyContext>(
+        r#"{"network":"testnet","rail":{"requested_core_tier":"managed","observed_sdk_tier":"t2"},"extra":true}"#
+    )
+    .is_err());
+
+    let manager = Arc::new(RecordingManager::new(response(
+        64,
+        33,
+        SdkAttestationLevel::TEE,
+    )));
+    let adapter = adapter(manager, TrustTier::Managed);
+    let signed = sign_digest(
+        &adapter,
+        &digest_request(Chain::Ethereum, SigningAlgorithm::EcdsaSecp256k1),
+    )
+    .unwrap();
+
+    let mut binding = serde_json::to_value(&signed.replay_binding).unwrap();
+    binding["extra"] = serde_json::json!(true);
+    assert!(serde_json::from_value::<ReplayBinding>(binding).is_err());
+
+    let mut response = serde_json::to_value(&signed).unwrap();
+    response["extra"] = serde_json::json!(true);
+    assert!(
+        serde_json::from_value::<lib_conxian_core_enclave::EnclaveSignResponse>(response).is_err()
+    );
 }
