@@ -1,28 +1,154 @@
 # lib-conxian-core Release Process (CON-218)
 
-This document defines the mandatory steps for releasing a new version of the Vault SDK and protocol primitives.
+This document defines the fail-closed release process for the protocol
+primitives crate. The source tree may intentionally contain a version that has
+not been published yet; normal CI must still be able to validate that state.
 
-## 1. Pre-requisites
-- 100% pass rate on all workspace tests (`cargo test --workspace`).
-- No compilation warnings (`cargo check`).
-- README.md and PRD.md versions are synchronized with Cargo.toml.
-- CHANGELOG.md is updated with all notable changes since the last release.
-- Audit reports (docs/architecture/) are updated if structural changes occurred.
+## Authority and parity contract
 
-## 2. Versioning Rules
-- **Major**: Breaking changes to the Vault SDK (src/sdk_primitive.rs) or shared data models.
-- **Minor**: New protocol primitives, new Bitcoin layer support, or additive SDK features.
-- **Patch**: Security fixes, bug fixes, or non-breaking hygiene improvements.
+`Cargo.toml` `[package].version` is the authoritative candidate version. It
+must be a valid SemVer 2.0.0 value in the form
+`X.Y.Z[-prerelease][+build]`. Stable versions, prerelease versions such as
+`0.2.13-rc.1`, and build metadata such as `0.2.13+build.1` are accepted. Cargo
+accepts these forms when packaging a crate; Cargo ignores build metadata while
+resolving dependency requirements, so this process treats it as informational
+and compares the complete string exactly everywhere it is surfaced.
 
-## 3. Execution Sequence
-1. Create a release branch (e.g., `release/v0.2.6`).
-2. Update version in root `Cargo.toml`.
-3. Update `CHANGELOG.md` with the release date and summary.
-4. Run `cargo build` to update `Cargo.lock`.
-5. Submit for final review (P0 Mainnet Blocker gate).
-6. Tag the commit once merged: `git tag -a v0.2.6 -m "Release v0.2.6"`.
-7. Push tag: `git push origin v0.2.6`.
+The root `lib-conxian-core` entry in `Cargo.lock` must mirror the complete
+version. The release guard also requires the structured current-version markers
+in `README.md` to match:
 
-## 4. Post-Release
-- Publish GitHub Release artifact with tag description.
-- Notify downstream consumers (conxian-gateway, conxius-platform).
+- the Version badge;
+- the `Stable` or `Pre-release` status line; and
+- both `lib-conxian-core` dependency examples.
+
+`CHANGELOG.md` must contain an exact release heading for the candidate,
+`## [vX.Y.Z[-prerelease][+build]]` (an optional ` - YYYY-MM-DD` suffix is
+allowed). References in the `Unreleased` section and historical release
+sections do not satisfy this requirement and do not cause false positives for
+another candidate.
+
+The version remains immutable after publication. If the exact complete version
+string is present on crates.io, do not edit the source to republish it or rerun
+`cargo publish` for that version. The guard requires the registry response to
+match the complete string, including prerelease and build metadata. Fix
+release metadata through the recovery flow, or prepare a new patch version
+when the published artifact itself is wrong.
+
+## Lifecycle phases
+
+The standard-library guard, `scripts/verify_release_version.py`, has explicit
+phases:
+
+| Phase | Required state | Used by |
+| --- | --- | --- |
+| `source-only` | Cargo manifest/lock, README markers, and changelog are locally consistent. No public artifact is required. | Pull requests and `main` CI; manual dry-runs. |
+| `pre-publish` | Valid `vX.Y.Z[-prerelease][+build]` tag matches Cargo, the GitHub tag exists and points at the checked-out commit, and the exact crate version and GitHub Release are both absent. | Tag pushes and manual `publish`. |
+| `post-publish` | The exact candidate exists on crates.io and the tag/source identity still matches. A matching GitHub Release may be absent. | After successful `cargo publish`; manual `release-only` recovery. |
+| `post-release` | The exact candidate exists on crates.io and a matching, non-draft GitHub Release exists. | Final workflow verification. |
+
+The public registry and GitHub APIs are checked without printing credentials.
+The GitHub API client uses `GITHUB_API_URL` when supplied by the runner and
+falls back to `https://api.github.com`.
+After `cargo publish`, crates.io propagation is polled with a bounded retry
+window and an actionable failure message. A timeout is never treated as proof
+that publication failed.
+
+## Pre-tag checklist
+
+Run these commands from the release commit before creating a tag:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked
+python scripts/verify_release_version.py --phase source-only
+python scripts/verify_release_hygiene.py
+python -m unittest discover -s scripts/tests -p 'test_*.py'
+```
+
+Confirm that the changelog entry describes the intended release boundary, then
+create and push the tag from the exact commit that passed the checks:
+
+```bash
+VERSION=0.2.12
+TAG="v${VERSION}"
+git fetch origin main --tags
+git switch main
+git pull --ff-only origin main
+git tag -a "$TAG" -m "Release $TAG"
+git push origin "$TAG"
+```
+
+The tag-push workflow checks the tag against Cargo and the GitHub tag API before
+it can publish. Do not create a tag solely to make the public registry version
+match the source; the release decision and changelog boundary must be
+intentional.
+
+## Fail-closed execution order
+
+The publishing workflow follows this order and stops on any failed step:
+
+1. Check out the tag. For manual operations, require an explicit `release_tag`,
+   fetch that existing tag, and check it out detached.
+2. Run local source parity and SemVer-aware tag/source identity checks.
+3. In `pre-publish`, reject an existing crates.io candidate or GitHub Release.
+4. Require `CARGO_REGISTRY_TOKEN`, then run `cargo publish --locked` exactly once.
+5. In `post-publish`, poll until the exact crate version is visible.
+6. Create the GitHub Release only after registry verification. The creation
+   step is idempotent when the matching release already exists.
+7. Run `post-release` parity verification.
+
+Manual `dry-run` runs only source parity and `cargo publish --dry-run --locked`.
+Both publication paths use Cargo's lockfile exactly as checked in, so dependency
+resolution cannot silently change between verification and upload. Manual
+workflow inputs are named `mode` and `release_tag`: `mode` is required and may
+be `dry-run`, `publish`, or `release-only`; `release_tag` is optional for
+`dry-run` and must be an existing matching
+`vX.Y.Z[-prerelease][+build]` tag for the other two modes. Manual `publish`
+requires both `mode=publish` and an existing matching `release_tag`. Manual
+`release-only` requires the same tag input, verifies the already-published
+candidate, and never runs `cargo publish`.
+
+## Safe retry matrix
+
+| Failure point | Safe action | Unsafe action |
+| --- | --- | --- |
+| Before upload is accepted (for example, dry-run, missing token, or a clearly failed pre-upload request) | Fix the cause and rerun `publish` after `pre-publish` confirms the exact version is absent. | Bypassing the guard or manually creating a release. |
+| `cargo publish` fails and crates.io does not contain the exact candidate | Inspect the error, wait for any transient registry response, then rerun `publish` only after the preflight still reports absence. | Assuming every timeout means no upload occurred. |
+| Publication result is ambiguous or the workflow times out | Query crates.io for the exact version. If it exists, stop publication attempts and use `release-only`; if it is still absent, rerun preflight rather than guessing. | Repeating `cargo publish` immediately. |
+| Crates.io contains the candidate but GitHub Release creation failed | Run `release-only` with the exact existing tag. It verifies registry/tag parity, creates the release if missing, and performs post-release verification. | Rerunning `publish`; crates.io versions are immutable. |
+| GitHub Release already exists | Run `release-only` if final verification is needed; release creation is idempotent. | Deleting or recreating the published crate. |
+
+## Exact release-only recovery
+
+Use this procedure when publication succeeded but the workflow did not finish
+the GitHub Release step:
+
+1. Confirm the exact candidate is visible on crates.io and identify the tag,
+   for example `v0.2.12` or `v0.2.13-rc.1`.
+2. Start the **Publish to crates.io** workflow manually with:
+   - `mode`: `release-only`
+   - `release_tag`: the existing matching tag, for example `v0.2.12` or `v0.2.13-rc.1`
+3. If using the CLI, the equivalent invocation is:
+
+   ```bash
+   gh workflow run "Publish to crates.io" \
+     --ref main \
+     -f mode=release-only \
+     -f release_tag=v0.2.12
+   ```
+
+4. Wait for `post-publish` registry verification, idempotent release creation,
+   and `post-release` verification to pass. No crates.io token is needed for
+   this recovery path, and no publication is attempted.
+
+If the tag does not exist, points at different source, or the registry does not
+contain the exact candidate, stop and resolve that state before retrying. Do
+not force-move a published tag or change the immutable package version.
+
+## Post-release follow-up
+
+After the workflow passes, review the generated GitHub Release, notify
+downstream consumers (`conxian-gateway`, `conxius-platform`), and retain the
+workflow run as the release audit trail.
