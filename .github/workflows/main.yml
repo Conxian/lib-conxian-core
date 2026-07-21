@@ -12,6 +12,15 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        feature_set:
+          - name: default
+            cargo_args: ''
+          - name: all-features
+            cargo_args: '--all-features'
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -19,27 +28,34 @@ jobs:
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
-          toolchain: stable
+          toolchain: 1.91.0
+          components: rustfmt, clippy
 
-      - name: Lint and Format Check
-        run: |
-          cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Format Check
+        if: matrix.feature_set.name == 'default'
+        run: cargo fmt --all -- --check
 
-      - name: Build Workspace
-        run: |
-          cargo build --workspace --release --locked
+      - name: Check (${{ matrix.feature_set.name }})
+        run: cargo check --workspace --locked ${{ matrix.feature_set.cargo_args }}
 
-      - name: Test Workspace
-        run: |
-          cargo test --workspace --locked
+      - name: Test (${{ matrix.feature_set.name }})
+        run: cargo test --workspace --locked ${{ matrix.feature_set.cargo_args }}
+
+      - name: Clippy (${{ matrix.feature_set.name }})
+        run: cargo clippy --workspace --all-targets --locked ${{ matrix.feature_set.cargo_args }} -- -D warnings
+
+      - name: Build Workspace (release)
+        if: matrix.feature_set.name == 'default'
+        run: cargo build --workspace --release --locked
 
       - name: Set up Python
+        if: matrix.feature_set.name == 'default'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.10'
 
       - name: Run Validation Scripts
+        if: matrix.feature_set.name == 'default'
         run: |
           python scripts/verify_signing_docs.py
           python scripts/verify_knowledge_retention.py
@@ -66,13 +82,13 @@ jobs:
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
-          toolchain: 1.89.0
+          toolchain: 1.91.0
 
       - name: Install pinned LLVM coverage tooling
         run: |
-          rustup component add llvm-tools-preview --toolchain 1.89.0
-          cargo +1.89.0 install cargo-llvm-cov --version 0.8.7 --locked
-          cargo +1.89.0 llvm-cov --version
+          rustup component add llvm-tools-preview --toolchain 1.91.0
+          cargo +1.91.0 install cargo-llvm-cov --version 0.8.7 --locked
+          cargo +1.91.0 llvm-cov --version
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -98,21 +114,21 @@ jobs:
             echo "github_head_ref: ${GITHUB_HEAD_REF:-}"
             echo "github_base_ref: ${GITHUB_BASE_REF:-}"
             echo "source_semantics: checked-out HEAD; pull_request coverage uses GitHub's merge ref, while checked-in baselines use explicit source_sha values"
-            echo "rust_toolchain: 1.89.0"
-            echo "rustc: $(rustc +1.89.0 --version)"
-            echo "cargo: $(cargo +1.89.0 --version)"
-            echo "llvm: $(rustc +1.89.0 -vV | sed -n 's/^LLVM version: //p')"
+            echo "rust_toolchain: 1.91.0"
+            echo "rustc: $(rustc +1.91.0 --version)"
+            echo "cargo: $(cargo +1.91.0 --version)"
+            echo "llvm: $(rustc +1.91.0 -vV | sed -n 's/^LLVM version: //p')"
             echo "llvm_tools_component: llvm-tools-preview"
-            echo "cargo-llvm-cov: $(cargo +1.89.0 llvm-cov --version)"
+            echo "cargo-llvm-cov: $(cargo +1.91.0 llvm-cov --version)"
             echo "cargo_features: default features (no --all-features)"
             echo "coverage_mode: workspace; locked dependencies"
             echo "policy: config/core_coverage.json"
             echo "policy_schema_version: 1"
             echo "policy_sha256: $policy_sha256"
             echo "ignore_filename_regex: '$ignore'"
-            echo "coverage-command: cargo +1.89.0 llvm-cov --workspace --locked --ignore-filename-regex '$ignore' --json --output-path target/coverage/coverage.json"
-            echo "lcov-command: cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --lcov --output-path target/coverage/coverage.lcov"
-            echo "html-command: cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --html --output-dir target/coverage/html"
+            echo "coverage-command: cargo +1.91.0 llvm-cov --workspace --locked --ignore-filename-regex '$ignore' --json --output-path target/coverage/coverage.json"
+            echo "lcov-command: cargo +1.91.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --lcov --output-path target/coverage/coverage.lcov"
+            echo "html-command: cargo +1.91.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --html --output-dir target/coverage/html"
             echo 'evaluation-command: python scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha "$(git rev-parse HEAD)" --label "${GITHUB_REF_NAME:-unknown}" --output-json target/coverage/core-coverage.json --output-markdown target/coverage/core-coverage.md'
           } | tee target/coverage/metadata.txt
 
@@ -121,13 +137,13 @@ jobs:
           set -euo pipefail
           mkdir -p target/coverage
           ignore="$COVERAGE_IGNORE_REGEX"
-          cargo +1.89.0 llvm-cov --workspace --locked \
+          cargo +1.91.0 llvm-cov --workspace --locked \
             --ignore-filename-regex "$ignore" \
             --json --output-path target/coverage/coverage.json
-          cargo +1.89.0 llvm-cov report --locked \
+          cargo +1.91.0 llvm-cov report --locked \
             --ignore-filename-regex "$ignore" \
             --lcov --output-path target/coverage/coverage.lcov
-          cargo +1.89.0 llvm-cov report --locked \
+          cargo +1.91.0 llvm-cov report --locked \
             --ignore-filename-regex "$ignore" \
             --html --output-dir target/coverage/html
 

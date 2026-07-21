@@ -353,7 +353,7 @@ pub fn inspect_control_block(
     }
 
     let path_bytes = control_block.len() - TAPROOT_CONTROL_BLOCK_BASE_BYTES;
-    if path_bytes % TAPROOT_MERKLE_PATH_NODE_BYTES != 0 {
+    if !path_bytes.is_multiple_of(TAPROOT_MERKLE_PATH_NODE_BYTES) {
         return Err(BitcoinBoundaryError::malformed(
             BitcoinBoundaryErrorCode::ControlBlockLengthMisaligned,
         ));

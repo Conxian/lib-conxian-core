@@ -60,10 +60,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This is an intentional pre-publication API break from the old
   consumer-implemented `ProtocolVerifier` trait to the concrete façade/backend
   API. See [docs/MIGRATION.md](docs/MIGRATION.md).
+- Raised the package MSRV to Rust `1.91` so the declared support floor covers
+  the locked default and optional `enclave` dependency graphs.
+- CI now uses Rust `1.91.0` and runs locked default/all-feature checks, tests,
+  and all-target Clippy with `-D warnings`.
 
 ### Documentation
 - Updated verifier architecture, API, ownership boundaries, migration, and
   Phase 1 roadmap documentation without marking unrelated work complete.
+- Added the default/enclave Rust compatibility matrix and release-coordination
+  guidance for `conxius-enclave-sdk 2.0.11`.
 
 ### Added
 - **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.

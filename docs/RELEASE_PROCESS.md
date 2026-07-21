@@ -35,6 +35,18 @@ match the complete string, including prerelease and build metadata. Fix
 release metadata through the recovery flow, or prepare a new patch version
 when the published artifact itself is wrong.
 
+## Rust and optional enclave SDK coordination
+
+- Keep the package `rust-version`, the explicit CI toolchain, and
+  [docs/COMPATIBILITY.md](COMPATIBILITY.md) synchronized.
+- The supported floor for `lib-conxian-core` is Rust `1.91+` for both default
+  and optional `enclave` builds.
+- The optional `enclave` dependency is coordinated with
+  `conxius-enclave-sdk 2.0.11`; review its declared MSRV and resolved Alloy /
+  `ruint` graph before changing the SDK version.
+- Before publishing a release or SDK upgrade, run locked default and
+  all-feature `check`, `test`, and all-target `clippy -D warnings` coverage.
+
 ## Release preparation
 
 Prepare the source tree before choosing a release operation:
@@ -75,9 +87,12 @@ Run these commands from the release commit before creating a tag:
 
 ```bash
 cargo check --workspace
+cargo check --workspace --all-features --locked
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo clippy --workspace --all-features --all-targets --locked -- -D warnings
 cargo test --workspace --locked
+cargo test --workspace --all-features --locked
 python scripts/verify_release_version.py --phase source-only
 python scripts/verify_release_hygiene.py
 python -m unittest discover -s scripts/tests -p 'test_*.py'

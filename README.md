@@ -48,6 +48,15 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
 | [`conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Runtime orchestration and middleware |
 
+## Rust and feature compatibility
+
+This crate supports Rust `1.91+` for both the default feature set and the
+optional `enclave` feature. The enclave path uses
+`conxius-enclave-sdk 2.0.11`, whose locked dependency graph includes Alloy
+components requiring Rust `1.91`. See the
+[compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
+coverage, and SDK release-coordination requirements.
+
 ## Usage
 
 Add `lib-conxian-core` to your `Cargo.toml`:
