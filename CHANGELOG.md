@@ -5,9 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.3.0] - 2026-07-21
+
+### Breaking Changes
+- This intentional breaking release bumps `lib-conxian-core` from `0.2.12` to
+  `0.3.0`. Update callers for typed fail-closed verifier results before
+  upgrading.
+
+### Migration
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` now return
+  typed `Result<..., StateProofError>` outcomes. Handle
+  `MalformedInput`, `VerificationFailed`, `Unsupported { chain }`, and
+  `Unavailable { chain }` instead of treating structural input or static roots
+  as proof.
+- `Bip322Bridge::verify_message_checked` now returns
+  `Result<bool, Bip322VerificationError>` after strict address/base64/witness
+  parsing; the deprecated `verify_message` wrapper fails closed.
+- FROST operations now return `Result<..., FrostError>`. Structurally valid
+  inputs still return `FrostError::Unsupported` until an audited backend exists.
+- `DlcManager::verify_oracle_attestation_for_intent` returns typed
+  `DlcVerificationError` outcomes and deliberately reports
+  `UnsupportedIntentBinding` for an otherwise valid tuple whose signature does
+  not commit to the complete intent. `verify_execution_checked` reports
+  `UnsupportedExecutionContext`, while deprecated `verify_execution` returns
+  `false`.
+- RGB checked operations retain typed `RGBError` outcomes: active adapters return
+  `VerificationUnavailable`, disabled runtime returns `GatedByRolloutMode`, and
+  Shadow observations return `NonAuthoritativeShadow` rather than authorizing.
 
 ### Security
+- **CON-1509 fail-closed verifier remediation:** Removed BIP-322 prefix and
+  non-empty-witness fallbacks; adapter, Babylon, and Liquid state-proof paths
+  now return typed malformed/failed/unsupported/unavailable failures; RGB
+  Shadow mode can no longer authorize; FROST placeholders now return typed
+  unsupported; and shallow DLC execution verification is typed unsupported.
+- Preserved the real DLC oracle point-equation primitive and the typed
+  intent-binding checks, with mutation coverage. Core advertises no BIP-322
+  script types until a real audited script/witness verifier exists.
 - Hardened `ProtocolVerifier<B>` with an enforceable consumer façade and a
   lower-level `ProtocolVerifierBackend` hook contract. Capability, request,
   result, state-root, provenance, and finality postconditions now run outside

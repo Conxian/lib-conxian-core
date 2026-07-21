@@ -14,7 +14,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 ## 2. Key Metrics
 
 - **Core Tests**: 74 Passing (100% success)
-- **Open Security Issues**: 0 (All stubs resolved)
+- **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
   `musig2_aggregate`, and `proof_request_validate`. MuSig2 coverage is direct

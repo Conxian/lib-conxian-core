@@ -9,8 +9,9 @@ and contract lookup methods. It is not a `UniversalChainSigner`, a generic
 chain adapter, an RGB node, a consignment store, or a production Bitcoin
 transaction builder.
 
-`RGBStockAdapter` and `RGBSkeletonAdapter` reject empty transition/seal inputs
-and return `RGBError::VerificationUnavailable` for otherwise non-empty input.
+The v0.3.0 RGB boundary is intentionally fail-closed. `RGBStockAdapter` and
+`RGBSkeletonAdapter` reject empty transition/seal inputs and return
+`RGBError::VerificationUnavailable` for otherwise non-empty input.
 `RGBRuntime::Shadow` maps a usable observation to the explicit
 `RGBError::NonAuthoritativeShadow` outcome. Shadow mode is observational only
 and **cannot authorize production signing or settlement**. It is

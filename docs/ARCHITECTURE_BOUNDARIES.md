@@ -2,6 +2,10 @@
 
 This document clarifies ownership and responsibility boundaries between core libraries and service layers in the Conxian ecosystem.
 
+The deterministic, offline contract-test layer that exercises these boundaries is documented in
+[`docs/INTEGRATION_TESTING.md`](INTEGRATION_TESTING.md). It uses only test-local doubles and does
+not add runtime, network, persistence, or cross-repository dependencies.
+
 ## 1. Core Primitives (`lib-conxian-core`)
 
 **Role**: Root dependency for protocol-bearing components.
@@ -30,7 +34,7 @@ This document clarifies ownership and responsibility boundaries between core lib
   block-reference, finality, capability, provenance, and typed-error models.
 - Versioned static chain-family risk-profile metadata, public evidence and
   governance references, and fail-closed invariants; see
-  [docs/CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md). Core does not
+  [docs/architecture/RISK_PROFILES.md](architecture/RISK_PROFILES.md). Core does not
   own live risk scoring or routing policy.
 
 **Constraints**:
@@ -93,11 +97,12 @@ readiness.
 ### Canonical static risk-profile ownership
 
 Core owns the additive, explicitly versioned static risk-profile schema and its
-invariants. Nexus owns live proof, finality, and freshness observations.
+invariants through the artifact-backed `control_model::risk` module. Nexus owns
+live proof, finality, and freshness observations.
 Gateway owns runtime routing and policy decisions. A static risk profile is
 neither a live market score nor a routing decision. Unknown, not-assessed, or
 stale metadata must fail closed in downstream consumers. See
-[`docs/CANONICAL_RISK_PROFILES.md`](CANONICAL_RISK_PROFILES.md).
+[`docs/architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).
 
 ### BIP-110 preflight ownership
 
@@ -122,6 +127,34 @@ The contract is a downstream handoff for SDK #179, Gateway #245, and Wallet #381
 does not claim that those consumers currently enforce the contract; their builders and routing
 flows must reject non-compliant or unsupported results rather than treating them as warnings.
 
+### Canonical risk-profile ownership (CORE-007)
+
+`RiskProfile`, `RiskProfileAssessment`, `RiskScore`, `RiskTarget`, and
+`CanonicalRiskProfileSet` are static protocol metadata contracts. Core owns their schema-v1 wire
+shape, score units and bounds, explicit assessed/unknown/not-assessed states, provenance rules,
+exact six-family/23-chain coverage, chain-family mismatch validation, trust-tier policy validation,
+and the checked-in `data/risk_profiles/v1.json` artifact. The artifact is compile-time embedded;
+core performs no network I/O, provider lookup, persistence, observation, or route selection.
+
+Nexus owns live chain observation, verification evidence, and comparison of current conditions with
+the static profile. Gateway owns runtime risk assessment, policy composition, persistence, and
+routing. Wallets and adapters may validate and preserve static target/policy metadata, but must
+not treat it as a live `VerificationStatus` or silently promote a not-assessed profile to a score.
+
+The six dimensions are unitless `0..=100` strength scores. Zero is a valid assessed minimum;
+unknown and not-assessed are explicit wire states. Assessed and partially assessed profiles require
+typed evidence references (`specification`, `audit`, `research`, or `observation`); governance/change
+references are separate and cannot substitute for empirical evidence. Not-assessed profiles require
+a governance/change reference, effective date, and rationale. Public schema-v1 JSON decoding is
+fail-closed for semantic invariants and unknown/typo fields; additive fields require a schema
+decision/version bump. The legacy `RiskAssessment` and `RailMetadata` shapes remain unchanged for
+source and JSON compatibility; canonical rail metadata uses a versioned wrapper with target-family
+validation. See [`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).
+
+Profile changes are reviewable data/API changes: artifact, profile revision, set version when
+applicable, evidence/change reference, tests, documentation, and release notes must change
+together.
+
 ### Deterministic core-to-downstream fixture boundary (CON-1505)
 
 Core owns the synthetic golden fixtures in `tests/fixtures/` and the
@@ -140,7 +173,7 @@ metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
 This is the initial Core-owned serialized-contract checkpoint. Its known
-compatibility assumptions are limited to Core `0.2.12`, Rust `1.85`, the Core
+compatibility assumptions are limited to Core `0.3.0`, Rust `1.85`, the Core
 default feature set (`default = []`), signing API version `1`, BIP-110 preflight
 API version `1`, and protocol-verifier evidence binding version `1`. The
 optional `conxius-enclave-sdk` `2.0.11` reference is recorded as a dependency
