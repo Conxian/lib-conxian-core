@@ -20,7 +20,7 @@
       "kind": "liquid_proof",
       "address": "ex1fixtureaddresswithmorethanthirtyninecharacters",
       "proof": "fixture-block:fixture-root:fixture-blinded-proof",
-      "malformed_proof": "incomplete-proof",
+      "malformed_proof": "",
       "expected": {"family": "bitcoin_utxo", "chain": "liquid", "trust_tier": "managed"}
     },
     {

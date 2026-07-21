@@ -38,13 +38,106 @@ struct SigningSuccessCase {
     verification_result: VerificationResult,
 }
 
+fn normalized_manifest_outcome(file: &str, fixture: &Value, case: &Value) -> &'static str {
+    let case_id = case["id"].as_str().unwrap_or("<missing case id>");
+
+    match file {
+        "signing_success.json" => {
+            assert!(
+                case["response"].is_object() && case["verification_result"].is_object(),
+                "fixture case {case_id} in {file} must record response and verification_result"
+            );
+            "success"
+        }
+        "signing_failures.json" | "verifier_failures.json" => {
+            assert!(
+                case["expected_error"]
+                    .as_str()
+                    .is_some_and(|error| !error.is_empty()),
+                "fixture case {case_id} in {file} must record a non-empty expected_error"
+            );
+            "failure"
+        }
+        "verifier_success.json" => {
+            let result_key = match case["kind"].as_str() {
+                Some("proof") => "state_result",
+                Some("finality") => "finality_result",
+                Some(kind) => panic!(
+                    "fixture case {case_id} in {file} has unknown success result kind {kind}"
+                ),
+                None => panic!("fixture case {case_id} in {file} is missing kind"),
+            };
+            assert!(
+                fixture[result_key].is_object(),
+                "fixture case {case_id} in {file} must map to top-level {result_key}"
+            );
+            "success"
+        }
+        "bip110_cases.json" => match case["expected_compliant"].as_bool() {
+            Some(true) => "success",
+            Some(false) => "failure",
+            None => {
+                panic!("fixture case {case_id} in {file} is missing boolean expected_compliant")
+            }
+        },
+        "adapter_cases.json" => match case["kind"].as_str() {
+            Some("bitcoin_tx_params" | "babylon_staking_intent") => {
+                assert!(
+                    case["expected"].is_object(),
+                    "fixture case {case_id} in {file} must record expected adapter metadata"
+                );
+                "success"
+            }
+            Some("liquid_proof") => {
+                assert!(
+                    case["proof"].as_str().is_some() && case["malformed_proof"].as_str().is_some(),
+                    "fixture case {case_id} in {file} must record both proof and malformed_proof"
+                );
+                "mixed"
+            }
+            Some("stacks_sbtc_intent") => {
+                assert!(
+                    case["expected"].is_object(),
+                    "fixture case {case_id} in {file} must record expected sBTC outcomes"
+                );
+                "mixed"
+            }
+            Some("rgb_rollout") => {
+                let rollout_cases = case["cases"].as_array().unwrap_or_else(|| {
+                    panic!("fixture case {case_id} in {file} is missing rollout cases")
+                });
+                assert!(
+                    !rollout_cases.is_empty()
+                        && rollout_cases
+                            .iter()
+                            .all(|rollout_case| rollout_case["expected"].is_string()),
+                    "fixture case {case_id} in {file} must record expected outcomes for every rollout case"
+                );
+                "mixed"
+            }
+            Some("dlc_intent") => {
+                assert!(
+                    case["expected_attestation"].is_boolean(),
+                    "fixture case {case_id} in {file} must record expected_attestation"
+                );
+                "mixed"
+            }
+            Some(kind) => {
+                panic!("fixture case {case_id} in {file} has unknown adapter kind {kind}")
+            }
+            None => panic!("fixture case {case_id} in {file} is missing kind"),
+        },
+        other => panic!("manifest references unsupported cases fixture {other}"),
+    }
+}
+
 #[test]
 fn manifest_and_every_golden_file_are_versioned_and_accounted_for() {
     let manifest = load_manifest();
 
     assert_eq!(manifest.schema_version, 1);
     assert_eq!(manifest.package_name, "lib-conxian-core");
-    assert_eq!(manifest.package_version, "0.2.12");
+    assert_eq!(manifest.package_version, "0.3.0");
     assert_eq!(
         manifest
             .contract_versions
@@ -84,24 +177,46 @@ fn manifest_and_every_golden_file_are_versioned_and_accounted_for() {
     }
 
     let manifest_files = files.clone();
-    let mut file_case_ids = BTreeMap::new();
+    let mut file_cases = BTreeMap::new();
     for file in files {
         let value = load_fixture_value(&file);
         assert_eq!(value["schema_version"], Value::from(1));
         let cases = value["cases"]
             .as_array()
             .unwrap_or_else(|| panic!("fixture {file} is missing a cases array"));
-        let mut ids = BTreeSet::new();
+        let mut cases_by_id = BTreeMap::new();
         for case in cases {
             let id = case["id"]
                 .as_str()
                 .unwrap_or_else(|| panic!("fixture {file} contains a case without an id"));
             assert!(
-                ids.insert(id.to_string()),
+                cases_by_id.insert(id.to_string(), case.clone()).is_none(),
                 "duplicate case id {id} in {file}"
             );
         }
-        file_case_ids.insert(file, ids);
+        file_cases.insert(file, cases_by_id);
+    }
+
+    for row in &manifest.fixtures {
+        let cases = file_cases.get(&row.file).unwrap_or_else(|| {
+            panic!(
+                "manifest row {} names missing fixture file {}",
+                row.id, row.file
+            )
+        });
+        let case = cases.get(&row.id).unwrap_or_else(|| {
+            panic!(
+                "manifest row {} names file {} but that file has no case with id {}",
+                row.id, row.file, row.id
+            )
+        });
+        let normalized =
+            normalized_manifest_outcome(&row.file, &load_fixture_value(&row.file), case);
+        assert_eq!(
+            row.outcome, normalized,
+            "manifest row {} in {} classifies case {} as {}, but its normalized fixture outcome is {}",
+            row.id, row.file, row.id, row.outcome, normalized
+        );
     }
 
     let disk_files: BTreeSet<_> = fs::read_dir(support::fixtures_dir())
@@ -119,9 +234,9 @@ fn manifest_and_every_golden_file_are_versioned_and_accounted_for() {
         "every fixture file must be listed exactly once in the manifest"
     );
 
-    let loaded_ids: BTreeSet<_> = file_case_ids
+    let loaded_ids: BTreeSet<_> = file_cases
         .values()
-        .flat_map(|ids| ids.iter().cloned())
+        .flat_map(|cases| cases.keys().cloned())
         .collect();
     assert_eq!(loaded_ids, declared_ids);
 }
