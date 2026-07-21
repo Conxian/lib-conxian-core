@@ -13,7 +13,8 @@ transaction builder.
 and return `RGBError::VerificationUnavailable` for otherwise non-empty input.
 `RGBRuntime::Shadow` maps a usable observation to the explicit
 `RGBError::NonAuthoritativeShadow` outcome. Shadow mode is observational only
-and **cannot authorize production signing or settlement**.
+and **cannot authorize production signing or settlement**. It is
+non-enforcing by design.
 
 ## Canonical target and UCS boundary
 

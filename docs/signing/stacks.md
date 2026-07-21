@@ -18,6 +18,8 @@ address. `SBTCBridge::get_status` returns `StacksError::StatusUnavailable` for a
 non-empty intent id and never fabricates `SBTCState::Finalized` without an
 evidence provider. These helper checks and outputs are not production
 address/transaction validation or authoritative persisted state.
+The pilot status path is not hardcoded to `SBTCState::Finalized`; it remains
+unavailable without provider-backed evidence.
 
 ## Canonical target and UCS boundary
 

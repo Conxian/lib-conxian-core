@@ -12,6 +12,9 @@ staking/delegation/unbonding or withdrawal transactions, own EOTS keys, verify
 EOTS signatures in production, run a light client, or broadcast Bitcoin
 transactions.
 
+The `BabylonAdapter` support described here is structural only; it does not
+establish BTC-header, checkpoint, or EOTS verification.
+
 `BabylonAdapter::verify_state_proof` does not implement BTC header, height,
 EOTS signature, checkpoint, or cryptographic commitment verification. It returns
 typed `StateProofError::MalformedInput` for empty evidence and
@@ -89,8 +92,10 @@ and EOTS proof production are outside the Core signer contract.
 ## Verification and finality boundary
 
 BTC headers, chain history, checkpoint binding, and EOTS proof verification are
-Nexus responsibilities. Gateway consumes them through a `ProtocolVerifier`
-façade backed by a concrete Nexus verifier. The façade checks advertised chain,
+Nexus responsibilities. The Babylon adapter's proof boundary is structural
+only, so it cannot substitute for those checks. Gateway consumes them through
+a `ProtocolVerifier` façade backed by a concrete Nexus verifier. The façade
+checks advertised chain,
 proof format, state/block identity, evidence binding, provenance, trust tier,
 verification class, finality class, and verifier identity. It does not implement
 the EOTS cryptographic verifier.

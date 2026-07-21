@@ -19,6 +19,8 @@ complete intent. `DlcManager::verify_execution_checked` returns typed
 unsupported because its compatibility inputs omit the nonce, outcome, expiry,
 CET, and transaction-binding evidence; the deprecated boolean wrapper returns
 `false`.
+The deprecated `DlcManager::verify_execution` wrapper is compatibility-only and
+also cannot authorize DLC execution.
 
 `DlcManager::create_intent` is construction-only: it copies the supplied oracle
 key bytes, collateral, outcome hash, and expiry into a `DlcIntent`. It does not

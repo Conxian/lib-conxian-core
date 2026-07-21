@@ -10,6 +10,9 @@ unsupported proof boundary. It does not contain Liquid peg DTOs, federation
 quorum/signing logic, an Elements transaction builder, confidential-asset proof
 verification, RPC clients, or a production Liquid signer.
 
+The adapter's address checks are structural only and do not establish a valid
+Liquid transaction, peg, federation quorum, or finality result.
+
 Liquid sidechain state and a Bitcoin L1 peg transaction are different signing
 surfaces. The flow must not use a Liquid address or sidechain proof as a proxy
 for Bitcoin peg finality.
