@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "contract": "bip110_preflight",
+  "api_version": 1,
+  "cases": [
+    {
+      "id": "bip110.boundaries",
+      "request": {
+        "api_version": 1,
+        "phase": "post_serialization",
+        "context": "bitcoin_transaction",
+        "measurements": {
+          "source": "serialized_transaction",
+          "pushdata_sizes_bytes": [256],
+          "op_return_script_pubkey_sizes_bytes": [83],
+          "non_op_return_script_pubkey_sizes_bytes": [34],
+          "witness_element_sizes_bytes": [256],
+          "taproot_control_block_sizes_bytes": [257]
+        }
+      },
+      "expected_compliant": true,
+      "expected_finding_codes": []
+    },
+    {
+      "id": "bip110.limit_plus_one",
+      "request": {
+        "api_version": 1,
+        "phase": "post_serialization",
+        "context": "bitcoin_transaction",
+        "measurements": {
+          "source": "serialized_transaction",
+          "pushdata_sizes_bytes": [257],
+          "op_return_script_pubkey_sizes_bytes": [84],
+          "non_op_return_script_pubkey_sizes_bytes": [35],
+          "witness_element_sizes_bytes": [257],
+          "taproot_control_block_sizes_bytes": [258]
+        }
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": [
+        "pushdata_exceeds_limit",
+        "op_return_exceeds_limit",
+        "script_pubkey_exceeds_limit",
+        "witness_element_exceeds_limit",
+        "taproot_control_block_exceeds_limit"
+      ]
+    },
+    {
+      "id": "bip110.multiple_violations",
+      "request": {
+        "api_version": 1,
+        "phase": "post_serialization",
+        "context": "bitcoin_transaction",
+        "measurements": {
+          "source": "serialized_transaction",
+          "pushdata_sizes_bytes": [257, 258],
+          "op_return_script_pubkey_sizes_bytes": [84, 85],
+          "non_op_return_script_pubkey_sizes_bytes": [35, 36],
+          "witness_element_sizes_bytes": [257, 258],
+          "taproot_control_block_sizes_bytes": [258, 259]
+        }
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": [
+        "pushdata_exceeds_limit",
+        "pushdata_exceeds_limit",
+        "op_return_exceeds_limit",
+        "op_return_exceeds_limit",
+        "script_pubkey_exceeds_limit",
+        "script_pubkey_exceeds_limit",
+        "witness_element_exceeds_limit",
+        "witness_element_exceeds_limit",
+        "taproot_control_block_exceeds_limit",
+        "taproot_control_block_exceeds_limit"
+      ]
+    },
+    {
+      "id": "bip110.unsupported_context",
+      "request": {
+        "api_version": 1,
+        "phase": "pre_construction",
+        "context": "dlc",
+        "measurements": {
+          "source": "caller_classified",
+          "pushdata_sizes_bytes": [],
+          "op_return_script_pubkey_sizes_bytes": [],
+          "non_op_return_script_pubkey_sizes_bytes": [],
+          "witness_element_sizes_bytes": [],
+          "taproot_control_block_sizes_bytes": []
+        }
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": ["unsupported_context"]
+    },
+    {
+      "id": "bip110.unknown_context",
+      "request": {
+        "api_version": 2,
+        "phase": "pre_construction",
+        "context": "future_context",
+        "measurements": {
+          "source": "caller_classified",
+          "pushdata_sizes_bytes": [257],
+          "op_return_script_pubkey_sizes_bytes": [],
+          "non_op_return_script_pubkey_sizes_bytes": [],
+          "witness_element_sizes_bytes": [],
+          "taproot_control_block_sizes_bytes": []
+        }
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": ["unsupported_api_version", "unknown_context"]
+    },
+    {
+      "id": "bip110.missing_measurements",
+      "request": {
+        "api_version": 1,
+        "phase": "pre_construction",
+        "context": "bitcoin_transaction"
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": ["missing_measurement_data"]
+    },
+    {
+      "id": "bip110.phase_mismatch",
+      "request": {
+        "api_version": 1,
+        "phase": "pre_construction",
+        "context": "bitcoin_transaction",
+        "measurements": {
+          "source": "serialized_transaction",
+          "pushdata_sizes_bytes": [],
+          "op_return_script_pubkey_sizes_bytes": [],
+          "non_op_return_script_pubkey_sizes_bytes": [],
+          "witness_element_sizes_bytes": [],
+          "taproot_control_block_sizes_bytes": []
+        }
+      },
+      "expected_compliant": false,
+      "expected_finding_codes": ["phase_mismatch"]
+    }
+  ]
+}

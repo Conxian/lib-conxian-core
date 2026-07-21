@@ -2,8 +2,9 @@
 
 > **Historical context:** This report is a July 6, 2026 snapshot of reported
 > work. Its completion wording is not a claim that current
-> `lib-conxian-core` APIs provide production verification. The current
-> fail-closed boundaries are authoritative; see [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md).
+> `lib-conxian-core` APIs provide production verification. For the named
+> verifier paths, it is superseded by the CON-1509 fail-closed boundaries in
+> the v0.3.0 release; see [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md).
 
 ## 1. Cryptographic Hardening Audit
 - **MuSig2 (`src/musig2.rs`):** Verified real scalar-sum signature aggregation. COMPLETED.

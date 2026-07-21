@@ -9,6 +9,10 @@ oracle/execution helpers. It does not define funding, refund, CET,
 adaptor-signature, or transaction DTOs; it also does not build, persist,
 broadcast, or monitor a DLC.
 
+These typed boundaries are part of the intentional v0.3.0 API break. A valid
+equation or well-shaped compatibility input is not complete DLC execution
+evidence and cannot authorize settlement.
+
 `DlcManager::verify_oracle_attestation` performs a real secp256k1 point-equation
 check for caller-supplied oracle public key, nonce point, outcome message, and
 signature scalar. `verify_oracle_attestation_for_intent` adds typed intent
@@ -94,9 +98,10 @@ downstream verifier with an attestation format that signs the full context.
 
 - A validated `SignResponse` for each actual funding/refund/CET transaction
   surface.
-- A positive result from the raw `verify_oracle_attestation` primitive plus a
-  separately checked outcome-to-intent/collateral/expiry binding from a
-  downstream verifier before a CET can be considered executable.
+- A typed result from `verify_oracle_attestation_for_intent`; an otherwise valid
+  tuple returns `DlcVerificationError::UnsupportedIntentBinding` until the
+  attestation format commits to the complete intent. A downstream verifier
+  must still establish the CET/funding and finality context before execution.
 - A `ProtocolVerifier` finality result for funding, CET, or refund settlement
   when required by policy.
 - A Gateway-owned `DlcStatus`/workflow record. Core does not create a broadcast

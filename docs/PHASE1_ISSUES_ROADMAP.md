@@ -200,28 +200,29 @@ This item does not close CORE-007 or other unrelated roadmap work.
 **Priority**: 🟠 HIGH  
 **Depends On**: [CORE-006]  
 
-**Implementation status**: The additive, versioned schema and deterministic
-all-not-assessed registry are implemented in
-[`src/control_model/risk_profile.rs`](../src/control_model/risk_profile.rs).
-The initial registry deliberately contains no approved chain scores; see
-[`docs/CANONICAL_RISK_PROFILES.md`](CANONICAL_RISK_PROFILES.md).
+**Implementation note (GitHub #177)**: The schema-v1 canonical profile API,
+validated `data/risk_profiles/v1.json` artifact, exact six-family/23-chain
+coverage checks, compatibility tests, and ownership documentation are now
+implemented. The initial decision for every target is explicitly
+`not_assessed` because no approved evidence-backed score has been adopted.
 
 **Description**:
-Define the static, evidence-backed schema for chain-family risk metadata and
-document its downstream ownership. Static metadata must not become an implicit
-UCV routing policy.
+Define a versioned static risk-profile contract for each chain family and
+chain. Core owns schema, invariants, and approved metadata only; Nexus owns
+live observation/evidence and Gateway owns runtime assessment and routing.
 
 **Acceptance Criteria**:
-- [x] Risk score definitions for all dimensions, with explicit units and bounds
-- [x] Explicit family and chain subjects, including Bitcoin, Stacks, Babylon,
-  and Liquid
-- [x] Unknown/not-assessed handling, public evidence, governance references,
-  and versioned revisions
-- [x] Ownership boundary: Core metadata, Nexus observations, Gateway routing
+- [x] Risk score definitions, units, bounds, polarity, and explicit unknown/not-assessed states
+- [x] Versioned schema, profile revision, effective date, evidence, governance, and rationale rules
+- [x] Exact canonical coverage for all 6 families and 23 current chain variants
+- [x] Static-vs-live ownership and downstream consumer mapping
+- [x] Compatibility and validation tests for bounds, state consistency, target identity, and trust policy
 
-The numeric examples that were previously listed in this planning section are
-historical, unapproved examples. They are not canonical input and were not
-copied into the registry.
+The following historical examples are **non-canonical planning examples**
+only and must not be promoted without approved evidence and a coordinated
+profile review: Bitcoin DA=100/Settlement=100; Stacks DA=85/Settlement=80;
+Babylon DA=90/Settlement=70; Liquid DA=60/Settlement=75. Issue #177 and this
+roadmap are governance references, not empirical risk evidence.
 
 ---
 
@@ -264,7 +265,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 
 ## Summary
 
-### Issues to Create (9 total)
+### Issues Summary (9 total; 8 still to create)
 
 | ID | Title | Priority | Status |
 |:---|:------|:--------:|:-------|
@@ -274,7 +275,7 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 | CORE-004 | BIP-110 Compliance Matrix | 🟠 | 🟡 In progress in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
 | CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Initial contract in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardening in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
-| CORE-007 | Chain Risk Profiles | 🟠 | Implemented in [CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md) |
+| CORE-007 | Chain Risk Profiles | 🟠 | ✅ Implemented in [#177](https://github.com/Conxian/lib-conxian-core/issues/177); see [RISK_PROFILES.md](architecture/RISK_PROFILES.md) |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |
 

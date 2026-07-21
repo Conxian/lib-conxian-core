@@ -1,6 +1,6 @@
 # Conxian Ecosystem Alignment Report
 
-> **Status**: Active | **Last Updated**: 2026-07-15 | **Version**: 0.2.11
+> **Status**: Active | **Last Updated**: 2026-07-21 | **Version**: 0.3.0
 
 ## BIP-110 Position Statement
 
@@ -91,9 +91,9 @@ This repository provides **shared protocol primitives** that are consumed by all
 
 | Module | lib-conxian-core | conxius-enclave-sdk | Strategy |
 |--------|-------------------|---------------------|----------|
-| `protocol/frost.rs` | Skeletal | Full implementation | Keep local, reference SDK |
+| `protocol/frost.rs` | Fail-closed boundary | Full implementation | Keep local boundary, reference SDK |
 | `enclave/` | X.509 stubs | Full attestation | Keep local stubs only |
-| `bitcoin/bip322.rs` | Basic | Full BIP-322 | Keep local |
+| `bitcoin/bip322.rs` | Strict parser / unsupported boundary | Full BIP-322 | Keep local boundary, reference SDK |
 | `fedimint/` | Basic adapter | Full adapter | Keep local |
 | `lightning/` | Basic adapter | Full LND | Keep local |
 
@@ -141,14 +141,20 @@ pub enum TrustTier {
 
 ```rust
 pub enum ChainFamily {
-    BitcoinUtxo,  // Bitcoin, Liquid, Rootstock
-    Evm,         // Ethereum, Base, Arbitrum, Optimism, Polygon
+    BitcoinUtxo, // Bitcoin, Stacks, Liquid, Lightning, Babylon
+    Evm,         // Bob, Mezo, Citrea, Botanix, Ethereum, Base, Arbitrum, Optimism, Polygon
     CosmosIbc,   // CosmosHub, Osmosis, Celestia
     SolanaSvm,   // Solana, Eclipse
     Move,        // Aptos, Sui
     Substrate,   // Polkadot, Kusama
 }
 ```
+
+The current taxonomy contains exactly 6 families and 23 chain variants. The versioned canonical
+risk-profile artifact records an explicit `not_assessed` decision for every entry; it does not
+promote the historical example scores in the Phase 1 roadmap. See
+[`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md) for the field-level contract,
+static-vs-live ownership, and profile review process.
 
 ### Lifecycle States
 
@@ -255,7 +261,7 @@ After deprecation removal in v0.3.0:
 
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
-| lib-conxian-core | 0.2.11 | 0.3.0 | ✅ Migration complete (v0.2.11) |
+| lib-conxian-core | 0.3.0 | 0.3.0 | ✅ Current intentional breaking release |
 | conxius-enclave-sdk | 2.0.11 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
@@ -320,7 +326,7 @@ secp256k1 = "0.31"             # Align with SDK
 
 - [ ] Create Conxian Labs crates.io organization
 - [ ] Transfer crate ownership to organization
-- [ ] Publish lib-conxian-core v0.3.0 with removed deprecated code (completed in v0.2.11)
+- [ ] Publish lib-conxian-core v0.3.0 after the release/tag workflow and registry checks complete
 
 ### Long-term (Strategic)
 

@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "contract": "universal_chain_signer",
+  "api_version": 1,
+  "cases": [
+    {
+      "id": "signing.failure.unsupported_chain",
+      "request": {
+        "target": {"chain": "ethereum", "family": "evm"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": [101, 118, 109]}},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "expected_error": "unsupported_chain"
+    },
+    {
+      "id": "signing.failure.unsupported_algorithm",
+      "request": {
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "schnorr_secp256k1",
+        "payload": {"message": {"bytes": [115, 99, 104, 110, 111, 114, 114]}},
+        "derivation": {"path": {"components": []}, "purpose": "message_signing"}
+      },
+      "expected_error": "unsupported_algorithm"
+    },
+    {
+      "id": "signing.failure.invalid_target",
+      "request": {
+        "target": {"chain": "bitcoin", "family": "evm"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": [98, 97, 100, 32, 116, 97, 114, 103, 101, 116]}},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "expected_error": "invalid_target"
+    },
+    {
+      "id": "signing.failure.empty_message",
+      "request": {
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": []}},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "expected_error": "invalid_payload"
+    },
+    {
+      "id": "signing.failure.malformed_response",
+      "request": {
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": [109, 97, 108, 102, 111, 114, 109, 101, 100]}},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "response_mode": "signature_algorithm_mismatch",
+      "expected_error": "invalid_response"
+    }
+  ]
+}
