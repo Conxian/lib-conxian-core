@@ -34,19 +34,24 @@ Version `0.3.0` intentionally changes the fail-closed verifier APIs from the
   fail-closed boundaries; see [`VERIFIER_INVENTORY.md`](VERIFIER_INVENTORY.md)
   for the authoritative evidence and compatibility matrix.
 
-### Universal Chain Signing (`signing`)
-The platform-neutral contract for SDK and Gateway signer adapters.
-- `UniversalChainSigner`: capability-gated signing, address derivation, and complete signature verification.
-- `SignRequest`, `AddressDerivationRequest`, and `VerificationRequest`: explicit target, algorithm, payload/digest, and derivation metadata.
-- `SignerCapabilities`: versioned supported chain, algorithm, operation, and address-format declarations.
-- `SigningError`: structured fail-closed and secret-safe error taxonomy.
+### Signing and Vault SDK boundary (`signing`, optional `enclave`)
+Core owns protocol primitives and the platform-neutral signing contracts in
+`lib_conxian_core::signing`, including `UniversalChainSigner`, `SignRequest`,
+`SignResponse`, `SignerCapabilities`, and `SigningError`. These contracts do not
+provide private-key custody, hardware access, attestation, policy enforcement, or
+runtime signing backends.
 
-See [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md) for ownership boundaries and chain examples. Core defines the contract only; SDK, Gateway, Wallet, and Nexus retain their documented runtime responsibilities.
+The removed `sdk_primitive` module and `VaultSDK`, `SigningPolicy`, and `Wallet`
+types are not part of the current Core API. Hardware-backed signing, attestation,
+and policy flows use the canonical
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
 
-### Vault SDK (`sdk_primitive`)
-The primary interface for hardware-anchored signing and policy enforcement.
-- `VaultSDK::new(wallet: Wallet, policy: SigningPolicy)`: Initializes a new SDK instance.
-- `VaultSDK::sign_with_policy(tx_id: &str, amount_sats: u64, destination: &str)`: Validates and signs a transaction after policy verification.
+When the optional `enclave` feature is enabled, [`src/lib.rs`](../src/lib.rs)
+re-exports only the current SDK boundary types `EnclaveManager`, `SignRequest`,
+`SignResponse`, `SigningAlgorithm`, `ConclaveError`, and `ConclaveResult`; it does
+not restore the removed API. See [`MIGRATION.md`](MIGRATION.md) for migration
+guidance and [`SIGNING_ARCHITECTURE.md`](SIGNING_ARCHITECTURE.md) for ownership
+boundaries and contract examples.
 
 ### Deployment & Artifacts (`deployment`)
 Shared schemas for machine-readable execution records (CON-1237).
