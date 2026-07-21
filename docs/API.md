@@ -92,6 +92,37 @@ Canonical types for protocol orchestration and trust.
 - `PartnerLead`: Intake model for ecosystem integrations (CON-63).
 - `Chain`: Supported networks including Bitcoin, Stacks, CosmosHub, Solana, and Eclipse (ADR-006).
 
+#### Canonical risk profiles (CORE-007)
+
+The additive schema-v1 API defines static, versioned chain-risk metadata:
+
+- `RiskProfile` and `CanonicalRiskProfileSet`: profile records and the exact-coverage set.
+- `RiskTarget`: family or chain identity; chain targets validate against `chain_family_for`.
+- `RiskScore`: custom-deserialized unitless score bounded to `0..=100`.
+- `RiskMetricValue`, `RiskAssessmentStatus`, and `OverallRiskStatus`: explicit assessed,
+  partially-assessed, unknown, and not-assessed states. A valid score of zero is not unknown.
+- `EvidenceKind` and `EvidenceReference`: closed typed provenance for specification, audit,
+  research, and observation references. Governance/change references remain in the separate
+  `governance_ref` field and cannot satisfy empirical evidence requirements.
+- `RiskDimensions`: data availability, settlement, bridge, exit mechanism, normalized operator
+  independence (`operator_dependency_score`), and decentralization.
+- `StaticPolicyAssumptions`: optional `TrustTier`/`VerificationClass`/`FinalityClass` metadata
+  validated with `validate_trust_tier_policy`; it is not a live `VerificationStatus`.
+- `VersionedRailMetadata`: optional schema-v1 compatibility wrapper around legacy `RailMetadata`
+  with target-family validation.
+- `canonical_risk_profile_set()`: validated accessor for the compile-time embedded
+  `data/risk_profiles/v1.json` artifact.
+
+Only schema version `1` is accepted. Schema-v1 profile-set versions must be valid SemVer with
+major `1` (`1.1.0` is compatible); the embedded artifact remains exactly `1.0.0`. Public JSON
+decoding is fail-closed for semantic invariants and unknown/typo fields, so additive fields require
+a schema decision/version bump. Profiles require a positive revision, valid effective date,
+governance/change reference, and rationale. Assessed and partially assessed profiles require
+typed evidence references; the initial set is explicitly `not_assessed` for all 6 families and 23
+chains. Core owns schema and invariant validation only. Nexus owns live observation/evidence and
+Gateway owns runtime assessment, persistence, and routing. See
+[`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).
+
 Preflight consumers must provide classified measurements before treating a result as usable. Empty
 vectors are valid only for an explicitly present generic Bitcoin transaction with zero constrained
 occurrences; omitted measurement data, phase/source mismatches, unsupported contexts, and unknown
