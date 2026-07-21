@@ -1,6 +1,8 @@
 mod support;
 
-use lib_conxian_core::adapters::{BitcoinAdapter, TxParams, UniversalChainAdapter};
+use lib_conxian_core::adapters::{
+    BitcoinAdapter, StateProofError, TxParams, UniversalChainAdapter,
+};
 use lib_conxian_core::babylon::{BabylonAdapter, StakingIntent};
 use lib_conxian_core::bitcoin::liquid_adapter::LiquidAdapter;
 use lib_conxian_core::protocol::dlc::{DlcIntent, DlcManager};
@@ -64,9 +66,12 @@ fn representative_adapter_dtos_round_trip_and_remain_structural_only() {
                 assert_eq!(adapter.trust_tier(), expected(case, "trust_tier"));
                 assert!(adapter.validate_address("bc1qfixture").is_ok());
                 let proof: String = expected(case, "proof");
-                assert!(adapter
-                    .verify_state_proof("fixture-root", &proof)
-                    .expect("structural Babylon proof"));
+                match adapter.verify_state_proof("fixture-root", &proof) {
+                    Err(StateProofError::Unsupported { chain }) => assert_eq!(chain, "babylon"),
+                    other => {
+                        panic!("expected Babylon state proof to be unsupported, got {other:?}")
+                    }
+                }
             }
             "liquid_proof" => {
                 let adapter = LiquidAdapter;
@@ -76,12 +81,13 @@ fn representative_adapter_dtos_round_trip_and_remain_structural_only() {
                 assert!(adapter
                     .validate_address(case["address"].as_str().expect("Liquid address"))
                     .is_ok());
-                assert!(adapter
-                    .verify_state_proof(
-                        "fixture-root",
-                        case["proof"].as_str().expect("Liquid proof")
-                    )
-                    .expect("structural Liquid proof"));
+                match adapter.verify_state_proof(
+                    "fixture-root",
+                    case["proof"].as_str().expect("Liquid proof"),
+                ) {
+                    Err(StateProofError::Unsupported { chain }) => assert_eq!(chain, "liquid"),
+                    other => panic!("expected Liquid state proof to be unsupported, got {other:?}"),
+                }
                 assert!(adapter
                     .verify_state_proof(
                         "fixture-root",
@@ -121,6 +127,9 @@ fn representative_adapter_dtos_round_trip_and_remain_structural_only() {
                             assert_eq!(result, Err(RGBError::GatedByRolloutMode));
                         }
                         "ok" => assert_eq!(result, Ok(true)),
+                        "non_authoritative_shadow" => {
+                            assert_eq!(result, Err(RGBError::NonAuthoritativeShadow));
+                        }
                         "transition_validation_failed" => assert!(matches!(
                             result,
                             Err(RGBError::TransitionValidationFailed(_))

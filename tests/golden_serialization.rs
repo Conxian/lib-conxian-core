@@ -14,6 +14,13 @@ use support::{
     SignerResponseMode,
 };
 
+const LEGACY_BOUNDARY_FIXTURES: [&str; 4] = [
+    "adapter_contracts.json",
+    "bip110_preflight.json",
+    "signing_boundary.json",
+    "verifier_boundary.json",
+];
+
 #[derive(Debug, Deserialize)]
 struct SigningSuccessFixture {
     schema_version: u16,
@@ -105,6 +112,7 @@ fn manifest_and_every_golden_file_are_versioned_and_accounted_for() {
             entry.file_name().to_string_lossy().into_owned()
         })
         .filter(|file| file != "manifest.json")
+        .filter(|file| !LEGACY_BOUNDARY_FIXTURES.contains(&file.as_str()))
         .collect();
     assert_eq!(
         disk_files, manifest_files,

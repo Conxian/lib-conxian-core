@@ -44,11 +44,13 @@ Fixtures use fixed RFC3339 timestamps, public or dummy byte arrays, stable IDs, 
 structural proof strings. They must not contain private keys, seeds, custody material, secrets,
 RPC URLs, network credentials, environment-specific branches, or real production evidence.
 
-Every fixture file has a schema version and `cases` array. Tests load every file listed by the
-manifest, reject fixture files that exist on disk but are not listed, compare all case IDs against
-the manifest, and exercise JSON deserialize/serialize/deserialize structural round trips. Typed
-tests replay the case payloads and expected assertions rather than treating fixture metadata as
-dead JSON. A new fixture must be added to the manifest in the same change.
+Every manifest-indexed fixture file has a schema version and `cases` array. Tests load every file
+listed by the manifest, reject unlisted cases-based files, compare all case IDs against the
+manifest, and exercise JSON deserialize/serialize/deserialize structural round trips. The legacy
+boundary fixtures `adapter_contracts.json`, `bip110_preflight.json`, `signing_boundary.json`, and
+`verifier_boundary.json` are intentionally outside that manifest inventory and are consumed
+separately by `core_to_downstream_integration.rs`. A new cases-based fixture must be added to the
+manifest in the same change.
 
 The BIP-110 fixtures represent classified measurements supplied by a transaction-aware caller;
 they do not turn Core into a transaction parser or consensus validator. The Taproot control-block

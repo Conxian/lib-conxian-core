@@ -34,7 +34,7 @@
       "kind": "rgb_rollout",
       "cases": [
         {"mode": "disabled", "transition_hex": "00", "expected": "gated_by_rollout_mode"},
-        {"mode": "shadow", "transition_hex": "", "expected": "ok"},
+        {"mode": "shadow", "transition_hex": "00", "expected": "non_authoritative_shadow"},
         {"mode": "active", "transition_hex": "", "expected": "transition_validation_failed"}
       ]
     },
