@@ -2,6 +2,7 @@ pub mod bip110;
 pub mod bip110_preflight;
 pub mod lifecycle;
 pub mod ops;
+pub mod risk_profile;
 pub mod trust;
 
 pub use bip110::{Bip110Limits, Bip110TransactionShape};
@@ -15,6 +16,14 @@ pub use bip110_preflight::{
 };
 pub use lifecycle::*;
 pub use ops::*;
+pub use risk_profile::{
+    enumerated_chain_families, enumerated_chains, AssessmentStatus, CanonicalRiskProfile,
+    GovernanceReference, ResolvedRiskProfile, RiskDimension, RiskEvidence, RiskEvidenceKind,
+    RiskProfileLookupError, RiskProfilePosture, RiskProfileRegistry, RiskProfileSchemaVersion,
+    RiskProfileSubject, RiskProfileSupersession, RiskProfileValidationError, RiskScore,
+    RiskScoreScale, RiskScoreUnit, CANONICAL_RISK_PROFILE_GOVERNANCE_REFERENCE,
+    CANONICAL_RISK_PROFILE_POLICY_REFERENCE, CANONICAL_RISK_PROFILE_SCHEMA_VERSION,
+};
 pub use trust::{
     chain_family_for, validate_trust_tier_policy, Bip110Compliance, Bip110ValidationResult,
     Bip110Violation, BridgeSystem, Chain, ChainFamily, FinalityClass, ProofEnvelope,
@@ -597,6 +606,36 @@ mod tests {
         );
         assert!(!result.is_compliant);
         assert_eq!(result.violations.len(), 4);
+    }
+
+    #[test]
+    fn test_bip110_legacy_optional_op_return_preserves_violation_order() {
+        use super::trust::bip110;
+
+        let compliance = Bip110Compliance::new();
+
+        let result = compliance.validate_transaction(&[0], None, 0, &[0]);
+        assert_eq!(result, Bip110ValidationResult::compliant());
+
+        let result = compliance.validate_transaction(
+            &[bip110::MAX_PUSHDATA_BYTES + 1],
+            None,
+            bip110::MAX_SCRIPT_PUBKEY_BYTES,
+            &[bip110::MAX_WITNESS_ELEMENT_BYTES + 1],
+        );
+        assert_eq!(
+            result,
+            Bip110ValidationResult::non_compliant(vec![
+                Bip110Violation::PushdataExceedsLimit {
+                    size: bip110::MAX_PUSHDATA_BYTES + 1,
+                    max: bip110::MAX_PUSHDATA_BYTES,
+                },
+                Bip110Violation::WitnessElementExceedsLimit {
+                    size: bip110::MAX_WITNESS_ELEMENT_BYTES + 1,
+                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                },
+            ])
+        );
     }
 
     #[test]

@@ -60,6 +60,9 @@ preimage, or interpret a script. Core can carry the resulting bytes through a
 or interpret Bitcoin transactions or BIP-341/BIP-342 scripts. See the BIP-110
 matrix for the current parser/interpreter boundary in
 [`docs/BIP110_ALIGNMENT.md`](../BIP110_ALIGNMENT.md).
+The neutral structural API and vector matrix for this boundary is documented in
+[`docs/bitcoin/TAPROOT_MINISCRIPT_SUPPORT.md`](../bitcoin/TAPROOT_MINISCRIPT_SUPPORT.md); its
+successful results do not claim cryptographic verification or script execution.
 
 ### BIP-110 preflight boundary
 

@@ -200,6 +200,48 @@ mod tests {
     }
 
     #[test]
+    fn legacy_validation_covers_zero_exact_over_limit_and_optional_op_return() {
+        let compliance = Bip110Compliance::new();
+
+        assert_eq!(
+            compliance.validate_transaction(&[0], None, 0, &[0]),
+            Bip110ValidationResult::compliant()
+        );
+        assert_eq!(
+            compliance.validate_transaction(
+                &[MAX_PUSHDATA_BYTES],
+                Some(MAX_OP_RETURN_BYTES),
+                MAX_SCRIPT_PUBKEY_BYTES,
+                &[MAX_WITNESS_ELEMENT_BYTES],
+            ),
+            Bip110ValidationResult::compliant()
+        );
+
+        assert_eq!(
+            compliance.validate_transaction(
+                &[MAX_PUSHDATA_BYTES + 1],
+                None,
+                MAX_SCRIPT_PUBKEY_BYTES + 1,
+                &[MAX_WITNESS_ELEMENT_BYTES + 1],
+            ),
+            Bip110ValidationResult::non_compliant(vec![
+                Bip110Violation::PushdataExceedsLimit {
+                    size: MAX_PUSHDATA_BYTES + 1,
+                    max: MAX_PUSHDATA_BYTES,
+                },
+                Bip110Violation::ScriptPubKeyExceedsLimit {
+                    size: MAX_SCRIPT_PUBKEY_BYTES + 1,
+                    max: MAX_SCRIPT_PUBKEY_BYTES,
+                },
+                Bip110Violation::WitnessElementExceedsLimit {
+                    size: MAX_WITNESS_ELEMENT_BYTES + 1,
+                    max: MAX_WITNESS_ELEMENT_BYTES,
+                },
+            ])
+        );
+    }
+
+    #[test]
     fn aggregate_validation_preserves_all_violations_across_all_vectors() {
         let shape = Bip110TransactionShape::new(
             vec![MAX_PUSHDATA_BYTES + 1, MAX_PUSHDATA_BYTES + 2],
