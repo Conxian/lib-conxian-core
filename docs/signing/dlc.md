@@ -9,11 +9,22 @@ oracle/execution helpers. It does not define funding, refund, CET,
 adaptor-signature, or transaction DTOs; it also does not build, persist,
 broadcast, or monitor a DLC.
 
+These typed boundaries are part of the intentional v0.3.0 API break. A valid
+equation or well-shaped compatibility input is not complete DLC execution
+evidence and cannot authorize settlement.
+
 `DlcManager::verify_oracle_attestation` performs a real secp256k1 point-equation
 check for caller-supplied oracle public key, nonce point, outcome message, and
-signature scalar. `DlcManager::verify_execution` is a compatibility-only check
-for a non-empty, non-zero-ish signature and positive collateral. It is not a
-cryptographic oracle-attestation or CET verifier.
+signature scalar. `verify_oracle_attestation_for_intent` adds typed intent
+outcome, collateral-policy, and expiry checks, but returns
+`DlcVerificationError::UnsupportedIntentBinding` for an otherwise valid tuple:
+the existing oracle signature does not commit to collateral, expiry, or the
+complete intent. `DlcManager::verify_execution_checked` returns typed
+unsupported because its compatibility inputs omit the nonce, outcome, expiry,
+CET, and transaction-binding evidence; the deprecated boolean wrapper returns
+`false`.
+The deprecated `DlcManager::verify_execution` wrapper is compatibility-only and
+also cannot authorize DLC execution.
 
 `DlcManager::create_intent` is construction-only: it copies the supplied oracle
 key bytes, collateral, outcome hash, and expiry into a `DlcIntent`. It does not
@@ -40,9 +51,10 @@ The UCS boundary is intentionally narrow:
 3. The SDK returns a public `SignResponse`; Core does not receive the adaptor
    secret, oracle private key, funding key, or CET key material.
 
-Core's `DlcIntent` and oracle helper do not imply that the requested bytes are a
-valid DLC transaction or that an oracle outcome is bound to the intent. The
-caller must perform those bindings explicitly.
+Core's `DlcIntent` and raw oracle helper do not imply that the requested bytes
+are a valid DLC transaction or that an oracle outcome is bound to the complete
+intent. The caller must perform those bindings explicitly, or supply a
+downstream verifier with an attestation format that signs the full context.
 
 ## Participant ownership
 
@@ -61,7 +73,7 @@ caller must perform those bindings explicitly.
 | 1 | Gateway | Oracle public key, collateral, outcome hash, expiry block, funding/counterparty binding | `DlcManager::create_intent` is construction-only and copies the supplied fields; caller/Gateway validates oracle-key encoding, non-zero collateral, expiry semantics, and contract binding | Reviewable, Gateway-owned intent | Invalid oracle-key encoding, zero collateral, invalid expiry, or missing contract/counterparty binding |
 | 2 | Gateway + counterparty | Contract descriptors, collateral UTXOs, payout policy, refund timelock, oracle event mapping | Core has no funding/refund DTO or builder; downstream code owns exact bytes | Unsigned funding/refund transaction payloads | Missing contract binding, unsupported script, or incomplete counterparty agreement |
 | 3 | Wallet + SDK | `SignRequest`, Bitcoin capability, policy/attestation context | UCS validates request/response metadata | Public `SignResponse` for each transaction | Unsupported capability, malformed payload, backend failure, or invalid response |
-| 4 | Oracle | Nonce point `R`, outcome message, signature scalar `s`, oracle public key | `verify_oracle_attestation` checks the point equation; caller binds message to `DlcIntent::outcome_hash` | Cryptographically valid/invalid attestation result | Invalid key/point/scalar, equation failure, wrong outcome binding, or expired event |
+| 4 | Oracle | Nonce point `R`, outcome message, signature scalar `s`, oracle public key | `verify_oracle_attestation` checks the point equation; Core's intent helper rejects the valid tuple as unsupported until a full-context attestation exists | Cryptographically valid primitive result or typed unsupported intent binding | Invalid key/point/scalar, equation failure, wrong outcome binding, expired event, or missing full-context binding |
 | 5 | Downstream | Verified oracle outcome, funding outpoint, adaptor data, payout outputs | Core supplies no CET/adaptor DTO; use a Bitcoin `SignRequest` only for exact constructed bytes | Signed CET or refund path | No verified attestation, missing funding state, unsupported adaptor flow, or policy block |
 | 6 | Nexus + Gateway | Funding/CET/refund txid, Bitcoin proof and finality evidence | `ProtocolVerifier` validates transaction/state/finality result around a real backend | Verified settlement or non-final result | Invalid/stale proof, evidence mismatch, non-final required state, or rejected transaction |
 
@@ -86,8 +98,10 @@ caller must perform those bindings explicitly.
 
 - A validated `SignResponse` for each actual funding/refund/CET transaction
   surface.
-- A positive result from `verify_oracle_attestation` plus a separately checked
-  outcome-to-intent binding before a CET can be considered executable.
+- A typed result from `verify_oracle_attestation_for_intent`; an otherwise valid
+  tuple returns `DlcVerificationError::UnsupportedIntentBinding` until the
+  attestation format commits to the complete intent. A downstream verifier
+  must still establish the CET/funding and finality context before execution.
 - A `ProtocolVerifier` finality result for funding, CET, or refund settlement
   when required by policy.
 - A Gateway-owned `DlcStatus`/workflow record. Core does not create a broadcast
@@ -99,8 +113,11 @@ caller must perform those bindings explicitly.
 attestation tuple. The caller still owns outcome encoding, event-id/nonce
 binding, oracle-key-set policy, expiry checks, collateral policy, contract and
 counterparty binding, and association with the `DlcIntent`.
-`verify_execution` should remain compatibility-only and must not be used as the
-production authorization gate.
+`verify_oracle_attestation_for_intent` intentionally returns typed unsupported
+for a valid tuple because the current attestation format lacks a signed
+full-intent commitment. `verify_execution_checked` is also unsupported and
+must not be used as the production authorization gate. Use a downstream
+full-context attestation verifier plus CET/finality verification instead.
 
 Nexus supplies Bitcoin transaction/block evidence through a
 `ProtocolVerifierBackend`; Gateway consumes the `ProtocolVerifier` façade. The
@@ -148,10 +165,12 @@ does not retry oracle calls, reconstruct CETs, or promote
   exist in Core.
 - No DLC transaction builder, contract execution engine, persistence, counterparty
   coordinator, oracle-set manager, or broadcast integration exists here.
-- `verify_oracle_attestation` does not bind `outcome_msg` to
-  `DlcIntent::outcome_hash`; the caller must do so.
-- `verify_execution` is compatibility-only and does not cryptographically
-  verify an oracle signature or CET.
+- `verify_oracle_attestation` remains a raw tuple primitive; callers must not
+  treat it as complete intent authorization. The intent helper performs
+  policy/malformed checks but returns `UnsupportedIntentBinding` until a signed
+  full-context attestation format is supplied.
+- `verify_execution_checked` is explicitly unsupported and does not verify an
+  oracle signature or CET; its boolean compatibility wrapper fails closed.
 - No production DLC `UniversalChainSigner` or DLC-aware
   `ProtocolVerifierBackend` is implemented in this repository.
 

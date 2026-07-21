@@ -1,7 +1,7 @@
 # lib-conxian-core
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.2.12-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 
 Shared protocol primitives for the Conxian ecosystem.
@@ -34,7 +34,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 ## Status
 
-**v0.2.12 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.3.0 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -63,10 +63,10 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = "0.2.12"
+lib-conxian-core = "0.3.0"
 
 # For Vault SDK features (hardware signing, attestation)
-lib-conxian-core = { version = "0.2.12", features = ["enclave"] }
+lib-conxian-core = { version = "0.3.0", features = ["enclave"] }
 ```
 
 ### Quick Start

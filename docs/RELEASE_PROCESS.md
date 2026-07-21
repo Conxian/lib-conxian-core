@@ -45,11 +45,12 @@ change to the release flow.
 ## 2. Normal tag release
 
 After the parity change is merged, create and push exactly
-`v{Cargo.toml version}`. For example, when `Cargo.toml` says `0.2.12`:
+`v{Cargo.toml version}`. For the current release, when `Cargo.toml` says
+`0.3.0`:
 
 ```bash
-git tag -a v0.2.12 -m "Release v0.2.12"
-git push origin v0.2.12
+git tag -a v0.3.0 -m "Release v0.3.0"
+git push origin v0.3.0
 ```
 
 The tag workflow stops before publication when local parity fails or when the
