@@ -87,8 +87,14 @@ non-default SDK features. It is not an SDK feature name. The matrix covers Core
 Run the complete matrix from the repository root with:
 
 ```text
-python3 scripts/run_sdk_compat.py
+cargo +1.91.0 fetch --locked
+python3 scripts/run_sdk_compat.py --offline
 ```
+
+The regular workspace `--all-features` CI job deliberately enables the
+harness's `run` feature and exercises its DTO-only SDK feature checks. That is
+a broad workspace smoke test, not a substitute for this dedicated eight-command
+matrix.
 
 The individual locked commands use the following shape (the script expands the
 full Core/SDK matrix):
@@ -98,9 +104,13 @@ cargo +1.91.0 test --manifest-path tests/sdk-compat/Cargo.toml --locked \
   --no-default-features --features run,core-enclave,all-supported
 ```
 
-The opt-in CI entry point is the manually dispatched
-`.github/workflows/sdk-compat.yml` workflow. Focused formatting and linting
-remain repository-local commands:
+The dedicated `.github/workflows/sdk-compat.yml` workflow runs for pull
+requests targeting `main`, pushes to `main`, and manual dispatches. It first
+acquires the locked dependency graph with `cargo +1.91.0 fetch --locked`, then
+runs the eight matrix commands with Cargo's `--offline` flag. This proves the
+matrix is network-independent at runtime after dependency acquisition; the
+locked fetch step itself is the dependency-acquisition phase and may use the
+network. Focused formatting and linting remain repository-local commands:
 
 ```text
 cargo fmt --all -- --check

@@ -1,6 +1,10 @@
 name: SDK v2.0.11 Compatibility Evidence
 
-on:
+'on':
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -19,5 +23,8 @@ jobs:
         with:
           toolchain: 1.91.0
 
-      - name: Run opt-in locked compatibility matrix
-        run: python3 scripts/run_sdk_compat.py
+      - name: Fetch locked dependencies
+        run: cargo +1.91.0 fetch --locked
+
+      - name: Run offline locked compatibility matrix
+        run: python3 scripts/run_sdk_compat.py --offline
