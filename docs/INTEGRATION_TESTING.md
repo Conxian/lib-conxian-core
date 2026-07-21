@@ -28,6 +28,30 @@ order. SDK and Wallet code own key custody, transaction construction, serializat
 user approval, and concrete signing. Nexus owns observation, proof acquisition, and verifier
 backends. Gateway owns orchestration, persistence, routing, retries, and external side effects.
 
+## Enclave SDK companion tests
+
+The workspace member `lib-conxian-core-enclave` is tested separately against the
+exact published `conxius-enclave-sdk =2.0.11` API. Its integration tests inject
+a deterministic in-process `EnclaveManager` double and verify the adapter
+boundary rather than a simulator or provider implementation. Coverage includes:
+
+- all three exact Core/SDK algorithm mappings;
+- derivation-path rendering at root, hardened, `u32::MAX`, and component-count
+  boundaries;
+- byte-preserving SHA-256 digest extraction plus message and unsupported-digest
+  rejection;
+- SDK request construction and public response shape validation;
+- malformed hex, signature/key lengths, missing/invalid attestations, and
+  secret-safe provider errors;
+- `Strict`, `Managed`, `Expedient`, and `ObserverOnly` trust-policy behavior;
+  `ObserverOnly` never invokes the provider; and
+- BIP-110 rejection before provider invocation, plus inclusive compliant
+  boundary values.
+
+The tests do not verify hardware, cryptographic attestation, simulator success,
+network calls, replay state, persistence, or production provider readiness.
+Those behaviors remain SDK/downstream responsibilities.
+
 ## Fixture policy
 
 Golden JSON files are under [`../tests/fixtures/`](../tests/fixtures/) and are indexed by
@@ -73,8 +97,9 @@ The exact pins represented by this checkpoint are:
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
-| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` `2.0.11` |
-| SDK main line | `conxius-enclave-sdk` `2.0.12`; not imported by this test layer |
+| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` exact `2.0.11` |
+| Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.11`; default features remain minimal |
+| SDK main line | `conxius-enclave-sdk` `2.0.12`; not the stable target for this checkpoint |
 | Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `3b091d2700d840514427e4190c40d631b6d8132c`; this checkpoint does not change that downstream pin |
 | Gateway | local Core crate integration; no cross-repository dependency is added here |
 | Wallet | TypeScript boundary; no Rust runtime dependency is added here |
@@ -83,9 +108,11 @@ The current `Conxian/conxian-nexus` default branch is `main`, and its root `Carg
 contains the exact `lib-conxian-core` revision pin
 `3b091d2700d840514427e4190c40d631b6d8132c`. This is a verified downstream manifest status, not
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
-The optional `enclave` feature
-has a known downstream MSRV/dependency mismatch and is not required by this test layer. The tests
-run against default features and do not require `--all-features`.
+The optional direct `enclave` feature remains available for compatibility, but
+the companion adapter is the tested Core/SDK boundary. The effective workspace
+floor is Rust `1.91+`; the SDK `2.0.11` manifest's lower declaration does not
+lower that floor because its locked Alloy graph requires Rust `1.91`. The tests
+run with default features for Core and do not enable simulator/mock/dev bypasses.
 
 This document describes the Core-only fixture layer. Direct compile and
 serde-boundary evidence against the exact SDK release is intentionally kept in
@@ -104,6 +131,7 @@ Run from the repository root:
 
 ```text
 cargo fmt --all -- --check
+cargo test -p lib-conxian-core-enclave --locked
 cargo test --test core_to_downstream_integration --locked
 cargo test --test golden_serialization --locked
 cargo test --test deterministic_contracts --locked

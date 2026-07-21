@@ -28,6 +28,30 @@ digest algorithm and length. No chain-domain hashing or encoding is implicit.
 `DerivationContext` contains only structured path and purpose metadata; it never
 contains a seed, private key, share, or enclave handle.
 
+## Exact published enclave SDK companion
+
+The workspace member [`lib-conxian-core-enclave`](../addons/lib-conxian-core-enclave/)
+is the cycle-safe adapter boundary for the exact published
+`conxius-enclave-sdk =2.0.11` API. It depends on Core and the SDK directly while
+Core's default features remain SDK-independent. Applications inject an
+`Arc<dyn EnclaveManager>`; the adapter does not construct a provider or own its
+lifecycle.
+
+| Contract surface | Implemented behavior | Fail-closed boundary |
+| --- | --- | --- |
+| Algorithm mapping | ECDSA secp256k1, Schnorr secp256k1, and Ed25519 map explicitly in both directions | No fallback algorithm or provider-specific enum is inferred. |
+| Payload mapping | Only an explicit 32-byte Core SHA-256 digest is copied into SDK `message_hash` | Core messages and SHA-512, Keccak-256, and Blake2b-256 digests are rejected because SDK `2.0.11` carries no digest-algorithm discriminator. |
+| Derivation | Structured Core indices render deterministically as `m/<index>` with `'` for hardened components | Core purpose is not invented as a path component because the SDK request has no purpose field. |
+| Public response | Exact SDK hex fields map to Core signatures and public verification keys after length checks | Malformed hex, unsupported lengths, missing fields, and invalid attestation JSON produce typed errors without raw provider values. |
+| Trust policy | `Strict` requires hardware-backed StrongBox/CloudTEE; `Managed` and `Expedient` require TEE or stronger; `ObserverOnly` cannot sign | Software attestation is never accepted for signing; cryptographic attestation verification remains SDK/downstream-owned. |
+| Bitcoin gate | Core's canonical `validate_bip110_preflight` runs before `EnclaveManager::sign` | Non-compliant, missing, unsupported, or mismatched preflight results cannot reach the provider. The adapter does not parse or serialize Bitcoin transactions. |
+
+The adapter supports the safe shared contract surface only. It does not claim
+that every SDK protocol/provider is production-ready, and it does not silently
+fall back to legacy signing when the exact typed SDK API cannot represent a
+request. Simulator/mock/dev paths are not enabled by default and are not
+production evidence.
+
 ## Existing chain-family mapping
 
 The contract reuses the existing `Chain` and `ChainFamily` models. Bitcoin,
@@ -94,6 +118,7 @@ not accept an underspecified `(chain, signature)` pair.
 | --- | --- | --- |
 | Core (`lib-conxian-core`) | Canonical DTOs, capability checks, validation, and the `UniversalChainSigner` contract | Private keys, key generation, hardware, RPC, persistence, retries, or provider behavior |
 | Enclave/Wallet SDK | Hardware-backed custody, key derivation, signing backends, attestation, and concrete `UniversalChainSigner` implementations | Gateway routing and cross-provider orchestration |
+| Core/SDK companion adapter | Exact Core/SDK mapping, typed request/response boundary, trust gates, and Core-first BIP-110 preflight | Provider runtime, attestation verification, replay state, networking, persistence, telemetry, or environment-specific behavior |
 | Gateway | Runtime coordination, policy/workflow enforcement, provider selection, retries, persistence, and external side effects | Canonical signing DTO definitions and private-key custody |
 | Nexus | Chain observation, proof/state verification, and evidence used by higher-level routing | Signing key custody or core runtime orchestration |
 

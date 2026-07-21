@@ -43,11 +43,15 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-conxius-enclave-sdk = { version = "2.0.11", optional = true }
+conxius-enclave-sdk = { version = "=2.0.11", default-features = false, optional = true }
 
 [features]
 default = []
 enclave = ["conxius-enclave-sdk"]
 
 [workspace]
-members = ["fuzz", "tests/sdk-compat"]
+members = [
+    "fuzz",
+    "tests/sdk-compat",
+    "addons/lib-conxian-core-enclave",
+]

@@ -44,7 +44,7 @@ not add runtime, network, persistence, or cross-repository dependencies.
 - Must remain platform-agnostic and audit-ready.
 - Must avoid "dumping ground" growth: if behavior depends on environment, tenancy, provider APIs, or workflow orchestration, it belongs to standalone Conxian Gateway/Platform.
 
-## 2. Secure Enclave SDK (`lib-conclave-sdk`)
+## 2. Secure Enclave SDK (`conxius-enclave-sdk`)
 
 **Role**: Implementation layer for secure execution environments and trusted hardware.
 
@@ -57,6 +57,27 @@ not add runtime, network, persistence, or cross-repository dependencies.
 **Constraints**:
 - Depends on `lib-conxian-core` for data models and protocol rules.
 - Contains the "How" of secure execution, while Core contains the "What".
+
+### 2.1 Core/SDK companion adapter (`lib-conxian-core-enclave`)
+
+The workspace companion crate at
+[`addons/lib-conxian-core-enclave`](../addons/lib-conxian-core-enclave/) targets
+the exact published `conxius-enclave-sdk =2.0.11` API. It is an adapter boundary,
+not a second SDK implementation. It owns only:
+
+- explicit conversion for the three overlapping signing algorithms;
+- deterministic rendering of Core derivation metadata into the SDK path string;
+- fail-closed extraction of explicit 32-byte SHA-256 digests;
+- typed, secret-safe public response mapping and conservative attestation-level
+  policy gates; and
+- Core-first BIP-110 preflight enforcement before Bitcoin provider invocation.
+
+The adapter uses an injected `Arc<dyn EnclaveManager>` and leaves hardware
+providers, key lifecycle, attestation cryptographic verification, replay state,
+networking, persistence, telemetry, and environment-specific behavior in the
+SDK or downstream application. Its default feature surface is empty, it does
+not enable simulator/mock/dev bypasses, and it does not make a production-
+readiness claim for every SDK protocol/provider.
 
 ## 3. Unified standalone Conxian Gateway (`conxian-gateway`)
 
@@ -74,8 +95,8 @@ not add runtime, network, persistence, or cross-repository dependencies.
 
 1. **standalone Conxian Gateway** uses **lib-conxian-core** for state and control-model types.
 2. **standalone Conxian Gateway** implements runtime adapters and provider workflows against core traits.
-3. **Wallet** uses **lib-conclave-sdk** for enclave-anchored signing.
-4. **lib-conclave-sdk** uses **lib-conxian-core** to ensure signed intents align with protocol rules.
+3. **Wallet** uses **conxius-enclave-sdk** through the companion adapter for enclave-anchored signing.
+4. **conxius-enclave-sdk** uses **lib-conxian-core** to ensure signed intents align with protocol rules.
 
 ## 5. Core-vs-standalone Conxian Gateway guardrail (CON-700)
 
@@ -173,18 +194,21 @@ metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
 This is the initial Core-owned serialized-contract checkpoint. Its known
-compatibility assumptions are limited to Core `0.3.0`, Rust `1.91`, the Core
+compatibility assumptions are limited to Core `0.3.0`, Rust `1.91+`, the Core
 default feature set (`default = []`), signing API version `1`, BIP-110 preflight
-API version `1`, and protocol-verifier evidence binding version `1`. The
-optional `conxius-enclave-sdk` `2.0.11` reference is recorded as a dependency
-assumption only for this Core-only fixture layer; it is not compiled by this
-layer, and no optional SDK or `--all-features` path is enabled here. Direct
-compile compatibility evidence is provided separately by the opt-in harness
-documented in [docs/COMPATIBILITY.md](COMPATIBILITY.md). This checkpoint does
-not claim revision pins for `conxius-enclave-sdk`,
-`conxian-gateway`, or `conxian-nexus`. Pinned downstream fan-out is deferred
-until the UCS and ProtocolVerifier APIs stabilize, so no Gateway or Nexus pin is
-asserted here. Downstream repositories remain responsible for runtime
+API version `1`, and protocol-verifier evidence binding version `1`.
+
+The repository keeps three deliberately separate evidence surfaces. This
+Core-only fixture layer does not compile the optional SDK or enable an
+`--all-features` path. The companion `lib-conxian-core-enclave` workspace member
+directly compiles against the exact published `conxius-enclave-sdk` `2.0.11` API
+without simulator/mock/dev bypass features. The separate non-published
+`tests/sdk-compat` harness provides opt-in direct release compatibility evidence
+and an explicit SDK feature matrix; see [docs/COMPATIBILITY.md](COMPATIBILITY.md).
+
+None of these checkpoints claims that every SDK protocol/provider,
+`conxian-gateway`, or `conxian-nexus` runtime is production-ready or pinned to
+this branch. Downstream repositories remain responsible for runtime
 orchestration, parsing/classification, live evidence, cryptography, persistence,
 and external side effects.
 
@@ -198,7 +222,7 @@ fan-out is deferred and must remain opt-in and pinned until the APIs stabilize.
 
 ### 6.1. Canonical Ownership
 - **Shared Core (`lib-conxian-core`):** Protocol-bearing primitives, canonical data models, and platform-agnostic crypto. Owned by the Protocol Team.
-- **Secure Enclave (`lib-conclave-sdk`):** TEE-specific implementations and hardware-bound signing. Owned by the Security Team.
+- **Secure Enclave (`conxius-enclave-sdk`):** TEE-specific implementations and hardware-bound signing. Owned by the Security Team.
 - **Gateway-Local:** Provider-specific orchestration and temporary integration shims. Owned by the Infrastructure Team.
 
 ### 6.2. Version Policy

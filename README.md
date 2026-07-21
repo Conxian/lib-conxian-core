@@ -11,6 +11,11 @@ Shared protocol primitives for the Conxian ecosystem.
 For **hardware-backed signing, attestation, and policy primitives**, use the production
 [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.11) instead.
 
+For the fail-closed Core-to-SDK contract boundary, use the workspace companion
+crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
+the exact published SDK `=2.0.11`, keeps Core's default features SDK-independent,
+and does not enable simulator/mock/dev bypass features by default.
+
 > **v0.2.11 Breaking Change**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed.
 > See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions.
 
@@ -45,6 +50,7 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 | Crate | Purpose |
 |-------|---------|
 | [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) | **Production Vault SDK** - Hardware-backed signing, attestation, FROST DKG, BitVM2 |
+| [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/) | Fail-closed Core/SDK adapter - exact algorithm, digest, derivation, trust-policy, response, and BIP-110 preflight boundary |
 | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
 | [`conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Runtime orchestration and middleware |
 
@@ -65,9 +71,16 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 [dependencies]
 lib-conxian-core = "0.3.0"
 
-# For Vault SDK features (hardware signing, attestation)
-lib-conxian-core = { version = "0.3.0", features = ["enclave"] }
+# For the exact published SDK contract boundary
+lib-conxian-core-enclave = "0.1.0"
+conxius-enclave-sdk = "=2.0.11"
 ```
+
+The root package's optional `enclave` feature remains available for direct
+dependency compatibility, but the companion crate is the documented adapter
+surface. See [docs/SIGNING_ARCHITECTURE.md](docs/SIGNING_ARCHITECTURE.md) and
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for supported capabilities and
+the Rust `1.91+` effective toolchain floor.
 
 ### Quick Start
 

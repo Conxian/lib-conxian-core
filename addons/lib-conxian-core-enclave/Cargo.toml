@@ -1,0 +1,18 @@
+[package]
+name = "lib-conxian-core-enclave"
+version = "0.1.0"
+description = "Fail-closed Core adapter boundary for conxius-enclave-sdk 2.0.11."
+edition = "2021"
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Conxian/lib-conxian-core"
+readme = "README.md"
+keywords = ["bitcoin", "enclave", "signing", "conxian"]
+categories = ["cryptography::cryptocurrencies"]
+
+[dependencies]
+lib-conxian-core = { path = "../.." }
+conxius-enclave-sdk = { version = "=2.0.11", default-features = false }
+hex = "0.4.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

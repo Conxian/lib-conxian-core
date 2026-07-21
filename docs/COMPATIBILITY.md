@@ -35,8 +35,11 @@ When upgrading `conxius-enclave-sdk`:
    `clippy -D warnings` commands before publishing either side of the
    integration.
 
-Do not downgrade Alloy in `lib-conxian-core` solely to preserve the stale Rust
-`1.85` declaration; any dependency change requires separate compatibility
+The SDK package manifest's Rust `1.85` declaration is lower than the effective
+workspace floor because its locked Alloy graph requires Rust `1.91`. Do not
+treat that manifest-level declaration as support for running this workspace on
+Rust `1.85`, and do not downgrade Alloy in `lib-conxian-core` solely to preserve
+that stale declaration. Any dependency change requires separate compatibility
 validation and coordination with the SDK release.
 
 ## Opt-in SDK v2.0.11 compatibility evidence
@@ -175,3 +178,24 @@ closure does not expand this harness's claims. Core tracking remains
 the Core umbrella [#173](https://github.com/Conxian/lib-conxian-core/issues/173),
 and the deterministic downstream fixture work
 [CON-1505](https://linear.app/conxian-labs/issue/CON-1505/core-009-build-deterministic-core-to-downstream-integration-tests).
+## Companion adapter crate
+
+`addons/lib-conxian-core-enclave` targets the exact published
+`conxius-enclave-sdk =2.0.11` release. It is a separate workspace member so the
+Core default feature graph remains SDK-independent and no Core-to-SDK-to-Core
+dependency cycle is introduced.
+
+| Surface | Feature selection | SDK target | Effective Rust | Default bypass features |
+| --- | --- | --- | --- | --- |
+| `lib-conxian-core-enclave` | Workspace member; no feature flags | Exact `2.0.11` | `1.91+` | None; simulator/mock/dev paths are not enabled |
+| Core `enclave` feature | Optional direct SDK dependency | Exact `2.0.11` | `1.91+` | None by default |
+
+The companion adapter is intentionally narrower than the SDK. It supports
+explicit algorithm conversion, deterministic derivation-path rendering,
+digest-only SHA-256 request construction, conservative trust-tier gates, typed
+public response mapping, and Core-first BIP-110 preflight for Bitcoin signing.
+Provider lifecycle, attestation verification, replay state, networking,
+persistence, telemetry, and environment-specific policy remain outside Core
+and this adapter. See
+[`addons/lib-conxian-core-enclave/README.md`](../addons/lib-conxian-core-enclave/README.md)
+and [`SIGNING_ARCHITECTURE.md`](SIGNING_ARCHITECTURE.md).
