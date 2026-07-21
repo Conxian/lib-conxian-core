@@ -21,6 +21,10 @@ pub enum RGBError {
     ContractNotFound(String),
     /// Operation gated by current rollout mode.
     GatedByRolloutMode,
+    /// No audited RGB transition/seal verifier is available in Core.
+    VerificationUnavailable,
+    /// Shadow observations are explicitly non-authoritative.
+    NonAuthoritativeShadow,
     /// Persistence layer error.
     PersistenceError(String),
 }
@@ -36,6 +40,12 @@ impl std::fmt::Display for RGBError {
             Self::SealVerificationFailed => write!(f, "RGB seal verification failed"),
             Self::ContractNotFound(id) => write!(f, "RGB contract not found: {id}"),
             Self::GatedByRolloutMode => write!(f, "RGB operation gated by rollout mode"),
+            Self::VerificationUnavailable => {
+                write!(f, "RGB verification is unavailable in Core")
+            }
+            Self::NonAuthoritativeShadow => {
+                write!(f, "RGB shadow observation is non-authoritative")
+            }
             Self::PersistenceError(msg) => write!(f, "RGB persistence error: {msg}"),
         }
     }
@@ -49,10 +59,10 @@ impl std::error::Error for RGBError {}
 pub enum RGBExecutionMode {
     /// Adapter is inactive; all calls return errors.
     Disabled,
-    /// Adapter executes logic but side-effects/enforcement are bypassed.
-    /// This mode is used for non-production validation without blocking flows.
+    /// Adapter observations are collected but are never authoritative.
+    /// This mode cannot authorize a production flow.
     Shadow,
-    /// Adapter is fully active and enforced.
+    /// Adapter is fully active and enforced by a real downstream verifier.
     Active,
 }
 
@@ -69,7 +79,7 @@ pub trait RGBAdapter {
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError>;
 }
 
-/// Production-ready RGB Adapter utilizing placeholder for Stock persistence (CON-1407).
+/// In-memory RGB adapter with stock-style contract membership (CON-1407).
 pub struct RGBStockAdapter {
     pub contract_ids: Vec<ContractId>,
 }
@@ -95,14 +105,14 @@ impl RGBAdapter for RGBStockAdapter {
                 "Empty transition".to_string(),
             ));
         }
-        Ok(true)
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn verify_seal(&self, utxo_txid: &str, seal_commitment: &str) -> Result<bool, RGBError> {
         if utxo_txid.is_empty() || seal_commitment.is_empty() {
             return Err(RGBError::SealVerificationFailed);
         }
-        Ok(true)
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError> {
@@ -125,21 +135,21 @@ impl RGBAdapter for RGBSkeletonAdapter {
                 "Empty transition".to_string(),
             ));
         }
-        Ok(true)
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn verify_seal(&self, utxo_txid: &str, seal_commitment: &str) -> Result<bool, RGBError> {
         if utxo_txid.is_empty() || seal_commitment.is_empty() {
             return Err(RGBError::SealVerificationFailed);
         }
-        Ok(true)
+        Err(RGBError::VerificationUnavailable)
     }
 
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError> {
-        if contract_id == "invalid" {
-            return Err(RGBError::ContractNotFound(contract_id.to_string()));
+        if contract_id.trim().is_empty() {
+            return Err(RGBError::InvalidContractId);
         }
-        Ok(format!("Contract details for {}", contract_id))
+        Err(RGBError::VerificationUnavailable)
     }
 }
 
@@ -158,10 +168,13 @@ impl<A: RGBAdapter> RGBRuntime<A> {
     pub fn validate_transition(&self, transition_hex: &str) -> Result<bool, RGBError> {
         match self.mode {
             RGBExecutionMode::Disabled => Err(RGBError::GatedByRolloutMode),
-            RGBExecutionMode::Shadow => {
-                let _ = self.adapter.validate_transition(transition_hex);
-                Ok(true)
-            }
+            RGBExecutionMode::Shadow => match self.adapter.validate_transition(transition_hex) {
+                Err(error @ RGBError::TransitionValidationFailed(_)) => Err(error),
+                Err(RGBError::VerificationUnavailable) | Ok(_) => {
+                    Err(RGBError::NonAuthoritativeShadow)
+                }
+                Err(error) => Err(error),
+            },
             RGBExecutionMode::Active => self.adapter.validate_transition(transition_hex),
         }
     }
@@ -171,8 +184,13 @@ impl<A: RGBAdapter> RGBRuntime<A> {
         match self.mode {
             RGBExecutionMode::Disabled => Err(RGBError::GatedByRolloutMode),
             RGBExecutionMode::Shadow => {
-                let _ = self.adapter.verify_seal(utxo_txid, seal_commitment);
-                Ok(true)
+                match self.adapter.verify_seal(utxo_txid, seal_commitment) {
+                    Err(error @ RGBError::SealVerificationFailed) => Err(error),
+                    Err(RGBError::VerificationUnavailable) | Ok(_) => {
+                        Err(RGBError::NonAuthoritativeShadow)
+                    }
+                    Err(error) => Err(error),
+                }
             }
             RGBExecutionMode::Active => self.adapter.verify_seal(utxo_txid, seal_commitment),
         }
@@ -207,10 +225,25 @@ mod tests {
             Err(RGBError::GatedByRolloutMode)
         );
 
-        assert!(shadow.validate_transition("abc").is_ok());
+        assert_eq!(
+            shadow.validate_transition("abc"),
+            Err(RGBError::NonAuthoritativeShadow)
+        );
 
-        assert!(active.validate_transition("abc").is_ok());
-        assert!(active.validate_transition("").is_err());
+        assert_eq!(
+            active.validate_transition("abc"),
+            Err(RGBError::VerificationUnavailable)
+        );
+        assert_eq!(
+            active.validate_transition(""),
+            Err(RGBError::TransitionValidationFailed(
+                "Empty transition".to_string()
+            ))
+        );
+        assert_eq!(
+            shadow.verify_seal("utxo", "commitment"),
+            Err(RGBError::NonAuthoritativeShadow)
+        );
     }
 
     #[test]
