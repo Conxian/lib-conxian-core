@@ -6,6 +6,22 @@
 
 This document maps identified protocol gaps to research status and implementation priority scoring.
 
+## Current Core boundary (2026-07-21)
+
+The SDK and proposal scores below must not be read as claims that
+`lib-conxian-core` itself provides production verification. In Core:
+
+- FROST share generation, distribution, and aggregation are typed
+  `Unsupported` boundaries until an audited implementation is supplied.
+- Enclave DER handling parses container shape only; it is not certificate-chain
+  or hardware-attestation verification. Production attestation belongs in
+  `conxius-enclave-sdk`.
+- BIP-322 handles address/base64/witness shape only; it does not perform
+  cryptographic script or signature verification.
+- Fedimint point reconstruction is a deterministic primitive, not
+  provider-backed mint/note/status verification. Authenticated mint status is
+  unavailable without a provider.
+
 ## Critical Discovery: SDK Integration (v0.2.10)
 
 **The production Vault SDK is in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) v2.0.11**, NOT in this repository.
@@ -25,12 +41,12 @@ This document maps identified protocol gaps to research status and implementatio
 | Removed in-core MuSig2/BitVM2/Vault implementations | `conxius-enclave-sdk` | ✅ **SDK-owned** - production signing, sessions, attestation, and BitVM2 verification live in the SDK |
 | `fuzz/fuzz_targets/musig2_aggregate.rs` | upstream `musig2::KeyAggContext` | ✅ **Dependency-level fuzz coverage** |
 | `fuzz/fuzz_targets/proof_request_validate.rs` | `src/verifier.rs::ProofVerificationRequest::validate` | ✅ **Structural and contract/policy validation; no cryptographic BitVM2 proof verification** |
-| `src/protocol/frost.rs` | `src/protocol/frost.rs` | ✅ Parity |
+| `src/protocol/frost.rs` | `conxius-enclave-sdk` FROST implementation | ⚠️ Core exposes a typed unsupported boundary; production share/distribution/aggregation is SDK-owned |
 | `src/control_model/` | N/A | ✅ Unique to lib-conxian-core |
 
-## SDK Capabilities Now Available (via `enclave` feature)
+## SDK Capabilities (not implementations in Core)
 
-### Core Modules (via conxius-enclave-sdk)
+### SDK Modules (via conxius-enclave-sdk)
 
 | Module | Capabilities | WASM |
 |--------|-------------|------|
@@ -64,13 +80,13 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 | Candidate | Strategic | Readiness | Demand | Total Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **MuSig2 Aggregation (G-10)** | 40 | 30 | 30 | **100** | **Implemented** (SDK) |
-| **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **Implemented** (SDK) |
+| **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **Implemented** (SDK; Core unsupported) |
 | **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Implemented** (SDK) |
-| **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK) |
+| **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK; Core DER parse-only) |
 | **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** (SDK) |
-| **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Implemented** (SDK) |
-| **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK) |
+| **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Implemented** (SDK; Core shape-only) |
+| **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK; Core deterministic primitive/status provider required) |
 | **Silent Payments (G-05)** | 35 | 25 | 20 | **80** | **Implemented** (SDK) |
 | **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Implemented** |
 | **Fuzz Testing (CON-1332 / GitHub #147)** | 30 | 30 | 20 | **80** | **Implemented** (4 bounded targets; weekly/manual CI) |
@@ -81,11 +97,11 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 ## Gap Identification & Resolution
 1. **Universal Chain Adapters**: Skeletal implementation complete for Cosmos, Solana, Move, and Substrate (CXIP-21).
 2. **BitVM2 Multi-Party**: Resolved (CON-1306). Production MuSig2-based Taproot tree aggregation and BitVM2 verification are owned by `conxius-enclave-sdk`; this crate no longer carries the Vault implementation.
-3. **BIP-322**: Resolved (CON-1266). Hardened universal message signing logic.
-4. **FROST Round 2**: Resolved (CON-1329). Moving from skeletal generation to encrypted share distribution.
-5. **Hardware Attestation**: Resolved (CON-1329). Implementing X.509 DER parsing for enclave certificate chains.
+3. **BIP-322**: Core provides hardened address/base64/witness shape handling, but cryptographic script and signature verification remains SDK/provider-owned.
+4. **FROST Round 2**: Core retains a typed unsupported boundary for share generation, distribution, and aggregation; production implementation is SDK-owned and requires audit.
+5. **Hardware Attestation**: Core parses DER containers only; certificate-chain and hardware-attestation verification is SDK-owned.
 6. **MuSig2 Signature Aggregation**: Resolved (G-10). Production signing and session aggregation are owned by `conxius-enclave-sdk`; this crate retains only protocol primitives and direct dependency-level fuzz coverage.
-7. **Fedimint**: Resolved (G-16). Transitioning to real cryptographic blinding via `fedimint-client-wasm`.
+7. **Fedimint**: Core provides deterministic point reconstruction only; authenticated mint, note, and status verification requires a provider, and mint status is unavailable without one.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
 9. **DLC**: Resolved (G-06). Hardened oracle attestation verification.
 10. **RGB**: Resolved (CON-1407). Expanded integration with Stock persistence support.

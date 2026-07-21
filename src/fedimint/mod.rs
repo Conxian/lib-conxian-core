@@ -1,4 +1,4 @@
-//! Fedimint Community Liquidity Adapter
+//! Fedimint deterministic primitives and provider boundary
 //! Aligned with CXIP 20 and G-16
 
 use secp256k1::{PublicKey, Scalar, Secp256k1, SecretKey};
@@ -17,6 +17,10 @@ pub struct FedimintAdapter;
 /// Typed failures for Fedimint note construction and verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FedimintError {
+    /// A mint identifier is empty or contains only whitespace.
+    MalformedMintId,
+    /// Authenticated provider-backed mint status is not available in Core.
+    StatusUnavailable,
     /// A byte input does not have the required exact length.
     InvalidLength {
         field: &'static str,
@@ -34,6 +38,13 @@ pub enum FedimintError {
 impl std::fmt::Display for FedimintError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::MalformedMintId => write!(f, "mint ID must not be empty"),
+            Self::StatusUnavailable => {
+                write!(
+                    f,
+                    "authenticated Fedimint mint status is unavailable in Core"
+                )
+            }
             Self::InvalidLength {
                 field,
                 expected,
@@ -52,15 +63,22 @@ impl std::fmt::Display for FedimintError {
 impl std::error::Error for FedimintError {}
 
 impl FedimintAdapter {
-    pub fn get_mint_status(&self, mint_id: &str) -> Result<FedimintMint, String> {
-        Ok(FedimintMint {
-            mint_id: mint_id.to_string(),
-            community_name: "Conxian Community Mint".to_string(),
-            total_liquidity_sats: 100_000_000,
-        })
+    /// Returns authenticated provider-backed status for a mint.
+    ///
+    /// Core validates the identifier shape but does not have a Fedimint
+    /// provider. It therefore returns a typed unavailable error for every
+    /// non-empty identifier instead of fabricating community or liquidity
+    /// data.
+    pub fn get_mint_status(&self, mint_id: &str) -> Result<FedimintMint, FedimintError> {
+        if mint_id.trim().is_empty() {
+            return Err(FedimintError::MalformedMintId);
+        }
+
+        Err(FedimintError::StatusUnavailable)
     }
 
-    /// Implements real cryptographic blinding for e-cash notes (G-16).
+    /// Performs deterministic secp256k1 point reconstruction for an e-cash
+    /// note primitive (G-16). This is not provider-backed mint verification.
     /// Uses ECC point addition: blinded_note = H(secret)*G + r*G
     pub fn blind_note(secret: &[u8], blinding_factor: &[u8]) -> Result<Vec<u8>, FedimintError> {
         let secp = Secp256k1::new();
@@ -190,5 +208,25 @@ mod tests {
             FedimintAdapter::verify_unblinded_checked(&[0x01; 32], &[0x01; 32], secret),
             Err(FedimintError::InvalidLength { .. })
         ));
+    }
+
+    #[test]
+    fn test_fedimint_mint_status_rejects_empty_id() {
+        let adapter = FedimintAdapter;
+
+        assert_eq!(
+            adapter.get_mint_status(" \t\n").unwrap_err(),
+            FedimintError::MalformedMintId
+        );
+    }
+
+    #[test]
+    fn test_fedimint_mint_status_requires_authenticated_provider() {
+        let adapter = FedimintAdapter;
+
+        assert_eq!(
+            adapter.get_mint_status("fedimint://community").unwrap_err(),
+            FedimintError::StatusUnavailable
+        );
     }
 }

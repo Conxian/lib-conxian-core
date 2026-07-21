@@ -30,12 +30,16 @@ real verifier.
 | `DlcManager::verify_oracle_attestation_for_intent` | Not an authorization result | It can check the real point equation plus oracle-key, outcome-hash, positive-collateral, and expiry policy, but the existing oracle tuple does not sign collateral/expiry/full-intent context | Typed `DlcVerificationError::UnsupportedIntentBinding` for an otherwise valid tuple; malformed, mismatched, expired, and invalid evidence remain typed failures |
 | `DlcManager::verify_execution_checked` | Not implemented | Its compatibility arguments omit nonce, outcome, expiry height, CET, and transaction binding | `MalformedAttestation` for short input, otherwise `UnsupportedExecutionContext` |
 | `FrostManager::generate_shares`, `prepare_distribution_shares`, and `aggregate_signature` | Not implemented | No audited FROST DKG, distribution, nonce, commitment, or Schnorr provider | Typed `FrostError`; no fabricated shares, encrypted payloads, or signatures |
-| `FedimintAdapter::verify_unblinded_checked` | Authoritative point equality | Exact 33-byte compressed point, 32-byte blinding factor, and real secp256k1 reconstruction | Typed malformed-input error or `Ok(false)` for a valid but mismatched point |
+| `FedimintAdapter::verify_unblinded_checked` | Deterministic primitive only | Exact 33-byte compressed point, 32-byte blinding factor, and real secp256k1 point reconstruction/equality; no provider-backed mint or note authorization | Typed malformed-input error or `Ok(false)` for a valid but mismatched point |
+| `FedimintAdapter::get_mint_status` | Provider-backed status unavailable | Core validates only a non-empty/non-whitespace ID; it does not query or authenticate a mint or know community/liquidity data | `FedimintError::MalformedMintId` or `FedimintError::StatusUnavailable` |
 
 The deprecated `Bip322Bridge::verify_message`, `DlcManager::verify_execution`,
 and `FedimintAdapter::verify_unblinded` wrappers return `false` on every
-unsupported or malformed path. `FedimintAdapter::blind_note` now returns a
-typed `Result`; it never uses an all-zero byte sentinel for an error.
+unsupported or malformed path. `FedimintAdapter::blind_note` and
+`verify_unblinded_checked` are deterministic point-reconstruction primitives,
+not provider-backed mint, note, or status verification. `get_mint_status`
+returns `StatusUnavailable` for every non-empty ID until an authenticated
+provider is supplied; it never fabricates community or liquidity data.
 
 ## Enclave and rollout boundaries
 

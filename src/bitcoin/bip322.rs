@@ -87,8 +87,12 @@ mod tests {
     use super::*;
 
     fn encoded_witness() -> String {
+        encoded_witness_with_item(&[0x30, 0x01])
+    }
+
+    fn encoded_witness_with_item(item: &[u8]) -> String {
         let mut witness = Witness::new();
-        witness.push(vec![0x30, 0x01]);
+        witness.push(item);
         base64::engine::general_purpose::STANDARD.encode(bitcoin::consensus::serialize(&witness))
     }
 
@@ -107,6 +111,34 @@ mod tests {
         {
             assert!(!Bip322Bridge::verify_message(&msg));
         }
+    }
+
+    #[test]
+    fn test_bip322_mutated_message_remains_unsupported_after_structural_parsing() {
+        let msg = Bip322Message {
+            message: "Hello Conxian (mutated)".to_string(),
+            address: "1BitcoinEaterAddressDontSendf59kuE".to_string(),
+            signature: encoded_witness(),
+        };
+
+        assert_eq!(
+            Bip322Bridge::verify_message_checked(&msg),
+            Err(Bip322VerificationError::Unsupported)
+        );
+    }
+
+    #[test]
+    fn test_bip322_mutated_witness_contents_remain_unsupported_after_structural_parsing() {
+        let msg = Bip322Message {
+            message: "Hello Conxian".to_string(),
+            address: "1BitcoinEaterAddressDontSendf59kuE".to_string(),
+            signature: encoded_witness_with_item(&[0x31, 0x01]),
+        };
+
+        assert_eq!(
+            Bip322Bridge::verify_message_checked(&msg),
+            Err(Bip322VerificationError::Unsupported)
+        );
     }
 
     #[test]

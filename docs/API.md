@@ -142,6 +142,8 @@ Advanced protocol support for multi-party and cross-chain coordination.
 - `CovenantManager::generate_cat_vault_script(pubkey: &[u8], target_hash: &[u8])`: Generates OP_CAT recursive covenants.
 - `DlcManager::create_intent(oracle_pubkey: &[u8], collateral: u64, outcome: [u8; 32], expiry: u32)`: Creates DLC intents for native Bitcoin finance (G-06).
 - `DlcManager::verify_oracle_attestation_for_intent`: Performs typed intent/outcome/expiry checks but returns `UnsupportedIntentBinding` for a valid tuple because the existing oracle signature does not commit to collateral and expiry. `verify_execution_checked` remains explicitly unsupported because its compatibility inputs omit the required execution evidence.
+- `FedimintAdapter::blind_note` and `verify_unblinded_checked`: Deterministic secp256k1 point reconstruction/equality primitives, not provider-backed mint or note verification.
+- `FedimintAdapter::get_mint_status`: Rejects an empty/whitespace ID with `FedimintError::MalformedMintId`; every non-empty ID returns `FedimintError::StatusUnavailable` until an authenticated provider supplies status. Core does not fabricate community or liquidity data.
 
 ### Universal Chain Adapters (`adapters`)
 CXIP-21 interface for cross-chain orchestration.
