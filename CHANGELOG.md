@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.3.0] - 2026-07-21
+
+### Breaking Changes
+- This intentional breaking release bumps `lib-conxian-core` from `0.2.12` to
+  `0.3.0`. Update callers for typed fail-closed verifier results before
+  upgrading.
+
+### Migration
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` now return
+  `Result<..., StateProofError>`; handle typed missing, invalid, unsupported,
+  unavailable, and root-mismatch outcomes.
+- FROST operations now return `Result<..., FrostError>`. Structurally valid
+  inputs still return `FrostError::Unsupported` until an audited backend exists.
+- `DlcManager::verify_execution` now returns `Result<bool, DlcError>`. Callers
+  requiring authoritative verification should use
+  `verify_execution_attestation` with the intent, nonce point, outcome message,
+  signature scalar, and current block context.
 
 ### Security
 - **CON-1509 fail-closed verifier remediation:** Removed BIP-322 prefix and

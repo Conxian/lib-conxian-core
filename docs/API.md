@@ -1,9 +1,27 @@
-# lib-conxian-core API Reference v0.2.12
+# lib-conxian-core API Reference v0.3.0
 
 ## 1. Overview
 This library provides the Rust-native API for Conxian protocol primitives. It is intended to be used as a dependency (`lib-conxian-core`) by the standalone Gateway, Wallet, and third-party integrators.
 
-## 2. Core Modules
+## 2. v0.3.0 Breaking-Release Migration
+
+Version `0.3.0` intentionally changes the fail-closed verifier APIs from
+`0.2.12`:
+
+- `UniversalChainAdapter::{verify_state_proof, get_state_root}` now return
+  `Result<..., StateProofError>`. Handle typed missing, invalid, unsupported,
+  unavailable, and state-root-mismatch failures instead of string results.
+- `FrostManager::{generate_shares, prepare_distribution_shares,
+  aggregate_signature}` now return `Result<..., FrostError>`. Even
+  structurally valid inputs return `FrostError::Unsupported` until an audited
+  FROST backend exists; input shape validation is not authorization.
+- `DlcManager::verify_execution` now returns `Result<bool, DlcError>` and
+  remains a typed unsupported boundary because its arguments cannot bind the
+  complete attestation context. Callers needing authoritative verification
+  should use `verify_execution_attestation` with the intent, nonce point,
+  outcome message, signature scalar, and current block.
+
+## 3. Core Modules
 
 ### Universal Chain Signing (`signing`)
 The platform-neutral contract for SDK and Gateway signer adapters.
@@ -113,14 +131,14 @@ Advanced Bitcoin-native primitives.
   results until an audited script verifier is available; the compatibility
   boolean wrapper fails closed (G-09).
 
-## 3. Trust Tier Policy (CON-791)
+## 4. Trust Tier Policy (CON-791)
 The library enforces explicit trust-tier metadata for all cross-domain operations:
 - **T1: Strict**: Sovereign verified (e.g., IBC light-clients).
 - **T2: Managed**: Hybrid verified with independent attesters.
 - **T3: Expedient**: Attester network with caps and kill-switches.
 - **T4: ObserverOnly**: Not allowed in production.
 
-## 4. Integration Guidelines
+## 5. Integration Guidelines
 Implementation details for runtime orchestration, network IO, and database persistence live in the standalone `conxian-gateway` repository. This library focuses exclusively on stable interfaces and protocol-bearing logic.
 
 ### Protocol Primitives (`protocol`)

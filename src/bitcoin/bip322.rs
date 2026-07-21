@@ -101,6 +101,26 @@ mod tests {
     }
 
     #[test]
+    fn test_bip322_valid_segwit_address_does_not_use_prefix_fallback() {
+        // This is a canonically encoded, structurally valid SegWit witness
+        // stack. Its presence must not turn the valid `bc1` prefix into a
+        // successful verification result.
+        let witness = Witness::from_slice(&[vec![0u8; 64], vec![0x02; 33]]);
+        let encoded_witness = bitcoin::consensus::encode::serialize(&witness);
+        let msg = Bip322Message {
+            message: "Hello Conxian".to_string(),
+            address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh".to_string(),
+            signature: base64::engine::general_purpose::STANDARD.encode(encoded_witness),
+        };
+
+        assert_eq!(
+            Bip322Bridge::try_verify_message(&msg),
+            Err(Bip322Error::UnsupportedScriptType)
+        );
+        assert!(!Bip322Bridge::verify_message(&msg));
+    }
+
+    #[test]
     fn test_bip322_invalid_address() {
         let msg = Bip322Message {
             message: "msg".to_string(),
