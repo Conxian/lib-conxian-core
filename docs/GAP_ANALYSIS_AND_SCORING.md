@@ -75,12 +75,26 @@ k256 = "0.14.0-rc.9"           # ⚠️ Watch for stable
 - **Technical Readiness (30%)**: Specification stability, dependency availability.
 - **Ecosystem Demand (30%)**: Partner requirements, TVL potential.
 
-> **Canonical risk-profile boundary (CORE-007):** This planning rubric and the
-> candidate matrix below are not the canonical chain-family risk-profile input.
-> Their scores are historical prioritization material, not approved chain risk
-> assessments. The Core registry intentionally contains no scores until a
-> separate governance decision supplies public evidence and a versioned data
-> revision. See [CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md).
+## Canonical risk-profile boundary (CORE-007 / GitHub #177)
+
+The scoring rubric above is a planning and prioritization tool. Its values are **not** canonical
+chain-risk scores and must not be copied into `data/risk_profiles/v1.json` or treated as routing
+policy. The canonical schema and governance rules live in
+[`docs/architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).
+
+The initial schema-v1 profile set records an explicit `not_assessed` decision for every one of the
+6 `ChainFamily` values and 23 current `Chain` variants. No profile has an approved score until a
+review changes the artifact, profile revision, evidence references, governance reference, focused
+tests, documentation, and release notes together. Issue #177 and repository documentation are
+change references only; they are not empirical risk evidence.
+
+The six canonical dimensions are unitless strength scores in `0..=100`: data availability,
+settlement, bridge, exit mechanism, operator independence/resilience (the normalized
+`operator_dependency_score`), and decentralization. A valid zero is distinct from `unknown` and
+`not_assessed`. Nexus owns live observations and evidence acquisition; Gateway owns runtime
+assessment, persistence, and routing. Core owns only the versioned data contract and invariants.
+The Core registry intentionally contains no approved scores until separate governance supplies
+public evidence and a versioned artifact revision.
 
 ## Candidate Matrix
 
