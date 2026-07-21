@@ -102,7 +102,7 @@ The integration vectors are in
 | Empty witness | `malformed / empty_witness`. |
 | `thresh(2, ...)`-style public metadata | Supported static handoff when context/capabilities are valid. |
 | Timelock-only metadata | Supported when timelock flag and zero signer counts agree. |
-| Required signatures greater than candidate signers | `malformed / invalid_miniscript_metadata`. |
+| Required signatures greater than candidate signers, or max satisfaction elements less than required signatures | `malformed / invalid_miniscript_metadata`. |
 | `CHECKSIGADD` metadata in SegWit v0 context | `malformed / miniscript_context_mismatch`. |
 | Compilation, satisfaction, execution, or cryptographic-verification request | `downstream_owned / downstream_owned_miniscript_capability`. |
 

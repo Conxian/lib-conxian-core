@@ -253,6 +253,33 @@ fn threshold_metadata() -> MiniscriptPolicyMetadata {
     }
 }
 
+fn single_key_metadata() -> MiniscriptPolicyMetadata {
+    MiniscriptPolicyMetadata {
+        policy_kind: MiniscriptPolicyKind::SingleKey,
+        required_signatures: 1,
+        candidate_signers: 1,
+        max_satisfaction_elements: 1,
+        uses_timelock: false,
+        uses_hashlock: false,
+        uses_checksigadd: false,
+    }
+}
+
+fn assert_invalid_miniscript_metadata_error(error: BitcoinBoundaryError) {
+    assert_eq!(error.category, BitcoinBoundaryErrorCategory::Malformed);
+    assert_eq!(
+        error.code,
+        BitcoinBoundaryErrorCode::InvalidMiniscriptMetadata
+    );
+    assert_eq!(error.category_code(), "malformed");
+    assert_eq!(error.code_str(), "invalid_miniscript_metadata");
+    assert_eq!(error.to_string(), "malformed: invalid_miniscript_metadata");
+    assert_eq!(
+        serde_json::to_string(&error).expect("metadata error serializes"),
+        r#"{"category":"malformed","code":"invalid_miniscript_metadata"}"#
+    );
+}
+
 #[test]
 fn miniscript_metadata_handoff_accepts_public_threshold_constraints_only() {
     let handoff = MiniscriptHandoff {
@@ -351,6 +378,27 @@ fn miniscript_metadata_rejects_inconsistent_constraints_and_downstream_capabilit
         error.code,
         BitcoinBoundaryErrorCode::UnsupportedMiniscriptContext
     );
+}
+
+#[test]
+fn miniscript_metadata_rejects_undersized_satisfaction_bounds_for_threshold_and_single_key() {
+    let mut threshold = threshold_metadata();
+    validate_miniscript_policy_metadata(&MiniscriptContext::TaprootScriptPath, &threshold)
+        .expect("threshold metadata with a sufficient bound remains valid");
+    threshold.max_satisfaction_elements = 1;
+    let error =
+        validate_miniscript_policy_metadata(&MiniscriptContext::TaprootScriptPath, &threshold)
+            .expect_err("threshold bound cannot be smaller than required signatures");
+    assert_invalid_miniscript_metadata_error(error);
+
+    let mut single_key = single_key_metadata();
+    validate_miniscript_policy_metadata(&MiniscriptContext::TaprootScriptPath, &single_key)
+        .expect("single-key metadata with a sufficient bound remains valid");
+    single_key.max_satisfaction_elements = 0;
+    let error =
+        validate_miniscript_policy_metadata(&MiniscriptContext::TaprootScriptPath, &single_key)
+            .expect_err("single-key bound cannot be smaller than required signatures");
+    assert_invalid_miniscript_metadata_error(error);
 }
 
 #[test]

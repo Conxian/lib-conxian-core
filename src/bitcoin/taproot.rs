@@ -665,6 +665,12 @@ pub fn validate_miniscript_policy_metadata(
         ));
     }
 
+    if metadata.max_satisfaction_elements < metadata.required_signatures {
+        return Err(BitcoinBoundaryError::malformed(
+            BitcoinBoundaryErrorCode::InvalidMiniscriptMetadata,
+        ));
+    }
+
     match metadata.policy_kind {
         MiniscriptPolicyKind::SingleKey
             if metadata.required_signatures != 1 || metadata.candidate_signers != 1 =>
