@@ -156,6 +156,17 @@ def _publish_command_has_flags(text: str, *flags: str) -> bool:
     return False
 
 
+def _publish_command_has_package(text: str, package_name: str) -> bool:
+    """Return whether a cargo publish command names the expected package."""
+
+    package_pattern = rf"(?:-p|--package)\s+{re.escape(package_name)}(?:\s|[;&|]|$)"
+    return any(
+        re.search(r"\bcargo\s+publish\b", line)
+        and re.search(package_pattern, line)
+        for line in text.splitlines()
+    )
+
+
 def _step_id(step: Step) -> str | None:
     for _, value in _key_values(step.lines, "id"):
         if re.fullmatch(r"[A-Za-z0-9_-]+", value):
@@ -378,6 +389,11 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
     if publish_step is None:
         violations.append("could not find the 'Publish to crates.io' step")
     else:
+        publish_text = "\n".join(publish_step.lines)
+        if not _publish_command_has_package(publish_text, "lib-conxian-core"):
+            violations.append(
+                "Core publication must use `cargo publish ... -p lib-conxian-core`"
+            )
         publish_condition = _if_expression(publish_step) or ""
         if "github.event_name == 'push'" not in publish_condition:
             violations.append("real publication must remain available for tag pushes")
@@ -394,6 +410,10 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
         if not _publish_command_has_flags(dry_run_text, "--dry-run", "--locked"):
             violations.append(
                 "manual dry-run path must invoke `cargo publish --dry-run --locked`"
+            )
+        if not _publish_command_has_package(dry_run_text, "lib-conxian-core"):
+            violations.append(
+                "manual dry-run path must target `lib-conxian-core` explicitly"
             )
         dry_run_condition = _if_expression(dry_run_step) or ""
         if not re.search(r"inputs\.mode\s*==\s*['\"]dry-run['\"]", dry_run_condition):
@@ -443,6 +463,44 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
             violations.append("registry verification must require successful cargo publish")
         if not re.search(r"--registry-attempts\s+1[2-9]", registry_text):
             violations.append("registry verification must use bounded propagation retries")
+
+    addon_dry_run_step = _step_by_name(steps, "Verify add-on package (after Core registry propagation)")
+    if addon_dry_run_step is None:
+        violations.append("real publication must dry-run the add-on after Core registry verification")
+    else:
+        addon_dry_run_text = "\n".join(addon_dry_run_step.lines)
+        addon_dry_run_condition = _if_expression(addon_dry_run_step) or ""
+        if not _publish_command_has_flags(addon_dry_run_text, "--dry-run", "--locked"):
+            violations.append("add-on verification must invoke `cargo publish --dry-run --locked`")
+        if not _publish_command_has_package(
+            addon_dry_run_text,
+            "lib-conxian-core-enclave",
+        ):
+            violations.append(
+                "add-on verification must target `lib-conxian-core-enclave` explicitly"
+            )
+        if "steps.registry.outcome == 'success'" not in addon_dry_run_condition:
+            violations.append(
+                "add-on dry-run must require successful Core registry verification"
+            )
+
+    addon_publish_step = _step_by_name(steps, "Publish add-on to crates.io")
+    if addon_publish_step is None:
+        violations.append("real publication must publish the add-on after its dry-run")
+    else:
+        addon_publish_text = "\n".join(addon_publish_step.lines)
+        addon_publish_condition = _if_expression(addon_publish_step) or ""
+        if not _publish_command_has_package(
+            addon_publish_text,
+            "lib-conxian-core-enclave",
+        ):
+            violations.append(
+                "add-on publication must use `cargo publish ... -p lib-conxian-core-enclave`"
+            )
+        if "steps.addon_dry_run.outcome == 'success'" not in addon_publish_condition:
+            violations.append(
+                "add-on publication must require successful add-on dry-run verification"
+            )
 
     release_step = _step_by_name(steps, "Create GitHub Release (idempotent)")
     if release_step is None:
@@ -495,6 +553,16 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
                     "GitHub Release creation must support successful release-only recovery "
                     f"(step starts on line {release_step.start_line})"
                 )
+            if "steps.addon_publish.outcome == 'success'" not in release_condition:
+                violations.append(
+                    "GitHub Release creation must require successful add-on publication "
+                    f"(step starts on line {release_step.start_line})"
+                )
+            if "steps.addon_recovery.outcome == 'success'" not in release_condition:
+                violations.append(
+                    "GitHub Release creation must require successful add-on recovery verification "
+                    f"(step starts on line {release_step.start_line})"
+                )
         if "gh release view \"$RELEASE_TAG\"" not in release_text:
             violations.append("GitHub Release creation must be idempotent when the release exists")
         if "gh release create \"$RELEASE_TAG\"" not in release_text:
@@ -530,6 +598,8 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
         "Validate pre-publish parity",
         "Publish to crates.io",
         "Verify crates.io publication",
+        "Verify add-on package (after Core registry propagation)",
+        "Publish add-on to crates.io",
         "Create GitHub Release (idempotent)",
         "Verify post-release parity",
     )
@@ -537,6 +607,17 @@ def verify(workflow_path: Path, main_workflow_path: Path = DEFAULT_MAIN_WORKFLOW
         if before in step_positions and after in step_positions:
             if step_positions[before] >= step_positions[after]:
                 violations.append(f"workflow steps must keep {before!r} before {after!r}")
+
+    recovery_position = step_positions.get("Validate published candidate for recovery")
+    addon_recovery_position = step_positions.get("Validate add-on candidate for recovery")
+    if (
+        recovery_position is not None
+        and addon_recovery_position is not None
+        and recovery_position >= addon_recovery_position
+    ):
+        violations.append(
+            "workflow steps must keep Core recovery validation before add-on recovery validation"
+        )
 
     violations.extend(_verify_main_workflow(main_workflow_path))
 

@@ -445,6 +445,28 @@ fn schnorr_public_key_derivation_fails_closed_before_getter_invocation() {
 }
 
 #[test]
+fn ed25519_public_key_derivation_fails_closed_before_getter_invocation() {
+    let manager = Arc::new(RecordingManager::new(response(
+        64,
+        32,
+        SdkAttestationLevel::TEE,
+    )));
+    let adapter = adapter(manager.clone(), TrustTier::Managed);
+
+    assert_eq!(
+        adapter
+            .derive_public_key(
+                &SigningTarget::for_chain(Chain::Solana),
+                SigningAlgorithm::Ed25519,
+                &context(),
+            )
+            .unwrap_err(),
+        AdapterError::UnsupportedPublicKeyDerivation(SigningAlgorithm::Ed25519)
+    );
+    assert_eq!(manager.public_key_calls(), 0);
+}
+
+#[test]
 fn invalid_chain_algorithm_pairs_are_rejected_before_provider_calls() {
     for (chain, algorithm) in [
         (Chain::Solana, SigningAlgorithm::EcdsaSecp256k1),

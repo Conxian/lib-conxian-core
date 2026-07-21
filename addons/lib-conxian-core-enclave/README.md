@@ -50,10 +50,10 @@ validator before invoking the injected manager.
 | Algorithms | Explicit conversion for ECDSA secp256k1, Schnorr secp256k1, and Ed25519 | The overlap is limited to the exact SDK enum; no implicit algorithm fallback exists. |
 | Chain/algorithm gate | Bitcoin, Liquid, Lightning, and Babylon allow secp256k1; Stacks and Ethereum allow ECDSA secp256k1; Solana allows Ed25519 | This is a concrete deny-by-default allowlist based on Core `Chain`/`ChainFamily` semantics. Other chains and pairs are rejected before the manager is called. |
 | Payloads | 32-byte Core SHA-256 digests only | The SDK request has `message_hash` but no digest-algorithm field, so messages, SHA-512, Keccak-256, and Blake2b-256 are rejected. |
-| Derivation | Deterministic `m/<index>` rendering with `'` for hardened components | Core purpose metadata is preserved in the Core request/result but is not invented as an SDK path component because SDK `2.0.11` has no purpose field. |
+| Derivation | Deterministic `m/<index>` rendering with `'` for hardened components; only ECDSA secp256k1 public-key derivation may use the SDK getter | Core purpose metadata is preserved in the Core request/result but is not invented as an SDK path component because SDK `2.0.11` has no purpose field. Schnorr and Ed25519 public-key derivation are unsupported because the getter is algorithm-agnostic; signing response validation remains separate. |
 | ECDSA response | 64-byte compact or 65-byte recoverable signatures; 33- or 65-byte public keys | Hex decoding and length checks are performed before Core response construction. |
-| Schnorr response | 64-byte compact signatures and exactly 32-byte x-only public keys | `EnclaveManager::get_public_key` accepts only a path and may select an algorithm from path text in SDK `2.0.11`; Schnorr public-key derivation therefore fails closed and never calls the getter. |
-| Ed25519 response | 64-byte raw signatures; 32-byte public keys | No provider behavior is inferred from the enum mapping. |
+| Schnorr response | 64-byte compact signatures and exactly 32-byte x-only public keys | `EnclaveManager::get_public_key` accepts only a path and is algorithm-agnostic in SDK `2.0.11`; Schnorr public-key derivation therefore fails closed and never calls the getter. Signing response validation remains separate. |
+| Ed25519 response | 64-byte raw signatures; 32-byte public keys | SDK `2.0.11`'s getter is also algorithm-agnostic, so Ed25519 public-key derivation fails closed and never calls the getter. Signing response validation remains separate. |
 | Trust policy and attestation | `Strict` requires StrongBox/CloudTEE; `Managed` and `Expedient` require TEE or stronger; `ObserverOnly` never signs | The report nonce must exactly match the forwarded 32-byte digest, and the complete opaque report/evidence is retained in the response. This layer performs request binding and level gating only; it does not cryptographically verify signatures, certificates, freshness, or hardware claims. |
 | BIP-110 | Bitcoin signing requires a compliant Core preflight result before provider invocation | Transaction parsing, byte classification, serialization, and deployment state remain downstream-owned. |
 | Manager boundary | Injected `Arc<dyn EnclaveManager>` and exact SDK request/response types | Lifecycle, unlock policy, replay state, provider selection, and runtime side effects remain SDK/application-owned. |
@@ -64,7 +64,9 @@ validator before invoking the injected manager.
 - Digest algorithms not represented unambiguously by SDK `2.0.11`.
 - Silent fallback to legacy signing when a stronger typed API is absent.
 - Automatic Taproot tweak construction; the adapter sends `taproot_tweak: None`.
-- Schnorr public-key derivation through the SDK `2.0.11` path-only getter.
+- Schnorr and Ed25519 public-key derivation through the SDK `2.0.11`
+  algorithm-agnostic path-only getter. Signing response validation for both
+  algorithms remains a separate supported boundary.
 - Attestation verification, replay protection, network calls, database access,
   telemetry, or provider-specific policy.
 - Claims that simulator/mock paths or the SDK's cloud simulation are production
@@ -106,3 +108,11 @@ registry requirement in the packaged manifest. It can complete only after
 Core `0.3.0` is available from the configured registry. Until then, Cargo
 fails closed during dependency resolution rather than accepting an older Core
 release; do not weaken the requirement to make a local package command pass.
+
+The release workflow therefore publishes `lib-conxian-core` first, waits for
+the exact Core version to be visible through crates.io and its index, runs the
+add-on package dry-run, and publishes `lib-conxian-core-enclave` only after that
+dry-run resolves the registry dependency. A manual dry-run before Core is
+published verifies the Core package only; the add-on dry-run is intentionally
+performed in the publish path after Core propagation rather than hiding this
+external ordering prerequisite.

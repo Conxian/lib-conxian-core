@@ -564,7 +564,10 @@ impl EnclaveSdkAdapter {
         derivation: &DerivationContext,
     ) -> Result<PublicVerificationKey, AdapterError> {
         validate_chain_algorithm(target, algorithm)?;
-        if algorithm == SigningAlgorithm::SchnorrSecp256k1 {
+        if matches!(
+            algorithm,
+            SigningAlgorithm::SchnorrSecp256k1 | SigningAlgorithm::Ed25519
+        ) {
             return Err(AdapterError::UnsupportedPublicKeyDerivation(algorithm));
         }
         let derivation_path = render_derivation_path(derivation)?;

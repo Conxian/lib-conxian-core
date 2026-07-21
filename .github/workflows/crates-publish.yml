@@ -106,13 +106,30 @@ jobs:
             exit 1
           fi
 
-          python scripts/verify_release_version.py \
+          if python scripts/verify_release_version.py \
             --phase pre-publish \
             --tag "$RELEASE_TAG" \
             --repository "$GITHUB_REPOSITORY" \
             --source-revision "$(git rev-parse HEAD)" \
             --registry-attempts 1 \
-            --registry-delay-seconds 0
+            --registry-delay-seconds 0; then
+            echo "Core candidate is absent and the normal pre-publish guard passed."
+          else
+            pre_publish_status=$?
+            echo "::warning::Normal pre-publish guard did not pass; checking whether the exact Core candidate is already published for a safe retry."
+            if python scripts/verify_release_version.py \
+              --phase post-publish \
+              --tag "$RELEASE_TAG" \
+              --repository "$GITHUB_REPOSITORY" \
+              --source-revision "$(git rev-parse HEAD)" \
+              --registry-attempts 1 \
+              --registry-delay-seconds 0; then
+              echo "The exact Core candidate is already confirmed on crates.io; continuing as an idempotent retry for the add-on."
+            else
+              echo "::error::Pre-publish validation failed and the exact Core candidate was not confirmed."
+              exit "$pre_publish_status"
+            fi
+          fi
 
       - name: Validate published candidate for recovery
         id: recovery
@@ -130,9 +147,75 @@ jobs:
             --registry-attempts 12 \
             --registry-delay-seconds 10
 
+      - name: Validate add-on candidate for recovery
+        id: addon_recovery
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'release-only' && steps.recovery.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+
+          addon_version="$(
+            cargo metadata --format-version 1 --no-deps |
+              python -c 'import json, sys; packages = json.load(sys.stdin)["packages"]; print(next(package["version"] for package in packages if package["name"] == "lib-conxian-core-enclave"))'
+          )"
+          attempts=12
+
+          for attempt in $(seq 1 "$attempts"); do
+            if python - "$addon_version" <<'PY'
+          import json
+          import sys
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
+
+          package_version = sys.argv[1]
+          endpoint = (
+              "https://crates.io/api/v1/crates/lib-conxian-core-enclave/"
+              f"{quote(package_version, safe='')}"
+          )
+          request = Request(
+              endpoint,
+              headers={"User-Agent": "Conxian/lib-conxian-core release workflow"},
+          )
+          try:
+              with urlopen(request, timeout=15) as response:
+                  payload = json.load(response)
+          except HTTPError as error:
+              if error.code == 404:
+                  raise SystemExit(10)
+              print(f"registry HTTP status {error.code}", file=sys.stderr)
+              raise SystemExit(11)
+          except (OSError, URLError, ValueError) as error:
+              print(f"registry lookup failed: {error.__class__.__name__}", file=sys.stderr)
+              raise SystemExit(11)
+
+          version = payload.get("version", {})
+          if version.get("num") != package_version or version.get("yanked"):
+              print("exact add-on candidate is mismatched or yanked", file=sys.stderr)
+              raise SystemExit(11)
+          PY
+            then
+              echo "The exact add-on candidate ${addon_version} is confirmed on crates.io for release-only recovery."
+              exit 0
+            else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 10 ]]; then
+                echo "::error::Unable to confirm the exact add-on candidate ${addon_version}; refusing release-only recovery."
+                exit 1
+              fi
+            fi
+
+            if (( attempt < attempts )); then
+              echo "Add-on ${addon_version} is not visible on crates.io yet (attempt ${attempt}/${attempts}); retrying in 10 seconds."
+              sleep 10
+            fi
+          done
+
+          echo "::error::The exact add-on candidate ${addon_version} was not visible on crates.io after ${attempts} bounded retries; do not create the GitHub Release yet."
+          exit 1
+
       - name: Publish to crates.io (dry run)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'dry-run' }}
-        run: cargo publish --dry-run --locked
+        run: cargo publish --dry-run --locked -p lib-conxian-core
 
       - name: Publish to crates.io
         id: publish
@@ -150,11 +233,11 @@ jobs:
             exit 1
           fi
 
-          if cargo publish --locked; then
+          if cargo publish --locked -p lib-conxian-core; then
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             publish_status=$?
-            echo "::warning::cargo publish exited non-zero; checking the exact candidate before failing closed."
+            echo "::warning::Core cargo publish exited non-zero; checking the exact candidate before failing closed."
             if python scripts/verify_release_version.py \
               --phase post-publish \
               --tag "$RELEASE_TAG" \
@@ -186,15 +269,174 @@ jobs:
             --registry-attempts 12 \
             --registry-delay-seconds 10
 
+      - name: Verify add-on package (after Core registry propagation)
+        id: addon_dry_run
+        if: ${{ success() && steps.registry.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+
+          attempts=12
+          core_version="$(
+            cargo metadata --format-version 1 --no-deps |
+              python -c 'import json, sys; packages = json.load(sys.stdin)["packages"]; print(next(package["version"] for package in packages if package["name"] == "lib-conxian-core"))'
+          )"
+          dry_run_log="$(mktemp)"
+          trap 'rm -f "$dry_run_log"' EXIT
+
+          for attempt in $(seq 1 "$attempts"); do
+            if cargo publish --dry-run --locked -p lib-conxian-core-enclave >"$dry_run_log" 2>&1; then
+              echo "Add-on package dry-run passed after Core registry verification."
+              exit 0
+            fi
+
+            if ! grep -Eq 'no matching package named `lib-conxian-core`|failed to select a version for the requirement `lib-conxian-core' "$dry_run_log"; then
+              echo "::error::Add-on package dry-run failed for a reason other than Core crates.io/index propagation."
+              exit 1
+            fi
+
+            if (( attempt < attempts )); then
+              echo "Core is published but its registry index entry is not resolvable yet (attempt ${attempt}/${attempts}); retrying in 10 seconds."
+              sleep 10
+            fi
+          done
+
+          echo "::error::Core ${core_version} remained unavailable to the add-on package after ${attempts} bounded registry/index retries. Do not republish Core; rerun this workflow after crates.io propagation completes."
+          exit 1
+
+      - name: Publish add-on to crates.io
+        id: addon_publish
+        if: ${{ success() && steps.addon_dry_run.outcome == 'success' }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CARGO_REGISTRY_TOKEN:-}" ]]; then
+            echo "::error::CARGO_REGISTRY_TOKEN is required before publishing lib-conxian-core-enclave."
+            echo "::error::Configure the crates.io secret or stop after the dry-run validation."
+            exit 1
+          fi
+
+          addon_version="$(
+            cargo metadata --format-version 1 --no-deps |
+              python -c 'import json, sys; packages = json.load(sys.stdin)["packages"]; print(next(package["version"] for package in packages if package["name"] == "lib-conxian-core-enclave"))'
+          )"
+
+          registry_state() {
+            python - "$1" "$2" <<'PY'
+          import json
+          import sys
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
+
+          package_name, package_version = sys.argv[1:]
+          endpoint = (
+              "https://crates.io/api/v1/crates/"
+              f"{quote(package_name, safe='')}/{quote(package_version, safe='')}"
+          )
+          request = Request(
+              endpoint,
+              headers={"User-Agent": "Conxian/lib-conxian-core release workflow"},
+          )
+          try:
+              with urlopen(request, timeout=15) as response:
+                  payload = json.load(response)
+          except HTTPError as error:
+              if error.code == 404:
+                  print("missing")
+                  raise SystemExit(0)
+              print(f"registry HTTP status {error.code}", file=sys.stderr)
+              raise SystemExit(2)
+          except (OSError, URLError, ValueError) as error:
+              print(f"registry lookup failed: {error.__class__.__name__}", file=sys.stderr)
+              raise SystemExit(2)
+
+          version = payload.get("version", {})
+          if version.get("num") != package_version:
+              print("registry returned a mismatched package version", file=sys.stderr)
+              raise SystemExit(3)
+          if version.get("yanked"):
+              print("exact package version is yanked", file=sys.stderr)
+              raise SystemExit(3)
+          print("present")
+          PY
+          }
+
+          wait_for_addon_registry() {
+            local attempts=12
+            local state
+            for attempt in $(seq 1 "$attempts"); do
+              if state="$(registry_state lib-conxian-core-enclave "$addon_version")"; then
+                case "$state" in
+                  present)
+                    return 0
+                    ;;
+                  missing)
+                    ;;
+                  *)
+                    echo "::error::Unexpected crates.io state for lib-conxian-core-enclave ${addon_version}: ${state}."
+                    return 1
+                    ;;
+                esac
+              else
+                echo "::error::Unable to determine the exact add-on registry state; failing closed."
+                return 1
+              fi
+
+              if (( attempt < attempts )); then
+                echo "Add-on ${addon_version} is not visible on crates.io yet (attempt ${attempt}/${attempts}); retrying in 10 seconds."
+                sleep 10
+              fi
+            done
+
+            echo "::error::lib-conxian-core-enclave ${addon_version} was not visible on crates.io after ${attempts} bounded retries. Do not republish; use a later safe retry or release-only recovery once both packages are confirmed."
+            return 1
+          }
+
+          if addon_state="$(registry_state lib-conxian-core-enclave "$addon_version")"; then
+            case "$addon_state" in
+              present)
+                echo "already_published=true" >> "$GITHUB_OUTPUT"
+                echo "The exact add-on candidate ${addon_version} is already confirmed on crates.io; treating this as a safe retry state."
+                exit 0
+                ;;
+              missing)
+                ;;
+              *)
+                echo "::error::Unexpected crates.io state for lib-conxian-core-enclave ${addon_version}: ${addon_state}."
+                exit 1
+                ;;
+            esac
+          else
+            echo "::error::Unable to determine whether lib-conxian-core-enclave ${addon_version} already exists; failing closed."
+            exit 1
+          fi
+
+          if cargo publish --locked -p lib-conxian-core-enclave; then
+            wait_for_addon_registry
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            publish_status=$?
+            echo "::warning::Add-on cargo publish exited non-zero; checking the exact candidate before failing closed."
+            if addon_state="$(registry_state lib-conxian-core-enclave "$addon_version")" && [[ "$addon_state" == "present" ]]; then
+              echo "already_published=true" >> "$GITHUB_OUTPUT"
+              echo "The exact add-on candidate ${addon_version} is confirmed on crates.io; treating this as a safe retry state."
+            else
+              echo "::error::Add-on publication did not succeed and the exact candidate was not confirmed."
+              exit "$publish_status"
+            fi
+          fi
+
       - name: Create GitHub Release (idempotent)
         id: release
         if: >-
           ${{
             success() &&
             (
-              (github.event_name == 'push' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success') ||
-              (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success') ||
-              (github.event_name == 'workflow_dispatch' && inputs.mode == 'release-only' && steps.recovery.outcome == 'success')
+              (github.event_name == 'push' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success' && steps.addon_dry_run.outcome == 'success' && steps.addon_publish.outcome == 'success') ||
+              (github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && steps.publish.outcome == 'success' && steps.registry.outcome == 'success' && steps.addon_dry_run.outcome == 'success' && steps.addon_publish.outcome == 'success') ||
+              (github.event_name == 'workflow_dispatch' && inputs.mode == 'release-only' && steps.recovery.outcome == 'success' && steps.addon_recovery.outcome == 'success')
             )
           }}
         env:
