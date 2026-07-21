@@ -37,6 +37,9 @@ test-results/
 playwright-report/
 coverage/
 *.lcov
+# Durable coverage policy and baselines are reviewed documentation.
+!docs/coverage/
+!docs/coverage/**
 junit.xml
 
 # --- Logs ---
