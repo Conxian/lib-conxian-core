@@ -600,6 +600,36 @@ mod tests {
     }
 
     #[test]
+    fn test_bip110_legacy_optional_op_return_preserves_violation_order() {
+        use super::trust::bip110;
+
+        let compliance = Bip110Compliance::new();
+
+        let result = compliance.validate_transaction(&[0], None, 0, &[0]);
+        assert_eq!(result, Bip110ValidationResult::compliant());
+
+        let result = compliance.validate_transaction(
+            &[bip110::MAX_PUSHDATA_BYTES + 1],
+            None,
+            bip110::MAX_SCRIPT_PUBKEY_BYTES,
+            &[bip110::MAX_WITNESS_ELEMENT_BYTES + 1],
+        );
+        assert_eq!(
+            result,
+            Bip110ValidationResult::non_compliant(vec![
+                Bip110Violation::PushdataExceedsLimit {
+                    size: bip110::MAX_PUSHDATA_BYTES + 1,
+                    max: bip110::MAX_PUSHDATA_BYTES,
+                },
+                Bip110Violation::WitnessElementExceedsLimit {
+                    size: bip110::MAX_WITNESS_ELEMENT_BYTES + 1,
+                    max: bip110::MAX_WITNESS_ELEMENT_BYTES,
+                },
+            ])
+        );
+    }
+
+    #[test]
     fn test_bip110_disabled_compliance() {
         let compliance = Bip110Compliance::disabled();
         assert!(!compliance.is_enabled());
