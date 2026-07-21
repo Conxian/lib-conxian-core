@@ -39,6 +39,15 @@ Resilience and recovery models for Lightning operations.
 Canonical types for protocol orchestration and trust.
 - `StateProposal`: Unified model for external settlement triggers (CON-162).
 - `TrustTier`: Approved classification for bridge/messaging security (CON-791).
+- `Bip110Compliance`: Legacy aggregate size validator. `Bip110Compliance::new()` creates an
+  enabled validator with canonical limits, while `Bip110Compliance::default()` is intentionally
+  disabled (equivalent to `Bip110Compliance::disabled()`); callers must choose `new()` when they
+  want enforcement.
+- `Bip110Compliance::validate_transaction(...)`: The legacy API treats `Some(size)` as one full
+  serialized OP_RETURN output ScriptPubKey and `None` as no OP_RETURN occurrence, so `None` skips
+  OP_RETURN validation. Its `script_pubkey_size` argument is one full serialized non-OP_RETURN
+  ScriptPubKey. Both measurements include the complete serialized script, including opcodes and
+  data-push prefixes, rather than only the output payload.
 - `Bip110Limits`: Canonical BIP-110 size-policy limits for core validation.
 - `Bip110TransactionShape`: Serializable transaction-wide size metadata for the BIP-110 contract.
 - `Bip110PreflightRequest` / `Bip110PreflightResult`: Versioned, serializable pre-construction and

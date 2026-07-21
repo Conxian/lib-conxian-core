@@ -32,6 +32,10 @@ not add runtime, network, persistence, or cross-repository dependencies.
   see [docs/SIGNING_ARCHITECTURE.md](SIGNING_ARCHITECTURE.md).
 - Platform-neutral protocol verification contracts and canonical proof,
   block-reference, finality, capability, provenance, and typed-error models.
+- Versioned static chain-family risk-profile metadata, public evidence and
+  governance references, and fail-closed invariants; see
+  [docs/CANONICAL_RISK_PROFILES.md](CANONICAL_RISK_PROFILES.md). Core does not
+  own live risk scoring or routing policy.
 
 **Constraints**:
 - Must NOT contain hardware-specific or enclave-specific implementation logic.
@@ -61,7 +65,8 @@ not add runtime, network, persistence, or cross-repository dependencies.
 **Responsibilities (managed in independent repository)**:
 - Unified REST API and MCP server.
 - Protocol monitoring and TVL aggregation.
-- Compliance and risk assessment engine.
+- Live compliance/risk observation and policy inputs; static canonical risk
+  metadata remains a Core contract and is not a live market score.
 - Runtime/provider implementations that satisfy core integration traits.
 - Routing requests to external Bitcoin layers and sidechains.
 
@@ -88,6 +93,15 @@ hooks, while consumers use only the façade so capability, request, result, and
 postcondition validation cannot be bypassed. Core's evidence-binding hash
 provides structural consistency, not cryptographic authenticity or production
 readiness.
+
+### Canonical static risk-profile ownership
+
+Core owns the additive, explicitly versioned static risk-profile schema and its
+invariants. Nexus owns live proof, finality, and freshness observations.
+Gateway owns runtime routing and policy decisions. A static risk profile is
+neither a live market score nor a routing decision. Unknown, not-assessed, or
+stale metadata must fail closed in downstream consumers. See
+[`docs/CANONICAL_RISK_PROFILES.md`](CANONICAL_RISK_PROFILES.md).
 
 ### BIP-110 preflight ownership
 
