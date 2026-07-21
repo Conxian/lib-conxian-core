@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "contract": "universal_chain_signer",
+  "api_version": 1,
+  "cases": [
+    {
+      "id": "signing.success.bitcoin_message",
+      "request": {
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": [98, 105, 116, 99, 111, 105, 110, 32, 112, 97, 121, 109, 101, 110, 116]}},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "response": {
+        "signature": {"algorithm": "ecdsa_secp256k1", "encoding": "raw", "bytes": [42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42]},
+        "verification_key": {"algorithm": "ecdsa_secp256k1", "bytes": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]},
+        "address": {"chain": "bitcoin", "format": "bitcoin_bech32", "value": "bc1qdeterministicfixture"},
+        "derivation": {"path": {"components": []}, "purpose": "payment"}
+      },
+      "verification_request": {
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "ecdsa_secp256k1",
+        "payload": {"message": {"bytes": [98, 105, 116, 99, 111, 105, 110, 32, 112, 97, 121, 109, 101, 110, 116]}},
+        "signature": {"algorithm": "ecdsa_secp256k1", "encoding": "raw", "bytes": [42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42]},
+        "verification_key": {"algorithm": "ecdsa_secp256k1", "bytes": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]},
+        "address": {"chain": "bitcoin", "format": "bitcoin_bech32", "value": "bc1qdeterministicfixture"}
+      },
+      "verification_result": {
+        "valid": true,
+        "target": {"chain": "bitcoin", "family": "bitcoin_utxo"},
+        "algorithm": "ecdsa_secp256k1"
+      }
+    }
+  ]
+}
