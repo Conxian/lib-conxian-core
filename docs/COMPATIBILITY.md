@@ -51,8 +51,8 @@ default production graph.
 
 ### Evidence baseline
 
-This checkpoint was based on Core `origin/main` commit
-`97ffaa76d847d34e1caef3d946804bd6ebdb445f` on **July 21, 2026**:
+This rebased checkpoint is based on Core `origin/main` commit
+`5325860499800ae440e03962605de9dd833e53e1` on **July 21, 2026**:
 
 | Surface | Exact baseline |
 | --- | --- |
@@ -178,6 +178,7 @@ closure does not expand this harness's claims. Core tracking remains
 the Core umbrella [#173](https://github.com/Conxian/lib-conxian-core/issues/173),
 and the deterministic downstream fixture work
 [CON-1505](https://linear.app/conxian-labs/issue/CON-1505/core-009-build-deterministic-core-to-downstream-integration-tests).
+
 ## Companion adapter crate
 
 `addons/lib-conxian-core-enclave` targets the exact published

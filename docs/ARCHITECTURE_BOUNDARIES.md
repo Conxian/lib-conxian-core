@@ -12,7 +12,10 @@ not add runtime, network, persistence, or cross-repository dependencies.
 
 **Responsibilities (managed in independent repository)**:
 - Canonical data models (e.g., `StateProposal`, `PartnerLead`).
-- Low-level cryptographic primitives (MuSig2, BitVM2 proof verification).
+- Protocol-facing cryptographic contracts and invariant checks used by
+  downstream signing and proof implementations; production MuSig2 sessions and
+  BitVM2 proof verification are owned by `conxius-enclave-sdk` or an audited
+  downstream provider.
 - Shared financial and yield metrics logic.
 - Job Card Schema (CJCS) specifications.
 - Shared wallet models and generic signing interfaces.

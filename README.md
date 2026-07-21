@@ -70,8 +70,19 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 ```toml
 [dependencies]
 lib-conxian-core = "0.3.0"
+```
 
-# For the exact published SDK contract boundary
+Or use a table declaration when selecting dependency features:
+
+```toml
+[dependencies]
+lib-conxian-core = { version = "0.3.0", default-features = false }
+```
+
+For the exact published SDK contract boundary, add:
+
+```toml
+[dependencies]
 lib-conxian-core-enclave = "0.1.0"
 conxius-enclave-sdk = "=2.0.11"
 ```

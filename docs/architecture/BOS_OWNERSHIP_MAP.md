@@ -6,7 +6,9 @@ This document defines the canonical repository and runtime ownership for the Con
 
 | Layer | Primary Responsibility | Representative Repositories |
 | :--- | :--- | :--- |
-| **Vault SDK & Core** | Signing primitives, policy enforcement, shared models. | `lib-conxian-core` |
+| **Protocol Core** | Canonical protocol primitives, control contracts, and invariant validation. | `lib-conxian-core` |
+| **Secure Enclave SDK** | Production hardware-backed signing, attestation, and policy flows. | `conxius-enclave-sdk` |
+| **Core/SDK Adapter** | Narrow typed compatibility boundary; no provider or runtime ownership. | `lib-conxian-core-enclave` |
 | **Gateway & Routing** | Protocol monitoring, compliance, service ingress. | `conxian-gateway ` |
 | **Orchestration** | Automation, cross-service workflows, platform logic. | `conxius-platform` |
 | **Reference Client** | User interface, biometric proof, reference signing. | `conxius-wallet`, `Conxian_UI` |
@@ -14,24 +16,41 @@ This document defines the canonical repository and runtime ownership for the Con
 
 ## 2. Component Ownership Detail
 
-### 2.1 Vault SDK (`lib-conxian-core`)
-- **Vault SDK Primitive**: `src/sdk_primitive.rs` (Primary sellable primitive)
-- **MuSig2 Key Aggregation**: `src/musig2.rs`
-- **BitVM2 Proof Verification**: `src/bitvm2.rs`
-- **Job Card Schema (CJCS)**: `src/cjcs.rs`
-- **Shared Financial Models**: `src/lib.rs`
+### 2.1 Protocol Core (`lib-conxian-core`)
+- **Canonical protocol primitives**: control models, lifecycle state machines,
+  chain adapters, and invariant validation.
+- **Contract surfaces**: platform-neutral signing, verifier, and BIP-110
+  preflight contracts.
+- **Explicit non-ownership**: Core is not the production Vault SDK and does not
+  own hardware, provider behavior, runtime orchestration, persistence, or
+  external side effects. Production MuSig2 sessions and BitVM2 proof
+  verification are SDK/downstream responsibilities.
+- **Job Card Schema (CJCS)** and shared financial models remain protocol types.
 
-### 2.2 Supporting Services (`conxian-gateway `)
+### 2.2 Secure Enclave SDK (`conxius-enclave-sdk`)
+- **Production signing**: hardware-backed key custody, derivation, and concrete
+  signing implementations.
+- **Security flows**: attestation and policy enforcement.
+- **Provider/runtime boundary**: concrete hardware providers and SDK runtime
+  behavior remain in this repository or its downstream integrations.
+
+### 2.3 Core/SDK companion adapter (`lib-conxian-core-enclave`)
+- Maps the exact published SDK API to Core's typed contracts.
+- Enforces Core-first fail-closed gates such as BIP-110 preflight.
+- Does not implement hardware providers, attestation cryptography, persistence,
+  networking, or runtime orchestration.
+
+### 2.4 Supporting Services (`conxian-gateway `)
 - **Sovereign Service Integration**: `conxian-gateway repo: src/engine/mod.rs` (Bisq, RGB, Changelly)
 - **Bitcoin Layer Status**: `conxian-gateway repo: src/engine/mod.rs` (Stacks, Liquid, Rootstock, etc.)
 - **Compliance & Risk**: `conxian-gateway repo: src/engine/remediation.rs`
 - **MCP Integration**: `conxian-gateway repo: src/api/mcp_handler.rs`
 
-### 2.3 External Platform Logic (`conxius-platform`)
+### 2.4 External Platform Logic (`conxius-platform`)
 - **Workflow Orchestration**: Cross-service state machine management.
 - **Institutional Egress**: PAPSS, BRICS, and ISO 20022 signal normalization.
 
-### 2.4 Reference Application (`conxius-wallet`)
+### 2.5 Reference Application (`conxius-wallet`)
 - **Secure Signing**: StrongBox TEE integration.
 - **Account Abstraction**: ERC-4337 biometric passkey flows.
 
