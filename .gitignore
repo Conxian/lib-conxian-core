@@ -36,6 +36,9 @@ credentials.json
 test-results/
 playwright-report/
 coverage/
+target/coverage/
+!docs/coverage/
+!docs/coverage/**
 *.lcov
 junit.xml
 

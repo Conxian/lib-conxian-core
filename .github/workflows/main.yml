@@ -52,6 +52,109 @@ jobs:
           python scripts/verify_release_hygiene.py
           python -m unittest discover -s scripts/tests -p 'test_*.py'
 
+  coverage-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      COVERAGE_IGNORE_REGEX: '(^|/)(tests|fuzz|target|generated|vendor|examples)/'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          toolchain: 1.89.0
+
+      - name: Install pinned LLVM coverage tooling
+        run: |
+          rustup component add llvm-tools-preview --toolchain 1.89.0
+          cargo +1.89.0 install cargo-llvm-cov --version 0.8.7 --locked
+          cargo +1.89.0 llvm-cov --version
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.10'
+
+      - name: Test coverage evaluator
+        run: python scripts/test_core_coverage.py
+
+      - name: Capture coverage metadata
+        run: |
+          set -euo pipefail
+          mkdir -p target/coverage
+          ignore="$COVERAGE_IGNORE_REGEX"
+          source_sha="$(git rev-parse HEAD)"
+          policy_sha256="$(sha256sum config/core_coverage.json | awk '{print $1}')"
+          {
+            echo "source_sha: $source_sha"
+            echo "github_sha: ${GITHUB_SHA:-unknown}"
+            echo "github_event_name: ${GITHUB_EVENT_NAME:-unknown}"
+            echo "github_ref: ${GITHUB_REF:-unknown}"
+            echo "github_ref_name: ${GITHUB_REF_NAME:-unknown}"
+            echo "github_head_ref: ${GITHUB_HEAD_REF:-}"
+            echo "github_base_ref: ${GITHUB_BASE_REF:-}"
+            echo "source_semantics: checked-out HEAD; pull_request coverage uses GitHub's merge ref, while checked-in baselines use explicit source_sha values"
+            echo "rust_toolchain: 1.89.0"
+            echo "rustc: $(rustc +1.89.0 --version)"
+            echo "cargo: $(cargo +1.89.0 --version)"
+            echo "llvm: $(rustc +1.89.0 -vV | sed -n 's/^LLVM version: //p')"
+            echo "llvm_tools_component: llvm-tools-preview"
+            echo "cargo-llvm-cov: $(cargo +1.89.0 llvm-cov --version)"
+            echo "cargo_features: default features (no --all-features)"
+            echo "coverage_mode: workspace; locked dependencies"
+            echo "policy: config/core_coverage.json"
+            echo "policy_schema_version: 1"
+            echo "policy_sha256: $policy_sha256"
+            echo "ignore_filename_regex: '$ignore'"
+            echo "coverage-command: cargo +1.89.0 llvm-cov --workspace --locked --ignore-filename-regex '$ignore' --json --output-path target/coverage/coverage.json"
+            echo "lcov-command: cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --lcov --output-path target/coverage/coverage.lcov"
+            echo "html-command: cargo +1.89.0 llvm-cov report --locked --ignore-filename-regex '$ignore' --html --output-dir target/coverage/html"
+            echo 'evaluation-command: python scripts/core_coverage.py --input target/coverage/coverage.json --policy config/core_coverage.json --mode report-only --commit-sha "$(git rev-parse HEAD)" --label "${GITHUB_REF_NAME:-unknown}" --output-json target/coverage/core-coverage.json --output-markdown target/coverage/core-coverage.md'
+          } | tee target/coverage/metadata.txt
+
+      - name: Generate coverage reports
+        run: |
+          set -euo pipefail
+          mkdir -p target/coverage
+          ignore="$COVERAGE_IGNORE_REGEX"
+          cargo +1.89.0 llvm-cov --workspace --locked \
+            --ignore-filename-regex "$ignore" \
+            --json --output-path target/coverage/coverage.json
+          cargo +1.89.0 llvm-cov report --locked \
+            --ignore-filename-regex "$ignore" \
+            --lcov --output-path target/coverage/coverage.lcov
+          cargo +1.89.0 llvm-cov report --locked \
+            --ignore-filename-regex "$ignore" \
+            --html --output-dir target/coverage/html
+
+      - name: Evaluate coverage policy (report-only)
+        run: |
+          python scripts/core_coverage.py \
+            --input target/coverage/coverage.json \
+            --policy config/core_coverage.json \
+            --mode report-only \
+            --commit-sha "$(git rev-parse HEAD)" \
+            --label "${GITHUB_REF_NAME:-unknown}" \
+            --output-json target/coverage/core-coverage.json \
+            --output-markdown target/coverage/core-coverage.md
+          cat target/coverage/core-coverage.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: core-coverage
+          path: |
+            target/coverage/coverage.json
+            target/coverage/coverage.lcov
+            target/coverage/html
+            target/coverage/core-coverage.json
+            target/coverage/core-coverage.md
+            target/coverage/metadata.txt
+
   sbom-provenance:
     runs-on: ubuntu-latest
     permissions:
