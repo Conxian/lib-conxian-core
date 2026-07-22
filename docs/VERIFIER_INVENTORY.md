@@ -41,6 +41,17 @@ not provider-backed mint, note, or status verification. `get_mint_status`
 returns `StatusUnavailable` for every non-empty ID until an authenticated
 provider is supplied; it never fabricates community or liquidity data.
 
+## Lightning provisioning
+
+| API | Authoritative status | Supported evidence in Core | Fail-closed outcome |
+| --- | --- | --- | --- |
+| `LightningNode::request_jit_channel` | Provisioning unavailable in Core | Core validates the node public-key shape only; it has no LSPS2 transport, peer/channel state, liquidity reservation, or authoritative provisioning backend | `LightningError::JITProvisioningFailed` for malformed keys; `LightningError::JitProvisioningUnavailable` for valid keys; never `Ok(true)` |
+
+A valid node public key establishes only input shape, not a provisioned
+channel. Actual JIT provisioning, peer interaction, liquidity, and channel
+state belong in Gateway/Lightning infrastructure. Core must not treat parsing
+alone as authorization or provisioning success.
+
 ## Enclave and rollout boundaries
 
 | API | Authoritative status | Supported evidence in Core | Fail-closed outcome |
