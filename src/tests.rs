@@ -4,7 +4,7 @@ mod cxip20_architecture_tests {
         AdaptorSignature, CryptoStubError, WitnessEncryption, WitnessEncryptionError, PVDE,
     };
     use crate::enclave::ZKCompliance;
-    use crate::lightning::LightningNode;
+    use crate::lightning::{LightningError, LightningNode};
     use crate::rgb::{RGBExecutionMode, RGBRuntime, RGBSkeletonAdapter};
     use crate::stacks::{SBTCBridge, StacksNakamoto};
 
@@ -60,12 +60,23 @@ mod cxip20_architecture_tests {
 
     #[test]
     fn test_lightning_advanced_features() {
+        use secp256k1::{PublicKey, Secp256k1, SecretKey};
+
         let offer_result = LightningNode::create_bolt12_offer(50000, "invoice");
         assert!(offer_result.is_err()); // Currently fails closed
-        assert!(LightningNode::request_jit_channel(
-            "0218845781f631c48f1c9709e23092067d06837f30aa0cd0544ac887fe91ddd166"
-        )
-        .is_ok());
+
+        assert_eq!(
+            LightningNode::request_jit_channel("not-a-public-key"),
+            Err(LightningError::JITProvisioningFailed)
+        );
+
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_byte_array([1u8; 32]).expect("test scalar is valid");
+        let valid_pubkey = hex::encode(PublicKey::from_secret_key(&secp, &secret_key).serialize());
+        assert_eq!(
+            LightningNode::request_jit_channel(&valid_pubkey),
+            Err(LightningError::JitProvisioningUnavailable)
+        );
         let channel_id = [1u8; 32];
         assert!(LightningNode::initiate_splicing(&channel_id, 1000).is_ok());
     }

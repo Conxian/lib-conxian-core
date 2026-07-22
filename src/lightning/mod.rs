@@ -26,6 +26,7 @@ pub enum LightningError {
     ChannelNotFound,
     SplicingFailed,
     JITProvisioningFailed,
+    JitProvisioningUnavailable,
     PaymentFailed(String),
     PolicyViolation(String),
     FinalityTimeout,
@@ -38,6 +39,9 @@ impl std::fmt::Display for LightningError {
             Self::ChannelNotFound => write!(f, "Channel not found"),
             Self::SplicingFailed => write!(f, "Splicing operation failed"),
             Self::JITProvisioningFailed => write!(f, "JIT channel provisioning failed"),
+            Self::JitProvisioningUnavailable => {
+                write!(f, "JIT channel provisioning is unavailable")
+            }
             Self::PaymentFailed(msg) => write!(f, "Payment failed: {msg}"),
             Self::PolicyViolation(msg) => write!(f, "Policy violation: {msg}"),
             Self::FinalityTimeout => write!(f, "Payment reached finality timeout"),
@@ -137,9 +141,9 @@ impl LightningNode {
 
     /// LSPS2 JIT Channel Provisioning
     pub fn request_jit_channel(node_pubkey_hex: &str) -> Result<bool, LightningError> {
-        let _pubkey = PublicKey::from_str(node_pubkey_hex)
+        let _ = PublicKey::from_str(node_pubkey_hex)
             .map_err(|_| LightningError::JITProvisioningFailed)?;
-        Ok(true)
+        Err(LightningError::JitProvisioningUnavailable)
     }
 
     /// Splicing (Dynamic capacity resizing)

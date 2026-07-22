@@ -16,7 +16,7 @@ Audit of `lib-conxian-core` and protocol integration layers for simulated behavi
 
 ### 2.2 Lightning Network (`src/lightning/mod.rs`)
 - **BOLT 12 Offers**: Returns `Err(LightningError::InvalidOffer)`. Defers to LDK in production. **STATUS: FAIL-CLOSED (SAFE)**.
-- **JIT Channels**: Returns `Ok(true)` after parsing pubkey. This is a behavioral stub for the orchestration layer. **STATUS: PASSIVE**.
+- **JIT Channels**: Validates pubkey syntax only. Without LSPS2 transport or an authoritative provisioning backend in Core, malformed keys return `Err(LightningError::JITProvisioningFailed)` and valid keys return `Err(LightningError::JitProvisioningUnavailable)`. **STATUS: FAIL-CLOSED / UNSUPPORTED**.
 
 ### 2.3 BitVM2 (`src/bitvm2.rs`)
 - **Segment Script Hashes**: Uses `sha256:hash-{}-{}` format as placeholders for on-chain scripts. These must be replaced with actual script hashes once the BitVM2 circuit is finalized. **STATUS: PENDING CIRCUIT FINALIZATION**.
