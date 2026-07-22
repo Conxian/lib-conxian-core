@@ -10,7 +10,7 @@
 > implementation, or deployment, not proof that the proposed consensus rules are active on a
 > network. This repository does not infer activation, activation height, signaling, or expiry.
 >
-> **Last updated:** 2026-07-21
+> **Last updated:** 2026-07-22
 
 ## Executive summary
 
@@ -128,8 +128,9 @@ size violations all fail closed.
 
 ### Downstream consumption notes
 
-The following are integration handoffs, not claims that those consumers currently enforce this
-contract:
+The following are integration handoffs and downstream status references. A merged item records
+completion of that repository's tracked follow-up; it does not make Core a transaction parser or
+claim that BIP-110 is active consensus.
 
 1. **The `lib-conxian-core-enclave` companion adapter** targets the exact published
    `conxius-enclave-sdk =2.0.11` API. For a Bitcoin signing request it invokes
@@ -137,20 +138,24 @@ contract:
    `EnclaveManager` when the result is non-compliant, structurally invalid, or
    uses an unsupported context. This gate consumes Core's measurements; it does
    not parse transactions or establish that a provider's attestation is valid.
-2. **SDK #194 (`conxius-enclave-sdk`)** owns the remaining Core/SDK type and adapter alignment;
-   its downstream signing work should use the pre-construction result as a rejection gate and
-   preserve post-serialization findings for final-byte verification. The separate SDK #179
-   BIP-322/BIP-110 signing work remains outside this Core change.
-3. **Gateway #245 (`conxian-gateway`)** should carry the version, phase, context, and ordered
-   findings through orchestration without converting them into warnings-only status.
-4. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
+2. **SDK #179 and [PR #203](https://github.com/Conxian/conxius-enclave-sdk/pull/203)**
+   completed the BIP-322/BIP-110 signing work. **SDK #194 and [PR #236](https://github.com/Conxian/conxius-enclave-sdk/pull/236)**
+   completed the Core/SDK control-model adapter alignment. These merged SDK changes consume this
+   contract; they do not expand Core's transaction parsing, attestation, or network-consensus
+   claims.
+3. **Gateway #245 (`conxian-gateway`) remains open and downstream-owned.** It should carry the
+   version, phase, context, and ordered findings through orchestration without converting them
+   into warnings-only status.
+4. **Nexus #163 (`conxian-nexus`) remains open and downstream-owned.** It should verify lighter
+   node sync with limited data; observation and synchronization policy remain outside Core.
+5. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
    and reject any non-compliant or unsupported result before broadcast.
 
 Core defines these request/result types and their fail-closed semantics; the
 companion adapter adds only the pre-provider gate described above. It does not
-claim that SDK #194 (or its related SDK #179 signing work), Gateway #245, or
-Wallet #381 have implemented complete transaction parsing, attestation
-verification, or production enforcement.
+claim that the merged SDK follow-ups or the downstream Gateway, Nexus, and Wallet work provide
+complete transaction parsing, attestation verification, or production enforcement of every
+proposed rule.
 
 ## Proposed-rule matrix
 
@@ -307,9 +312,11 @@ I/O, activation-height logic, UTXO persistence, or downstream policy.
 - [PR #194](https://github.com/Conxian/lib-conxian-core/pull/194) added the evidence-backed compliance matrix and clarified proposal/deployment status.
 - [PR #201](https://github.com/Conxian/lib-conxian-core/pull/201) added the versioned, fail-closed preflight contract.
 - [Issue #173](https://github.com/Conxian/lib-conxian-core/issues/173) adds the cycle-safe Core/SDK companion adapter and deterministic pre-provider gate described here.
-- [SDK issue #194](https://github.com/Conxian/conxius-enclave-sdk/issues/194) records the remaining SDK/Core alignment and adapter work; it is downstream of this protocol contract.
+- [SDK issue #179](https://github.com/Conxian/conxius-enclave-sdk/issues/179) and [SDK PR #203](https://github.com/Conxian/conxius-enclave-sdk/pull/203) completed the BIP-322/BIP-110 signing work; the issue is closed.
+- [SDK issue #194](https://github.com/Conxian/conxius-enclave-sdk/issues/194) and [SDK PR #236](https://github.com/Conxian/conxius-enclave-sdk/pull/236) completed the Core/SDK control-model adapter alignment; the issue is closed.
+- [Gateway issue #245](https://github.com/Conxian/conxian-gateway/issues/245) and [Nexus issue #163](https://github.com/Conxian/conxian-nexus/issues/163) remain open downstream handoffs for orchestration and observation/synchronization behavior.
 - [Parent issue #173](https://github.com/Conxian/lib-conxian-core/issues/173) tracks the broader research umbrella.
-- [Issue #179](https://github.com/Conxian/lib-conxian-core/issues/179) tracks this compliance-matrix follow-up. This completion change supplies the remaining legacy optional-OP_RETURN regression coverage; issue status is tracked independently.
+- [Issue #179](https://github.com/Conxian/lib-conxian-core/issues/179) tracks this compliance-matrix follow-up. The Core implementation and tests were already complete; this documentation refresh reconciles downstream status and leaves the remaining ownership explicit.
 
 ## References
 
