@@ -35,8 +35,11 @@ When upgrading `conxius-enclave-sdk`:
    `clippy -D warnings` commands before publishing either side of the
    integration.
 
-Do not downgrade Alloy in `lib-conxian-core` solely to preserve the stale Rust
-`1.85` declaration; any dependency change requires separate compatibility
+The SDK package manifest's Rust `1.85` declaration is lower than the effective
+workspace floor because its locked Alloy graph requires Rust `1.91`. Do not
+treat that manifest-level declaration as support for running this workspace on
+Rust `1.85`, and do not downgrade Alloy in `lib-conxian-core` solely to preserve
+that stale declaration. Any dependency change requires separate compatibility
 validation and coordination with the SDK release.
 
 ## Opt-in SDK v2.0.11 compatibility evidence
@@ -48,8 +51,8 @@ default production graph.
 
 ### Evidence baseline
 
-This checkpoint was based on Core `origin/main` commit
-`97ffaa76d847d34e1caef3d946804bd6ebdb445f` on **July 21, 2026**:
+This rebased checkpoint is based on Core `origin/main` commit
+`5325860499800ae440e03962605de9dd833e53e1` on **July 21, 2026**:
 
 | Surface | Exact baseline |
 | --- | --- |
@@ -137,8 +140,10 @@ development features are never forwarded through Core's production features.
 
 The harness provides compile-time and deterministic offline evidence for:
 
-- an explicit Core `TrustTier` ↔ SDK v2.0.11 rail `TrustTier` representation
-  mapping (`Strict`/`Managed`/`Expedient`/`ObserverOnly` ↔ `T1`/`T2`/`T3`/`T4`);
+- explicit adapter-owned Core signing-tier requirements for SDK v2.0.11 rail
+  `TrustTier` (`Strict`/`Managed`/`Expedient` require `T1`/`T2`/`T3` or
+  stronger); SDK `T4` is observation-only and is not a sign-capable
+  `ObserverOnly` mapping;
 - serde round trips for both sides' trust types, SDK signing/attestation DTOs,
   Core signing fixtures, and Core BIP-110 preflight fixtures;
 - Core canonical BIP-110 limits paired with the SDK's independent
@@ -146,9 +151,9 @@ The harness provides compile-time and deterministic offline evidence for:
   non-canonical Core policies and invalid SDK policy values fail closed;
 - the existing deterministic Core signer and BIP-110 fixture boundaries.
 
-The trust mapping is a representation adapter only. It does not make SDK `T4`
-production-eligible when Core maps it to `ObserverOnly`, and it does not
-authorize a signing or settlement operation. The v2.0.11 SDK exposes no
+The trust mapping is an adapter-owned policy check, not an SDK or Core enum
+mutation. It does not make SDK `T4` production-eligible or authorize a signing
+or settlement operation. The v2.0.11 SDK exposes no
 BIP-110 module, validator, or `bip110_compliant` feature. Accordingly, the
 local BIP-110 evidence record is deliberately not an SDK enforcement claim;
 transaction parsing, classification, policy enforcement, signing, and
@@ -175,3 +180,33 @@ closure does not expand this harness's claims. Core tracking remains
 the Core umbrella [#173](https://github.com/Conxian/lib-conxian-core/issues/173),
 and the deterministic downstream fixture work
 [CON-1505](https://linear.app/conxian-labs/issue/CON-1505/core-009-build-deterministic-core-to-downstream-integration-tests).
+
+## Companion adapter crate
+
+`addons/lib-conxian-core-enclave` targets the exact published
+`conxius-enclave-sdk =2.0.11` release. It is a separate workspace member so the
+Core default feature graph remains SDK-independent and no SDK-to-Core
+dependency is introduced. The companion adapter depends on both Core and the
+published SDK; the SDK package itself remains standalone.
+
+The `2.0.12` value associated with the SDK's unreleased upstream `main` line is
+metadata only. The latest published SDK target for this workspace and its
+companion adapter remains exact `2.0.11`.
+
+| Surface | Feature selection | SDK target | Effective Rust | Default bypass features |
+| --- | --- | --- | --- | --- |
+| `lib-conxian-core-enclave` | Workspace member; no feature flags | Exact `2.0.11` | `1.91+` | None; simulator/mock/dev paths are not enabled |
+| Core `enclave` feature | Optional direct SDK dependency | Exact `2.0.11` | `1.91+` | None by default |
+
+The companion adapter is intentionally narrower than the SDK. It supports
+explicit algorithm conversion, a deny-by-default chain/algorithm allowlist,
+deterministic derivation-path rendering, digest-only SHA-256 request
+construction, conservative trust-tier gates, request-bound attestation evidence
+retention, adapter-owned rail/network policy, typed Core envelope replay
+binding, typed public response mapping, and Core-first BIP-110 preflight for
+Bitcoin signing. Provider lifecycle, cryptographic signature/attestation
+verification, replay storage/cache TTL, networking, persistence, telemetry, and
+environment-specific policy remain outside Core and this adapter. Core's
+canonical BIP-110 validator remains authoritative. See
+[`addons/lib-conxian-core-enclave/README.md`](../addons/lib-conxian-core-enclave/README.md)
+and [`SIGNING_ARCHITECTURE.md`](SIGNING_ARCHITECTURE.md).

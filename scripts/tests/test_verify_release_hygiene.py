@@ -166,6 +166,25 @@ class ReleaseHygieneTests(unittest.TestCase):
             any("cargo publish --locked" in violation for violation in violations)
         )
 
+    def test_publish_commands_require_explicit_workspace_packages(self) -> None:
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "cargo publish --locked -p lib-conxian-core;",
+            "cargo publish --locked;",
+            1,
+        )
+        violations = self.verify_workflow(workflow)
+        self.assertTrue(any("lib-conxian-core" in violation for violation in violations))
+
+        workflow = hygiene.DEFAULT_WORKFLOW.read_text(encoding="utf-8").replace(
+            "cargo publish --locked -p lib-conxian-core-enclave;",
+            "cargo publish --locked;",
+            1,
+        )
+        violations = self.verify_workflow(workflow)
+        self.assertTrue(
+            any("lib-conxian-core-enclave" in violation for violation in violations)
+        )
+
 
 class ParityAndRemoteReleaseHygieneTests(unittest.TestCase):
     def _verify_workflow_variant(self, workflow: str) -> list[str]:

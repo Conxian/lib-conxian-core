@@ -53,18 +53,35 @@ class ErrorOpener:
 
 
 class FakeRegistry:
-    def __init__(self, published: str | None = None, sequence: list[str | None] | None = None):
+    def __init__(
+        self,
+        published: str | guard.RegistryVersion | None = None,
+        sequence: list[str | guard.RegistryVersion | None] | None = None,
+        *,
+        yanked: bool = False,
+        crate_name: str | None = PACKAGE,
+    ):
         self.published = published
         self.sequence = list(sequence or [])
+        self.yanked = yanked
+        self.crate_name = crate_name
         self.calls: list[tuple[str, str]] = []
 
     def get_version(self, package_name: str, version: str) -> guard.RegistryVersion | None:
         self.calls.append((package_name, version))
         if self.sequence:
-            published = self.sequence.pop(0)
+            candidate = self.sequence.pop(0)
         else:
-            published = self.published
-        return guard.RegistryVersion(published) if published is not None else None
+            candidate = self.published
+        if candidate is None:
+            return None
+        if isinstance(candidate, guard.RegistryVersion):
+            return candidate
+        return guard.RegistryVersion(
+            number=candidate,
+            yanked=self.yanked,
+            crate_name=self.crate_name,
+        )
 
 
 class FakeGitHub:
@@ -373,6 +390,42 @@ class ReleaseVersionGuardTests(unittest.TestCase):
 
         self.assertIsNone(client.get_tag_target(TAG))
 
+    def test_crates_io_client_retains_exact_identity_and_yanked_state(self) -> None:
+        opener = FakeOpener(
+            [
+                {
+                    "crate": {"name": PACKAGE},
+                    "version": {"num": VERSION, "yanked": True},
+                }
+            ]
+        )
+        client = guard.CratesIoClient(opener=opener)
+
+        published = client.get_version(PACKAGE, VERSION)
+
+        self.assertEqual(
+            published,
+            guard.RegistryVersion(number=VERSION, yanked=True, crate_name=PACKAGE),
+        )
+        self.assertEqual(
+            opener.urls,
+            [f"https://crates.io/api/v1/crates/{PACKAGE}/{VERSION}"],
+        )
+
+    def test_crates_io_client_rejects_missing_publication_state(self) -> None:
+        opener = FakeOpener(
+            [
+                {
+                    "crate": {"name": PACKAGE},
+                    "version": {"num": VERSION},
+                }
+            ]
+        )
+        client = guard.CratesIoClient(opener=opener)
+
+        with self.assertRaisesRegex(guard.RemoteCheckError, "boolean version.yanked"):
+            client.get_version(PACKAGE, VERSION)
+
     def test_remote_tag_lookup_failure_is_not_reported_as_missing_tag(self) -> None:
         temporary, root = self.repo()
         self.addCleanup(temporary.cleanup)
@@ -461,6 +514,57 @@ class ReleaseVersionGuardTests(unittest.TestCase):
         self.assertTrue(any("already contains" in error for error in errors))
         self.assertTrue(any("already exists" in error for error in errors))
 
+    def test_pre_publish_rejects_exact_yanked_candidate(self) -> None:
+        temporary, root = self.repo()
+        self.addCleanup(temporary.cleanup)
+        registry = FakeRegistry(
+            published=guard.RegistryVersion(
+                number=VERSION,
+                yanked=True,
+                crate_name=PACKAGE,
+            )
+        )
+
+        errors = guard.verify_phase(
+            root,
+            "pre-publish",
+            tag=TAG,
+            repository="Conxian/lib-conxian-core",
+            source_revision=COMMIT,
+            registry=registry,
+            github=FakeGitHub(),
+        )
+
+        self.assertTrue(any("is yanked" in error for error in errors))
+        self.assertFalse(any("already contains" in error for error in errors))
+
+    def test_pre_publish_rejects_wrong_registry_version_or_identity(self) -> None:
+        for candidate, expected_text in (
+            (
+                guard.RegistryVersion(number="0.2.11", yanked=False, crate_name=PACKAGE),
+                "response version did not match",
+            ),
+            (
+                guard.RegistryVersion(number=VERSION, yanked=False, crate_name="other-crate"),
+                "crate identity did not match",
+            ),
+        ):
+            with self.subTest(candidate=candidate):
+                temporary, root = self.repo()
+                self.addCleanup(temporary.cleanup)
+
+                errors = guard.verify_phase(
+                    root,
+                    "pre-publish",
+                    tag=TAG,
+                    repository="Conxian/lib-conxian-core",
+                    source_revision=COMMIT,
+                    registry=FakeRegistry(published=candidate),
+                    github=FakeGitHub(),
+                )
+
+                self.assertTrue(any(expected_text in error for error in errors), errors)
+
     def test_recovery_requires_published_candidate(self) -> None:
         temporary, root = self.repo()
         self.addCleanup(temporary.cleanup)
@@ -500,6 +604,79 @@ class ReleaseVersionGuardTests(unittest.TestCase):
         )
 
         self.assertEqual(errors, [])
+
+    def test_post_publish_rejects_exact_yanked_candidate(self) -> None:
+        temporary, root = self.repo()
+        self.addCleanup(temporary.cleanup)
+        registry = FakeRegistry(
+            published=guard.RegistryVersion(
+                number=VERSION,
+                yanked=True,
+                crate_name=PACKAGE,
+            )
+        )
+
+        errors = guard.verify_phase(
+            root,
+            "post-publish",
+            tag=TAG,
+            repository="Conxian/lib-conxian-core",
+            source_revision=COMMIT,
+            registry=registry,
+            github=FakeGitHub(),
+            registry_attempts=1,
+            registry_delay_seconds=0,
+        )
+
+        self.assertTrue(any("is yanked" in error for error in errors))
+
+    def test_release_only_recovery_rejects_exact_yanked_candidate(self) -> None:
+        temporary, root = self.repo()
+        self.addCleanup(temporary.cleanup)
+
+        errors = guard.verify_phase(
+            root,
+            "post-publish",
+            tag=TAG,
+            repository="Conxian/lib-conxian-core",
+            source_revision=COMMIT,
+            registry=FakeRegistry(
+                published=guard.RegistryVersion(
+                    number=VERSION,
+                    yanked=True,
+                    crate_name=PACKAGE,
+                )
+            ),
+            github=FakeGitHub(release=None),
+            registry_attempts=1,
+            registry_delay_seconds=0,
+        )
+
+        self.assertTrue(any("is yanked" in error for error in errors))
+
+    def test_post_release_rejects_exact_yanked_candidate_before_release_creation(self) -> None:
+        temporary, root = self.repo()
+        self.addCleanup(temporary.cleanup)
+
+        errors = guard.verify_phase(
+            root,
+            "post-release",
+            tag=TAG,
+            repository="Conxian/lib-conxian-core",
+            source_revision=COMMIT,
+            registry=FakeRegistry(
+                published=guard.RegistryVersion(
+                    number=VERSION,
+                    yanked=True,
+                    crate_name=PACKAGE,
+                )
+            ),
+            github=FakeGitHub(release={"tag_name": TAG, "draft": False}),
+            registry_attempts=1,
+            registry_delay_seconds=0,
+        )
+
+        self.assertTrue(any("is yanked" in error for error in errors))
 
     def test_post_release_requires_matching_release(self) -> None:
         temporary, root = self.repo()
@@ -550,6 +727,29 @@ class ReleaseVersionGuardTests(unittest.TestCase):
         self.assertEqual(published.number, VERSION)
         self.assertEqual(len(registry.calls), 3)
         self.assertEqual(delays, [2.5, 2.5])
+
+    def test_registry_polling_distinguishes_not_found_from_transient_failure(self) -> None:
+        with self.assertRaisesRegex(guard.RemoteCheckError, "did not expose"):
+            guard.wait_for_registry_version(
+                FakeRegistry(),
+                PACKAGE,
+                VERSION,
+                attempts=1,
+                delay_seconds=0,
+            )
+
+        class TransientRegistry:
+            def get_version(self, package_name: str, version: str) -> guard.RegistryVersion | None:
+                raise guard.RemoteCheckError("crates.io returned HTTP 503")
+
+        with self.assertRaisesRegex(guard.RemoteCheckError, "state is unknown"):
+            guard.wait_for_registry_version(
+                TransientRegistry(),
+                PACKAGE,
+                VERSION,
+                attempts=1,
+                delay_seconds=0,
+            )
 
 
 if __name__ == "__main__":

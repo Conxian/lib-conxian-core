@@ -4,28 +4,38 @@
   "layers": [
     {
       "id": "protocol-core",
-      "name": "lib-conxian-core (Vault SDK)",
-      "role": "Canonical primitives and shared protocol logic",
+      "name": "lib-conxian-core",
+      "role": "Canonical protocol primitives, invariants, and control contracts",
       "visibility": "Public",
       "ownership": "Protocol Team",
       "trust_boundary": "L0 (Root of Trust)",
       "contracts": [
-        "VaultSDK",
         "ControlModel",
-        "MuSig2",
-        "BitVM2"
+        "Invariant validation",
+        "BIP-110 preflight contracts",
+        "Platform-neutral adapter interfaces"
       ],
       "repository": "https://github.com/Conxian/lib-conxian-core"
     },
     {
       "id": "enclave-sdk",
-      "name": "lib-conclave-sdk",
-      "role": "TEE implementation and hardware-bound signing",
+      "name": "conxius-enclave-sdk",
+      "role": "Production hardware-backed signing, attestation, and policy flows",
       "visibility": "Public",
       "ownership": "Security Team",
       "trust_boundary": "L1 (Hardware Isolated)",
       "dependencies": ["protocol-core"],
-      "repository": "https://github.com/Conxian/lib-conclave-sdk"
+      "repository": "https://github.com/Conxian/conxius-enclave-sdk"
+    },
+    {
+      "id": "enclave-adapter",
+      "name": "lib-conxian-core-enclave",
+      "role": "Narrow Core/SDK compatibility adapter and fail-closed contract boundary",
+      "visibility": "Public",
+      "ownership": "Protocol/Security Integration",
+      "trust_boundary": "L1 (Contract Boundary)",
+      "dependencies": ["protocol-core", "enclave-sdk"],
+      "repository": "https://github.com/Conxian/lib-conxian-core"
     },
     {
       "id": "gateway",
@@ -53,7 +63,7 @@
       "visibility": "Public",
       "ownership": "Product Team",
       "trust_boundary": "L3 (User Managed)",
-      "dependencies": ["enclave-sdk", "protocol-core"],
+      "dependencies": ["enclave-adapter", "protocol-core"],
       "repository": "https://github.com/Conxian/conxius-wallet"
     },
     {
@@ -68,7 +78,7 @@
     }
   ],
   "integration_contracts": {
-    "signing": "VaultSDK interface for MuSig2 and policy enforcement",
+    "signing": "conxius-enclave-sdk production signing through the lib-conxian-core-enclave compatibility boundary",
     "routing": "Gateway MCP/REST API for protocol adapters",
     "settlement": "Nexus state proposals and anchors"
   }

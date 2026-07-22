@@ -131,18 +131,26 @@ size violations all fail closed.
 The following are integration handoffs, not claims that those consumers currently enforce this
 contract:
 
-1. **SDK #194 (`conxius-enclave-sdk`)** owns the remaining Core/SDK type and adapter alignment;
+1. **The `lib-conxian-core-enclave` companion adapter** targets the exact published
+   `conxius-enclave-sdk =2.0.11` API. For a Bitcoin signing request it invokes
+   `validate_bip110_preflight` first and refuses to call the injected
+   `EnclaveManager` when the result is non-compliant, structurally invalid, or
+   uses an unsupported context. This gate consumes Core's measurements; it does
+   not parse transactions or establish that a provider's attestation is valid.
+2. **SDK #194 (`conxius-enclave-sdk`)** owns the remaining Core/SDK type and adapter alignment;
    its downstream signing work should use the pre-construction result as a rejection gate and
    preserve post-serialization findings for final-byte verification. The separate SDK #179
    BIP-322/BIP-110 signing work remains outside this Core change.
-2. **Gateway #245 (`conxian-gateway`)** should carry the version, phase, context, and ordered
+3. **Gateway #245 (`conxian-gateway`)** should carry the version, phase, context, and ordered
    findings through orchestration without converting them into warnings-only status.
-3. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
+4. **Wallet #381 (`conxius-wallet`)** should populate the fully-classified generic Bitcoin context
    and reject any non-compliant or unsupported result before broadcast.
 
-Core defines these request/result types and their fail-closed semantics only; it does not claim
-that SDK #194 (or its related SDK #179 signing work), Gateway #245, or Wallet #381 have implemented
-enforcement.
+Core defines these request/result types and their fail-closed semantics; the
+companion adapter adds only the pre-provider gate described above. It does not
+claim that SDK #194 (or its related SDK #179 signing work), Gateway #245, or
+Wallet #381 have implemented complete transaction parsing, attestation
+verification, or production enforcement.
 
 ## Proposed-rule matrix
 
@@ -298,6 +306,7 @@ I/O, activation-height logic, UTXO persistence, or downstream policy.
 - [PR #189](https://github.com/Conxian/lib-conxian-core/pull/189) hardened the merged contract coverage.
 - [PR #194](https://github.com/Conxian/lib-conxian-core/pull/194) added the evidence-backed compliance matrix and clarified proposal/deployment status.
 - [PR #201](https://github.com/Conxian/lib-conxian-core/pull/201) added the versioned, fail-closed preflight contract.
+- [Issue #173](https://github.com/Conxian/lib-conxian-core/issues/173) adds the cycle-safe Core/SDK companion adapter and deterministic pre-provider gate described here.
 - [SDK issue #194](https://github.com/Conxian/conxius-enclave-sdk/issues/194) records the remaining SDK/Core alignment and adapter work; it is downstream of this protocol contract.
 - [Parent issue #173](https://github.com/Conxian/lib-conxian-core/issues/173) tracks the broader research umbrella.
 - [Issue #179](https://github.com/Conxian/lib-conxian-core/issues/179) tracks this compliance-matrix follow-up. This completion change supplies the remaining legacy optional-OP_RETURN regression coverage; issue status is tracked independently.

@@ -79,7 +79,10 @@ The GitHub API client uses `GITHUB_API_URL` when supplied by the runner and
 falls back to `https://api.github.com`.
 After `cargo publish`, crates.io propagation is polled with a bounded retry
 window and an actionable failure message. A timeout is never treated as proof
-that publication failed.
+that publication failed. The workspace release has an additional dependency
+ordering rule: `lib-conxian-core` is published and confirmed first, then the
+workflow waits for its registry/index entry before dry-running and publishing
+`lib-conxian-core-enclave`.
 
 ## Pre-tag checklist
 
@@ -124,15 +127,20 @@ intentional.
 ## Dry-run and manual operation
 
 Use the `workflow_dispatch` `mode=dry-run` input for validation. It runs source
-parity and `cargo publish --dry-run --locked`; it does not publish, create a
-tag, query publication state, or create a GitHub Release. The `release_tag`
-input is optional in dry-run mode.
+parity and `cargo publish --dry-run --locked -p lib-conxian-core`; it does not
+publish, create a tag, query publication state, or create a GitHub Release.
+The add-on dry-run is intentionally deferred to the real publish path because
+its `lib-conxian-core = "0.3.0"` registry dependency cannot resolve until Core
+has been published and the crates.io/index entry has propagated. The
+`release_tag` input is optional in dry-run mode.
 
 A manual real-publish run uses `mode=publish` with an existing, matching
 `release_tag`. It is still protected by local parity, tag/source identity,
 token, crates.io state, bounded propagation checks, and the same fail-closed
 publication logic as a tag push. `mode=release-only` is the recovery path after
-the exact crate version is already published; it never runs `cargo publish`.
+the exact Core and add-on versions are already published; it never runs
+`cargo publish`. Recovery verifies both registry candidates before creating or
+accepting the GitHub Release.
 Tag-triggered runs are the only automatic path that creates GitHub Releases.
 
 ## Fail-closed execution order
@@ -143,15 +151,22 @@ The publishing workflow follows this order and stops on any failed step:
    fetch that existing tag, and check it out detached.
 2. Run local source parity and SemVer-aware tag/source identity checks.
 3. In `pre-publish`, reject an existing crates.io candidate or GitHub Release.
-4. Require `CARGO_REGISTRY_TOKEN`, then run `cargo publish --locked` exactly once.
-   If Cargo exits non-zero, the workflow checks the exact candidate before
-   failing; only a confirmed published candidate may continue to recovery.
-5. In `post-publish`, poll until the exact crate version is visible.
-6. Create the GitHub Release only after registry verification. The creation
+4. Require `CARGO_REGISTRY_TOKEN`, then run `cargo publish --locked -p
+   lib-conxian-core` exactly once. If Cargo exits non-zero, the workflow checks
+   the exact Core candidate before failing; only a confirmed published
+   candidate may continue to the add-on.
+5. In `post-publish`, poll until the exact Core crate version is visible.
+6. Run `cargo publish --dry-run --locked -p lib-conxian-core-enclave` with
+   bounded retries for the specific Core index-propagation error. Any other
+   add-on packaging failure is fatal.
+7. Publish the add-on with `cargo publish --locked -p
+   lib-conxian-core-enclave`, verify its exact registry version, and treat only
+   an exact already-published candidate as a safe retry state.
+8. Create the GitHub Release only after both package registry verifications. The creation
    step is idempotent when the matching release already exists.
-7. Run `post-release` parity verification.
+9. Run `post-release` parity verification.
 
-Manual `dry-run` runs only source parity and `cargo publish --dry-run --locked`.
+Manual `dry-run` runs only source parity and the Core package dry-run.
 Both publication paths use Cargo's lockfile exactly as checked in, so dependency
 resolution cannot silently change between verification and upload. Manual
 workflow inputs are named `mode` and `release_tag`: `mode` is required and may

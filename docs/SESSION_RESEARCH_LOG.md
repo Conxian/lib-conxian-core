@@ -1,6 +1,9 @@
 # Session Research Log
 
 > This document tracks research findings and decisions made during development sessions.
+> Entries are historical snapshots; they do not override the current ownership
+> model. The current production SDK is `conxius-enclave-sdk`, and the Core
+> companion is `lib-conxian-core-enclave`.
 
 ---
 
@@ -19,7 +22,7 @@
 | Crate | Version | Purpose |
 |-------|---------|---------|
 | `conxius-enclave-sdk` | 2.0.11 | Production Vault SDK |
-| `lib-conclave-sdk` | 2.0.8 | Alias (should deprecate) |
+| Historical SDK alias entry | 2.0.8 | Deprecated; not a current package |
 | `conxian-core` | 0.1.4 | Gateway core |
 | `conxian_api` | 0.1.4 | HTTP API |
 | `conxian_compliance` | 0.1.4 | ZK compliance |

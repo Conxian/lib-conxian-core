@@ -28,7 +28,6 @@ This document provides a comprehensive analysis of the Conxian ecosystem crate r
 | Crate | Version | Owner | Purpose | Downloads | Status |
 |-------|---------|-------|---------|-----------|--------|
 | `conxius-enclave-sdk` | 2.0.11 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
-| `lib-conclave-sdk` | 2.0.8 | botshelomokoka | Alias | 10 | ⚠️ Deprecated |
 | `conxian-core` | 0.1.4 | botshelomokoka | Gateway core | 23 | ⚠️ WIP |
 | `conxian_api` | 0.1.4 | botshelomokoka | HTTP API | 10 | ⚠️ WIP |
 | `conxian_compliance` | 0.1.4 | botshelomokoka | ZK compliance | 13 | ⚠️ WIP |
@@ -78,14 +77,14 @@ This repository provides **shared protocol primitives** that are consumed by all
 | `cjcs.rs` | CJC protocol types | ~15 | **LOW** - Legacy |
 | `contract_bridge.rs` | Clarity contract interfaces | ~75 | **MEDIUM** - Stacks integration |
 
-#### ⚠️ DEPRECATED Modules (Duplicated in SDK)
+#### ⚠️ Historical extraction notes (not current Core modules)
 
-| Module | SDK Equivalent | Action |
-|--------|----------------|--------|
-| `sdk_primitive.rs` | `conxius-enclave-sdk` | Deprecated, use SDK |
-| `musig2.rs` | `protocol::musig2` | Deprecated, use SDK |
-| `bitvm2.rs` | `protocol::bitvm2` | Deprecated, use SDK |
-| `wallet.rs` | `k256` or SDK | Deprecated, use SDK |
+| Historical Core module | SDK Equivalent | Current status |
+|------------------------|----------------|----------------|
+| `sdk_primitive.rs` | `conxius-enclave-sdk` | Removed from current Core API; use the SDK |
+| `musig2.rs` | `conxius-enclave-sdk` | Historical extraction record; production sessions are SDK-owned |
+| `bitvm2.rs` | `conxius-enclave-sdk` | Historical extraction record; production verification is SDK-owned |
+| `wallet.rs` | `k256` or SDK | Historical extraction record; custody/signing are downstream-owned |
 
 #### 🔄 Shared Modules (Partial Overlap)
 
@@ -172,7 +171,8 @@ conxian-ui
             ├── conxian-engine (business logic)
             ├── conxian-compliance (ZK verification)
             └── lib-conxian-core (shared primitives)
-                    └── conxius-enclave-sdk (optional: enclave features)
+                    └── lib-conxian-core-enclave (compatibility adapter)
+                            └── conxius-enclave-sdk (optional: enclave features)
 
 conxius-wallet
     └── conxius-enclave-sdk (signing, attestation)
@@ -184,22 +184,23 @@ conxian-nexus
 
 ### Dependency Matrix
 
-| Consumer | lib-conxian-core | conxius-enclave-sdk | Notes |
-|----------|-------------------|---------------------|-------|
-| conxian-gateway | ✅ Direct | ⚠️ Optional | Runtime uses both |
-| conxius-wallet | ✅ Types only | ✅ Direct | SDK for signing |
-| conxian-nexus | ✅ Direct | ❌ | Observing primitives |
-| conxian-ui | ❌ | ❌ | Frontend only |
+| Consumer | lib-conxian-core | lib-conxian-core-enclave | conxius-enclave-sdk | Notes |
+|----------|-------------------|---------------------------|---------------------|-------|
+| conxian-gateway | ✅ Direct | ⚠️ As needed | ⚠️ As needed | Owns runtime orchestration and provider selection |
+| conxius-wallet | ✅ Types only | ✅ Boundary | ✅ Direct/through boundary | SDK for signing; adapter maps Core contracts |
+| conxian-nexus | ✅ Direct | ❌ | ❌ | Observing and verifying primitives |
+| conxian-ui | ❌ | ❌ | ❌ | Frontend only |
 
 ## Strategic Recommendations
 
-### 1. Crate Consolidation (Short-term)
+### 1. Canonical SDK naming (complete)
 
-#### Action: Deprecate `lib-conclave-sdk`
-
-- `lib-conclave-sdk` v2.0.8 is an alias for `conxius-enclave-sdk`
-- Keep only `conxius-enclave-sdk` as the single SDK crate
-- Update documentation to reference the single SDK crate
+- Use `conxius-enclave-sdk` as the single current production SDK package and
+  repository name.
+- Keep `lib-conxian-core-enclave` as the narrow Core/SDK compatibility adapter;
+  it is not a second provider or runtime SDK.
+- Keep `lib-conxian-core` focused on protocol primitives, invariants, and
+  control contracts.
 
 #### Action: Align `conxian-*` crates
 
@@ -228,14 +229,13 @@ cargo owner --add github:Conxian-Labs:owners <crate-name>
 - conxian_api
 - conxian_compliance
 - conxian_engine
-- lib-conclave-sdk (then deprecate)
 - anya-core (consider archiving)
 
 ### 3. Code Deduplication (Medium-term)
 
 #### lib-conxian-core: Keep Only Unique Code
 
-After deprecation removal in v0.3.0:
+The following is the current ownership target after the historical extraction:
 
 **Keep:**
 - `control_model/` - Trust tiers, lifecycle states, invariants
@@ -319,7 +319,7 @@ secp256k1 = "0.31"             # Align with SDK
 ### Short-term (Next Sprint)
 
 - [x] Publish migration guide ✅ DONE (v0.2.11)
-- [ ] Deprecate lib-conclave-sdk on crates.io
+- [x] Use `conxius-enclave-sdk` as the canonical production SDK name
 - [ ] Consider consolidating conxian-* crates
 
 ### Medium-term (Next Quarter)
@@ -330,7 +330,8 @@ secp256k1 = "0.31"             # Align with SDK
 
 ### Long-term (Strategic)
 
-- [ ] Decide: Keep lib-conxian-core separate OR merge into conxius-enclave-sdk
+- [x] Keep `lib-conxian-core` and `conxius-enclave-sdk` separate with the
+  `lib-conxian-core-enclave` compatibility boundary
 - [ ] Align all beta dependencies to stable versions
 - [ ] Publish comprehensive API documentation
 - [ ] Evaluate BIP-110 activation impact across all repos

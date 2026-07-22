@@ -7,7 +7,8 @@ This document maps security and operational controls across the public repositor
 | Role | Target Repositories | Branch Protection | Secret Handling | Dependency Review |
 | :--- | :--- | :--- | :--- | :--- |
 | **Protocol Core** | `lib-conxian-core`, `conxian-nexus` | Required PRs, 2+ Approvals, Status Checks | Zero Secret Egress (ZSE) | Required on all PRs |
-| **Security SDK** | `lib-conclave-sdk` | Required PRs, Security Lead Approval | Enclave-Bound (No tracking) | Required on all PRs |
+| **Security SDK** | `conxius-enclave-sdk` | Required PRs, Security Lead Approval | Enclave-Bound (No tracking) | Required on all PRs |
+| **Core/SDK Adapter** | `lib-conxian-core-enclave` | Required PRs, Protocol + Security Review | No secrets; typed boundary only | Required on all PRs |
 | **Infrastructure** | `conxian-gateway` | Required PRs, Status Checks | Environment variables (No .env) | Required on all PRs |
 | **Product/UI** | `conxius-wallet`, `conxian_ui` | Required PRs | Environment variables | Required on all PRs |
 | **Website** | `conxian-labs-site` | Required PRs | Environment variables | Required on all PRs |
@@ -19,6 +20,15 @@ This document maps security and operational controls across the public repositor
 | **Reusable SDKs** | Tagged Release | SEMVER (vX.Y.Z) | Pinned Git tags / Crates.io |
 | **App-Layer** | Deployment Tracked | Main branch SHA | Continuous Deployment (CD) |
 | **Protocol** | Tagged Release | SEMVER (vX.Y.Z) | Controlled Promotion Lanes |
+
+The ownership boundary is explicit: `lib-conxian-core` owns canonical protocol
+primitives, invariant validation, and control contracts. Production signing,
+attestation, and policy flows belong to `conxius-enclave-sdk`; the
+`lib-conxian-core-enclave` crate is only a narrow compatibility adapter between
+those contracts. Runtime orchestration, provider selection, persistence, and
+external side effects belong to `conxian-gateway` or other downstream consumers.
+Core does not own a production `VaultSDK`, hardware/provider implementation, or
+runtime contract.
 
 ## 3. Enforcement Status (Audit Date: 2026-06-14)
 

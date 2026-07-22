@@ -6,7 +6,9 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 
 | Layer | Repository | Role | Evaluation Standard |
 | :--- | :--- | :--- | :--- |
-| **SDK & Core** | `lib-conxian-core` | Vault SDK & Protocol Primitives | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
+| **Protocol Core** | `lib-conxian-core` | Canonical protocol primitives, control contracts, and invariants | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
+| **Secure Enclave SDK** | `conxius-enclave-sdk` | Production hardware-backed signing, attestation, and policy flows | **P0 - Hardened**: provider-backed, fail-closed, security-reviewed. |
+| **Core/SDK Adapter** | `lib-conxian-core-enclave` | Narrow compatibility adapter between Core contracts and the SDK | **P0 - Hardened**: typed boundary, no provider/runtime ownership. |
 | **Supporting Infra** | `conxian-gateway`  | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
 | **User & Application** | `conxius-wallet` | Reference Asset Management Client | **P1 - Standard**: StrongBox/TEE signing, Passkey auth, zero-PII persistence. |
 | **User & Application** | `Conxian_UI` | Product Dashboards & Landing | **P1 - Standard**: High-contrast theme, responsive, type-safe, CI-badge mandatory. |
@@ -33,9 +35,14 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 - **Sanitization**: Regular audits to move strategic detail to Linear Virtual Office.
 
 ## 3. Dependency Relationships
-- **lib-conxian-core (Vault SDK)** is the primary commercial primitive for all integrators.
-- **conxian-gateway** serves as a downstream consumer of the SDK, providing protocol routing.
-- **conxius-wallet** serves as the reference application proving SDK and security model.
+- **lib-conxian-core** is the shared protocol foundation for all integrators; it
+  does not provide production Vault SDK, hardware, provider, or runtime behavior.
+- **conxius-enclave-sdk** owns production signing, attestation, and policy flows.
+- **lib-conxian-core-enclave** provides the narrow Core/SDK compatibility boundary
+  used by downstream applications.
+- **conxian-gateway** owns runtime orchestration and protocol routing.
+- **conxius-wallet** is the reference application consuming the SDK boundary and
+  Core protocol contracts.
 
 ## 4. Maintenance
 This map is reviewed during the Weekly Launch Review (CON-229). Any repo addition or role shift requires an update here.

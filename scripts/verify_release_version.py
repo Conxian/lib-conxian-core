@@ -5,7 +5,9 @@ The source-only phase is intentionally local: an unreleased version on ``main``
 is valid. Release phases are fail-closed and require a valid SemVer 2.0.0
 ``vX.Y.Z[-prerelease][+build]`` tag, an existing GitHub tag pointing at the
 checked-out source, and the expected crates.io/GitHub Release state for the
-selected lifecycle phase.
+selected lifecycle phase. A registry candidate is usable only when its exact
+crate identity and version match and its crates.io ``yanked`` flag is explicitly
+``false``.
 
 Cargo accepts SemVer prerelease and build metadata in package versions. This
 guard therefore accepts both forms and compares the complete version string
@@ -85,9 +87,11 @@ class SourceMetadata:
 
 @dataclass(frozen=True)
 class RegistryVersion:
-    """The exact crates.io version returned by the registry API."""
+    """The exact crates.io version and publication state returned by the API."""
 
     number: str
+    yanked: bool
+    crate_name: str | None = None
 
 
 class RegistryLookup(Protocol):
@@ -344,25 +348,66 @@ def wait_for_registry_version(
         raise ValueError("registry retry delay must not be negative")
 
     last_error: str | None = None
+    saw_transient_error = False
     for attempt in range(1, attempts + 1):
         try:
             published = registry.get_version(package_name, version)
         except RemoteCheckError as error:
+            saw_transient_error = True
             last_error = str(error)
         else:
-            if published is not None and published.number == version:
+            if published is None:
+                last_error = f"exact version {version} is not visible yet"
+            else:
+                candidate_errors = _registry_version_errors(
+                    published,
+                    package_name,
+                    version,
+                )
+                if candidate_errors:
+                    raise RemoteCheckError("; ".join(candidate_errors))
                 return published
-            last_error = f"version {version} is not visible yet"
 
         if attempt < attempts:
             sleep_fn(delay_seconds)
 
     detail = f" Last error: {last_error}." if last_error else ""
+    if saw_transient_error:
+        raise RemoteCheckError(
+            f"crates.io could not confirm {package_name} {version} after "
+            f"{attempts} attempt(s); registry state is unknown.{detail}"
+        )
     raise RemoteCheckError(
         f"crates.io did not expose {package_name} {version} after {attempts} attempt(s)."
         f"{detail} If cargo publish succeeded, do not republish; use workflow mode"
         " `release-only` after the registry is confirmed."
     )
+
+
+def _registry_version_errors(
+    published: RegistryVersion,
+    package_name: str,
+    version: str,
+) -> list[str]:
+    """Return fail-closed violations for one exact registry candidate."""
+
+    errors: list[str] = []
+    if published.crate_name is not None and published.crate_name != package_name:
+        errors.append(
+            "crates.io response crate identity did not match the expected package: "
+            f"{published.crate_name!r} != {package_name!r}"
+        )
+    if published.number != version:
+        errors.append(
+            "crates.io response version did not match the expected version: "
+            f"{published.number!r} != {version!r}"
+        )
+    if published.yanked is not False:
+        errors.append(
+            f"crates.io exact candidate {package_name} {version} is yanked; "
+            "a yanked version cannot be treated as published or used for release recovery"
+        )
+    return errors
 
 
 class CratesIoClient:
@@ -398,11 +443,18 @@ class CratesIoClient:
         except (URLError, OSError, ValueError) as error:
             raise RemoteCheckError(f"unable to query crates.io at {url}: {error}") from error
 
+        crate_payload = payload.get("crate") if isinstance(payload, dict) else None
         version_payload = payload.get("version") if isinstance(payload, dict) else None
+        crate_name = crate_payload.get("name") if isinstance(crate_payload, dict) else None
         number = version_payload.get("num") if isinstance(version_payload, dict) else None
         if not isinstance(number, str):
             raise RemoteCheckError(f"crates.io response for {url} lacked version.num")
-        return RegistryVersion(number=number)
+        yanked = version_payload.get("yanked") if isinstance(version_payload, dict) else None
+        if not isinstance(yanked, bool):
+            raise RemoteCheckError(f"crates.io response for {url} lacked boolean version.yanked")
+        if not isinstance(crate_name, str) or not crate_name:
+            raise RemoteCheckError(f"crates.io response for {url} lacked crate.name")
+        return RegistryVersion(number=number, yanked=yanked, crate_name=crate_name)
 
 
 class GitHubClient:
@@ -595,10 +647,18 @@ def verify_phase(
             errors.append(str(error))
         else:
             if published is not None:
-                errors.append(
-                    f"crates.io already contains {metadata.package_name} {metadata.version}; "
-                    "use post-publish/recovery or release-only instead of republishing"
+                candidate_errors = _registry_version_errors(
+                    published,
+                    metadata.package_name,
+                    metadata.version,
                 )
+                if candidate_errors:
+                    errors.extend(candidate_errors)
+                else:
+                    errors.append(
+                        f"crates.io already contains {metadata.package_name} {metadata.version}; "
+                        "use post-publish/recovery or release-only instead of republishing"
+                    )
 
         try:
             release = github_client.get_release(tag)

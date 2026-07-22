@@ -1,5 +1,10 @@
 # Audit Report: Fail-Open & Simulated Behavior (CON-625)
 
+> **Historical snapshot:** This audit predates the current SDK extraction. Its
+> legacy source-path references describe reported findings at that time; current
+> production signing, attestation, and BitVM2 verification ownership is in
+> `conxius-enclave-sdk` or an audited downstream provider.
+
 ## 1. Scope
 Audit of `lib-conxian-core` and protocol integration layers for simulated behavior, mocks, or fail-open logic that could compromise mainnet safety.
 
