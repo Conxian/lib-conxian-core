@@ -55,3 +55,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# --- Python Specific ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
