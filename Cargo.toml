@@ -25,7 +25,7 @@ ark-bn254 = "0.6"
 ark-ff = "0.6"
 ark-groth16 = { version = "0.6", default-features = false }
 ark-serialize = "0.6"
-base64 = "0.22"
+base64 = "0.23"
 serde = { version = "1.0", features = ["derive"] }
 der = { version = "0.8", features = ["derive", "alloc"] }
 
