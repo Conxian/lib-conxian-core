@@ -6,9 +6,8 @@ use lib_conxian_core::control_model::{
     RailCustodyModel, RailFinalitySemantics, RailMetadata, RailOperationalCapabilities,
     RailTrustAssumptions, RiskAssessment, RiskAssessmentStatus, RiskBand, RiskDimensions,
     RiskMetricState, RiskMetricValue, RiskProfile, RiskProfileAssessment, RiskScore, RiskTarget,
-    StaticPolicyAssumptions, TrustTier, VerificationClass, VersionedRailMetadata,
-    ALL_CHAIN_FAMILIES, ALL_CHAINS, CANONICAL_RISK_PROFILE_SET_VERSION,
-    RISK_PROFILE_SCHEMA_VERSION,
+    StaticPolicyAssumptions, TrustTier, VerificationClass, VersionedRailMetadata, ALL_CHAINS,
+    ALL_CHAIN_FAMILIES, CANONICAL_RISK_PROFILE_SET_VERSION, RISK_PROFILE_SCHEMA_VERSION,
 };
 use serde_json::{json, Value};
 

@@ -330,7 +330,10 @@ impl UniversalChainAdapter for StatechainAdapter {
     }
 
     fn validate_address(&self, address: &str) -> Result<(), String> {
-        if address.len() >= 64 && address.len() <= 66 && address.chars().all(|c| c.is_ascii_hexdigit()) {
+        if address.len() >= 64
+            && address.len() <= 66
+            && address.chars().all(|c| c.is_ascii_hexdigit())
+        {
             Ok(())
         } else {
             Err("Invalid statechain pubkey address".to_string())
@@ -447,9 +450,9 @@ impl UniversalChainAdapter for FederationAdapter {
     }
 
     fn validate_address(&self, address: &str) -> Result<(), String> {
-        if address.starts_with("0x") && address.len() == 42 {
-            Ok(())
-        } else if address.starts_with("bc1") {
+        let is_evm = address.starts_with("0x") && address.len() == 42;
+        let is_btc = address.starts_with("bc1");
+        if is_evm || is_btc {
             Ok(())
         } else {
             Err("Invalid federation address".to_string())
@@ -488,9 +491,9 @@ impl UniversalChainAdapter for MergeMinedAdapter {
     }
 
     fn validate_address(&self, address: &str) -> Result<(), String> {
-        if address.starts_with("0x") && address.len() == 42 {
-            Ok(())
-        } else if address.len() >= 26 && address.len() <= 35 {
+        let is_evm = address.starts_with("0x") && address.len() == 42;
+        let is_legacy = address.len() >= 26 && address.len() <= 35;
+        if is_evm || is_legacy {
             Ok(())
         } else {
             Err("Invalid merge-mined address".to_string())
@@ -814,12 +817,8 @@ mod tests {
         let rollup = RollupAdapter {
             chain: Chain::Citrea,
         };
-        let alt_rollup = AltRollupAdapter {
-            chain: Chain::Bob,
-        };
-        let alt_l1 = AltLayer1Adapter {
-            chain: Chain::Bevm,
-        };
+        let alt_rollup = AltRollupAdapter { chain: Chain::Bob };
+        let alt_l1 = AltLayer1Adapter { chain: Chain::Bevm };
         let hybrid = HybridAdapter {
             chain: Chain::InternetComputer,
         };

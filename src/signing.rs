@@ -148,10 +148,12 @@ impl AddressFormat {
                     && !matches!(target.chain, Chain::Stacks | Chain::Rootstock)
             }
             // ── Bitcoin L2 ──
-            Self::StacksC32 | Self::AnchorC32 => matches!(
-                target.family,
-                ChainFamily::Anchor | ChainFamily::BitcoinUtxo
-            ) && target.chain == Chain::Stacks,
+            Self::StacksC32 | Self::AnchorC32 => {
+                matches!(
+                    target.family,
+                    ChainFamily::Anchor | ChainFamily::BitcoinUtxo
+                ) && target.chain == Chain::Stacks
+            }
             Self::RootstockBase58 | Self::MergeMinedBase58 => {
                 target.family == ChainFamily::MergeMined
             }
