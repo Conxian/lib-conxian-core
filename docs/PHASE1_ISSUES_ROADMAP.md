@@ -214,7 +214,7 @@ live observation/evidence and Gateway owns runtime assessment and routing.
 **Acceptance Criteria**:
 - [x] Risk score definitions, units, bounds, polarity, and explicit unknown/not-assessed states
 - [x] Versioned schema, profile revision, effective date, evidence, governance, and rationale rules
-- [x] Exact canonical coverage for all 6 families and 23 current chain variants
+- [x] Exact canonical coverage for all 17 families and 48 current chain variants (expanded per bitcoinlayers.org, v0.3.0)
 - [x] Static-vs-live ownership and downstream consumer mapping
 - [x] Compatibility and validation tests for bounds, state consistency, target identity, and trust policy
 

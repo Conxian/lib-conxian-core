@@ -19,12 +19,12 @@ non-enforcing by design.
 
 ## Canonical target and UCS boundary
 
-There is no separate `Chain::RGB` variant in the Core taxonomy. RGB is a
-Bitcoin-adjacent protocol flow, so a Bitcoin anchor or Bitcoin transaction
-surface uses `SigningTarget::for_chain(Chain::Bitcoin)` and
-`ChainFamily::BitcoinUtxo`. An RGB transition or consignment is not silently
-turned into a Bitcoin signing payload; the downstream SDK/client owns its
-serialization and chooses the exact bytes or digest that require signing.
+`Chain::Rgb` exists in the Core taxonomy and maps to `ChainFamily::Csv`.
+For a Bitcoin anchor or Bitcoin transaction surface, use
+`SigningTarget::for_chain(Chain::Bitcoin)` with `ChainFamily::BitcoinUtxo`.
+An RGB transition or consignment is not silently turned into a Bitcoin signing
+payload; the downstream SDK/client owns its serialization and chooses the exact
+bytes or digest that require signing.
 
 The UCS boundary is:
 

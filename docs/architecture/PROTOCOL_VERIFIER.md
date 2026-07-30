@@ -89,10 +89,10 @@ advertisement immediately. For runtime-selected implementations, use the
 `ChainId::from_chain` derives its family from the shared
 `control_model::chain_family_for` mapping. `ChainId::try_from_parts` checks
 explicit parts, and deserializing a known chain with a mismatched family fails.
-The taxonomy intentionally keeps Bitcoin-anchored lanes such as Stacks,
-Liquid, Lightning, and Babylon in the coarse `BitcoinUtxo` family. Concrete
-chain capabilities still distinguish their operations and address/proof
-formats.
+The taxonomy assigns each chain to its canonical family per bitcoinlayers.org:
+Lightning stays in `BitcoinUtxo`, Stacks maps to `Anchor`, Liquid to `Federation`,
+Babylon to `BPoS`, etc. Concrete chain capabilities still distinguish their
+operations and address/proof formats.
 
 ## Request-aware proof result checks
 

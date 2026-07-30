@@ -13,7 +13,7 @@
       "id": "adapters.babylon_staking_intent",
       "kind": "babylon_staking_intent",
       "value": {"staker_pubkey": [2, 2, 2], "finality_provider_pubkey": [3, 3, 3], "amount_sats": 100000, "lock_time_blocks": 144},
-      "expected": {"family": "bitcoin_utxo", "chain": "bitcoin", "trust_tier": "strict", "proof": "840000:dummy-proof"}
+      "expected": {"family": "b_po_s", "chain": "babylon", "trust_tier": "strict", "proof": "840000:dummy-proof"}
     },
     {
       "id": "adapters.liquid_proof",
@@ -21,7 +21,7 @@
       "address": "ex1fixtureaddresswithmorethanthirtyninecharacters",
       "proof": "fixture-block:fixture-root:fixture-blinded-proof",
       "malformed_proof": "",
-      "expected": {"family": "bitcoin_utxo", "chain": "liquid", "trust_tier": "managed"}
+      "expected": {"family": "federation", "chain": "liquid", "trust_tier": "managed"}
     },
     {
       "id": "adapters.stacks_sbtc_intent",

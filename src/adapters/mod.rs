@@ -315,6 +315,373 @@ impl UniversalChainAdapter for MoveAdapter {
     }
 }
 
+/// Adapter for Statechain protocols (Spark, Mercury Layer).
+pub struct StatechainAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for StatechainAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Statechain
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.len() >= 64 && address.len() <= 66 && address.chars().all(|c| c.is_ascii_hexdigit()) {
+            Ok(())
+        } else {
+            Err("Invalid statechain pubkey address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(500)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("statechain", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("statechain")
+    }
+}
+
+/// Adapter for Ark protocol implementations (Second, Arkade).
+pub struct ArkAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for ArkAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Ark
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("ark:") && address.len() >= 70 {
+            Ok(())
+        } else {
+            Err("Invalid Ark vTXO address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(800)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("ark", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("ark")
+    }
+}
+
+/// Adapter for Bitcoin-secured PoS networks (Babylon, Core, Arch, Midl, Nomic, Side Protocol).
+pub struct BPoSAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for BPoSAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::BPoS
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("bc1") || address.starts_with("bbn") {
+            Ok(())
+        } else {
+            Err("Invalid BPoS address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(1200)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("bpos", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("bpos")
+    }
+}
+
+/// Adapter for federated Bitcoin sidechains (Liquid, Botanix, Bitlayer, Mezo).
+pub struct FederationAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for FederationAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Federation
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 42 {
+            Ok(())
+        } else if address.starts_with("bc1") {
+            Ok(())
+        } else {
+            Err("Invalid federation address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(2000)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Managed
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("federation", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("federation")
+    }
+}
+
+/// Adapter for merge-mined Bitcoin sidechains (Rootstock, Fractal).
+pub struct MergeMinedAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for MergeMinedAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::MergeMined
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 42 {
+            Ok(())
+        } else if address.len() >= 26 && address.len() <= 35 {
+            Ok(())
+        } else {
+            Err("Invalid merge-mined address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(1500)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Strict
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("merge-mined", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("merge-mined")
+    }
+}
+
+/// Adapter for Bitcoin rollups (Citrea, Alpen, Alkanes).
+pub struct RollupAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for RollupAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Rollup
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 42 {
+            Ok(())
+        } else {
+            Err("Invalid rollup address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, tx_params: &TxParams) -> Result<u64, String> {
+        let base_fee = 1500u64;
+        let data_fee = tx_params
+            .data
+            .as_ref()
+            .map(|d| d.len() as u64 * 8)
+            .unwrap_or(0);
+        Ok(base_fee + data_fee)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Expedient
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("rollup", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("rollup")
+    }
+}
+
+/// Adapter for alternative rollups (BOB, Merlin, Bsquared, Hemi, Corn, Rollux, Starknet).
+pub struct AltRollupAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for AltRollupAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::AltRollup
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 42 {
+            Ok(())
+        } else {
+            Err("Invalid alt-rollup address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, tx_params: &TxParams) -> Result<u64, String> {
+        let base_fee = 2000u64;
+        let data_fee = tx_params
+            .data
+            .as_ref()
+            .map(|d| d.len() as u64 * 10)
+            .unwrap_or(0);
+        Ok(base_fee + data_fee)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Expedient
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("alt-rollup", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("alt-rollup")
+    }
+}
+
+/// Adapter for alternative Layer-1 chains with Bitcoin bridging (BEVM, GOAT).
+pub struct AltLayer1Adapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for AltLayer1Adapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::AltLayer1
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.starts_with("0x") && address.len() == 42 {
+            Ok(())
+        } else {
+            Err("Invalid alt-L1 address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(3000)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Expedient
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("alt-layer1", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("alt-layer1")
+    }
+}
+
+/// Adapter for hybrid/other architectures (Internet Computer, Flashnet).
+pub struct HybridAdapter {
+    pub chain: Chain,
+}
+
+impl UniversalChainAdapter for HybridAdapter {
+    fn family(&self) -> ChainFamily {
+        ChainFamily::Hybrid
+    }
+
+    fn chain(&self) -> Chain {
+        self.chain.clone()
+    }
+
+    fn validate_address(&self, address: &str) -> Result<(), String> {
+        if address.len() >= 20 {
+            Ok(())
+        } else {
+            Err("Invalid hybrid address".to_string())
+        }
+    }
+
+    fn estimate_fee(&self, _tx_params: &TxParams) -> Result<u64, String> {
+        Ok(5000)
+    }
+
+    fn trust_tier(&self) -> TrustTier {
+        TrustTier::Expedient
+    }
+
+    fn verify_state_proof(&self, state_root: &str, proof: &str) -> Result<bool, StateProofError> {
+        reject_unverified_state_proof("hybrid", state_root, proof)
+    }
+
+    fn get_state_root(&self) -> Result<String, StateProofError> {
+        unavailable_state_root("hybrid")
+    }
+}
+
 /// Adapter for Substrate-based networks (Polkadot, Kusama).
 pub struct SubstrateAdapter {
     pub chain: Chain,
@@ -429,9 +796,51 @@ mod tests {
         let substrate = SubstrateAdapter {
             chain: Chain::Polkadot,
         };
+        let statechain = StatechainAdapter {
+            chain: Chain::Spark,
+        };
+        let ark = ArkAdapter {
+            chain: Chain::Second,
+        };
+        let bpos = BPoSAdapter {
+            chain: Chain::Babylon,
+        };
+        let federation = FederationAdapter {
+            chain: Chain::Liquid,
+        };
+        let merge_mined = MergeMinedAdapter {
+            chain: Chain::Rootstock,
+        };
+        let rollup = RollupAdapter {
+            chain: Chain::Citrea,
+        };
+        let alt_rollup = AltRollupAdapter {
+            chain: Chain::Bob,
+        };
+        let alt_l1 = AltLayer1Adapter {
+            chain: Chain::Bevm,
+        };
+        let hybrid = HybridAdapter {
+            chain: Chain::InternetComputer,
+        };
 
-        let adapters: [&dyn UniversalChainAdapter; 6] =
-            [&bitcoin, &evm, &cosmos, &solana, &move_adapter, &substrate];
+        let adapters: [&dyn UniversalChainAdapter; 15] = [
+            &bitcoin,
+            &evm,
+            &cosmos,
+            &solana,
+            &move_adapter,
+            &substrate,
+            &statechain,
+            &ark,
+            &bpos,
+            &federation,
+            &merge_mined,
+            &rollup,
+            &alt_rollup,
+            &alt_l1,
+            &hybrid,
+        ];
 
         for adapter in adapters {
             assert!(matches!(
