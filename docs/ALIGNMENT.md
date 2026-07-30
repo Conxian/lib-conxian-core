@@ -140,16 +140,28 @@ pub enum TrustTier {
 
 ```rust
 pub enum ChainFamily {
-    BitcoinUtxo, // Bitcoin, Stacks, Liquid, Lightning, Babylon
-    Evm,         // Bob, Mezo, Citrea, Botanix, Ethereum, Base, Arbitrum, Optimism, Polygon
-    CosmosIbc,   // CosmosHub, Osmosis, Celestia
-    SolanaSvm,   // Solana, Eclipse
-    Move,        // Aptos, Sui
-    Substrate,   // Polkadot, Kusama
+    BitcoinUtxo,  // Bitcoin, Lightning
+    Statechain,   // Spark, MercuryLayer
+    Ark,          // Second, Arkade
+    BPoS,         // Babylon, Core, Arch, Midl, Nomic, SideProtocol
+    Federation,   // Liquid, Botanix, Bitlayer, Mezo
+    MergeMined,   // Rootstock, Fractal
+    Anchor,       // Stacks
+    Rollup,       // Citrea, Alpen, Alkanes
+    AltRollup,    // Bob, Bsquared, Hemi, Corn, Merlin, Rollux, Starknet
+    AltLayer1,    // Bevm, Goat
+    Csv,          // Rgb
+    Hybrid,       // InternetComputer, Flashnet
+    Evm,          // Ethereum, Base, Arbitrum, Optimism, Polygon
+    CosmosIbc,    // CosmosHub, Osmosis, Celestia
+    SolanaSvm,    // Solana, Eclipse
+    Move,         // Aptos, Sui
+    Substrate,    // Polkadot, Kusama
 }
 ```
 
-The current taxonomy contains exactly 6 families and 23 chain variants. The versioned canonical
+The current taxonomy contains exactly 17 families and 48 chain variants, aligned with
+[bitcoinlayers.org](https://www.bitcoinlayers.org/) classification. The versioned canonical
 risk-profile artifact records an explicit `not_assessed` decision for every entry; it does not
 promote the historical example scores in the Phase 1 roadmap. See
 [`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md) for the field-level contract,

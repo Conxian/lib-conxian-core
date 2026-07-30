@@ -123,7 +123,7 @@ major `1` (`1.1.0` is compatible); the embedded artifact remains exactly `1.0.0`
 decoding is fail-closed for semantic invariants and unknown/typo fields, so additive fields require
 a schema decision/version bump. Profiles require a positive revision, valid effective date,
 governance/change reference, and rationale. Assessed and partially assessed profiles require
-typed evidence references; the initial set is explicitly `not_assessed` for all 6 families and 23
+typed evidence references; the initial set is explicitly `not_assessed` for all 17 families and 48
 chains. Core owns schema and invariant validation only. Nexus owns live observation/evidence and
 Gateway owns runtime assessment, persistence, and routing. See
 [`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).

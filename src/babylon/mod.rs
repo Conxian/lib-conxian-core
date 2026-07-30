@@ -22,11 +22,11 @@ pub struct BabylonAdapter;
 
 impl UniversalChainAdapter for BabylonAdapter {
     fn family(&self) -> ChainFamily {
-        ChainFamily::BitcoinUtxo
+        ChainFamily::BPoS
     }
 
     fn chain(&self) -> Chain {
-        Chain::Bitcoin
+        Chain::Babylon
     }
 
     fn validate_address(&self, address: &str) -> Result<(), String> {
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_babylon_adapter_trait() {
         let adapter = BabylonAdapter;
-        assert_eq!(adapter.family(), ChainFamily::BitcoinUtxo);
+        assert_eq!(adapter.family(), ChainFamily::BPoS);
         assert!(adapter.validate_address("bc1q_babylon").is_ok());
     }
 

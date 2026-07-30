@@ -679,25 +679,66 @@ fn encode_chain_family(encoder: &mut CanonicalEncoder, family: &ChainFamily) {
 fn chain_family_name(family: &ChainFamily) -> &'static str {
     match family {
         ChainFamily::BitcoinUtxo => "bitcoin_utxo",
+        ChainFamily::Statechain => "statechain",
+        ChainFamily::Ark => "ark",
+        ChainFamily::BPoS => "bpos",
+        ChainFamily::Federation => "federation",
+        ChainFamily::MergeMined => "merge_mined",
+        ChainFamily::Anchor => "anchor",
+        ChainFamily::Rollup => "rollup",
+        ChainFamily::AltRollup => "alt_rollup",
+        ChainFamily::AltLayer1 => "alt_layer1",
+        ChainFamily::Csv => "csv",
         ChainFamily::Evm => "evm",
         ChainFamily::CosmosIbc => "cosmos_ibc",
         ChainFamily::SolanaSvm => "solana_svm",
         ChainFamily::Move => "move",
         ChainFamily::Substrate => "substrate",
+        ChainFamily::Hybrid => "hybrid",
     }
 }
 
 fn chain_name(chain: &Chain) -> &'static str {
     match chain {
+        // ── Bitcoin L1 ──
         Chain::Bitcoin => "bitcoin",
+        // ── Bitcoin Native ──
+        Chain::Lightning => "lightning",
+        Chain::Spark => "spark",
+        Chain::MercuryLayer => "mercury_layer",
+        Chain::Second => "second",
+        Chain::Arkade => "arkade",
+        // ── Sidesystems ──
         Chain::Stacks => "stacks",
         Chain::Liquid => "liquid",
-        Chain::Lightning => "lightning",
+        Chain::Rootstock => "rootstock",
+        Chain::Botanix => "botanix",
+        Chain::Citrea => "citrea",
+        Chain::Alpen => "alpen",
+        Chain::Arch => "arch",
+        Chain::Midl => "midl",
+        Chain::Nomic => "nomic",
+        Chain::SideProtocol => "side_protocol",
+        // ── Other ──
         Chain::Babylon => "babylon",
         Chain::Bob => "bob",
         Chain::Mezo => "mezo",
-        Chain::Citrea => "citrea",
-        Chain::Botanix => "botanix",
+        Chain::Alkanes => "alkanes",
+        Chain::Bevm => "bevm",
+        Chain::Bitlayer => "bitlayer",
+        Chain::Bsquared => "bsquared",
+        Chain::Core => "core",
+        Chain::Corn => "corn",
+        Chain::Flashnet => "flashnet",
+        Chain::Fractal => "fractal",
+        Chain::Goat => "goat",
+        Chain::Hemi => "hemi",
+        Chain::InternetComputer => "internet_computer",
+        Chain::Merlin => "merlin",
+        Chain::Rgb => "rgb",
+        Chain::Rollux => "rollux",
+        Chain::Starknet => "starknet",
+        // ── Cross-ecosystem ──
         Chain::Ethereum => "ethereum",
         Chain::Base => "base",
         Chain::Arbitrum => "arbitrum",
@@ -717,6 +758,28 @@ fn chain_name(chain: &Chain) -> &'static str {
 
 fn encode_bridge_system(encoder: &mut CanonicalEncoder, system: &BridgeSystem) {
     encoder.push_str(match system {
+        // ── Bitcoin bridges ──
+        BridgeSystem::BitcoinFinality => "bitcoin_finality",
+        BridgeSystem::Lightning => "lightning",
+        BridgeSystem::Bitvm2 => "bitvm2",
+        BridgeSystem::StacksNakamoto => "stacks_nakamoto",
+        BridgeSystem::BabylonStaking => "babylon_staking",
+        BridgeSystem::CitreaZk => "citrea_zk",
+        BridgeSystem::AlpenBridge => "alpen_bridge",
+        BridgeSystem::RootstockPowpeg => "rootstock_powpeg",
+        BridgeSystem::LiquidPeg => "liquid_peg",
+        BridgeSystem::BotanixSpiderchain => "botanix_spiderchain",
+        BridgeSystem::RgbCsv => "rgb_csv",
+        BridgeSystem::MerlinBridge => "merlin_bridge",
+        BridgeSystem::BobBridge => "bob_bridge",
+        BridgeSystem::BsquaredBridge => "bsquared_bridge",
+        BridgeSystem::CoreBridge => "core_bridge",
+        BridgeSystem::BevmBridge => "bevm_bridge",
+        BridgeSystem::FractalBridge => "fractal_bridge",
+        BridgeSystem::BitlayerBridge => "bitlayer_bridge",
+        BridgeSystem::ArkBridge => "ark_bridge",
+        BridgeSystem::SparkBridge => "spark_bridge",
+        // ── Cross-ecosystem ──
         BridgeSystem::Ibc => "ibc",
         BridgeSystem::WormholeNtt => "wormhole_ntt",
         BridgeSystem::Hyperlane => "hyperlane",
@@ -726,7 +789,6 @@ fn encode_bridge_system(encoder: &mut CanonicalEncoder, system: &BridgeSystem) {
         BridgeSystem::NearChainSignatures => "near_chain_signatures",
         BridgeSystem::CircleCctp => "circle_cctp",
         BridgeSystem::NexusZkVM => "nexus_zk_vm",
-        BridgeSystem::Bitvm2 => "bitvm2",
     });
 }
 

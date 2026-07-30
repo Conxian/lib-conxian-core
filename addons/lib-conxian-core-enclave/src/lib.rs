@@ -640,12 +640,20 @@ pub fn is_supported_chain_algorithm(target: &SigningTarget, algorithm: SigningAl
     matches!(
         (&target.chain, &target.family, algorithm),
         (
-            Chain::Bitcoin | Chain::Liquid | Chain::Lightning | Chain::Babylon,
+            Chain::Bitcoin | Chain::Lightning,
             ChainFamily::BitcoinUtxo,
             SigningAlgorithm::EcdsaSecp256k1 | SigningAlgorithm::SchnorrSecp256k1,
         ) | (
+            Chain::Liquid,
+            ChainFamily::Federation,
+            SigningAlgorithm::EcdsaSecp256k1 | SigningAlgorithm::SchnorrSecp256k1,
+        ) | (
+            Chain::Babylon,
+            ChainFamily::BPoS,
+            SigningAlgorithm::EcdsaSecp256k1 | SigningAlgorithm::SchnorrSecp256k1,
+        ) | (
             Chain::Stacks,
-            ChainFamily::BitcoinUtxo,
+            ChainFamily::Anchor,
             SigningAlgorithm::EcdsaSecp256k1
         ) | (
             Chain::Ethereum,

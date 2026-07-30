@@ -43,9 +43,33 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-cha
 
 | Tier | Protocols | Characteristics |
 |------|-----------|----------------|
-| T1 Strict | Bitcoin L1 finality, BitVM2 SNARK verification, RGB state proofs | Full validation, no trust assumptions |
-| T2 Managed | Lightning channel state, Fedimint consensus, Canton Daml state | Consortium/multi-sig governance |
-| T3 Expedient | EVM L2 bridges (Arbitrum/Base/OP), Cosmos IBC, Solana | Optimistic or fast-finality, economic security |
+| T1 Strict | Bitcoin L1 finality, BitVM2 SNARK verification, RGB state proofs, Statechains, Ark, BPoS (Babylon/Core), Merge-mined (Rootstock/Fractal) | Full validation, no trust assumptions |
+| T2 Managed | Lightning channel state, Fedimint consensus, Federated sidechains (Liquid/Botanix/Bitlayer/Mezo), Anchor (Stacks) | Consortium/multi-sig governance |
+| T3 Expedient | EVM L2 bridges, Cosmos IBC, Solana, Bitcoin rollups (Citrea/Alpen/Alkanes), Alt rollups (BOB/Merlin/Starknet), Alt L1s (BEVM/GOAT) | Optimistic or fast-finality, economic security |
+
+## Universal Chain Coverage (bitcoinlayers.org aligned)
+
+### Current Taxonomy: 17 families, 48 chains
+
+| Family | Chains | bitcoinlayers.org Category |
+|--------|--------|---------------------------|
+| `BitcoinUtxo` | Bitcoin, Lightning | Bitcoin L1 + Native |
+| `Statechain` | Spark, MercuryLayer | Bitcoin Native |
+| `Ark` | Second, Arkade | Bitcoin Native |
+| `BPoS` | Babylon, Core, Arch, Midl, Nomic, SideProtocol | Sidesystems + Other |
+| `Federation` | Liquid, Botanix, Bitlayer, Mezo | Sidesystems + Other |
+| `MergeMined` | Rootstock, Fractal | Sidesystems + Other |
+| `Anchor` | Stacks | Sidesystems |
+| `Rollup` | Citrea, Alpen, Alkanes | Sidesystems + Other |
+| `AltRollup` | Bob, Bsquared, Hemi, Corn, Merlin, Rollux, Starknet | Other |
+| `AltLayer1` | Bevm, Goat | Other |
+| `Csv` | Rgb | Other |
+| `Hybrid` | InternetComputer, Flashnet | Other |
+| `Evm` | Ethereum, Base, Arbitrum, Optimism, Polygon | Cross-ecosystem |
+| `CosmosIbc` | CosmosHub, Osmosis, Celestia | Cross-ecosystem |
+| `SolanaSvm` | Solana, Eclipse | Cross-ecosystem |
+| `Move` | Aptos, Sui | Cross-ecosystem |
+| `Substrate` | Polkadot, Kusama | Cross-ecosystem |
 
 ## Workflow Instructions
 - **Verification:** Always run `cargo test --workspace` to verify changes.

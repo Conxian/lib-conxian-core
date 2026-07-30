@@ -20,10 +20,10 @@ for Bitcoin peg finality.
 ## Canonical target and UCS boundary
 
 For a Liquid-side operation, the canonical UCS target is
-`SigningTarget::for_chain(Chain::Liquid)` with `ChainFamily::BitcoinUtxo`.
-Core has no dedicated `AddressFormat::Liquid`; a concrete signer must advertise
-`AddressFormat::Generic` or another compatible format only if it owns the real
-Elements address validation. For a Bitcoin L1 peg transaction, use a separate
+`SigningTarget::for_chain(Chain::Liquid)` with `ChainFamily::Federation`.
+Core provides `AddressFormat::LiquidConfidential` and `AddressFormat::FederationAddress`;
+a concrete signer must advertise one of these or `AddressFormat::Generic` only if it owns
+the real Elements address validation. For a Bitcoin L1 peg transaction, use a separate
 `SigningTarget::for_chain(Chain::Bitcoin)` request.
 
 The UCS boundary carries the exact bytes or digest for the selected surface:

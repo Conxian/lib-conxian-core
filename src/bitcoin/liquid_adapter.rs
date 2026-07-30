@@ -12,7 +12,7 @@ pub struct LiquidAdapter;
 
 impl UniversalChainAdapter for LiquidAdapter {
     fn family(&self) -> ChainFamily {
-        ChainFamily::BitcoinUtxo
+        ChainFamily::Federation
     }
 
     fn chain(&self) -> Chain {

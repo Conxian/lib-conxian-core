@@ -6,8 +6,8 @@ use lib_conxian_core::control_model::{
     RailCustodyModel, RailFinalitySemantics, RailMetadata, RailOperationalCapabilities,
     RailTrustAssumptions, RiskAssessment, RiskAssessmentStatus, RiskBand, RiskDimensions,
     RiskMetricState, RiskMetricValue, RiskProfile, RiskProfileAssessment, RiskScore, RiskTarget,
-    StaticPolicyAssumptions, TrustTier, VerificationClass, VersionedRailMetadata,
-    CANONICAL_RISK_PROFILE_SET_VERSION, RISK_PROFILE_SCHEMA_VERSION,
+    StaticPolicyAssumptions, TrustTier, VerificationClass, VersionedRailMetadata, ALL_CHAINS,
+    ALL_CHAIN_FAMILIES, CANONICAL_RISK_PROFILE_SET_VERSION, RISK_PROFILE_SCHEMA_VERSION,
 };
 use serde_json::{json, Value};
 
@@ -136,20 +136,20 @@ fn canonical_artifact_is_a_valid_json_golden_with_exact_coverage() {
     assert_eq!(roundtrip, source);
     assert_eq!(set.schema_version, RISK_PROFILE_SCHEMA_VERSION);
     assert_eq!(set.profile_set_version, CANONICAL_RISK_PROFILE_SET_VERSION);
-    assert_eq!(set.profiles.len(), 6 + 23);
+    assert_eq!(set.profiles.len(), 17 + 48);
     assert_eq!(
         set.profiles
             .iter()
             .filter(|profile| matches!(profile.target, RiskTarget::Family { .. }))
             .count(),
-        6
+        17
     );
     assert_eq!(
         set.profiles
             .iter()
             .filter(|profile| matches!(profile.target, RiskTarget::Chain { .. }))
             .count(),
-        23
+        48
     );
     assert!(set.profiles.iter().all(|profile| {
         profile.assessment.status == RiskAssessmentStatus::NotAssessed
@@ -161,46 +161,17 @@ fn canonical_artifact_is_a_valid_json_golden_with_exact_coverage() {
 fn canonical_loader_validates_and_exposes_each_target() {
     let set = canonical_risk_profile_set().unwrap();
 
-    for family in [
-        ChainFamily::BitcoinUtxo,
-        ChainFamily::Evm,
-        ChainFamily::CosmosIbc,
-        ChainFamily::SolanaSvm,
-        ChainFamily::Move,
-        ChainFamily::Substrate,
-    ] {
-        let target = RiskTarget::Family { family };
+    for family in ALL_CHAIN_FAMILIES {
+        let target = RiskTarget::Family {
+            family: family.clone(),
+        };
         assert!(set.profile_for_target(&target).is_some());
     }
 
-    for chain in [
-        Chain::Bitcoin,
-        Chain::Stacks,
-        Chain::Liquid,
-        Chain::Lightning,
-        Chain::Babylon,
-        Chain::Bob,
-        Chain::Mezo,
-        Chain::Citrea,
-        Chain::Botanix,
-        Chain::Ethereum,
-        Chain::Base,
-        Chain::Arbitrum,
-        Chain::Optimism,
-        Chain::Polygon,
-        Chain::CosmosHub,
-        Chain::Osmosis,
-        Chain::Celestia,
-        Chain::Solana,
-        Chain::Eclipse,
-        Chain::Aptos,
-        Chain::Sui,
-        Chain::Polkadot,
-        Chain::Kusama,
-    ] {
+    for chain in ALL_CHAINS {
         let target = RiskTarget::Chain {
-            family: chain_family_for(&chain),
-            chain,
+            family: chain_family_for(chain),
+            chain: chain.clone(),
         };
         assert!(set.profile_for_target(&target).is_some());
     }
@@ -564,15 +535,45 @@ fn every_chain_target_matches_the_canonical_chain_family_mapping() {
 #[test]
 fn all_current_chain_family_mappings_are_explicitly_checked() {
     let expected = [
+        // ── Bitcoin L1 ──
         (Chain::Bitcoin, ChainFamily::BitcoinUtxo),
-        (Chain::Stacks, ChainFamily::BitcoinUtxo),
-        (Chain::Liquid, ChainFamily::BitcoinUtxo),
+        // ── Bitcoin Native ──
         (Chain::Lightning, ChainFamily::BitcoinUtxo),
-        (Chain::Babylon, ChainFamily::BitcoinUtxo),
-        (Chain::Bob, ChainFamily::Evm),
-        (Chain::Mezo, ChainFamily::Evm),
-        (Chain::Citrea, ChainFamily::Evm),
-        (Chain::Botanix, ChainFamily::Evm),
+        (Chain::Spark, ChainFamily::Statechain),
+        (Chain::MercuryLayer, ChainFamily::Statechain),
+        (Chain::Second, ChainFamily::Ark),
+        (Chain::Arkade, ChainFamily::Ark),
+        // ── Sidesystems ──
+        (Chain::Stacks, ChainFamily::Anchor),
+        (Chain::Liquid, ChainFamily::Federation),
+        (Chain::Rootstock, ChainFamily::MergeMined),
+        (Chain::Botanix, ChainFamily::Federation),
+        (Chain::Citrea, ChainFamily::Rollup),
+        (Chain::Alpen, ChainFamily::Rollup),
+        (Chain::Arch, ChainFamily::BPoS),
+        (Chain::Midl, ChainFamily::BPoS),
+        (Chain::Nomic, ChainFamily::BPoS),
+        (Chain::SideProtocol, ChainFamily::BPoS),
+        // ── Other Bitcoin-adjacent ──
+        (Chain::Babylon, ChainFamily::BPoS),
+        (Chain::Bob, ChainFamily::AltRollup),
+        (Chain::Mezo, ChainFamily::Federation),
+        (Chain::Alkanes, ChainFamily::Rollup),
+        (Chain::Bevm, ChainFamily::AltLayer1),
+        (Chain::Bitlayer, ChainFamily::Federation),
+        (Chain::Bsquared, ChainFamily::AltRollup),
+        (Chain::Core, ChainFamily::BPoS),
+        (Chain::Corn, ChainFamily::AltRollup),
+        (Chain::Flashnet, ChainFamily::Hybrid),
+        (Chain::Fractal, ChainFamily::MergeMined),
+        (Chain::Goat, ChainFamily::AltLayer1),
+        (Chain::Hemi, ChainFamily::AltRollup),
+        (Chain::InternetComputer, ChainFamily::Hybrid),
+        (Chain::Merlin, ChainFamily::AltRollup),
+        (Chain::Rgb, ChainFamily::Csv),
+        (Chain::Rollux, ChainFamily::AltRollup),
+        (Chain::Starknet, ChainFamily::AltRollup),
+        // ── Cross-ecosystem ──
         (Chain::Ethereum, ChainFamily::Evm),
         (Chain::Base, ChainFamily::Evm),
         (Chain::Arbitrum, ChainFamily::Evm),
@@ -589,7 +590,7 @@ fn all_current_chain_family_mappings_are_explicitly_checked() {
         (Chain::Kusama, ChainFamily::Substrate),
     ];
 
-    assert_eq!(expected.len(), 23);
+    assert_eq!(expected.len(), 48);
     for (chain, family) in expected {
         assert_eq!(chain_family_for(&chain), family);
         assert!(canonical_risk_profile_set()

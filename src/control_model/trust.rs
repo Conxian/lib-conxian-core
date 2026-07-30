@@ -29,15 +29,45 @@ pub mod bip110 {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Chain {
+    // ── Bitcoin L1 ──
     Bitcoin,
+    // ── Bitcoin Native (bitcoinlayers.org) ──
+    Lightning,
+    Spark,
+    Second,
+    MercuryLayer,
+    Arkade,
+    // ── Sidesystems (bitcoinlayers.org) ──
     Stacks,
     Liquid,
-    Lightning,
+    Rootstock,
+    Botanix,
+    Citrea,
+    Alpen,
+    Arch,
+    Midl,
+    Nomic,
+    SideProtocol,
+    // ── Other Bitcoin-adjacent (bitcoinlayers.org) ──
     Babylon,
     Bob,
     Mezo,
-    Citrea,
-    Botanix,
+    Alkanes,
+    Bevm,
+    Bitlayer,
+    Bsquared,
+    Core,
+    Corn,
+    Flashnet,
+    Fractal,
+    Goat,
+    Hemi,
+    InternetComputer,
+    Merlin,
+    Rgb,
+    Rollux,
+    Starknet,
+    // ── Cross-ecosystem ──
     Ethereum,
     Base,
     Arbitrum,
@@ -57,12 +87,40 @@ pub enum Chain {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ChainFamily {
+    /// Bitcoin L1 and UTXO-native protocols (Lightning, statechains, Ark).
     BitcoinUtxo,
+    /// Statechain protocols (Spark, Mercury Layer).
+    Statechain,
+    /// Ark protocol and its implementations.
+    Ark,
+    /// Bitcoin-secured Proof-of-Stake networks.
+    BPoS,
+    /// Federated Bitcoin sidechains (Liquid, Botanix, Bitlayer, Mezo).
+    Federation,
+    /// Merge-mined Bitcoin sidechains (Rootstock, Fractal).
+    MergeMined,
+    /// Bitcoin anchor/anchor-based layers (Stacks).
+    Anchor,
+    /// Bitcoin rollups (Citrea, Alpen, Alkanes).
+    Rollup,
+    /// Alternative rollup designs (BOB, Merlin, Bsquared, Hemi, Corn, Rollux, Starknet).
+    AltRollup,
+    /// Alternative Layer-1 chains with Bitcoin bridging (BEVM, GOAT).
+    AltLayer1,
+    /// Client-side validation protocols (RGB).
+    Csv,
+    /// EVM-compatible chains.
     Evm,
+    /// Cosmos/IBC ecosystem.
     CosmosIbc,
+    /// Solana SVM ecosystem.
     SolanaSvm,
+    /// Move-based chains (Aptos, Sui).
     Move,
+    /// Substrate/Polkadot ecosystem.
     Substrate,
+    /// Other/hybrid architectures (Internet Computer, Flashnet).
+    Hybrid,
 }
 
 impl Chain {
@@ -74,18 +132,36 @@ impl Chain {
     /// formats, and proof capabilities separately.
     pub fn family(&self) -> ChainFamily {
         match self {
-            Self::Bitcoin | Self::Stacks | Self::Liquid | Self::Lightning | Self::Babylon => {
-                ChainFamily::BitcoinUtxo
+            // ── Bitcoin L1 ──
+            Self::Bitcoin => ChainFamily::BitcoinUtxo,
+            // ── Bitcoin Native (bitcoinlayers.org) ──
+            Self::Lightning => ChainFamily::BitcoinUtxo,
+            Self::Spark | Self::MercuryLayer => ChainFamily::Statechain,
+            Self::Second | Self::Arkade => ChainFamily::Ark,
+            // ── Sidesystems ──
+            Self::Stacks => ChainFamily::Anchor,
+            Self::Liquid => ChainFamily::Federation,
+            Self::Rootstock => ChainFamily::MergeMined,
+            Self::Botanix => ChainFamily::Federation,
+            Self::Citrea | Self::Alpen => ChainFamily::Rollup,
+            Self::Arch | Self::Midl | Self::Nomic | Self::SideProtocol => ChainFamily::BPoS,
+            // ── Other Bitcoin-adjacent ──
+            Self::Babylon | Self::Core => ChainFamily::BPoS,
+            Self::Bob | Self::Bsquared | Self::Hemi | Self::Corn | Self::Merlin | Self::Rollux => {
+                ChainFamily::AltRollup
             }
-            Self::Bob
-            | Self::Mezo
-            | Self::Citrea
-            | Self::Botanix
-            | Self::Ethereum
-            | Self::Base
-            | Self::Arbitrum
-            | Self::Optimism
-            | Self::Polygon => ChainFamily::Evm,
+            Self::Mezo | Self::Bitlayer => ChainFamily::Federation,
+            Self::Alkanes => ChainFamily::Rollup,
+            Self::Bevm | Self::Goat => ChainFamily::AltLayer1,
+            Self::Fractal => ChainFamily::MergeMined,
+            Self::Flashnet => ChainFamily::Hybrid,
+            Self::InternetComputer => ChainFamily::Hybrid,
+            Self::Rgb => ChainFamily::Csv,
+            Self::Starknet => ChainFamily::AltRollup,
+            // ── Cross-ecosystem ──
+            Self::Ethereum | Self::Base | Self::Arbitrum | Self::Optimism | Self::Polygon => {
+                ChainFamily::Evm
+            }
             Self::CosmosHub | Self::Osmosis | Self::Celestia => ChainFamily::CosmosIbc,
             Self::Solana | Self::Eclipse => ChainFamily::SolanaSvm,
             Self::Aptos | Self::Sui => ChainFamily::Move,
@@ -152,6 +228,48 @@ pub enum VerificationStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum BridgeSystem {
+    // ── Canonical Bitcoin bridges ──
+    /// Bitcoin L1 finality (native).
+    BitcoinFinality,
+    /// Lightning Network.
+    Lightning,
+    /// BitVM2 SNARK verification bridge.
+    Bitvm2,
+    /// Stacks Nakamoto sBTC peg.
+    StacksNakamoto,
+    /// Babylon Bitcoin staking protocol.
+    BabylonStaking,
+    /// Citrea zero-knowledge rollup bridge.
+    CitreaZk,
+    /// Alpen rollup bridge.
+    AlpenBridge,
+    /// Rootstock Powpeg.
+    RootstockPowpeg,
+    /// Liquid federated peg.
+    LiquidPeg,
+    /// Botanix Spiderchain federation.
+    BotanixSpiderchain,
+    /// RGB client-side validation bridge.
+    RgbCsv,
+    /// Merlin Chain bridge.
+    MerlinBridge,
+    /// BOB (Build on Bitcoin) bridge.
+    BobBridge,
+    /// Bsquared Network bridge.
+    BsquaredBridge,
+    /// Core bridge.
+    CoreBridge,
+    /// BEVM bridge.
+    BevmBridge,
+    /// Fractal merge-mined bridge.
+    FractalBridge,
+    /// Bitlayer federation bridge.
+    BitlayerBridge,
+    /// Ark protocol bridge.
+    ArkBridge,
+    /// Spark statechain bridge.
+    SparkBridge,
+    // ── Cross-ecosystem bridges ──
     Ibc,
     WormholeNtt,
     Hyperlane,
@@ -161,7 +279,6 @@ pub enum BridgeSystem {
     NearChainSignatures,
     CircleCctp,
     NexusZkVM,
-    Bitvm2,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

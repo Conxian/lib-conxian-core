@@ -24,7 +24,7 @@ unavailable without provider-backed evidence.
 ## Canonical target and UCS boundary
 
 For a Stacks-side signing operation, the canonical target is
-`SigningTarget::for_chain(Chain::Stacks)` with `ChainFamily::BitcoinUtxo` and a
+`SigningTarget::for_chain(Chain::Stacks)` with `ChainFamily::Anchor` and a
 capability such as `EcdsaSecp256k1` plus `AddressFormat::StacksC32` when the
 concrete signer truly supports it. A Bitcoin-side peg transaction is a
 separate request with `SigningTarget::for_chain(Chain::Bitcoin)`; the sBTC

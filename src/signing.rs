@@ -106,9 +106,25 @@ pub enum SignatureEncoding {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AddressFormat {
+    // ── Bitcoin UTXO ──
     BitcoinBase58,
     BitcoinBech32,
+    // ── Bitcoin L2 families ──
     StacksC32,
+    RootstockBase58,
+    LiquidConfidential,
+    StatechainPubkey,
+    ArkVtxo,
+    BPoSBech32,
+    FederationAddress,
+    MergeMinedBase58,
+    AnchorC32,
+    RollupEvmHex,
+    AltRollupHex,
+    AltLayer1Hex,
+    CsvContractId,
+    HybridAddress,
+    // ── Cross-ecosystem ──
     EvmHex,
     SolanaBase58,
     CosmosBech32,
@@ -126,10 +142,33 @@ impl AddressFormat {
     /// validation.
     pub fn is_compatible_with(self, target: &SigningTarget) -> bool {
         match self {
+            // ── Bitcoin L1 ──
             Self::BitcoinBase58 | Self::BitcoinBech32 => {
-                target.family == ChainFamily::BitcoinUtxo && target.chain != Chain::Stacks
+                target.family == ChainFamily::BitcoinUtxo
+                    && !matches!(target.chain, Chain::Stacks | Chain::Rootstock)
             }
-            Self::StacksC32 => target.chain == Chain::Stacks,
+            // ── Bitcoin L2 ──
+            Self::StacksC32 | Self::AnchorC32 => {
+                matches!(
+                    target.family,
+                    ChainFamily::Anchor | ChainFamily::BitcoinUtxo
+                ) && target.chain == Chain::Stacks
+            }
+            Self::RootstockBase58 | Self::MergeMinedBase58 => {
+                target.family == ChainFamily::MergeMined
+            }
+            Self::LiquidConfidential | Self::FederationAddress => {
+                target.family == ChainFamily::Federation
+            }
+            Self::StatechainPubkey => target.family == ChainFamily::Statechain,
+            Self::ArkVtxo => target.family == ChainFamily::Ark,
+            Self::BPoSBech32 => target.family == ChainFamily::BPoS,
+            Self::RollupEvmHex => target.family == ChainFamily::Rollup,
+            Self::AltRollupHex => target.family == ChainFamily::AltRollup,
+            Self::AltLayer1Hex => target.family == ChainFamily::AltLayer1,
+            Self::CsvContractId => target.family == ChainFamily::Csv,
+            Self::HybridAddress => target.family == ChainFamily::Hybrid,
+            // ── Cross-ecosystem ──
             Self::EvmHex => target.family == ChainFamily::Evm,
             Self::SolanaBase58 => target.family == ChainFamily::SolanaSvm,
             Self::CosmosBech32 => target.family == ChainFamily::CosmosIbc,
@@ -1028,7 +1067,7 @@ mod tests {
         );
         assert_eq!(
             SigningTarget::for_chain(Chain::Stacks).family,
-            ChainFamily::BitcoinUtxo
+            ChainFamily::Anchor
         );
         assert_eq!(
             SigningTarget::for_chain(Chain::Ethereum).family,
@@ -1037,6 +1076,30 @@ mod tests {
         assert_eq!(
             SigningTarget::for_chain(Chain::Solana).family,
             ChainFamily::SolanaSvm
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Babylon).family,
+            ChainFamily::BPoS
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Liquid).family,
+            ChainFamily::Federation
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Rootstock).family,
+            ChainFamily::MergeMined
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Citrea).family,
+            ChainFamily::Rollup
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Spark).family,
+            ChainFamily::Statechain
+        );
+        assert_eq!(
+            SigningTarget::for_chain(Chain::Second).family,
+            ChainFamily::Ark
         );
     }
 

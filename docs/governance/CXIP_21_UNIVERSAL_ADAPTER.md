@@ -37,7 +37,7 @@ Every adapter must expose metadata that aligns with `control_model.rs`, includin
 1. Define the trait in `src/adapters/mod.rs`.
 2. Implement `BitcoinAdapter` in `src/bitcoin/mod.rs`.
 3. Implement `EvmAdapter` in `src/evm/mod.rs` (New).
-4. Update `VaultSDK` to consume these adapters via a registry.
+4. Update `conxius-enclave-sdk` to consume these adapters via a registry.
 
 ## 5. Backward Compatibility
 This proposal is additive and does not break existing Vault SDK signatures.
