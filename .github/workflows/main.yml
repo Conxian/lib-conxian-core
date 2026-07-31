@@ -64,6 +64,7 @@ jobs:
           python scripts/verify_submodule_secret_filenames.py
           python scripts/verify_bos_production_boundary.py
           python scripts/verify_contamination_guard.py
+          python scripts/verify_core_dependency_boundary.py
           python scripts/verify_pr_bos_classification.py
           python scripts/verify_release_version.py --phase source-only
           python scripts/verify_release_hygiene.py

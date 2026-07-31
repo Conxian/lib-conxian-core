@@ -29,11 +29,9 @@ jobs:
 
       - name: Cargo audit
         run: |
-          cargo generate-lockfile
-          # Ignore rustls-webpki (transitive via bdk 0.30.2) and unmaintained warnings
-          # RUSTSEC-2026-0104, RUSTSEC-2026-0099, RUSTSEC-2026-0098 (webpki)
+          # Audit the exact committed lockfile. Remaining ignores are unmaintained warnings:
           # RUSTSEC-2024-0388 (derivative), RUSTSEC-2025-0057 (fxhash),
           # RUSTSEC-2024-0384 (instant), RUSTSEC-2024-0436 (paste)
-          cargo audit --ignore RUSTSEC-2026-0104 --ignore RUSTSEC-2026-0099 --ignore RUSTSEC-2026-0098 \
+          cargo audit --file Cargo.lock \
                        --ignore RUSTSEC-2024-0388 --ignore RUSTSEC-2025-0057 \
                        --ignore RUSTSEC-2024-0384 --ignore RUSTSEC-2024-0436
