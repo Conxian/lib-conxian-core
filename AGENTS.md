@@ -1,4 +1,4 @@
-# Conxian Agent Guidelines: lib-conxian-core (v0.3.0 — Session 47, Aug 2026)
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.1 — Session 48, Aug 2026)
 
 This repository is the canonical home of the **Vault SDK** and shared protocol primitives. It is a "protocol-first" library.
 
@@ -18,7 +18,7 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 
 ## Protocol Coverage — SDK → Core Alignment
 
-The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-chain `AssetRegistry` and 33 protocol modules. lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
+The Conxius Enclave SDK (`lib-conclave-sdk` v0.3.1) defines the canonical 42-chain `AssetRegistry` and 46 protocol modules. lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
 
 ### Core Type Coverage Requirements
 
@@ -47,7 +47,7 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-cha
 | T2 Managed | Lightning channel state, Fedimint consensus, Canton Daml state | Consortium/multi-sig governance |
 | T3 Expedient | EVM L2 bridges (Arbitrum/Base/OP), Cosmos IBC, Solana | Optimistic or fast-finality, economic security |
 
-## Module Catalog (Session 47 — Aug 2026)
+## Module Catalog (Session 48 — Aug 2026)
 
 ### Core Modules
 
