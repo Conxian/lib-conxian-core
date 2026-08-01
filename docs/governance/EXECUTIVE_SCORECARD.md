@@ -8,7 +8,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 | :--- | :--- | :--- | :--- |
 | **Launch** | 🟢 | None | Finalize audit engagement |
 | **Repo/Gov** | 🟢 | None | Finalize CXIP-21 approval |
-| **Release** | 🟢 | None | Confirm v0.3.0 stability |
+| **Release** | 🟢 | None | Confirm v0.3.1 stability |
 | **Growth** | 🟢 | None | Select primary Babylon Finality Provider |
 
 ## 2. Key Metrics
@@ -27,4 +27,4 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 1. **Audit**: Execute external security audit for core cryptographic paths (CON-1333).
 2. **Alignment**: Repair broken submodule pins in `conxian-business` (CON-1308).
-3. **Research**: Progress BitVMX and BitVM3 research for v0.3.0 floor.
+3. **Research**: Progress BitVMX and BitVM3 research for v0.3.1 floor.

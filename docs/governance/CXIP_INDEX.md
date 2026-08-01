@@ -16,7 +16,7 @@ contains a production verifier. Current `lib-conxian-core` boundaries are:
   provider-backed mint/note/status verification; authenticated status is
   unavailable without a provider.
 
-These are the current v0.3.0 Core boundaries. Proposal status below describes
+These are the current v0.3.1 Core boundaries. Proposal status below describes
 governance/specification state only and does not authorize a production flow;
 the verifier inventory is the source of truth for evidence and compatibility
 wrappers.

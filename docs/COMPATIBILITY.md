@@ -56,7 +56,7 @@ This rebased checkpoint is based on Core `origin/main` commit
 
 | Surface | Exact baseline |
 | --- | --- |
-| Core package | `lib-conxian-core` `0.3.0` |
+| Core package | `lib-conxian-core` `0.3.1` |
 | Core Rust floor | `1.91` (`1.91.0` in CI and the harness) |
 | SDK formal release | `conxius-enclave-sdk` `2.0.11` |
 | SDK release tag | `v2.0.11` at commit `d3e9a6a26da1bd4c15e612ce7051a0bfdf640a83` |
@@ -125,7 +125,7 @@ cargo +1.91.0 clippy --manifest-path tests/sdk-compat/Cargo.toml --tests \
 
 ```text
 lib-conxian-core-sdk-compat (non-published, opt-in test evidence)
-├── local lib-conxian-core 0.3.0
+├── local lib-conxian-core 0.3.1
 │   └── conxius-enclave-sdk 2.0.11 only when Core's `enclave` feature is enabled
 └── conxius-enclave-sdk =2.0.11 (direct evidence dependency)
 ```

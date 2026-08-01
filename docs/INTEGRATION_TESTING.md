@@ -61,7 +61,7 @@ Golden JSON files are under [`../tests/fixtures/`](../tests/fixtures/) and are i
 `manifest.json`. The manifest requires:
 
 - fixture schema version `1`;
-- package `lib-conxian-core` version `0.3.0`;
+- package `lib-conxian-core` version `0.3.1`;
 - UCS API version `1`;
 - BIP-110 preflight API version `1`;
 - ProtocolVerifier evidence-binding version `1` and domain
@@ -96,7 +96,7 @@ The exact pins represented by this checkpoint are:
 
 | Surface | Current checkpoint |
 | --- | --- |
-| Core package | `lib-conxian-core` `0.3.0` |
+| Core package | `lib-conxian-core` `0.3.1` |
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
@@ -146,8 +146,8 @@ cargo package -p lib-conxian-core-enclave --locked --allow-dirty --no-verify
 
 The add-on package check is a release/package dry-run for the workspace
 member. Its manifest keeps the local path for workspace builds and declares
-the compatible published Core requirement `lib-conxian-core = "0.3.0"` so Cargo
-can produce a registry-ready package manifest. The check requires Core `0.3.0`
+the compatible published Core requirement `lib-conxian-core = "0.3.1"` so Cargo
+can produce a registry-ready package manifest. The check requires Core `0.3.1`
 to be available from the configured registry; before that publication Cargo
 must reject resolution rather than silently selecting the older published
 `0.2.11` Core release.

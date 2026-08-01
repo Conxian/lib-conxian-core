@@ -9,7 +9,7 @@ and contract lookup methods. It is not a `UniversalChainSigner`, a generic
 chain adapter, an RGB node, a consignment store, or a production Bitcoin
 transaction builder.
 
-The v0.3.0 RGB boundary is intentionally fail-closed. `RGBStockAdapter` and
+The v0.3.1 RGB boundary is intentionally fail-closed. `RGBStockAdapter` and
 `RGBSkeletonAdapter` reject empty transition/seal inputs and return
 `RGBError::VerificationUnavailable` for otherwise non-empty input.
 `RGBRuntime::Shadow` maps a usable observation to the explicit

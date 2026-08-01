@@ -6,7 +6,7 @@
 
 This document maps identified protocol gaps to research status and implementation priority scoring.
 
-## Current Core boundary (2026-07-21)
+## Current Core boundary (2026-08-01)
 
 The SDK and proposal scores below must not be read as claims that
 `lib-conxian-core` itself provides production verification. In Core:
@@ -31,7 +31,7 @@ The SDK and proposal scores below must not be read as claims that
 | Crate | Version | Purpose | Status |
 |-------|---------|---------|--------|
 | `conxius-enclave-sdk` | 2.0.11 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
-| `lib-conxian-core` | 0.3.0 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Fail-closed boundary |
+| `lib-conxian-core` | 0.3.1 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Fail-closed boundary |
 | `conxian-gateway` | 0.1.4 | Runtime orchestration and middleware | ⚠️ WIP |
 
 ### Local Implementations vs SDK

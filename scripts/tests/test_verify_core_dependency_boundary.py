@@ -5,7 +5,7 @@ import unittest
 from scripts.verify_core_dependency_boundary import validate_metadata
 
 
-CORE_ID = "path+file:///repo#lib-conxian-core@0.3.0"
+CORE_ID = "path+file:///repo#lib-conxian-core@0.3.1"
 SDK_COMPAT_ID = "path+file:///repo/tests/sdk-compat#sdk-compat@0.1.0"
 
 
@@ -19,7 +19,7 @@ def metadata(core_dependencies=None, extra_packages=None, extra_nodes=None):
     return {
         "workspace_members": [CORE_ID, SDK_COMPAT_ID],
         "packages": [
-            package(CORE_ID, "lib-conxian-core", "0.3.0"),
+            package(CORE_ID, "lib-conxian-core", "0.3.1"),
             package(SDK_COMPAT_ID, "sdk-compat", "0.1.0"),
             package(modern_rustls_id, "rustls", "0.23.40"),
             package(modern_webpki_id, "rustls-webpki", "0.103.13"),
