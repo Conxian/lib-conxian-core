@@ -137,7 +137,7 @@ fn manifest_and_every_golden_file_are_versioned_and_accounted_for() {
 
     assert_eq!(manifest.schema_version, 1);
     assert_eq!(manifest.package_name, "lib-conxian-core");
-    assert_eq!(manifest.package_version, "0.3.0");
+    assert_eq!(manifest.package_version, "0.3.1");
     assert_eq!(
         manifest
             .contract_versions

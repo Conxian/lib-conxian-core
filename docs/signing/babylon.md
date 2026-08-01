@@ -15,7 +15,7 @@ transactions.
 The `BabylonAdapter` support described here is structural only; it does not
 establish BTC-header, checkpoint, or EOTS verification.
 
-The v0.3.0 boundary is intentionally fail-closed: structural Babylon input is
+The v0.3.1 boundary is intentionally fail-closed: structural Babylon input is
 not an authorization result, and the typed adapter errors do not replace a
 Nexus-backed verifier.
 

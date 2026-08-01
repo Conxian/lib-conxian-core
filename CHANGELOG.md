@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.1] - 2026-08-01
+
+### Changed
+- Updated the module catalog in `AGENTS.md` to document 17 public modules, supporting 42 chains and aligning with ecosystem requirements. Removed the phantom `sdk_primitive` reference.
+
+### Added
+- Workspace-wide preparation and versioning alignment for the v0.3.1 stable release, synchronizing Cargo manifests, locks, READMEs, changelogs, test fixtures, and API documentation.
+
 ## [v0.3.0] - 2026-07-21
 
 ### Breaking Changes

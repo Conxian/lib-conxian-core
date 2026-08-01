@@ -1,6 +1,6 @@
 # Conxian Ecosystem Alignment Report
 
-> **Status**: Active | **Last Updated**: 2026-07-21 | **Version**: 0.3.0
+> **Status**: Active | **Last Updated**: 2026-08-01 | **Version**: 0.3.1
 
 ## BIP-110 Position Statement
 
@@ -273,7 +273,7 @@ The following is the current ownership target after the historical extraction:
 
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
-| lib-conxian-core | 0.3.0 | 0.3.0 | ✅ Current intentional breaking release |
+| lib-conxian-core | 0.3.1 | 0.3.1 | ✅ Current intentional breaking release |
 | conxius-enclave-sdk | 2.0.11 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
@@ -338,7 +338,7 @@ secp256k1 = "0.31"             # Align with SDK
 
 - [ ] Create Conxian Labs crates.io organization
 - [ ] Transfer crate ownership to organization
-- [ ] Publish lib-conxian-core v0.3.0 after the release/tag workflow and registry checks complete
+- [ ] Publish lib-conxian-core v0.3.1 after the release/tag workflow and registry checks complete
 
 ### Long-term (Strategic)
 

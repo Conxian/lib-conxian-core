@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package_name": "lib-conxian-core",
-  "package_version": "0.3.0",
+  "package_version": "0.3.1",
   "contract_versions": {
     "universal_chain_signer_api_version": 1,
     "bip110_preflight_api_version": 1,
