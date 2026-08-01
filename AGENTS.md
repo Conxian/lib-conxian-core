@@ -1,84 +1,111 @@
-# Conxian Agent Guidelines: lib-conxian-core
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.0 — Session 47, Aug 2026)
 
-This repository is the canonical home of **protocol primitives** and shared type contracts for the Conxian ecosystem. It is a "protocol-first" library — types, invariants, fail-closed boundaries. No network IO, no persistence, no hardware.
+This repository is the canonical home of the **Vault SDK** and shared protocol primitives. It is a "protocol-first" library.
 
-## Architecture (v0.3.0)
-- **Core (`src/`):** Canonical types, state machines, invariant validation, interface contracts. 48 chains, 17 families, 15 adapters (all fail-closed).
-- **SDK (`conxius-enclave-sdk` v2.0.11):** Hardware signing, attestation, FROST DKG, MuSig2, BitVM2. Core optionally depends on SDK (`enclave` feature) for type re-exports.
-- **Gateway (`conxian-gateway`):** Runtime orchestration, persistence, external side effects. Has `core_compat` bridge to Core types.
-- **Nexus (`conxian-nexus`):** Chain observation, proof verification, headers, finality evidence. Has `core_types` re-exports from Core.
-- **Rule:** Network IO, database access, or environment-specific branching → Gateway/Nexus, not Core. Enforced by `scripts/verify_contamination_guard.py`.
+## Strategic Priority (Vault SDK)
+Prioritize the development and hardening of the `VaultSDK` primitive (`src/sdk_primitive.rs`). This is the primary commercial interface for the Conxian ecosystem.
 
-## Fail-Closed Posture
-Every verification boundary returns typed errors, never fabricated success. 65 fail-closed return sites across production code. Deprecated boolean wrappers return `false`. See `docs/VERIFIER_INVENTORY.md` for the complete inventory.
+## Architectural Boundaries (CON-700)
+- **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
+- **Gateway:** Runtime orchestration, persistence, and external side effects live in the standalone `conxian-gateway` repository.
+- **Rule:** If a change needs network IO, database access, or environment-specific branching, it belongs in the Gateway, not here. This is automatically enforced by `scripts/verify_contamination_guard.py`.
 
-## Trust Tier Taxonomy (CON-791)
-- `Strict` (T1): Full validation, no trust assumptions
-- `Managed` (T2): Consortium/multi-sig governance
-- `Expedient` (T3): Economic security, fast-finality
-- `ObserverOnly` (T4): Not allowed in production
+## Trust Policy Enforcement (CON-791)
+Ensure all cross-domain bridge or messaging metadata aligns with the approved trust-tier taxonomy in `control_model.rs`:
+- `Strict` (T1)
+- `Managed` (T2)
+- `Expedient` (T3)
 
-## Universal Chain Coverage (bitcoinlayers.org aligned, v0.3.0)
+## Protocol Coverage — SDK → Core Alignment
 
-### 17 families, 48 chains
+The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-chain `AssetRegistry` and 33 protocol modules. lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
 
-| Family | Chains |
-|--------|--------|
-| `BitcoinUtxo` | Bitcoin, Lightning |
-| `Statechain` | Spark, MercuryLayer |
-| `Ark` | Second, Arkade |
-| `BPoS` | Babylon, Core, Arch, Midl, Nomic, SideProtocol |
-| `Federation` | Liquid, Botanix, Bitlayer, Mezo |
-| `MergeMined` | Rootstock, Fractal |
-| `Anchor` | Stacks |
-| `Rollup` | Citrea, Alpen, Alkanes |
-| `AltRollup` | Bob, Bsquared, Hemi, Corn, Merlin, Rollux, Starknet |
-| `AltLayer1` | Bevm, Goat |
-| `Csv` | Rgb |
-| `Hybrid` | InternetComputer, Flashnet |
-| `Evm` | Ethereum, Base, Arbitrum, Optimism, Polygon |
-| `CosmosIbc` | CosmosHub, Osmosis, Celestia |
-| `SolanaSvm` | Solana, Eclipse |
-| `Move` | Aptos, Sui |
-| `Substrate` | Polkadot, Kusama |
+### Core Type Coverage Requirements
 
-## Key Files
-- Chain taxonomy: `src/control_model/trust.rs` (Chain, ChainFamily, BridgeSystem, TrustTier)
-- Risk profiles: `data/risk_profiles/v1.json` (65 entries, all not_assessed)
-- Verifier contracts: `src/verifier.rs` (ProtocolVerifier façade)
-- Signing contracts: `src/signing.rs` (UniversalChainSigner, 21 AddressFormats)
-- Adapters: `src/adapters/mod.rs` (15 UniversalChainAdapter impls)
-- Verifier inventory: `docs/VERIFIER_INVENTORY.md`
+| Domain | Core Types | Consumers |
+|--------|-----------|-----------|
+| Bitcoin L1 | Block, Tx, Utxo, Script | nexus, gateway |
+| Stacks | StacksBlock, ClarityValue | nexus, gateway |
+| EVM-compatible | EvmBlock, EvmTx, EvmReceipt | nexus, gateway |
+| Cosmos | CosmosBlock, CosmosTx | nexus |
+| Lightning | LightningInvoice, LnPayment, LnChannel | nexus, gateway |
+| MMR | MmrNode, MmrProof, StateRoot | nexus |
+| RGB | RgbContract, RgbConsignment, RgbStash | gateway, nexus |
+| BitVM2 | BitVmProof, BitVmGate, BitVmChallenge | gateway, nexus |
+| DLC | DlcContract, DlcOracle, DlcOutcome | gateway, nexus |
+| Fedimint | FedimintModule, FedimintConsensus | gateway, nexus |
+| Canton | UniversalContractRef, CantonDomainRef, CantonStateTranslation | gateway |
+| Machine Economy | MachineIdentity, MachineRwaRevenue, M2MSettlement | gateway |
+| Settlement | SettlementRail, RailPlan, SettlementReceipt | gateway, platform |
+| Identity | DidDocument, DidResolution, IdentityProof | gateway, platform |
 
-## Cross-Repo State (2026-07-30)
+### Trust-Tier to Protocol Mapping
 
-| Repo | PR | Tag | crates.io |
-|------|-----|-----|-----------|
-| lib-conxian-core | [#236](https://github.com/Conxian/lib-conxian-core/pull/236) | `v0.3.0` | Pending |
-| conxius-enclave-sdk | [#257](https://github.com/Conxian/conxius-enclave-sdk/pull/257) | `v2.0.12` | Pending |
-| conxian-gateway | [#304](https://github.com/Conxian/conxian-gateway/pull/304) | `v0.1.5` | Pending |
-| conxian-nexus | [#189](https://github.com/Conxian/conxian-nexus/pull/189) | `v0.4.22` | Existing |
+| Tier | Protocols | Characteristics |
+|------|-----------|----------------|
+| T1 Strict | Bitcoin L1 finality, BitVM2 SNARK verification, RGB state proofs | Full validation, no trust assumptions |
+| T2 Managed | Lightning channel state, Fedimint consensus, Canton Daml state | Consortium/multi-sig governance |
+| T3 Expedient | EVM L2 bridges (Arbitrum/Base/OP), Cosmos IBC, Solana | Optimistic or fast-finality, economic security |
 
-## Remaining: crates.io Publishing
-```bash
-# Core — rerun release-only recovery (cargo publish succeeded, verification timed out)
-gh workflow run crates-publish.yml -R Conxian/lib-conxian-core \
-  -f mode=release-only -f release_tag=v0.3.0
+## Module Catalog (Session 47 — Aug 2026)
 
-# SDK — fix rebuild verification in release-strict.yml line 414-430, then publish
-# (cargo package --locked non-determinism between SBOM and publish jobs)
+### Core Modules
 
-# Gateway — dispatch crates.io publish
-gh workflow run release.yml -R Conxian/conxian-gateway \
-  -f release_version=0.1.5 -f publish_to_crates_io=true
+| Module | Path | Key Public Types | Status |
+|--------|------|-----------------|--------|
+| adapters | `src/adapters/mod.rs` | StateProofError, chain adapter abstraction | ✅ |
+| anchoring | `src/anchoring.rs` | AnchoringPublisher, TablelandAnchoringPublisher, OnChainAnchoringPublisher | ✅ |
+| babylon | `src/babylon/mod.rs` | BabylonAdapter, StakingIntent | ✅ |
+| cjcs | `src/cjcs.rs` | Canonical Job Card System types | ✅ |
+| contract_bridge | `src/contract_bridge.rs` | ClarityCall, ContractBridge, SignedContractCall | ✅ |
+| control_model | `src/control_model/` | BIP110, TrustTier, LifecycleState, RiskProfile, Chain, ChainFamily | ✅ |
+| deployment | `src/deployment.rs` | DeploymentPlan, contract deployment configuration | ✅ |
+| fedimint | `src/fedimint/mod.rs` | FedimintAdapter, FedimintMint | ✅ |
+| protocol | `src/protocol/` | covenant, dlc, frost, intent | ✅ |
+| verifier | `src/verifier.rs` | ProtocolVerifier, ProofVerificationRequest, CapabilityVerifier, ChainId, BlockReference, VerifiedBlockReference, TransactionFinalityStatus | ✅ |
 
-# After SDK on crates.io: bump Core pin
-# conxius-enclave-sdk = { version = "=2.0.12" }
-```
+### CXIP 20 Extended Modules
 
-## Workflow
-- `cargo fmt --check && cargo clippy --all-features -- -D warnings && cargo test --workspace`
-- Source of truth: `bitcoinlayers.org` for Bitcoin L2 taxonomy
-- New chain/protocol → add canonical types here first → adapters in gateway/nexus
-- Never track environment files, private keys, or credentials
-- Use `41502979+botshelomokoka@users.noreply.github.com` for commits to bypass email privacy
+| Module | Path | Key Public Types | Status |
+|--------|------|-----------------|--------|
+| bitcoin | `src/bitcoin/mod.rs` | bip322, taproot, liquid_adapter, SilentPaymentScanner | ✅ |
+| crypto | `src/crypto/mod.rs` | CryptoStubError, advanced cryptography utilities | ✅ |
+| enclave | `src/enclave/mod.rs` | AttestationCertificate, EnclaveVerificationError | ✅ |
+| lightning | `src/lightning/mod.rs` | LightningAdapter, LightningPaymentIntent/Event/State, LightningNode | ✅ |
+| rgb | `src/rgb/mod.rs` | RGBAdapter, RGBStockAdapter, RGBSkeletonAdapter, RGBRuntime | ✅ |
+| signing | `src/signing.rs` | SigningAlgorithm, SigningTarget, SignerCapabilities | ✅ |
+| stacks | `src/stacks/mod.rs` | sBTC, StacksNakamoto, StacksAdapter, SBTCBridge | ✅ |
+
+### Re-exported at Crate Root
+
+- `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
+- `EnclaveManager`, `SignRequest`, `SignResponse`, `SigningAlgorithm` (from `conxius-enclave-sdk`, `enclave` feature only)
+- 30+ verifier types (from `verifier`)
+- `ConclaveError`, `ConclaveResult` (from `conxius-enclave-sdk`, `enclave` feature only)
+
+## Consumer Wiring
+
+| Consumer | Modules Used | Wiring Path |
+|----------|-------------|-------------|
+| conxian-nexus | 12/17 | `compat::core_bridge::core_types` re-exports: control_model, signing, verifier, anchoring, bitcoin(taproot,bip322), protocol(dlc,frost,covenant,intent), lightning, adapters |
+| conxian-gateway | Own `conxian_core` + contract_bridge | Separate operational types crate; uses contract_bridge types through engine |
+| conxius-wallet | None directly | Uses `conxius-enclave-sdk` for signing (feature-gated via silent-payments crate) |
+| conxius-platform | None directly | TS orchestration; CI scripts reference canonical paths |
+| conxius-orbit | contract_bridge (planned) | CLI for deploying Stacks contracts; contract_bridge will provide typed principals |
+
+### Underutilized Modules (No Direct Consumer)
+
+| Module | Consumer Gap | Recommendation |
+|--------|-------------|----------------|
+| `crypto` | No consumer uses core crypto stubs | Gateway should use for transaction hashing in mempool orchestrator |
+| `enclave` | No consumer uses attestation types | Nexus executor should verify attestation before processing proofs |
+| `deployment` | Only used in internal tests | Orbit CLI should consume DeploymentPlan for contract deploy orchestration |
+| `cjcs` | No consumer uses Job Card types | Platform should use for SLA enforcement and gap job card generation |
+| `babylon` | Nexus uses trust tier but not staking | Gateway treasury monitor should integrate Babylon staking lifecycle |
+| `fedimint` | No consumer uses mint consensus types | Gateway should validate Fedimint state proofs against trust tiers |
+
+## Workflow Instructions
+- **Verification:** Always run `cargo test --workspace` to verify changes.
+- **ZSE:** Adhere to Zero Secret Egress standards. Never track environment files or private keys.
+- **Source of Truth:** Refer to `bitcoinlayers.org` for the latest Bitcoin Layer 2 research.
+- **Protocol Coverage:** When adding a new chain or protocol to the ecosystem, first add canonical types here, then implement adapters in gateway/nexus.
