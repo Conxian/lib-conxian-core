@@ -1,4 +1,4 @@
-# Conxian Agent Guidelines: lib-conxian-core
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.0 — Session 47, Aug 2026)
 
 This repository is the canonical home of the **Vault SDK** and shared protocol primitives. It is a "protocol-first" library.
 
@@ -46,6 +46,35 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-cha
 | T1 Strict | Bitcoin L1 finality, BitVM2 SNARK verification, RGB state proofs | Full validation, no trust assumptions |
 | T2 Managed | Lightning channel state, Fedimint consensus, Canton Daml state | Consortium/multi-sig governance |
 | T3 Expedient | EVM L2 bridges (Arbitrum/Base/OP), Cosmos IBC, Solana | Optimistic or fast-finality, economic security |
+
+## Module Catalog (Session 47 — Aug 2026)
+
+| Module | Path | Key Public Types | Status |
+|--------|------|-----------------|--------|
+| control_model | `src/control_model.rs` | BIP110, TrustTier, LifecycleState, RiskProfile | ✅ |
+| verifier | `src/verifier/` | ProtocolVerifier, ProofVerificationRequest, CapabilityVerifier | ✅ |
+| signing | `src/signing/` | SigningAlgorithm, SigningTarget, SignerCapabilities | ✅ |
+| anchoring | `src/anchoring/` | AnchoringPublisher, TablelandAnchoringPublisher, OnChainAnchoringPublisher | ✅ |
+| bitcoin | `src/bitcoin/` | taproot, bip322, liquid_adapter, SilentPaymentScanner | ✅ |
+| stacks | `src/stacks/` | sBTC, StacksNakamoto, StacksAdapter, SBTCBridge | ✅ |
+| lightning | `src/lightning/` | LightningAdapter, LightningPaymentIntent/Event/State, LightningNode | ✅ |
+| rgb | `src/rgb/` | RGBAdapter, RGBStockAdapter, RGBSkeletonAdapter, RGBRuntime | ✅ |
+| babylon | `src/babylon/` | BabylonAdapter, StakingIntent | ✅ |
+| fedimint | `src/fedimint/` | FedimintAdapter, FedimintMint | ✅ |
+| cjcs | `src/cjcs/` | Canonical Job Card System types | ✅ |
+| protocol | `src/protocol/` | DLC, FROST, Covenant, Intent | ✅ |
+| crypto | `src/crypto.rs` | Hashing utilities | ✅ |
+| deployment | `src/deployment.rs` | Deployment configuration | ✅ |
+| sdk_primitive | `src/sdk_primitive.rs` | VaultSDK (primary commercial interface) | ✅ |
+
+## Consumer Wiring
+
+| Consumer | Modules Used | Wiring Path |
+|----------|-------------|-------------|
+| conxian-nexus | 9/15 | `compat::core_bridge::core_types` re-exports |
+| conxian-gateway | Own `conxian_core` | Separate operational types crate + contract bridge |
+| conxius-wallet | None directly | Uses `conxius-enclave-sdk` for signing (feature-gated) |
+| conxius-platform | None directly | TS orchestration, CI scripts reference canonical paths |
 
 ## Workflow Instructions
 - **Verification:** Always run `cargo test --workspace` to verify changes.
