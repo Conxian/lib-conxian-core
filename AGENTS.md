@@ -49,32 +49,60 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.2.5) defines the canonical 41-cha
 
 ## Module Catalog (Session 47 — Aug 2026)
 
+### Core Modules
+
 | Module | Path | Key Public Types | Status |
 |--------|------|-----------------|--------|
-| control_model | `src/control_model.rs` | BIP110, TrustTier, LifecycleState, RiskProfile | ✅ |
-| verifier | `src/verifier/` | ProtocolVerifier, ProofVerificationRequest, CapabilityVerifier | ✅ |
-| signing | `src/signing/` | SigningAlgorithm, SigningTarget, SignerCapabilities | ✅ |
-| anchoring | `src/anchoring/` | AnchoringPublisher, TablelandAnchoringPublisher, OnChainAnchoringPublisher | ✅ |
-| bitcoin | `src/bitcoin/` | taproot, bip322, liquid_adapter, SilentPaymentScanner | ✅ |
-| stacks | `src/stacks/` | sBTC, StacksNakamoto, StacksAdapter, SBTCBridge | ✅ |
-| lightning | `src/lightning/` | LightningAdapter, LightningPaymentIntent/Event/State, LightningNode | ✅ |
-| rgb | `src/rgb/` | RGBAdapter, RGBStockAdapter, RGBSkeletonAdapter, RGBRuntime | ✅ |
-| babylon | `src/babylon/` | BabylonAdapter, StakingIntent | ✅ |
-| fedimint | `src/fedimint/` | FedimintAdapter, FedimintMint | ✅ |
-| cjcs | `src/cjcs/` | Canonical Job Card System types | ✅ |
-| protocol | `src/protocol/` | DLC, FROST, Covenant, Intent | ✅ |
-| crypto | `src/crypto.rs` | Hashing utilities | ✅ |
-| deployment | `src/deployment.rs` | Deployment configuration | ✅ |
-| sdk_primitive | `src/sdk_primitive.rs` | VaultSDK (primary commercial interface) | ✅ |
+| adapters | `src/adapters/mod.rs` | StateProofError, chain adapter abstraction | ✅ |
+| anchoring | `src/anchoring.rs` | AnchoringPublisher, TablelandAnchoringPublisher, OnChainAnchoringPublisher | ✅ |
+| babylon | `src/babylon/mod.rs` | BabylonAdapter, StakingIntent | ✅ |
+| cjcs | `src/cjcs.rs` | Canonical Job Card System types | ✅ |
+| contract_bridge | `src/contract_bridge.rs` | ClarityCall, ContractBridge, SignedContractCall | ✅ |
+| control_model | `src/control_model/` | BIP110, TrustTier, LifecycleState, RiskProfile, Chain, ChainFamily | ✅ |
+| deployment | `src/deployment.rs` | DeploymentPlan, contract deployment configuration | ✅ |
+| fedimint | `src/fedimint/mod.rs` | FedimintAdapter, FedimintMint | ✅ |
+| protocol | `src/protocol/` | covenant, dlc, frost, intent | ✅ |
+| verifier | `src/verifier.rs` | ProtocolVerifier, ProofVerificationRequest, CapabilityVerifier, ChainId, BlockReference, VerifiedBlockReference, TransactionFinalityStatus | ✅ |
+
+### CXIP 20 Extended Modules
+
+| Module | Path | Key Public Types | Status |
+|--------|------|-----------------|--------|
+| bitcoin | `src/bitcoin/mod.rs` | bip322, taproot, liquid_adapter, SilentPaymentScanner | ✅ |
+| crypto | `src/crypto/mod.rs` | CryptoStubError, advanced cryptography utilities | ✅ |
+| enclave | `src/enclave/mod.rs` | AttestationCertificate, EnclaveVerificationError | ✅ |
+| lightning | `src/lightning/mod.rs` | LightningAdapter, LightningPaymentIntent/Event/State, LightningNode | ✅ |
+| rgb | `src/rgb/mod.rs` | RGBAdapter, RGBStockAdapter, RGBSkeletonAdapter, RGBRuntime | ✅ |
+| signing | `src/signing.rs` | SigningAlgorithm, SigningTarget, SignerCapabilities | ✅ |
+| stacks | `src/stacks/mod.rs` | sBTC, StacksNakamoto, StacksAdapter, SBTCBridge | ✅ |
+
+### Re-exported at Crate Root
+
+- `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
+- `EnclaveManager`, `SignRequest`, `SignResponse`, `SigningAlgorithm` (from `conxius-enclave-sdk`, `enclave` feature only)
+- 30+ verifier types (from `verifier`)
+- `ConclaveError`, `ConclaveResult` (from `conxius-enclave-sdk`, `enclave` feature only)
 
 ## Consumer Wiring
 
 | Consumer | Modules Used | Wiring Path |
 |----------|-------------|-------------|
-| conxian-nexus | 9/15 | `compat::core_bridge::core_types` re-exports |
-| conxian-gateway | Own `conxian_core` | Separate operational types crate + contract bridge |
-| conxius-wallet | None directly | Uses `conxius-enclave-sdk` for signing (feature-gated) |
-| conxius-platform | None directly | TS orchestration, CI scripts reference canonical paths |
+| conxian-nexus | 12/17 | `compat::core_bridge::core_types` re-exports: control_model, signing, verifier, anchoring, bitcoin(taproot,bip322), protocol(dlc,frost,covenant,intent), lightning, adapters |
+| conxian-gateway | Own `conxian_core` + contract_bridge | Separate operational types crate; uses contract_bridge types through engine |
+| conxius-wallet | None directly | Uses `conxius-enclave-sdk` for signing (feature-gated via silent-payments crate) |
+| conxius-platform | None directly | TS orchestration; CI scripts reference canonical paths |
+| conxius-orbit | contract_bridge (planned) | CLI for deploying Stacks contracts; contract_bridge will provide typed principals |
+
+### Underutilized Modules (No Direct Consumer)
+
+| Module | Consumer Gap | Recommendation |
+|--------|-------------|----------------|
+| `crypto` | No consumer uses core crypto stubs | Gateway should use for transaction hashing in mempool orchestrator |
+| `enclave` | No consumer uses attestation types | Nexus executor should verify attestation before processing proofs |
+| `deployment` | Only used in internal tests | Orbit CLI should consume DeploymentPlan for contract deploy orchestration |
+| `cjcs` | No consumer uses Job Card types | Platform should use for SLA enforcement and gap job card generation |
+| `babylon` | Nexus uses trust tier but not staking | Gateway treasury monitor should integrate Babylon staking lifecycle |
+| `fedimint` | No consumer uses mint consensus types | Gateway should validate Fedimint state proofs against trust tiers |
 
 ## Workflow Instructions
 - **Verification:** Always run `cargo test --workspace` to verify changes.
