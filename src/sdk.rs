@@ -87,8 +87,8 @@ pub mod cross_cutting {
     pub use conxius_enclave_sdk::protocol::identity;
     pub use conxius_enclave_sdk::protocol::economy;
     pub use conxius_enclave_sdk::protocol::job_card;
-    pub use conxius_enclave_sdk::protocol::business;
     pub use conxius_enclave_sdk::protocol::opportunity;
+    pub use conxius_enclave_sdk::protocol::business;
     pub use conxius_enclave_sdk::protocol::zkml;
 }
 
@@ -98,8 +98,8 @@ pub mod rails {
     pub use conxius_enclave_sdk::protocol::rails::bisq;
     pub use conxius_enclave_sdk::protocol::rails::boltz;
     pub use conxius_enclave_sdk::protocol::rails::changelly;
-    pub use conxius_enclave_sdk::protocol::rails::wormhole;
     pub use conxius_enclave_sdk::protocol::rails::ntt;
+    pub use conxius_enclave_sdk::protocol::rails::wormhole;
     pub use conxius_enclave_sdk::protocol::rails::x402;
 }
 
@@ -123,8 +123,8 @@ pub mod infrastructure {
 
 #[cfg(feature = "enclave")]
 pub mod enclave_sdk {
-    pub use conxius_enclave_sdk::enclave::attestation;
     pub use conxius_enclave_sdk::enclave::android_strongbox;
+    pub use conxius_enclave_sdk::enclave::attestation;
     pub use conxius_enclave_sdk::enclave::cloud;
     // v2.0.12+: pub use conxius_enclave_sdk::enclave::durable_replay;
     // Feature-gated in SDK: cfg(not(wasm32))
