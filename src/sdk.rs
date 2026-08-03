@@ -107,7 +107,7 @@ pub mod rails {
 #[cfg(feature = "sdk-nexus")]
 pub mod nexus {
     pub use conxius_enclave_sdk::protocol::nexus::fedimint;
-    pub use conxius_enclave_sdk::protocol::nexus::roast;
+    // v2.0.12+: pub use conxius_enclave_sdk::protocol::nexus::roast;
 }
 
 #[cfg(feature = "sdk-infrastructure")]
@@ -115,7 +115,8 @@ pub mod infrastructure {
     pub use conxius_enclave_sdk::config;
     pub use conxius_enclave_sdk::state;
     pub use conxius_enclave_sdk::telemetry;
-    pub use conxius_enclave_sdk::wasm_bindings;
+    // cfg(wasm32) gated:
+    // pub use conxius_enclave_sdk::wasm_bindings;
 }
 
 // ── Enclave module (re-exported at crate root for backward compat) ──
