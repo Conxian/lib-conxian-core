@@ -16,19 +16,35 @@
 //! - `adapters`: Universal chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, +15 family adapters)
 //! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
+//! - `sdk`: **Comprehensive SDK re-exports** — all 50 conxius-enclave-sdk modules organized by category (Session 52)
 //!
-//! ## SDK Features
+//! ## SDK Features (Session 52 — Full Alignment)
 //!
-//! Enable the `enclave` feature for Vault SDK re-exports:
+//! Enable the `full-sdk` feature for access to ALL 50 SDK modules:
 //!
 //! ```toml
-//! lib-conxian-core = { version = "0.2", features = ["enclave"] }
+//! lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
+//! ```
+//!
+//! Or enable individual categories:
+//!
+//! ```toml
+//! lib-conxian-core = { version = "0.3", features = ["sdk-blockchain", "sdk-cross-cutting"] }
+//! ```
+//!
+//! Then access via `conxian_core::sdk::*`:
+//!
+//! ```rust,ignore
+//! use conxian_core::sdk::blockchain::{bitcoin, statechain, dlc};
+//! use conxian_core::sdk::cross_cutting::{intent, settlement, economy};
+//! use conxian_core::sdk::rails::{bisq, wormhole};
 //! ```
 //!
 //! ## Vault SDK Migration
 //!
 //! For Vault SDK features (hardware-backed signing, MuSig2, BitVM2), use
-//! [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) directly.
+//! [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) directly
+//! OR enable `full-sdk` on lib-conxian-core for re-exported access.
 //! See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions from v0.2.x.
 //!
 //! ## Contact
@@ -56,6 +72,17 @@ pub mod lightning;
 pub mod rgb;
 pub mod signing;
 pub mod stacks;
+
+// ── SDK re-exports (Session 52: all 50 modules) ──
+#[cfg(any(
+    feature = "enclave",
+    feature = "sdk-blockchain",
+    feature = "sdk-cross-cutting",
+    feature = "sdk-rails",
+    feature = "sdk-nexus",
+    feature = "sdk-infrastructure",
+))]
+pub mod sdk;
 
 #[cfg(test)]
 mod tests;

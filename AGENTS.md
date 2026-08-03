@@ -1,4 +1,4 @@
-# Conxian Agent Guidelines: lib-conxian-core (v0.3.1 — Session 48, Aug 2026)
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.1 — Session 52, Aug 2026)
 
 This repository is the canonical home of the **Vault SDK** and shared protocol primitives. It is a "protocol-first" library.
 
@@ -79,9 +79,28 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.3.1) defines the canonical 42-cha
 ### Re-exported at Crate Root
 
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
-- `EnclaveManager`, `SignRequest`, `SignResponse`, `SigningAlgorithm` (from `conxius-enclave-sdk`, `enclave` feature only)
 - 30+ verifier types (from `verifier`)
-- `ConclaveError`, `ConclaveResult` (from `conxius-enclave-sdk`, `enclave` feature only)
+
+### SDK Re-exports (Session 52 — Full Alignment with conxius-enclave-sdk v2.0.11)
+
+The `sdk` module (`src/sdk.rs`) re-exports ALL 50 conxius-enclave-sdk modules organized by category.
+Enable via Cargo features:
+
+```toml
+lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
+```
+
+| Category | Feature Flag | Modules | SDK Re-export Path |
+|----------|:-----------:|---------|-------------------|
+| Blockchain | `sdk-blockchain` | 22 | `sdk::blockchain::{bitcoin, bip322, bitvm, bitvm2, dlc, frost, frost_crypto, lightning, musig2, stacks, covenant, ark, cctp, mmr, ethereum, solana, statechain, sidl, credit, fiat, asset, bip110}` |
+| Cross-cutting | `sdk-cross-cutting` | 16 | `sdk::cross_cutting::{intent, settlement, settlement_service, swap_router, stablecoin_orchestrator, solver, chain_abstraction, account_abstraction, a2p, control_model_adapter, identity, economy, job_card, business, opportunity, zkml}` |
+| Rails | `sdk-rails` | 6 | `sdk::rails::{bisq, boltz, changelly, wormhole, ntt, x402}` |
+| Nexus | `sdk-nexus` | 2 | `sdk::nexus::{fedimint, roast}` |
+| Infrastructure | `sdk-infrastructure` | 4 | `sdk::infrastructure::{config, state, telemetry, wasm_bindings}` |
+| Enclave | `enclave` | 10 | `sdk::enclave_sdk::{attestation, android_strongbox, cloud, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
+
+**Meta-feature:** `full-sdk` enables all 6 categories at once. The full `conxius_enclave_sdk` crate is also
+re-exported at `sdk::conxius_enclave_sdk` for direct access.
 
 ## Consumer Wiring
 
