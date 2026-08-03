@@ -48,6 +48,32 @@ conxius-enclave-sdk = { version = "=2.0.11", default-features = false, optional 
 default = []
 enclave = ["conxius-enclave-sdk"]
 
+# ── SDK capability exposure (Session 52: align core with all SDK modules) ──
+# Each feature gate exposes a category of conxius-enclave-sdk modules through
+# conxian_core::sdk::*, making all 50 SDK modules accessible to downstream crates
+# that depend on lib-conxian-core.
+
+# Blockchain protocols (22 modules)
+sdk-blockchain = ["conxius-enclave-sdk"]
+# Cross-cutting capabilities (16 modules)
+sdk-cross-cutting = ["conxius-enclave-sdk"]
+# Settlement rails & bridges (6 modules)
+sdk-rails = ["conxius-enclave-sdk"]
+# Nexus verification (2 modules)
+sdk-nexus = ["conxius-enclave-sdk"]
+# Infrastructure & tooling (4 modules)
+sdk-infrastructure = ["conxius-enclave-sdk"]
+
+# Meta-feature: enable ALL SDK capabilities
+full-sdk = [
+    "enclave",
+    "sdk-blockchain",
+    "sdk-cross-cutting",
+    "sdk-rails",
+    "sdk-nexus",
+    "sdk-infrastructure",
+]
+
 [workspace]
 members = [
     "fuzz",
