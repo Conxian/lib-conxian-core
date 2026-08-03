@@ -47,26 +47,26 @@ pub use conxius_enclave_sdk;
 
 #[cfg(feature = "sdk-blockchain")]
 pub mod blockchain {
-    pub use conxius_enclave_sdk::protocol::bitcoin;
+    pub use conxius_enclave_sdk::protocol::ark;
+    pub use conxius_enclave_sdk::protocol::asset;
     pub use conxius_enclave_sdk::protocol::bip322;
+    pub use conxius_enclave_sdk::protocol::bitcoin;
     pub use conxius_enclave_sdk::protocol::bitvm;
     pub use conxius_enclave_sdk::protocol::bitvm2;
+    pub use conxius_enclave_sdk::protocol::cctp;
+    pub use conxius_enclave_sdk::protocol::covenant;
+    pub use conxius_enclave_sdk::protocol::credit;
     pub use conxius_enclave_sdk::protocol::dlc;
+    pub use conxius_enclave_sdk::protocol::ethereum;
+    pub use conxius_enclave_sdk::protocol::fiat;
     pub use conxius_enclave_sdk::protocol::frost;
     pub use conxius_enclave_sdk::protocol::lightning;
-    pub use conxius_enclave_sdk::protocol::musig2;
-    pub use conxius_enclave_sdk::protocol::stacks;
-    pub use conxius_enclave_sdk::protocol::covenant;
-    pub use conxius_enclave_sdk::protocol::ark;
-    pub use conxius_enclave_sdk::protocol::cctp;
     pub use conxius_enclave_sdk::protocol::mmr;
-    pub use conxius_enclave_sdk::protocol::ethereum;
-    pub use conxius_enclave_sdk::protocol::solana;
-    // v2.0.12+: pub use conxius_enclave_sdk::protocol::statechain;
+    pub use conxius_enclave_sdk::protocol::musig2;
     pub use conxius_enclave_sdk::protocol::sidl;
-    pub use conxius_enclave_sdk::protocol::credit;
-    pub use conxius_enclave_sdk::protocol::fiat;
-    pub use conxius_enclave_sdk::protocol::asset;
+    pub use conxius_enclave_sdk::protocol::solana;
+    pub use conxius_enclave_sdk::protocol::stacks;
+    // v2.0.12+: pub use conxius_enclave_sdk::protocol::statechain;
     // Feature-gated in SDK: cfg(frost-crypto) and cfg(bip110_compliant)
     // pub use conxius_enclave_sdk::protocol::frost_crypto;
     // pub use conxius_enclave_sdk::protocol::bip110;
@@ -74,21 +74,21 @@ pub mod blockchain {
 
 #[cfg(feature = "sdk-cross-cutting")]
 pub mod cross_cutting {
-    pub use conxius_enclave_sdk::protocol::intent;
-    pub use conxius_enclave_sdk::protocol::settlement;
-    pub use conxius_enclave_sdk::protocol::settlement_service;
-    pub use conxius_enclave_sdk::protocol::swap_router;
-    pub use conxius_enclave_sdk::protocol::stablecoin_orchestrator;
-    pub use conxius_enclave_sdk::protocol::solver;
-    pub use conxius_enclave_sdk::protocol::chain_abstraction;
-    pub use conxius_enclave_sdk::protocol::account_abstraction;
     pub use conxius_enclave_sdk::protocol::a2p;
+    pub use conxius_enclave_sdk::protocol::account_abstraction;
+    pub use conxius_enclave_sdk::protocol::business;
+    pub use conxius_enclave_sdk::protocol::chain_abstraction;
     // v2.0.12+: pub use conxius_enclave_sdk::protocol::control_model_adapter;
-    pub use conxius_enclave_sdk::protocol::identity;
     pub use conxius_enclave_sdk::protocol::economy;
+    pub use conxius_enclave_sdk::protocol::identity;
+    pub use conxius_enclave_sdk::protocol::intent;
     pub use conxius_enclave_sdk::protocol::job_card;
     pub use conxius_enclave_sdk::protocol::opportunity;
-    pub use conxius_enclave_sdk::protocol::business;
+    pub use conxius_enclave_sdk::protocol::settlement;
+    pub use conxius_enclave_sdk::protocol::settlement_service;
+    pub use conxius_enclave_sdk::protocol::solver;
+    pub use conxius_enclave_sdk::protocol::stablecoin_orchestrator;
+    pub use conxius_enclave_sdk::protocol::swap_router;
     pub use conxius_enclave_sdk::protocol::zkml;
 }
 
