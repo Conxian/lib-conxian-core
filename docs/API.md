@@ -1,4 +1,4 @@
-# lib-conxian-core API Reference v0.3.0
+# lib-conxian-core API Reference v0.3.1
 
 For the deterministic, offline core-to-downstream contract fixture layer, see
 [`INTEGRATION_TESTING.md`](INTEGRATION_TESTING.md). It records the exact contract pins, fixture
@@ -123,7 +123,7 @@ major `1` (`1.1.0` is compatible); the embedded artifact remains exactly `1.0.0`
 decoding is fail-closed for semantic invariants and unknown/typo fields, so additive fields require
 a schema decision/version bump. Profiles require a positive revision, valid effective date,
 governance/change reference, and rationale. Assessed and partially assessed profiles require
-typed evidence references; the initial set is explicitly `not_assessed` for all 6 families and 23
+typed evidence references; the initial set is explicitly `not_assessed` for all 17 families and 48
 chains. Core owns schema and invariant validation only. Nexus owns live observation/evidence and
 Gateway owns runtime assessment, persistence, and routing. See
 [`architecture/RISK_PROFILES.md`](architecture/RISK_PROFILES.md).
@@ -225,7 +225,7 @@ preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
 The compatibility assumptions recorded by this checkpoint are limited to the
-Core package `lib-conxian-core` `0.3.0`, Rust `1.91`, the default feature set
+Core package `lib-conxian-core` `0.3.1`, Rust `1.91`, the default feature set
 (`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and

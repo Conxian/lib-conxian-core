@@ -13,7 +13,7 @@
 //!
 //! - `control_model`: Trust tiers (CON-791), lifecycle states, versioned static risk profiles, and invariant validation
 //! - `anchoring`: State root persistence models
-//! - `adapters`: Chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint)
+//! - `adapters`: Universal chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, +15 family adapters)
 //! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
 //!

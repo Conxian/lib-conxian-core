@@ -15,7 +15,7 @@ transactions.
 The `BabylonAdapter` support described here is structural only; it does not
 establish BTC-header, checkpoint, or EOTS verification.
 
-The v0.3.0 boundary is intentionally fail-closed: structural Babylon input is
+The v0.3.1 boundary is intentionally fail-closed: structural Babylon input is
 not an authorization result, and the typed adapter errors do not replace a
 Nexus-backed verifier.
 
@@ -30,12 +30,11 @@ There are two identities in a Babylon flow and they must not be silently
 collapsed:
 
 - `Chain::Babylon` exists in the Core taxonomy and maps to
-  `ChainFamily::BitcoinUtxo`; it is the natural target for a capability that
+  `ChainFamily::BPoS`; it is the natural target for a capability that
   explicitly represents Babylon protocol operations.
-- `BabylonAdapter::chain()` currently returns `Chain::Bitcoin`, while its
-  `family()` is `BitcoinUtxo`. That implementation mismatch means an adapter
-  result cannot be treated as a Babylon-specific signer capability without an
-  explicit contract decision.
+- `BabylonAdapter::chain()` returns `Chain::Babylon` and its
+  `family()` is `ChainFamily::BPoS`. This alignment means the adapter result
+  can be treated as a Babylon-specific signer capability.
 
 For actual Bitcoin staking/delegation/unbonding/withdrawal transaction bytes,
 the transaction signer may instead advertise
@@ -104,8 +103,8 @@ proof format, state/block identity, evidence binding, provenance, trust tier,
 verification class, finality class, and verifier identity. It does not implement
 the EOTS cryptographic verifier.
 
-`BabylonAdapter` is not a substitute: its `chain()` returns `Chain::Bitcoin`
-and its proof check is unavailable without a downstream verifier. A production `Strict` result must meet
+`BabylonAdapter` is not a substitute for a full verifier:
+its proof check is unavailable without a downstream verifier. A production `Strict` result must meet
 the verifier capability policy, including the required light-client class where
 applicable. BTC finality for a staking transaction must be evaluated on the
 Bitcoin transaction/header evidence, not inferred from a Babylon intent or a
@@ -154,9 +153,8 @@ an observation-only success.
 - `BabylonAdapter::verify_state_proof` is unavailable without a downstream EOTS
   and header verifier, and `get_state_root` returns a typed unavailable error;
   it is not a production EOTS verifier.
-- `BabylonAdapter::chain() == Chain::Bitcoin` conflicts with the distinct
-  `Chain::Babylon` taxonomy variant; downstream capability and verifier
-  contracts must resolve that identity explicitly.
+- `BabylonAdapter::chain()` is `Chain::Babylon` with `ChainFamily::BPoS`, aligned
+  with the bitcoinlayers.org taxonomy.
 - Core does not define Babylon-specific transaction DTOs or lifecycle
   persistence.
 

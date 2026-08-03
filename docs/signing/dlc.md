@@ -9,7 +9,7 @@ oracle/execution helpers. It does not define funding, refund, CET,
 adaptor-signature, or transaction DTOs; it also does not build, persist,
 broadcast, or monitor a DLC.
 
-These typed boundaries are part of the intentional v0.3.0 API break. A valid
+These typed boundaries are part of the intentional v0.3.1 API break. A valid
 equation or well-shaped compatibility input is not complete DLC execution
 evidence and cannot authorize settlement.
 

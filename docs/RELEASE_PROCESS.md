@@ -105,7 +105,7 @@ Confirm that the changelog entry describes the intended release boundary, then
 create and push the tag from the exact commit that passed the checks:
 
 ```bash
-VERSION=0.3.0
+VERSION=0.3.1
 TAG="v${VERSION}"
 git fetch origin main --tags
 git switch main
@@ -115,8 +115,8 @@ git push origin "$TAG"
 ```
 
 At this revision, `Cargo.toml`, `Cargo.lock`, the current README markers, and the
-latest release heading all identify `0.3.0`, so the normal release tag is exactly
-`v0.3.0`. Future releases must derive the tag from the then-current authoritative
+latest release heading all identify `0.3.1`, so the normal release tag is exactly
+`v0.3.1`. Future releases must derive the tag from the then-current authoritative
 Cargo version instead of copying this example.
 
 The tag-push workflow checks the tag against Cargo and the GitHub tag API before
@@ -130,7 +130,7 @@ Use the `workflow_dispatch` `mode=dry-run` input for validation. It runs source
 parity and `cargo publish --dry-run --locked -p lib-conxian-core`; it does not
 publish, create a tag, query publication state, or create a GitHub Release.
 The add-on dry-run is intentionally deferred to the real publish path because
-its `lib-conxian-core = "0.3.0"` registry dependency cannot resolve until Core
+its `lib-conxian-core = "0.3.1"` registry dependency cannot resolve until Core
 has been published and the crates.io/index entry has propagated. The
 `release_tag` input is optional in dry-run mode.
 
@@ -215,18 +215,18 @@ Use this procedure when publication succeeded but the workflow did not finish
 the GitHub Release step:
 
 1. Confirm the exact candidate is visible on crates.io and identify the tag,
-   for example the current release tag `v0.3.0` or a future prerelease tag
+   for example the current release tag `v0.3.1` or a future prerelease tag
    such as `v0.3.1-rc.1`.
 2. Start the **Publish to crates.io** workflow manually with:
    - `mode`: `release-only`
-   - `release_tag`: the existing matching tag, for example `v0.3.0` or `v0.3.1-rc.1`
+   - `release_tag`: the existing matching tag, for example `v0.3.1` or `v0.3.1-rc.1`
 3. If using the CLI, the equivalent invocation is:
 
    ```bash
    gh workflow run "Publish to crates.io" \
      --ref main \
      -f mode=release-only \
-     -f release_tag=v0.3.0
+     -f release_tag=v0.3.1
    ```
 
 4. Wait for `post-publish` registry verification, idempotent release creation,

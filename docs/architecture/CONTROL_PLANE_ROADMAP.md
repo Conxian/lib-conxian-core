@@ -17,7 +17,7 @@ This document outlines the implementation plan and architectural boundaries for 
 ### 1.3 Policy Approval Queue
 - **Purpose:** Formal change control for protocol parameters and sensitive operational settings.
 - **Key Data Models:** `PolicyChangeRequest`, `PolicyApprovalStatus`.
-- **Dependency:** `VaultSDK` (Policy enforcement), `conxian-nexus` (Config application).
+- **Dependency:** `conxius-enclave-sdk` (Policy enforcement), `conxian-nexus` (Config application).
 
 ### 1.4 Environment & Config Registry
 - **Purpose:** Centralized registry for private environment endpoints and non-secret configuration.
@@ -30,7 +30,7 @@ This document outlines the implementation plan and architectural boundaries for 
 |--------|----------|---------|
 | Release Governance | Git/CI Metrics | Deployment Queue |
 | Audit Dashboard | Gateway Event Bus | Compliance Reports |
-| Policy Approvals | VaultSDK Invariants | Nexus Configuration |
+| Policy Approvals | conxius-enclave-sdk Invariants | Nexus Configuration |
 | Config Registry | Ops Metadata | Adapter Runtime |
 
 ## 3. Ownership & Boundaries
