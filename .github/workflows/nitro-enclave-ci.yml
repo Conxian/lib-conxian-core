@@ -72,8 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Download POC binary
-        uses: actions/download-artifact@434053e4b5b5ebd4c1fbb2e7b96105a13a9e36f6 # v7.0.1
+      - uses: actions/download-artifact@v6
         with:
           name: enclave-poc
 
