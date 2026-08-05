@@ -94,10 +94,10 @@ input.
 
 ## Toolchain and production posture
 
-The effective workspace/package support floor is Rust `1.91+`, matching the
+The effective workspace/package support floor is Rust `1.94.1+`, matching the
 Core package metadata and CI toolchain. The SDK `2.0.11` manifest declares a
 lower Rust version, but its locked dependency graph includes components that
-require Rust `1.91`; the higher effective floor is therefore intentional.
+require Rust `1.94.1`; the higher effective floor is therefore intentional.
 
 The adapter is a safe shared contract surface, not a production-readiness
 claim for every SDK protocol or provider. Applications must use a verified

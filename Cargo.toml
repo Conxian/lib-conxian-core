@@ -3,7 +3,7 @@ name = "lib-conxian-core"
 version = "0.3.1"
 description = "Foundational library and shared protocol primitives for the Conxian ecosystem."
 edition = "2021"
-rust-version = "1.97"
+rust-version = "1.94.1"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Conxian/lib-conxian-core"
 homepage = "https://www.conxian-labs.com"
@@ -42,8 +42,8 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-# Pinned to git tag until v2.0.12+ is published to crates.io (Session 57)
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.14", default-features = false, optional = true }
+# v2.0.12 is the newest SDK tag whose manifest supports the workspace Rust floor.
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.12", default-features = false, features = ["bip110_compliant"], optional = true }
 
 [features]
 default = []
@@ -64,7 +64,7 @@ sdk-rails = ["conxius-enclave-sdk"]
 sdk-nexus = ["conxius-enclave-sdk"]
 # Infrastructure & tooling (4 modules)
 sdk-infrastructure = ["conxius-enclave-sdk"]
-# Signing primitives (13 modules)
+# Reserved compatibility feature; SDK signing modules require a newer SDK/Rust floor.
 sdk-signing = ["conxius-enclave-sdk"]
 
 # Meta-feature: enable ALL SDK capabilities

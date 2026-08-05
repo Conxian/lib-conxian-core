@@ -2072,7 +2072,7 @@ dependencies = [
 [[package]]
 name = "conxius-enclave-sdk"
 version = "2.0.12"
-source = "git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.14#d3adefa40b3db8ce72e4959227ff9afffcca3bc5"
+source = "git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.12#5ef2799659451d24e1b95a23d53c0ab7243b5bd4"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -2092,7 +2092,6 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "js-sys",
- "jsonwebtoken",
  "k256 0.14.0",
  "lightning-invoice",
  "musig2",
@@ -2103,7 +2102,6 @@ dependencies = [
  "rand_core 0.10.1",
  "reqwest",
  "secp256k1 0.32.0-beta.2",
- "secrecy",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -3469,23 +3467,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsonwebtoken"
-version = "10.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba32bfb4ffdeaca3e34431072faf01745c9b26d25504aa7a6cf5684334fc4fc"
-dependencies = [
- "base64 0.22.1",
- "getrandom 0.2.17",
- "js-sys",
- "pem",
- "serde",
- "serde_json",
- "signature 2.2.0",
- "simple_asn1",
- "zeroize",
-]
-
-[[package]]
 name = "k256"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3970,16 +3951,6 @@ checksum = "112d82ceb8c5bf524d9af484d4e4970c9fd5a0cc15ba14ad93dccd28873b0629"
 dependencies = [
  "digest 0.11.3",
  "hmac 0.13.0",
-]
-
-[[package]]
-name = "pem"
-version = "3.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d30c53c26bc5b31a98cd02d20f25a7c8567146caf63ed593a9d87b2775291be"
-dependencies = [
- "base64 0.22.1",
- "serde_core",
 ]
 
 [[package]]
@@ -4918,15 +4889,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secrecy"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
-dependencies = [
- "zeroize",
-]
-
-[[package]]
 name = "security-framework"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5162,18 +5124,6 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
-
-[[package]]
-name = "simple_asn1"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d585997b0ac10be3c5ee635f1bab02d512760d14b7c468801ac8a01d9ae5f1d"
-dependencies = [
- "num-bigint",
- "num-traits",
- "thiserror 2.0.19",
- "time",
-]
 
 [[package]]
 name = "single_use_seals"

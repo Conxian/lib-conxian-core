@@ -68,9 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This is an intentional pre-publication API break from the old
   consumer-implemented `ProtocolVerifier` trait to the concrete façade/backend
   API. See [docs/MIGRATION.md](docs/MIGRATION.md).
-- Raised the package MSRV to Rust `1.91` so the declared support floor covers
+- Raised the package MSRV to Rust `1.94.1` so the declared support floor covers
   the locked default and optional `enclave` dependency graphs.
-- CI now uses Rust `1.91.0` and runs locked default/all-feature checks, tests,
+- CI now uses Rust `1.94.1` and runs locked default/all-feature checks, tests,
   and all-target Clippy with `-D warnings`.
 
 ### Documentation

@@ -54,9 +54,9 @@ pub trait TransportAdapter: Send + Sync {
 
     /// Check whether a specific feature is available for a chain.
     fn supports(&self, chain_id: &str, feature: TransportFeature) -> bool {
-        self.capabilities().iter().any(|c| {
-            c.chain_id == chain_id && c.features.contains(&feature)
-        })
+        self.capabilities()
+            .iter()
+            .any(|c| c.chain_id == chain_id && c.features.contains(&feature))
     }
 
     /// Broadcast a raw transaction to the chain.
@@ -66,11 +66,7 @@ pub trait TransportAdapter: Send + Sync {
     fn broadcast(&self, chain_id: &str, raw_tx: &[u8]) -> Result<String, TransportError>;
 
     /// Query UTXOs for an address.
-    fn query_utxos(
-        &self,
-        chain_id: &str,
-        address: &str,
-    ) -> Result<Vec<UtxoEntry>, TransportError>;
+    fn query_utxos(&self, chain_id: &str, address: &str) -> Result<Vec<UtxoEntry>, TransportError>;
 }
 
 /// A UTXO entry returned by a transport backend.
@@ -153,7 +149,11 @@ impl TransportAdapter for MockTransport {
         Ok("mock_txid_0000000000000000000000000000000000000000000000000000000000000000".into())
     }
 
-    fn query_utxos(&self, chain_id: &str, _address: &str) -> Result<Vec<UtxoEntry>, TransportError> {
+    fn query_utxos(
+        &self,
+        chain_id: &str,
+        _address: &str,
+    ) -> Result<Vec<UtxoEntry>, TransportError> {
         if !self.supports(chain_id, TransportFeature::UtxoLookup) {
             return Err(TransportError::UnsupportedFeature(
                 TransportFeature::UtxoLookup,
@@ -179,7 +179,10 @@ mod tests {
     fn unsupported_feature_returns_error() {
         let transport = MockTransport::new();
         let result = transport.broadcast("stacks:mainnet", b"");
-        assert!(matches!(result, Err(TransportError::UnsupportedFeature(_, _))));
+        assert!(matches!(
+            result,
+            Err(TransportError::UnsupportedFeature(_, _))
+        ));
     }
 
     #[test]

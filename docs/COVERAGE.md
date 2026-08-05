@@ -9,7 +9,7 @@ only after the baseline and exclusions have been reviewed.
 ## Tooling and reproducible commands
 
 The selected collector is `cargo-llvm-cov` **0.8.7**, using
-`llvm-tools-preview` from the exact Rust **1.91.0** toolchain. Both versions are
+`llvm-tools-preview` from the exact Rust **1.94.1** toolchain. Both versions are
 pinned in CI, and the toolchain matches the package MSRV. No optional features
 are enabled for this gate: coverage uses the workspace's default features and
 does not pass `--all-features`. The checked-in historical and candidate
@@ -17,20 +17,20 @@ baseline artifacts retain the toolchain provenance recorded when they were
 measured.
 
 ```bash
-rustup toolchain install 1.91.0 --profile minimal
-rustup +1.91.0 component add llvm-tools-preview
-cargo +1.91.0 install cargo-llvm-cov --version 0.8.7 --locked
-cargo +1.91.0 llvm-cov --version
+rustup toolchain install 1.94.1 --profile minimal
+rustup +1.94.1 component add llvm-tools-preview
+cargo +1.94.1 install cargo-llvm-cov --version 0.8.7 --locked
+cargo +1.94.1 llvm-cov --version
 
 mkdir -p target/coverage
 ignore='(^|/)(tests|fuzz|target|generated|vendor|examples)/'
-cargo +1.91.0 llvm-cov --workspace --locked \
+cargo +1.94.1 llvm-cov --workspace --locked \
   --ignore-filename-regex "$ignore" \
   --json --output-path target/coverage/coverage.json
-cargo +1.91.0 llvm-cov report --locked \
+cargo +1.94.1 llvm-cov report --locked \
   --ignore-filename-regex "$ignore" \
   --lcov --output-path target/coverage/coverage.lcov
-cargo +1.91.0 llvm-cov report --locked \
+cargo +1.94.1 llvm-cov report --locked \
   --ignore-filename-regex "$ignore" \
   --html --output-dir target/coverage/html
 

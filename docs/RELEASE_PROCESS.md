@@ -39,7 +39,7 @@ when the published artifact itself is wrong.
 
 - Keep the package `rust-version`, the explicit CI toolchain, and
   [docs/COMPATIBILITY.md](COMPATIBILITY.md) synchronized.
-- The supported floor for `lib-conxian-core` is Rust `1.91+` for both default
+- The supported floor for `lib-conxian-core` is Rust `1.94.1+` for both default
   and optional `enclave` builds.
 - The optional `enclave` dependency is coordinated with
   `conxius-enclave-sdk 2.0.11`; review its declared MSRV and resolved Alloy /

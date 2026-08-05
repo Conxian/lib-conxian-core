@@ -16,7 +16,6 @@
 //! | `fillDeadline` | `ResolvedCrossChainOrder.fillDeadline` |
 //! | `orderData` | `CrossChainIntent::to_order_data()` |
 
-use conxius_enclave_sdk::protocol::asset::Chain;
 use conxius_enclave_sdk::protocol::intent::{CrossChainIntent, ResolvedCrossChainOrder};
 use serde::{Deserialize, Serialize};
 
@@ -125,7 +124,10 @@ mod tests {
             &intent,
             "0xSettlementContract".into(),
             "SP2PABAF9...".into(),
-            42, 1, 2000000000, 2100000000,
+            42,
+            1,
+            2000000000,
+            2100000000,
         );
 
         let recovered = order.to_cross_chain_intent().unwrap();
@@ -137,7 +139,13 @@ mod tests {
     fn deadlines_enforced() {
         let intent = sample_intent();
         let order = Erc7683CrossChainOrder::from_cross_chain_intent(
-            &intent, "0xSettlement".into(), "0xSwapper".into(), 1, 1, 100, 200,
+            &intent,
+            "0xSettlement".into(),
+            "0xSwapper".into(),
+            1,
+            1,
+            100,
+            200,
         );
         assert!(order.is_open(50));
         assert!(!order.is_open(150));

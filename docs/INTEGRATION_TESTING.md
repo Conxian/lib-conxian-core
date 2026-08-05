@@ -113,8 +113,8 @@ contains the exact `lib-conxian-core` revision pin
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
-floor is Rust `1.91+`; the SDK `2.0.11` manifest's lower declaration does not
-lower that floor because its locked Alloy graph requires Rust `1.91`. The tests
+floor is Rust `1.94.1+`; the SDK `2.0.11` manifest's lower declaration does not
+lower that floor because its locked Alloy graph requires Rust `1.94.1`. The tests
 run with default features for Core and do not enable simulator/mock/dev bypasses.
 
 This document describes the Core-only fixture layer. Direct compile and
