@@ -1,85 +1,63 @@
-# Contributing to Conxian
+# Contributing to lib-conxian-core
 
-Thank you for your interest in contributing to Conxian! We welcome contributions from the community to help make the Conxian network more secure, efficient, and user-friendly.
+## Architecture
 
-## Code of Conduct
+`lib-conxian-core` is the protocol verification, trust-tier, and infrastructure
+layer shared by all Conxian services. It is **transport-neutral**: core owns
+deterministic contracts and types; network I/O lives in consumer crates.
 
-All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
+### Module Map (17 modules)
 
-## Getting Started
+| Module | Purpose | Consumer(s) |
+|--------|---------|-------------|
+| `control_model` | TrustTier (4 variants), Chain, BridgeSystem | Nexus, Gateway, Platform, SDK |
+| `signing` | SignerCapabilities, SigningAlgorithm, SigningTarget | Nexus |
+| `verifier` | 10+ protocol verification types | Nexus |
+| `anchoring` | AnchoringPublisher, 8 types | Nexus |
+| `bitcoin` | taproot, bip322 | Nexus |
+| `protocol` | dlc, frost, covenant, intent | Nexus |
+| `lightning` | LightningAdapter | Nexus |
+| `adapters` | StateProofError | Nexus |
+| `enclave` | AttestationCertificate, EnclaveVerificationError | Nexus |
+| `contract_bridge` | typed ContractCall, DeploymentPlan | Gateway, Orbit |
+| `babylon` | StakingIntent | Gateway |
+| `fedimint` | FedimintMint | Gateway |
+| `cjcs` | JobCard {context, type, work_intent} | Platform |
+| `stacks` | SBTCBridge, Emily API | Gateway |
+| `rgb` | GatewayRgbAdapter | Gateway |
+| `chain` | ERC-7683 intent mapping, transport adapters | Gateway, Nexus |
+| `crypto` | Key derivation | Internal |
 
-### Prerequisites
+### Feature Gates
 
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
-- [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+```toml
+[features]
+default = []
+full-sdk = ["dep:conxius-enclave-sdk"]
+sdk-blockchain = ["full-sdk"]   # blockchain protocol types
+sdk-signing = ["full-sdk"]      # signing primitives
+sdk-cross-cutting = ["full-sdk"] # chain abstraction, ERC-7683
+```
 
-### Local Setup
+All SDK-dependent modules are gated behind `full-sdk`. Core types
+(`control_model`, `signing`, `anchoring`) compile without the SDK.
 
-1. Fork and clone the repository.
-2. Install dependencies:
-   ```bash
-   cargo build
-   ```
-3. Run tests:
-   ```bash
-   cargo test
-   ```
+### Testing
 
-## Development Standards
+```bash
+# Default feature set
+cargo test --locked --all-targets
 
-- **Rust**:
-  - Follow standard Rust naming conventions.
-  - Run `cargo fmt --all --check` before submitting a PR.
-  - Run `cargo clippy --all-targets --all-features -- -D warnings` to check for common mistakes and improvements.
-  - Ensure all new public APIs are documented with doc comments.
+# All features
+cargo test --locked --all-targets --all-features
 
-## Development Workflow
+# Specific module
+cargo test --locked chain::transport
+```
 
-### Security First
+### Dependency Policy
 
-- **No Secrets**: Never commit API keys, private keys, or credentials.
-- **Ignore Rules**: Adhere to the `.gitignore` rules. Do not bypass them or use `git add --force` for sensitive files.
-- **Verification**: Ensure all changes are verified and do not introduce unintended public/private boundary issues.
-
-## Pull Request Process
-
-1. Create a new branch for your feature or bug fix.
-2. Commit your changes with descriptive commit messages.
-3. Ensure all tests pass.
-4. Update relevant documentation.
-5. Submit a pull request to the `main` branch.
-
-All PRs require review from at least one core maintainer before merging.
-
-
-## Governance Support Routing
-
-- For support and issue-routing guidance, use [SUPPORT.md](SUPPORT.md).
-- For vulnerability handling, follow [SECURITY.md](SECURITY.md) and avoid public disclosure.
-
-## Sensitive File Changes
-
-Changes to governance-sensitive files require CODEOWNERS review:
-
-- `.github/CODEOWNERS`
-- `SECURITY.md`
-- `SUPPORT.md`
-- `.github/ISSUE_TEMPLATE/**`
-- `.github/PULL_REQUEST_TEMPLATE*`
-- `.github/workflows/**`
-- `.github/release.yml`
-
-## Security
-
-If you discover a security vulnerability, please refer to our [Security Policy](SECURITY.md) for reporting instructions.
-
-## Release Discipline & Versioning
-
-- **Semantic Versioning**: We use [SemVer](https://semver.org/).
-  - `MAJOR` version for incompatible API changes.
-  - `MINOR` version for functionality in a backwards compatible manner.
-  - `PATCH` version for backwards compatible bug fixes.
-- **Changelog**: All changes must be recorded in [CHANGELOG.md](CHANGELOG.md).
-- **Tags**: Releases must be tagged in Git (e.g., `v0.2.0`).
-- **Licensing**: This project is dual-licensed under MIT and Apache 2.0. By contributing, you agree that your contributions will be licensed under these terms.
-- **Mainnet Safety**: Code promoted to the `main` branch must be mainnet-ready. Non-production behavior (stubs, mocks) is restricted to `dev` or `staged` branches.
+- Zero new mandatory dependencies without architecture review
+- `serde`, `thiserror`, `anyhow` for serialization/errors
+- All SDK integration gated behind feature flags
+- No network I/O in core — transport adapters live in consumers
