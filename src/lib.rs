@@ -56,6 +56,7 @@
 pub mod adapters;
 pub mod anchoring;
 pub mod babylon;
+pub mod chain;
 pub mod cjcs;
 pub mod contract_bridge;
 pub mod control_model;
