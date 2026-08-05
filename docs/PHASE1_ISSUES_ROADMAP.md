@@ -1,7 +1,7 @@
 # PHASE 1: Issue Creation & Discovery - Conxian Ecosystem
 
-**Status**: 📋 Planning Phase  
-**Date**: 2026-07-20  
+**Status**: 📋 Phase 1 Complete (6/9 implemented, 3 remaining for creation)  
+**Date**: 2026-07-20 (last reviewed 2026-08-05)  
 **Scope**: Core protocol library alignment & foundation
 
 ## Overview
@@ -25,7 +25,7 @@ This document tracks Phase 1 issues to be created across the Conxian ecosystem. 
 **Type**: Architecture  
 **Priority**: 🔴 CRITICAL  
 **Depends On**: None  
-**GitHub Issue**: [#174](https://github.com/Conxian/lib-conxian-core/issues/174)
+**GitHub Issue**: [#174](https://github.com/Conxian/lib-conxian-core/issues/174) ✅ Implemented
 
 **Implementation Note**: The implementation PR delivers the platform-neutral
 `UniversalChainSigner` contract, explicit signing/verification/address models,
@@ -57,6 +57,7 @@ Define shared trait interface for signing operations across all chains. This is 
 **Type**: Enhancement  
 **Priority**: 🔴 CRITICAL  
 **Depends On**: [CORE-001]  
+**GitHub Issue**: [#178](https://github.com/Conxian/lib-conxian-core/issues/178) ✅ Implemented  
 
 **Description**:
 Verify that core protocol handles BIP-341 (Taproot) and BIP-342 (Tapscript) signing flows correctly. Document any gaps or unsupported operations.
@@ -265,24 +266,24 @@ Define framework for testing core ↔ SDK ↔ Gateway ↔ Nexus integration flow
 
 ## Summary
 
-### Issues Summary (9 total; 8 still to create)
+### Issues Summary (9 total; 3 remaining for creation)
 
 | ID | Title | Priority | Status |
 |:---|:------|:--------:|:-------|
-| CORE-001 | UCS Interface Spec | 🔴 | ⏳ Create |
-| CORE-002 | BIP-341/342 Validation | 🔴 | ⏳ Create |
+| CORE-001 | UCS Interface Spec | 🔴 | ✅ Implemented in [#174](https://github.com/Conxian/lib-conxian-core/issues/174) |
+| CORE-002 | BIP-341/342 Validation | 🔴 | ✅ Implemented in [#178](https://github.com/Conxian/lib-conxian-core/issues/178) |
 | CORE-003 | Signing Flows Docs | 🟠 | ⏳ Create |
-| CORE-004 | BIP-110 Compliance Matrix | 🟠 | 🟡 In progress in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
+| CORE-004 | BIP-110 Compliance Matrix | 🟠 | ✅ Implemented in [#179](https://github.com/Conxian/lib-conxian-core/issues/179) |
 | CORE-005 | BIP-110 TX Builder Integration | 🟠 | ⏳ Create |
-| CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Initial contract in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardening in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
-| CORE-007 | Chain Risk Profiles | 🟠 | ✅ Implemented in [#177](https://github.com/Conxian/lib-conxian-core/issues/177); see [RISK_PROFILES.md](architecture/RISK_PROFILES.md) |
+| CORE-006 | Protocol Verifier Façade | 🔴 | ✅ Implemented in [#180](https://github.com/Conxian/lib-conxian-core/issues/180); hardened in [#191](https://github.com/Conxian/lib-conxian-core/issues/191) |
+| CORE-007 | Chain Risk Profiles | 🟠 | ✅ Implemented in [#177](https://github.com/Conxian/lib-conxian-core/issues/177) |
 | CORE-008 | Test Coverage Targets | 🟠 | ⏳ Create |
 | CORE-009 | Integration Test Framework | 🟠 | ⏳ Create |
 
 ### Next Steps
 
-1. **Create issues in GitHub** for all items above
-2. **Assign reviewers** from core team
-3. **Schedule architecture review** for CORE-001 & CORE-006
-4. **Generate Phase 1 summary** for SDK/Gateway alignment
+1. **Create remaining issues** in GitHub: CORE-003, CORE-005, CORE-008, CORE-009
+2. **Assign reviewers** from core team for remaining issues
+3. **Schedule architecture review** for CORE-005 (TX Builder Integration)
+4. **Begin Phase 2 planning** based on completed Phase 1 items
 

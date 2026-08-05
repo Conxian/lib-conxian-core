@@ -9,7 +9,7 @@ Shared protocol primitives for the Conxian ecosystem.
 ## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use the production
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.11) instead.
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.14) instead.
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
@@ -58,7 +58,7 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 This crate supports Rust `1.91+` for both the default feature set and the
 optional `enclave` feature. The enclave path uses
-`conxius-enclave-sdk 2.0.11`, whose locked dependency graph includes Alloy
+`conxius-enclave-sdk 2.0.14`, whose locked dependency graph includes Alloy
 components requiring Rust `1.91`. See the
 [compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
 coverage, and SDK release-coordination requirements.

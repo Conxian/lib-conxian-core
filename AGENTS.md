@@ -1,9 +1,8 @@
 # Conxian Agent Guidelines: lib-conxian-core (v0.3.1 — Session 52, Aug 2026)
 
-This repository is the canonical home of the **Vault SDK** and shared protocol primitives. It is a "protocol-first" library.
+This repository is the canonical home of shared protocol primitives and the Core type system for the Conxian ecosystem. It is a "protocol-first" library.
 
-## Strategic Priority (Vault SDK)
-Prioritize the development and hardening of the `VaultSDK` primitive (`src/sdk_primitive.rs`). This is the primary commercial interface for the Conxian ecosystem.
+> **Note:** The production Vault SDK (hardware-backed signing, attestation, FROST DKG, BitVM2) lives in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.14), NOT in this repository. See [docs/MIGRATION.md](docs/MIGRATION.md).
 
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
@@ -18,7 +17,7 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 
 ## Protocol Coverage — SDK → Core Alignment
 
-The Conxius Enclave SDK (`lib-conclave-sdk` v0.3.1) defines the canonical 42-chain `AssetRegistry` and 46 protocol modules. lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
+The Conxius Enclave SDK (`conxius-enclave-sdk` v0.3.1) defines the canonical 42-chain `AssetRegistry` and 46 protocol modules. lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
 
 ### Core Type Coverage Requirements
 
@@ -81,23 +80,29 @@ The Conxius Enclave SDK (`lib-conclave-sdk` v0.3.1) defines the canonical 42-cha
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
 - 30+ verifier types (from `verifier`)
 
-### SDK Re-exports (Session 52 — Full Alignment with conxius-enclave-sdk v2.0.11)
+### SDK Re-exports (Session 57 — Full Alignment with conxius-enclave-sdk v2.0.14)
 
-The `sdk` module (`src/sdk.rs`) re-exports ALL 50 conxius-enclave-sdk modules organized by category.
+The `sdk` module (`src/sdk.rs`) re-exports ALL 70 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
 
 ```toml
-lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
+lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
 ```
 
 | Category | Feature Flag | Modules | SDK Re-export Path |
-|----------|:-----------:|---------|-------------------|
-| Blockchain | `sdk-blockchain` | 22 | `sdk::blockchain::{bitcoin, bip322, bitvm, bitvm2, dlc, frost, frost_crypto, lightning, musig2, stacks, covenant, ark, cctp, mmr, ethereum, solana, statechain, sidl, credit, fiat, asset, bip110}` |
-| Cross-cutting | `sdk-cross-cutting` | 16 | `sdk::cross_cutting::{intent, settlement, settlement_service, swap_router, stablecoin_orchestrator, solver, chain_abstraction, account_abstraction, a2p, control_model_adapter, identity, economy, job_card, business, opportunity, zkml}` |
-| Rails | `sdk-rails` | 6 | `sdk::rails::{bisq, boltz, changelly, wormhole, ntt, x402}` |
+|----------|:-----------:|:-------:|-------------------|
+| Blockchain | `sdk-blockchain` | 24 | `sdk::blockchain::{ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router}` |
+| Cross-cutting | `sdk-cross-cutting` | 15 | `sdk::cross_cutting::{a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml}` |
 | Nexus | `sdk-nexus` | 2 | `sdk::nexus::{fedimint, roast}` |
-| Infrastructure | `sdk-infrastructure` | 4 | `sdk::infrastructure::{config, state, telemetry, wasm_bindings}` |
-| Enclave | `enclave` | 10 | `sdk::enclave_sdk::{attestation, android_strongbox, cloud, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
+| Infrastructure | `sdk-infrastructure` | 5 | `sdk::infrastructure::{config, serde_big_array, state, telemetry, wasm_support}` |
+| Signing | `sdk-signing` | 13 | `sdk::signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml}` |
+| Enclave | `enclave` | 11 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
+
+**Blocked modules:**
+- Rails (6): `pub(crate)` in SDK — cannot re-export (bisq, boltz, changelly, wormhole, ntt, x402)
+- `frost_crypto`: `#[cfg(feature = "frost-crypto")]` in SDK
+- `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
+- `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK
 
 **Meta-feature:** `full-sdk` enables all 6 categories at once. The full `conxius_enclave_sdk` crate is also
 re-exported at `sdk::conxius_enclave_sdk` for direct access.
