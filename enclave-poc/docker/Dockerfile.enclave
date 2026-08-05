@@ -1,0 +1,29 @@
+# Conxian AWS Nitro Enclave Signing Service
+# 
+# This Dockerfile builds the enclave image that runs inside AWS Nitro Enclaves.
+# It contains only the signing logic — no network access, no persistence.
+#
+# Build:  docker build -t conxian-enclave:latest -f docker/Dockerfile.enclave .
+# EIF:    nitro-cli build-enclave --docker-uri conxian-enclave:latest --output-file conxian-enclave.eif
+# Run:    nitro-cli run-enclave --eif-path conxian-enclave.eif --memory 512 --cpu-count 2 --enclave-cid 4
+
+FROM alpine:3.20
+
+# The enclave runs a minimal vsock server that:
+# 1. Listens on vsock port 5000
+# 2. Receives SignRequest JSON from the parent instance
+# 3. Signs with the enclave-bound key
+# 4. Returns SignResponse with attestation
+#
+# In production, this would be the conxius-enclave-sdk Nitro signing binary.
+# For the POC, we use a simple shell-based vsock responder.
+
+RUN apk add --no-cache socat curl
+
+# Copy the vsock signing server
+COPY docker/enclave-signing-server.sh /usr/local/bin/enclave-signing-server
+RUN chmod +x /usr/local/bin/enclave-signing-server
+
+# The enclave entrypoint starts the vsock listener immediately.
+# No network access is available inside the enclave.
+CMD ["/usr/local/bin/enclave-signing-server"]

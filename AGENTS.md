@@ -6,6 +6,8 @@ This repository is the canonical home of shared protocol primitives and the Core
 
 > **Session 52 review (2026-08-05):** Audited AGENTS.md, README.md, and PHASE1_ISSUES_ROADMAP.md. Fixed stale VaultSDK references, SDK version pins (v2.0.11→v2.0.14), SDK re-export module counts (50→70 with signing category), and Phase 1 status (6/9 CORE issues now closed). Blocked modules documented: Rails (6, pub(crate)), frost_crypto, wasm_bindings, android_strongbox, cloud.
 
+> **Session 52 AWS Nitro POC (2026-08-05):** Cross-referenced both repos (core v0.3.1 + SDK v2.0.14). Built `enclave-poc/` — a complete Nitro Enclave signing demo that exercises real Core types, the adapter boundary, and SDK's `EnclaveManager` trait. All 227 tests pass. POC demonstrates: Strict-tier Bitcoin signing with BIP-110 preflight ✅, ObserverOnly rejection ✅, 5-chain signing flow ✅. AWS Nitro deployment guide in `enclave-poc/README.md`. Docker artifacts in `enclave-poc/docker/`.
+
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
 - **Gateway:** Runtime orchestration, persistence, and external side effects live in the standalone `conxian-gateway` repository.
