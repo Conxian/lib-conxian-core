@@ -43,7 +43,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
 # Pinned to git tag until v2.0.12+ is published to crates.io (Session 57)
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.13", default-features = false, optional = true }
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.14", default-features = false, optional = true }
 
 [features]
 default = []
