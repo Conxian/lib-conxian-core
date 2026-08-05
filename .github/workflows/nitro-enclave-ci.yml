@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a1a6f64cc3c2f35be9d664a7c42f430ee5ca5590 # v4.0.2
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           role-to-assume: arn:aws:iam::692112933743:role/github-actions-nitro-provisioner
           aws-region: us-east-1
