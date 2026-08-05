@@ -8,7 +8,7 @@ This repository is the canonical home of shared protocol primitives and the Core
 
 > **Session 52 AWS Nitro POC (2026-08-05):** Cross-referenced both repos (core v0.3.1 + SDK v2.0.14). Built `enclave-poc/` — a complete Nitro Enclave signing demo that exercises real Core types, the adapter boundary, and SDK's `EnclaveManager` trait. All 227 tests pass. POC demonstrates: Strict-tier Bitcoin signing with BIP-110 preflight ✅, ObserverOnly rejection ✅, 5-chain signing flow ✅. AWS Nitro deployment guide in `enclave-poc/README.md`. Docker artifacts in `enclave-poc/docker/`.
 
-> **Session 52 Nitro CI + Extended POC (2026-08-05):** Created `.github/workflows/nitro-enclave-ci.yml` with build-test-docker-provision pipeline. Extended POC from 3→6 scenarios (error injection, key rotation, replay detection). Saved AWS secrets to GitHub repo secrets. Documented AWS permissions matrix — `botshelo` IAM user can read EC2 + manage SGs/roles but cannot launch instances or create OIDC providers. Full Nitro deployment requires either (a) adding `ec2:RunInstances`,`ec2:CreateKeyPair`,`iam:CreateInstanceProfile`,`iam:PassRole` to the user, or (b) creating a `github-actions-nitro-provisioner` IAM role with OIDC trust for GitHub Actions. See [AWS Permissions Matrix](#aws-nitro-permissions-matrix) below.
+> **Session 52 Nitro CI + Extended POC (2026-08-05):** Created `.github/workflows/nitro-enclave-ci.yml` with build-test-docker-provision pipeline. Extended POC from 3→6 scenarios (error injection, key rotation, replay detection). Saved AWS secrets to GitHub repo secrets. Documented AWS permissions matrix — `botshelo` IAM user can read EC2 + manage SGs/roles but cannot launch instances or create OIDC providers. Full Nitro deployment requires either (a) adding `ec2:RunInstances`,`ec2:CreateKeyPair`,`iam:CreateInstanceProfile`,`iam:AddRoleToInstanceProfile`,`iam:PassRole` to the user, or (b) creating a `github-actions-nitro-provisioner` IAM role with OIDC trust for GitHub Actions. See [AWS Permissions Matrix](#aws-nitro-permissions-matrix) below.
 
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
@@ -170,6 +170,7 @@ Empirically audited permissions for IAM user `botshelo` (account `692112933743`,
 | `ec2:CreateKeyPair` | `key-pair/*` | SSH access to instances |
 | `ec2:ImportKeyPair` | `key-pair/*` | Alternative SSH setup |
 | `iam:CreateInstanceProfile` | `*` | Attaching role to instance |
+| `iam:AddRoleToInstanceProfile` | `*` | Linking role to instance profile |
 | `iam:CreateOpenIDConnectProvider` | `*` | GitHub OIDC trust |
 | `iam:PassRole` | `*` | Instance profile assignment |
 
@@ -202,7 +203,7 @@ Empirically audited permissions for IAM user `botshelo` (account `692112933743`,
    ```json
    {
      "Effect": "Allow",
-     "Action": ["ec2:RunInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:PassRole"],
+     "Action": ["ec2:RunInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:AddRoleToInstanceProfile","iam:PassRole"],
      "Resource": "*",
      "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}}
    }

@@ -13,7 +13,10 @@
     {
       "Sid": "IAMInstanceProfilePermission",
       "Effect": "Allow",
-      "Action": "iam:CreateInstanceProfile",
+      "Action": [
+        "iam:CreateInstanceProfile",
+        "iam:AddRoleToInstanceProfile"
+      ],
       "Resource": "*"
     },
     {

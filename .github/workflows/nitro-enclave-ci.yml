@@ -110,26 +110,41 @@ jobs:
       - name: Provision Nitro spot instance
         run: |
           set -euo pipefail
-          # Create security group (idempotent)
+          # Use existing security group or create if missing
           SG_ID=$(aws ec2 describe-security-groups \
-            --filters Name=group-name,Values=conxian-nitro-ci \
+            --filters Name=group-name,Values=conxian-nitro-sg \
             --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || true)
           if [ -z "$SG_ID" ] || [ "$SG_ID" = "None" ]; then
             SG_ID=$(aws ec2 create-security-group \
-              --group-name conxian-nitro-ci \
-              --description "CI Nitro enclave signing" \
+              --group-name conxian-nitro-sg \
+              --description "Nitro enclave signing — SSH + gRPC" \
               --query 'GroupId' --output text)
             aws ec2 authorize-security-group-ingress \
               --group-id "$SG_ID" --protocol tcp --port 22 --cidr 0.0.0.0/0
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SG_ID" --protocol tcp --port 50051 --cidr 0.0.0.0/0
           fi
           echo "SG: $SG_ID"
 
+          # Discover latest Amazon Linux 2023 AMI with Nitro support
+          AMI_ID=$(aws ec2 describe-images \
+            --owners amazon \
+            --filters "Name=name,Values=al2023-ami-2023*-x86_64" "Name=state,Values=available" \
+            --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text)
+
+          # Find first available subnet in default VPC
+          SUBNET_ID=$(aws ec2 describe-subnets \
+            --filters "Name=default-for-az,Values=true" \
+            --query 'Subnets[0].SubnetId' --output text)
+
+          echo "AMI: $AMI_ID | Subnet: $SUBNET_ID"
+
           # Launch spot instance with Nitro enabled
           INSTANCE_ID=$(aws ec2 run-instances \
-            --image-id ami-021b301745ba3b19b \
+            --image-id "$AMI_ID" \
             --instance-type m5.xlarge \
             --security-group-ids "$SG_ID" \
-            --subnet-id subnet-0e02cf605f8eec865 \
+            --subnet-id "$SUBNET_ID" \
             --enclave-options Enabled=true \
             --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":30,"VolumeType":"gp3"}}]' \
             --instance-market-options '{"MarketType":"spot","SpotOptions":{"SpotInstanceType":"one-time","InstanceInterruptionBehavior":"terminate"}}' \
