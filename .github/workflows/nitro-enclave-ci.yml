@@ -139,18 +139,27 @@ jobs:
 
           echo "AMI: $AMI_ID | Subnet: $SUBNET_ID"
 
-          # Launch spot instance with Nitro enabled
-          INSTANCE_ID=$(aws ec2 run-instances \
-            --image-id "$AMI_ID" \
-            --instance-type m5.xlarge \
-            --security-group-ids "$SG_ID" \
-            --subnet-id "$SUBNET_ID" \
-            --enclave-options Enabled=true \
-            --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":30,"VolumeType":"gp3"}}]' \
-            --instance-market-options '{"MarketType":"spot","SpotOptions":{"SpotInstanceType":"one-time","InstanceInterruptionBehavior":"terminate"}}' \
-            --iam-instance-profile Name=conxian-nitro-enclave-profile \
-            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=conxian-nitro-ci},{Key=TTL,Value=4h}]' \
-            --query 'Instances[0].InstanceId' --output text)
+          # Launch spot instance with Nitro enabled (fallback instance types)
+          for ITYPE in m5.xlarge m5d.xlarge m5n.xlarge; do
+            INSTANCE_ID=$(aws ec2 run-instances \
+              --image-id "$AMI_ID" \
+              --instance-type "$ITYPE" \
+              --security-group-ids "$SG_ID" \
+              --subnet-id "$SUBNET_ID" \
+              --enclave-options Enabled=true \
+              --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":30,"VolumeType":"gp3"}}]' \
+              --instance-market-options '{"MarketType":"spot","SpotOptions":{"SpotInstanceType":"one-time","InstanceInterruptionBehavior":"terminate"}}' \
+              --iam-instance-profile Name=conxian-nitro-enclave-profile \
+              --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=conxian-nitro-ci},{Key=TTL,Value=4h}]' \
+              --query 'Instances[0].InstanceId' --output text 2>/dev/null || true)
+            [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ] && break
+            echo "No $ITYPE spot capacity, trying next..."
+          done
+
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+            echo "ERROR: No Nitro spot capacity available in any instance type"
+            exit 1
+          fi
 
           echo "Instance: $INSTANCE_ID"
           echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
