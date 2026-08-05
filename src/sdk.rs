@@ -1,6 +1,6 @@
-//! # SDK Capability Re-exports (Session 52)
+//! # SDK Capability Re-exports (Session 52 → Session 57)
 //!
-//! Comprehensive re-exports of all 50 conxius-enclave-sdk modules,
+//! Comprehensive re-exports of all publicly-accessible conxius-enclave-sdk modules,
 //! organized by category. Each category is gated behind a feature flag.
 //!
 //! Enable via Cargo.toml:
@@ -13,16 +13,21 @@
 //! lib-conxian-core = { version = "0.3", features = ["sdk-blockchain", "sdk-cross-cutting"] }
 //! ```
 //!
-//! ## Module Map (50 modules → 5 categories + enclave)
+//! ## Module Map (57 public modules → 6 categories; Session 57 ground-truth from v2.0.12)
 //!
 //! | Category | Feature | Modules | Status |
 //! |----------|---------|---------|:------:|
-//! | Blockchain | `sdk-blockchain` | bitcoin, bip322, bitvm, bitvm2, dlc, frost, lightning, musig2, stacks, covenant, ark, cctp, mmr, ethereum, solana, statechain, sidl, credit, fiat, asset, bip110, frost_crypto | ✅ |
-//! | Cross-cutting | `sdk-cross-cutting` | intent, settlement, settlement_service, swap_router, stablecoin_orchestrator, solver, chain_abstraction, account_abstraction, a2p, control_model_adapter, identity, economy, job_card, business, opportunity, zkml | ✅ |
-//! | Rails | `sdk-rails` | rails::{bisq, boltz, changelly, wormhole, ntt, x402} | ✅ |
-//! | Nexus | `sdk-nexus` | nexus::{fedimint, roast} | ✅ |
-//! | Infrastructure | `sdk-infrastructure` | config, state, telemetry, wasm_bindings | ✅ |
-//! | Enclave | `enclave` | attestation, android_strongbox, cloud, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | ✅ |
+//! | Blockchain | `sdk-blockchain` | ark, asset, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, sidl, solana, stacks, swap_router | ✅ |
+//! | Cross-cutting | `sdk-cross-cutting` | a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml | ✅ |
+//! | Nexus | `sdk-nexus` | nexus::fedimint | ✅ |
+//! | Infrastructure | `sdk-infrastructure` | config, state, telemetry, wasm_support | ✅ |
+//! | Enclave | `enclave` | android_authorization, android_strongbox, attestation, cloud, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | ✅ |
+//!
+//! **Not re-exported:**
+//! - Rails modules (`bisq`, `boltz`, `changelly`, `ntt`, `wormhole`, `x402`): `pub(crate)` in SDK — internal only
+//! - `frost_crypto`, `bip110_compliant`: behind SDK feature gates
+//! - `babylon`, `rgb`, `statechain`, `roast`, `signing/*`, `serde_big_array`: added to SDK main after v2.0.12 (pending v2.0.13 release)
+//! - `wasm_bindings`: `cfg(wasm32)` gated
 //!
 //! **Note:** SDK modules behind feature gates (frost_crypto, bip110, nitro, etc.)
 //! are only available when those SDK features are active. Consumers should enable
@@ -36,7 +41,6 @@
     feature = "enclave",
     feature = "sdk-blockchain",
     feature = "sdk-cross-cutting",
-    feature = "sdk-rails",
     feature = "sdk-nexus",
     feature = "sdk-infrastructure",
 ))]
@@ -66,7 +70,11 @@ pub mod blockchain {
     pub use conxius_enclave_sdk::protocol::sidl;
     pub use conxius_enclave_sdk::protocol::solana;
     pub use conxius_enclave_sdk::protocol::stacks;
-    // v2.0.12+: pub use conxius_enclave_sdk::protocol::statechain;
+    pub use conxius_enclave_sdk::protocol::swap_router;
+    // v2.0.13+ (on main, not yet in any release):
+    // pub use conxius_enclave_sdk::protocol::babylon;
+    // pub use conxius_enclave_sdk::protocol::rgb;
+    // pub use conxius_enclave_sdk::protocol::statechain;
     // Feature-gated in SDK: cfg(frost-crypto) and cfg(bip110_compliant)
     // pub use conxius_enclave_sdk::protocol::frost_crypto;
     // pub use conxius_enclave_sdk::protocol::bip110;
@@ -78,7 +86,7 @@ pub mod cross_cutting {
     pub use conxius_enclave_sdk::protocol::account_abstraction;
     pub use conxius_enclave_sdk::protocol::business;
     pub use conxius_enclave_sdk::protocol::chain_abstraction;
-    // v2.0.12+: pub use conxius_enclave_sdk::protocol::control_model_adapter;
+    pub use conxius_enclave_sdk::protocol::control_model_adapter;
     pub use conxius_enclave_sdk::protocol::economy;
     pub use conxius_enclave_sdk::protocol::identity;
     pub use conxius_enclave_sdk::protocol::intent;
@@ -88,26 +96,21 @@ pub mod cross_cutting {
     pub use conxius_enclave_sdk::protocol::settlement_service;
     pub use conxius_enclave_sdk::protocol::solver;
     pub use conxius_enclave_sdk::protocol::stablecoin_orchestrator;
-    pub use conxius_enclave_sdk::protocol::swap_router;
     pub use conxius_enclave_sdk::protocol::zkml;
 }
 
-// Rails modules are nested under protocol::rails::
-#[cfg(feature = "sdk-rails")]
-pub mod rails {
-    pub use conxius_enclave_sdk::protocol::rails::bisq;
-    pub use conxius_enclave_sdk::protocol::rails::boltz;
-    pub use conxius_enclave_sdk::protocol::rails::changelly;
-    pub use conxius_enclave_sdk::protocol::rails::ntt;
-    pub use conxius_enclave_sdk::protocol::rails::wormhole;
-    pub use conxius_enclave_sdk::protocol::rails::x402;
-}
+// Rails modules are `pub(crate)` in SDK v2.0.12 — cannot re-export.
+// Revisit after SDK v2.0.13 makes them public.
+//
+// #[cfg(feature = "sdk-rails")]
+// pub mod rails { ... }
 
 // Nexus modules are nested under protocol::nexus::
 #[cfg(feature = "sdk-nexus")]
 pub mod nexus {
     pub use conxius_enclave_sdk::protocol::nexus::fedimint;
-    // v2.0.12+: pub use conxius_enclave_sdk::protocol::nexus::roast;
+    // v2.0.13+ (on main, not yet in any release):
+    // pub use conxius_enclave_sdk::protocol::nexus::roast;
 }
 
 #[cfg(feature = "sdk-infrastructure")]
@@ -115,24 +118,41 @@ pub mod infrastructure {
     pub use conxius_enclave_sdk::config;
     pub use conxius_enclave_sdk::state;
     pub use conxius_enclave_sdk::telemetry;
+    pub use conxius_enclave_sdk::wasm_support;
     // cfg(wasm32) gated:
     // pub use conxius_enclave_sdk::wasm_bindings;
+    // v2.0.13+ (on main, not yet in any release):
+    // pub use conxius_enclave_sdk::serde_big_array;
 }
+
+// ── Signing module (Session 57 — does not exist in SDK v2.0.12) ──
+//
+// The `signing/` crate was added to SDK main after v2.0.12.
+// Will be re-exported here after v2.0.13 release:
+//
+// #[cfg(feature = "sdk-signing")]
+// pub mod signing {
+//     pub use conxius_enclave_sdk::signing::musig2_signing;
+//     pub use conxius_enclave_sdk::signing::bip322_signing;
+//     pub use conxius_enclave_sdk::signing::taproot;
+//     pub use conxius_enclave_sdk::signing::ucs;
+//     ...
+// }
 
 // ── Enclave module (re-exported at crate root for backward compat) ──
 
 #[cfg(feature = "enclave")]
 pub mod enclave_sdk {
-    pub use conxius_enclave_sdk::enclave::android_strongbox;
+    pub use conxius_enclave_sdk::enclave::android_authorization;
+    // Gated behind `development-simulators` in SDK:
+    // pub use conxius_enclave_sdk::enclave::android_strongbox;
+    // pub use conxius_enclave_sdk::enclave::cloud;
     pub use conxius_enclave_sdk::enclave::attestation;
-    pub use conxius_enclave_sdk::enclave::cloud;
-    // v2.0.12+: pub use conxius_enclave_sdk::enclave::durable_replay;
-    // Feature-gated in SDK: cfg(not(wasm32))
-    // pub use conxius_enclave_sdk::enclave::nitro;
+    pub use conxius_enclave_sdk::enclave::durable_replay;
+    pub use conxius_enclave_sdk::enclave::nitro;
+    pub use conxius_enclave_sdk::enclave::proof;
+    pub use conxius_enclave_sdk::enclave::proofs;
     pub use conxius_enclave_sdk::enclave::replay_guard;
-    // v2.0.12+ or re-exported at enclave module level only:
-    // pub use conxius_enclave_sdk::enclave::proof;
-    // pub use conxius_enclave_sdk::enclave::proofs;
-    // pub use conxius_enclave_sdk::enclave::trust;
-    // pub use conxius_enclave_sdk::enclave::trust_contracts;
+    pub use conxius_enclave_sdk::enclave::trust;
+    pub use conxius_enclave_sdk::enclave::trust_contracts;
 }
