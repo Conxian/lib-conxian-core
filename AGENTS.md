@@ -8,6 +8,8 @@ This repository is the canonical home of shared protocol primitives and the Core
 
 > **Session 52 AWS Nitro POC (2026-08-05):** Cross-referenced both repos (core v0.3.1 + SDK v2.0.14). Built `enclave-poc/` — a complete Nitro Enclave signing demo that exercises real Core types, the adapter boundary, and SDK's `EnclaveManager` trait. All 227 tests pass. POC demonstrates: Strict-tier Bitcoin signing with BIP-110 preflight ✅, ObserverOnly rejection ✅, 5-chain signing flow ✅. AWS Nitro deployment guide in `enclave-poc/README.md`. Docker artifacts in `enclave-poc/docker/`.
 
+> **Session 52 Nitro CI + Extended POC (2026-08-05):** Created `.github/workflows/nitro-enclave-ci.yml` with build-test-docker-provision pipeline. Extended POC from 3→6 scenarios (error injection, key rotation, replay detection). Saved AWS secrets to GitHub repo secrets. Documented AWS permissions matrix — `botshelo` IAM user can read EC2 + manage SGs/roles but cannot launch instances or create OIDC providers. Full Nitro deployment requires either (a) adding `ec2:RunInstances`,`ec2:CreateKeyPair`,`iam:CreateInstanceProfile`,`iam:PassRole` to the user, or (b) creating a `github-actions-nitro-provisioner` IAM role with OIDC trust for GitHub Actions. See [AWS Permissions Matrix](#aws-nitro-permissions-matrix) below.
+
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
 - **Gateway:** Runtime orchestration, persistence, and external side effects live in the standalone `conxian-gateway` repository.
@@ -137,3 +139,80 @@ re-exported at `sdk::conxius_enclave_sdk` for direct access.
 - **ZSE:** Adhere to Zero Secret Egress standards. Never track environment files or private keys.
 - **Source of Truth:** Refer to `bitcoinlayers.org` for the latest Bitcoin Layer 2 research.
 - **Protocol Coverage:** When adding a new chain or protocol to the ecosystem, first add canonical types here, then implement adapters in gateway/nexus.
+
+## AWS Nitro Permissions Matrix
+
+Empirically audited permissions for IAM user `botshelo` (account `692112933743`, region `us-east-1`).
+
+### Allowed
+
+| Action | Resource | Notes |
+|--------|----------|-------|
+| `sts:GetCallerIdentity` | — | Identity verification |
+| `ec2:DescribeVpcs` | `*` | VPC topology |
+| `ec2:DescribeSubnets` | `*` | Subnet discovery |
+| `ec2:DescribeImages` | `*` | AMI selection |
+| `ec2:DescribeSpotPriceHistory` | `*` | Cost estimation |
+| `ec2:DescribeKeyPairs` | `*` | Returns empty (no keys exist) |
+| `ec2:DescribeSecurityGroups` | `*` | SG audit |
+| `ec2:CreateSecurityGroup` | `*` | Created `sg-074fed552d15a1677` (SSH + enclave 50051) |
+| `ec2:AuthorizeSecurityGroupIngress` | `*` | Rule provisioning |
+| `iam:CreateRole` | `*` | Created `conxian-nitro-enclave-role` |
+| `iam:AttachRolePolicy` | `*` | Attached `AmazonSSMManagedInstanceCore` |
+| `servicequotas:ListServiceQuotas` | `*` | Quota verification |
+| `ce:GetCostAndUsage` | `*` | Cost tracking |
+
+### Denied (Required for Nitro Provisioning)
+
+| Action | Resource | Required For |
+|--------|----------|--------------|
+| `ec2:RunInstances` | `instance/*` | Launching Nitro-enabled EC2 |
+| `ec2:CreateKeyPair` | `key-pair/*` | SSH access to instances |
+| `ec2:ImportKeyPair` | `key-pair/*` | Alternative SSH setup |
+| `iam:CreateInstanceProfile` | `*` | Attaching role to instance |
+| `iam:CreateOpenIDConnectProvider` | `*` | GitHub OIDC trust |
+| `iam:PassRole` | `*` | Instance profile assignment |
+
+### GitHub Secrets (Provisioned)
+
+| Secret Name | Purpose | Scope |
+|-------------|---------|-------|
+| `AWS_ACCESS_KEY_ID` | IAM user access key | Repository |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key | Repository |
+| `AWS_REGION` | Default region (`us-east-1`) | Repository |
+
+### Nitro CI Workflow (`.github/workflows/nitro-enclave-ci.yml`)
+
+| Job | Trigger | Description |
+|-----|---------|-------------|
+| `build-test` | push, PR, manual | Build POC binary, verify 6 scenarios |
+| `docker-build` | push, PR, manual | Build Nitro EIF-ready Docker image |
+| `provision-nitro` | manual only | Provision spot instance, build EIF, run signing test, teardown |
+
+### Cost Controls
+
+- **Spot pricing:** m5.xlarge ~$0.06/hr (vs $0.192 on-demand)
+- **Auto-teardown:** 4h TTL tag on all instances; `always()` teardown in CI
+- **EBS:** 30 GB gp3 per instance (~$2.40/month if persistent)
+- **Estimated POC cost:** <$0.50 per CI run (build 5 min + provision 30 min + egress)
+
+### Path to Production
+
+1. **Minimum permissions** — Admin attaches following policy to `botshelo`:
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": ["ec2:RunInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:PassRole"],
+     "Resource": "*",
+     "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}}
+   }
+   ```
+2. **OIDC alternative** — Admin creates `github-actions-nitro-provisioner` IAM role
+   with trust for `token.actions.githubusercontent.com`, allowing CI to assume the
+   role without static credentials.
+3. **Production hardening:**
+   - Pre-bake EIF in CI, sign with AWS KMS, push to private ECR
+   - Use SSM Session Manager instead of SSH (no key pair needed)
+   - Add PCR preset verification in attestation chain
+   - Tag all resources with `Environment=production`, `BillingTag=nitro-enclave`
+
