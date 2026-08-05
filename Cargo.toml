@@ -42,7 +42,8 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-conxius-enclave-sdk = { version = "=2.0.11", default-features = false, optional = true }
+# Pinned to git tag until v2.0.12 is published to crates.io (Session 57)
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.12", default-features = false, optional = true }
 
 [features]
 default = []
@@ -63,6 +64,8 @@ sdk-rails = ["conxius-enclave-sdk"]
 sdk-nexus = ["conxius-enclave-sdk"]
 # Infrastructure & tooling (4 modules)
 sdk-infrastructure = ["conxius-enclave-sdk"]
+# Signing primitives (13 modules)
+sdk-signing = ["conxius-enclave-sdk"]
 
 # Meta-feature: enable ALL SDK capabilities
 full-sdk = [
@@ -72,6 +75,7 @@ full-sdk = [
     "sdk-rails",
     "sdk-nexus",
     "sdk-infrastructure",
+    "sdk-signing",
 ]
 
 [workspace]
