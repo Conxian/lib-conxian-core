@@ -219,3 +219,12 @@ Empirically audited permissions for IAM user `botshelo` (account `692112933743`,
    - Add PCR preset verification in attestation chain
    - Tag all resources with `Environment=production`, `BillingTag=nitro-enclave`
 
+
+## Session 52 Alignment Summary (2026-08-05)
+
+- **SDK**: conxius-enclave-sdk v2.0.14 (git tag), adapter 28 tests pass
+- **Toolchain**: rustc 1.97 across all repos (core, sdk, gateway, nexus)
+- **Nitro CI**: green end-to-end (build → docker → provision → teardown)
+- **Branch**: `docs/session-52-review-sync` — pending merge to `main`
+- **conxian-nexus**: PR #216 open (stable → 1.97)
+- **IAM**: `conxian-nitro-bootstrap` applied to `botshelo`

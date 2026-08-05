@@ -3574,7 +3574,7 @@ dependencies = [
 name = "lib-conxian-core-enclave"
 version = "0.1.0"
 dependencies = [
- "conxius-enclave-sdk 2.0.11",
+ "conxius-enclave-sdk 2.0.12",
  "hex",
  "lib-conxian-core",
  "serde",
