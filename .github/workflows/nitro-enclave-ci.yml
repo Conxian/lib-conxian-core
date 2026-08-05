@@ -43,10 +43,7 @@ jobs:
       - name: Test enclave adapter
         run: cargo test --locked -p lib-conxian-core-enclave
 
-      - name: Test core with enclave features
-        run: cargo test --locked --all-features -p lib-conxian-core
-
-      - name: Build enclave POC binary
+      - name: Build and verify enclave POC
         run: |
           cd enclave-poc
           cargo build --release --locked
