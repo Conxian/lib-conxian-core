@@ -225,7 +225,7 @@ preserves the typed `ProtocolVerifierError::StaleReference` shape through a
 test-only backend because the current Core façade does not acquire live evidence.
 
 The compatibility assumptions recorded by this checkpoint are limited to the
-Core package `lib-conxian-core` `0.3.1`, Rust `1.91`, the default feature set
+Core package `lib-conxian-core` `0.3.1`, Rust `1.97.1`, the default feature set
 (`default = []`),
 `UNIVERSAL_CHAIN_SIGNER_API_VERSION = 1`,
 `BIP110_PREFLIGHT_API_VERSION = 1`, and

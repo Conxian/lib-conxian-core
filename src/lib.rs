@@ -16,11 +16,11 @@
 //! - `adapters`: Universal chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, +15 family adapters)
 //! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
-//! - `sdk`: **Comprehensive SDK re-exports** — all 50 conxius-enclave-sdk modules organized by category (Session 52)
+//! - `sdk`: **Comprehensive SDK re-exports** — all 70 accessible conxius-enclave-sdk modules organized by category (Session 52)
 //!
 //! ## SDK Features (Session 52 — Full Alignment)
 //!
-//! Enable the `full-sdk` feature for access to ALL 50 SDK modules:
+//! Enable the `full-sdk` feature for access to all 70 accessible SDK modules:
 //!
 //! ```toml
 //! lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
@@ -74,7 +74,7 @@ pub mod rgb;
 pub mod signing;
 pub mod stacks;
 
-// ── SDK re-exports (Session 52: all 50 modules) ──
+// ── SDK re-exports (Session 52: all 70 accessible modules) ──
 #[cfg(any(
     feature = "enclave",
     feature = "sdk-blockchain",

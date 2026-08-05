@@ -210,7 +210,7 @@ metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
 This is the initial Core-owned serialized-contract checkpoint. Its known
-compatibility assumptions are limited to Core `0.3.1`, Rust `1.91+`, the Core
+compatibility assumptions are limited to Core `0.3.1`, Rust `1.97.1+`, the Core
 default feature set (`default = []`), signing API version `1`, BIP-110 preflight
 API version `1`, and protocol-verifier evidence binding version `1`.
 

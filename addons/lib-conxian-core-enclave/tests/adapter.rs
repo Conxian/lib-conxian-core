@@ -6,7 +6,9 @@ use std::sync::{
 use conxius_enclave_sdk::{
     config::Network as SdkNetwork,
     enclave::{
-        attestation::{AttestationLevel as SdkAttestationLevel, DeviceIntegrityReport},
+        attestation::{
+            AttestationLevel as SdkAttestationLevel, AttestationReportType, DeviceIntegrityReport,
+        },
         EnclaveManager, SignRequest as SdkSignRequest, SignResponse as SdkSignResponse,
         SigningAlgorithm as SdkSigningAlgorithm,
     },
@@ -149,12 +151,17 @@ fn attestation(level: SdkAttestationLevel) -> String {
 
 fn attestation_with_nonce(level: SdkAttestationLevel, challenge_nonce: Vec<u8>) -> String {
     serde_json::to_string(&DeviceIntegrityReport {
+        report_version: 1,
+        report_type: AttestationReportType::DeviceIntegrity,
         level,
         challenge_nonce,
         signature: vec![4, 5, 6],
+        attested_operation_public_key: vec![7, 8, 9],
+        signer_key_binding: None,
         certificate_chain: vec!["device".to_owned(), "root".to_owned()],
         timestamp: 1,
         extension_data: "deterministic-test-double".to_owned(),
+        extensions: vec![],
     })
     .unwrap()
 }
