@@ -117,7 +117,7 @@ jobs:
           if [ -z "$SG_ID" ] || [ "$SG_ID" = "None" ]; then
             SG_ID=$(aws ec2 create-security-group \
               --group-name conxian-nitro-sg \
-              --description "Nitro enclave signing — SSH + gRPC" \
+              --description "Nitro enclave signing: SSH + gRPC" \
               --query 'GroupId' --output text)
             aws ec2 authorize-security-group-ingress \
               --group-id "$SG_ID" --protocol tcp --port 22 --cidr 0.0.0.0/0
