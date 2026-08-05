@@ -3,56 +3,47 @@
 //! Comprehensive re-exports of all publicly-accessible conxius-enclave-sdk modules,
 //! organized by category. Each category is gated behind a feature flag.
 //!
-//! Enable via Cargo.toml:
-//! ```toml
-//! lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
-//! ```
+//! ## Module Map (78 public modules → 7 categories; Session 57 v2.0.13 ground-truth)
 //!
-//! Or enable individual categories:
-//! ```toml
-//! lib-conxian-core = { version = "0.3", features = ["sdk-blockchain", "sdk-cross-cutting"] }
-//! ```
+//! | Category | Feature | Modules | Count |
+//! |----------|---------|---------|:-----:|
+//! | Blockchain | `sdk-blockchain` | ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router | 24 |
+//! | Cross-cutting | `sdk-cross-cutting` | a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml | 15 |
+//! | Nexus | `sdk-nexus` | nexus::{fedimint, roast} | 2 |
+//! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support | 5 |
+//! | Signing | `sdk-signing` | signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml} | 13 |
+//! | Enclave | `enclave` | android_authorization, android_strongbox*, attestation, cloud*, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | 11 |
+//! | Rails | `sdk-rails` | (none — all `pub(crate)` in SDK) | 0 |
 //!
-//! ## Module Map (57 public modules → 6 categories; Session 57 ground-truth from v2.0.12)
+//! \* = gated behind `development-simulators` in SDK
 //!
-//! | Category | Feature | Modules | Status |
-//! |----------|---------|---------|:------:|
-//! | Blockchain | `sdk-blockchain` | ark, asset, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, sidl, solana, stacks, swap_router | ✅ |
-//! | Cross-cutting | `sdk-cross-cutting` | a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml | ✅ |
-//! | Nexus | `sdk-nexus` | nexus::fedimint | ✅ |
-//! | Infrastructure | `sdk-infrastructure` | config, state, telemetry, wasm_support | ✅ |
-//! | Enclave | `enclave` | android_authorization, android_strongbox, attestation, cloud, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | ✅ |
-//!
-//! **Not re-exported:**
-//! - Rails modules (`bisq`, `boltz`, `changelly`, `ntt`, `wormhole`, `x402`): `pub(crate)` in SDK — internal only
-//! - `frost_crypto`, `bip110_compliant`: behind SDK feature gates
-//! - `babylon`, `rgb`, `statechain`, `roast`, `signing/*`, `serde_big_array`: added to SDK main after v2.0.12 (pending v2.0.13 release)
-//! - `wasm_bindings`: `cfg(wasm32)` gated
-//!
-//! **Note:** SDK modules behind feature gates (frost_crypto, bip110, nitro, etc.)
-//! are only available when those SDK features are active. Consumers should enable
-//! the corresponding crate features on `conxius-enclave-sdk` if needed.
+//! **Blocked modules:**
+//! - Rails (6): `pub(crate)` in SDK — cannot re-export
+//! - `frost_crypto`: `#[cfg(feature = "frost-crypto")]` in SDK
+//! - `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
+//! - `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK
 
 // ── Full SDK re-export (always available when any sdk feature is enabled) ──
 
-/// Re-export the entire conxius-enclave-sdk crate.
-/// Access via `conxian_core::sdk::conxius_enclave_sdk::protocol::bitcoin` etc.
 #[cfg(any(
     feature = "enclave",
     feature = "sdk-blockchain",
     feature = "sdk-cross-cutting",
+    feature = "sdk-rails",
     feature = "sdk-nexus",
     feature = "sdk-infrastructure",
+    feature = "sdk-signing",
 ))]
 pub use conxius_enclave_sdk;
 
 // ── Convenience re-exports organized by category ──
-// These mirror the actual SDK module structure as confirmed by CI build.
 
 #[cfg(feature = "sdk-blockchain")]
 pub mod blockchain {
     pub use conxius_enclave_sdk::protocol::ark;
     pub use conxius_enclave_sdk::protocol::asset;
+    pub use conxius_enclave_sdk::protocol::babylon;
+    pub use conxius_enclave_sdk::protocol::bip110;
     pub use conxius_enclave_sdk::protocol::bip322;
     pub use conxius_enclave_sdk::protocol::bitcoin;
     pub use conxius_enclave_sdk::protocol::bitvm;
@@ -67,17 +58,14 @@ pub mod blockchain {
     pub use conxius_enclave_sdk::protocol::lightning;
     pub use conxius_enclave_sdk::protocol::mmr;
     pub use conxius_enclave_sdk::protocol::musig2;
+    pub use conxius_enclave_sdk::protocol::rgb;
     pub use conxius_enclave_sdk::protocol::sidl;
     pub use conxius_enclave_sdk::protocol::solana;
     pub use conxius_enclave_sdk::protocol::stacks;
+    pub use conxius_enclave_sdk::protocol::statechain;
     pub use conxius_enclave_sdk::protocol::swap_router;
-    // v2.0.13+ (on main, not yet in any release):
-    // pub use conxius_enclave_sdk::protocol::babylon;
-    // pub use conxius_enclave_sdk::protocol::rgb;
-    // pub use conxius_enclave_sdk::protocol::statechain;
-    // Feature-gated in SDK: cfg(frost-crypto) and cfg(bip110_compliant)
+    // #[cfg(feature = "frost-crypto")] in SDK:
     // pub use conxius_enclave_sdk::protocol::frost_crypto;
-    // pub use conxius_enclave_sdk::protocol::bip110;
 }
 
 #[cfg(feature = "sdk-cross-cutting")]
@@ -99,52 +87,52 @@ pub mod cross_cutting {
     pub use conxius_enclave_sdk::protocol::zkml;
 }
 
-// Rails modules are `pub(crate)` in SDK v2.0.12 — cannot re-export.
-// Revisit after SDK v2.0.13 makes them public.
-//
+// Rails modules are `pub(crate)` in SDK — cannot re-export.
 // #[cfg(feature = "sdk-rails")]
 // pub mod rails { ... }
 
-// Nexus modules are nested under protocol::nexus::
 #[cfg(feature = "sdk-nexus")]
 pub mod nexus {
     pub use conxius_enclave_sdk::protocol::nexus::fedimint;
-    // v2.0.13+ (on main, not yet in any release):
-    // pub use conxius_enclave_sdk::protocol::nexus::roast;
+    pub use conxius_enclave_sdk::protocol::nexus::roast;
 }
 
 #[cfg(feature = "sdk-infrastructure")]
 pub mod infrastructure {
     pub use conxius_enclave_sdk::config;
+    pub use conxius_enclave_sdk::serde_big_array;
     pub use conxius_enclave_sdk::state;
     pub use conxius_enclave_sdk::telemetry;
     pub use conxius_enclave_sdk::wasm_support;
-    // cfg(wasm32) gated:
+    // #[cfg(target_arch = "wasm32")] in SDK:
     // pub use conxius_enclave_sdk::wasm_bindings;
-    // v2.0.13+ (on main, not yet in any release):
-    // pub use conxius_enclave_sdk::serde_big_array;
 }
 
-// ── Signing module (Session 57 — does not exist in SDK v2.0.12) ──
-//
-// The `signing/` crate was added to SDK main after v2.0.12.
-// Will be re-exported here after v2.0.13 release:
-//
-// #[cfg(feature = "sdk-signing")]
-// pub mod signing {
-//     pub use conxius_enclave_sdk::signing::musig2_signing;
-//     pub use conxius_enclave_sdk::signing::bip322_signing;
-//     pub use conxius_enclave_sdk::signing::taproot;
-//     pub use conxius_enclave_sdk::signing::ucs;
-//     ...
-// }
+// ── Signing module (Session 57 — 13 modules, unblocked with v2.0.13) ──
+
+#[cfg(feature = "sdk-signing")]
+pub mod signing {
+    pub use conxius_enclave_sdk::signing::bip110_signing;
+    pub use conxius_enclave_sdk::signing::bip322_signing;
+    pub use conxius_enclave_sdk::signing::bitvm2_signing;
+    pub use conxius_enclave_sdk::signing::covenant_signing;
+    pub use conxius_enclave_sdk::signing::dlc_signing;
+    pub use conxius_enclave_sdk::signing::lightning_signing;
+    pub use conxius_enclave_sdk::signing::musig2_signing;
+    pub use conxius_enclave_sdk::signing::statechain_signing;
+    pub use conxius_enclave_sdk::signing::taproot;
+    pub use conxius_enclave_sdk::signing::threshold;
+    pub use conxius_enclave_sdk::signing::ucs;
+    pub use conxius_enclave_sdk::signing::wasm_runtime;
+    pub use conxius_enclave_sdk::signing::zkml_signing;
+}
 
 // ── Enclave module (re-exported at crate root for backward compat) ──
 
 #[cfg(feature = "enclave")]
 pub mod enclave_sdk {
     pub use conxius_enclave_sdk::enclave::android_authorization;
-    // Gated behind `development-simulators` in SDK:
+    // #[cfg(any(test, feature = "development-simulators"))] in SDK:
     // pub use conxius_enclave_sdk::enclave::android_strongbox;
     // pub use conxius_enclave_sdk::enclave::cloud;
     pub use conxius_enclave_sdk::enclave::attestation;
