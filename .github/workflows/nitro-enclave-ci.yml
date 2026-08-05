@@ -108,6 +108,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Provision Nitro spot instance
+        id: provision
         run: |
           set -euo pipefail
           # Use existing security group or create if missing
@@ -166,6 +167,7 @@ jobs:
           echo "sg_id=$SG_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait for instance ready
+        id: wait
         run: |
           aws ec2 wait instance-status-ok --instance-ids "${{ steps.provision.outputs.instance_id }}"
           IP=$(aws ec2 describe-instances \

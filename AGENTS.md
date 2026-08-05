@@ -203,7 +203,7 @@ Empirically audited permissions for IAM user `botshelo` (account `692112933743`,
    ```json
    {
      "Effect": "Allow",
-     "Action": ["ec2:RunInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:AddRoleToInstanceProfile","iam:PassRole"],
+     "Action": ["ec2:RunInstances","ec2:TerminateInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:AddRoleToInstanceProfile","iam:PassRole"],
      "Resource": "*",
      "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}}
    }

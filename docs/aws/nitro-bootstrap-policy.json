@@ -6,6 +6,7 @@
       "Effect": "Allow",
       "Action": [
         "ec2:RunInstances",
+        "ec2:TerminateInstances",
         "ec2:CreateKeyPair"
       ],
       "Resource": "*"
