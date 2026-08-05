@@ -141,7 +141,7 @@ jobs:
           echo "AMI: $AMI_ID | Subnet: $SUBNET_ID"
 
           # Launch spot instance with Nitro enabled (fallback instance types)
-          for ITYPE in m5.xlarge m5d.xlarge m5n.xlarge; do
+          for ITYPE in m5.xlarge m5d.xlarge m5n.xlarge m5a.xlarge m6i.xlarge c5.xlarge c5d.xlarge; do
             INSTANCE_ID=$(aws ec2 run-instances \
               --image-id "$AMI_ID" \
               --instance-type "$ITYPE" \
