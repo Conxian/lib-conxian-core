@@ -5,12 +5,12 @@ This document defines the mandatory hygiene standards, audit cadence, and except
 ## 1. Automated Guardrails
 
 ### 1.1 Forbidden File Checks
-The CI pipeline (`.github/workflows/hygiene.yml`) automatically scans every push and pull request for forbidden tracked files, including:
-- Environment files (`.env`)
-- Private keys (`*.pem`, `*.key`)
-- Dependency directories (`node_modules`)
-- Build artifacts (`target/`, `dist/`, `build/`)
-- Test reports (`test-results/`, `playwright-report/`)
+The CI pipeline (`.github/workflows/hygiene.yml`) and local verification script (`scripts/verify_tracked_artifacts.py`) automatically scan every commit, push, and pull request for forbidden tracked files. The checked patterns are fully synchronized across the codebase, covering:
+- **Environment & config files**: `.env`, `.env.*`
+- **Private keys & certificates**: `*.pem`, `*.key`, `*.pub`
+- **Dependency directories**: `node_modules`
+- **Build artifacts**: `target/`, `dist/`, `build/`
+- **Test reports & coverage**: `test-results/`, `playwright-report/`
 
 ### 1.2 Secret Scanning
 GitHub Secret Scanning must be enabled for all public and private repositories to detect accidental credential exposure.
