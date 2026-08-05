@@ -187,7 +187,7 @@ impl TrustPolicy {
         if report.challenge_nonce != expected_nonce {
             return Err(AdapterError::AttestationChallengeMismatch);
         }
-        let level = AttestationLevel::from_sdk(report.level.clone());
+        let level = AttestationLevel::from_sdk(report.level);
 
         let allowed = match self.minimum_attestation {
             Some(MinimumAttestation::Tee) => {

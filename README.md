@@ -9,7 +9,7 @@ Shared protocol primitives for the Conxian ecosystem.
 ## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use the production
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.12) instead.
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.14) instead.
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
@@ -56,10 +56,10 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 ## Rust and feature compatibility
 
-This crate supports Rust `1.94.1+` for both the default feature set and the
-optional `enclave` feature. The enclave path uses
-`conxius-enclave-sdk 2.0.12`, whose locked dependency graph includes Alloy
-components requiring Rust `1.94.1`. See the
+This crate supports Rust `1.97.1+` for both the default feature set and the
+optional SDK features. The root optional dependency selects Git tag `v2.0.14`;
+that tag's manifest still reports package version `2.0.12` and requires Rust
+`1.97.1`. See the
 [compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
 coverage, and SDK release-coordination requirements.
 
@@ -91,7 +91,7 @@ The root package's optional `enclave` feature remains available for direct
 dependency compatibility, but the companion crate is the documented adapter
 surface. See [docs/SIGNING_ARCHITECTURE.md](docs/SIGNING_ARCHITECTURE.md) and
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for supported capabilities and
-the Rust `1.94.1+` effective toolchain floor.
+the Rust `1.97.1+` effective toolchain floor.
 
 ### Quick Start
 

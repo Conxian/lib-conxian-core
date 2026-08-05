@@ -35,7 +35,7 @@ deterministic contracts and types; network I/O lives in consumer crates.
 default = []
 full-sdk = ["dep:conxius-enclave-sdk"]
 sdk-blockchain = ["full-sdk"]   # blockchain protocol types
-sdk-signing = ["full-sdk"]      # reserved compatibility feature
+sdk-signing = ["full-sdk"]      # signing primitives
 sdk-cross-cutting = ["full-sdk"] # chain abstraction, ERC-7683
 ```
 

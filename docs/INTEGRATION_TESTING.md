@@ -100,9 +100,9 @@ The exact pins represented by this checkpoint are:
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
-| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` exact `2.0.11` |
+| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` Git tag `v2.0.14` (manifest package version `2.0.12`) |
 | Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.11`; default features remain minimal |
-| SDK main line | `2.0.12` is metadata on unreleased upstream `main`; the latest published target remains exact `2.0.11` |
+| Companion SDK release | The adapter and evidence harness intentionally remain on the published `2.0.11` crate, separately from Core's Git-tagged optional dependency |
 | Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `3b091d2700d840514427e4190c40d631b6d8132c`; this checkpoint does not change that downstream pin |
 | Gateway | local Core crate integration; no cross-repository dependency is added here |
 | Wallet | TypeScript boundary; no Rust runtime dependency is added here |
@@ -113,8 +113,8 @@ contains the exact `lib-conxian-core` revision pin
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
-floor is Rust `1.94.1+`; the SDK `2.0.11` manifest's lower declaration does not
-lower that floor because its locked Alloy graph requires Rust `1.94.1`. The tests
+floor is Rust `1.97.1+`; the SDK `2.0.11` companion dependency's lower
+declaration does not lower the current Core workspace floor. The tests
 run with default features for Core and do not enable simulator/mock/dev bypasses.
 
 This document describes the Core-only fixture layer. Direct compile and

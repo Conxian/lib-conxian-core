@@ -6,7 +6,9 @@ use std::sync::{
 use conxius_enclave_sdk::{
     config::Network as SdkNetwork,
     enclave::{
-        attestation::{AttestationLevel as SdkAttestationLevel, AttestationReportType, DeviceIntegrityReport},
+        attestation::{
+            AttestationLevel as SdkAttestationLevel, AttestationReportType, DeviceIntegrityReport,
+        },
         EnclaveManager, SignRequest as SdkSignRequest, SignResponse as SdkSignResponse,
         SigningAlgorithm as SdkSigningAlgorithm,
     },
