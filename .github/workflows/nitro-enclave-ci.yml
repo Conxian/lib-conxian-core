@@ -2,7 +2,7 @@ name: Nitro Enclave Signing Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'docs/session-52-review-sync']
     paths:
       - 'addons/lib-conxian-core-enclave/**'
       - 'enclave-poc/**'
