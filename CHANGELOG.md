@@ -8,11 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.3.2] - 2026-08-07
 
 ### Changed
-- Updated the module catalog in `AGENTS.md` to document 17 public modules, supporting 42 chains and aligning with ecosystem requirements. Removed the phantom `sdk_primitive` reference.
-- Pinned `conxius-enclave-sdk` to v2.0.15 (includes P1 deprecation cleanup).
-
-### Removed
-- 5 deprecated APIs: `Bip322Bridge::verify_message` (use `verify_message_checked`), `Bip322Bridge::sign_message` (use `sign_message_checked`), `FedimintMint::connect` (use `connect_checked`), `EnclaveVerifier::verify_attestation` (use `verify_attestation_checked`), `ProtocolVerifier::verify_all` (use `verify_all_checked`).
+- Bumped `conxius-enclave-sdk` dependency from v2.0.14 to v2.0.16 (crates.io publication with matching manifest `version` field).
+- Added `version = "3.0.0"` to `frost-secp256k1-tr` git dependency for crates.io publish compatibility.
+- Published to crates.io — `lib-conxian-core = "0.3.2"` is now available on the registry.
 
 ## [v0.3.0] - 2026-07-21
 
