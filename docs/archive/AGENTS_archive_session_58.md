@@ -142,10 +142,89 @@ re-exported at `sdk::conxius_enclave_sdk` for direct access.
 - **Source of Truth:** Refer to `bitcoinlayers.org` for the latest Bitcoin Layer 2 research.
 - **Protocol Coverage:** When adding a new chain or protocol to the ecosystem, first add canonical types here, then implement adapters in gateway/nexus.
 
+## AWS Nitro Permissions Matrix
 
-## Key References
-- **Release process**: `docs/RELEASE_PROCESS.md`
-- **Compatibility matrix**: `docs/COMPATIBILITY.md`
-- **Architecture boundaries**: `docs/ARCHITECTURE_BOUNDARIES.md`
-- **Session archive**: `docs/archive/AGENTS_archive_session_58.md` (AWS Nitro matrix, session history)
-- **Build**: `cargo build --locked && cargo test --locked && cargo clippy -- -D warnings`
+Empirically audited permissions for IAM user `botshelo` (account `692112933743`, region `us-east-1`).
+
+### Allowed
+
+| Action | Resource | Notes |
+|--------|----------|-------|
+| `sts:GetCallerIdentity` | — | Identity verification |
+| `ec2:DescribeVpcs` | `*` | VPC topology |
+| `ec2:DescribeSubnets` | `*` | Subnet discovery |
+| `ec2:DescribeImages` | `*` | AMI selection |
+| `ec2:DescribeSpotPriceHistory` | `*` | Cost estimation |
+| `ec2:DescribeKeyPairs` | `*` | Returns empty (no keys exist) |
+| `ec2:DescribeSecurityGroups` | `*` | SG audit |
+| `ec2:CreateSecurityGroup` | `*` | Created `sg-074fed552d15a1677` (SSH + enclave 50051) |
+| `ec2:AuthorizeSecurityGroupIngress` | `*` | Rule provisioning |
+| `iam:CreateRole` | `*` | Created `conxian-nitro-enclave-role` |
+| `iam:AttachRolePolicy` | `*` | Attached `AmazonSSMManagedInstanceCore` |
+| `servicequotas:ListServiceQuotas` | `*` | Quota verification |
+| `ce:GetCostAndUsage` | `*` | Cost tracking |
+
+### Denied (Required for Nitro Provisioning)
+
+| Action | Resource | Required For |
+|--------|----------|--------------|
+| `ec2:RunInstances` | `instance/*` | Launching Nitro-enabled EC2 |
+| `ec2:CreateKeyPair` | `key-pair/*` | SSH access to instances |
+| `ec2:ImportKeyPair` | `key-pair/*` | Alternative SSH setup |
+| `iam:CreateInstanceProfile` | `*` | Attaching role to instance |
+| `iam:AddRoleToInstanceProfile` | `*` | Linking role to instance profile |
+| `iam:CreateOpenIDConnectProvider` | `*` | GitHub OIDC trust |
+| `iam:PassRole` | `*` | Instance profile assignment |
+
+### GitHub Secrets (Provisioned)
+
+| Secret Name | Purpose | Scope |
+|-------------|---------|-------|
+| `AWS_ACCESS_KEY_ID` | IAM user access key | Repository |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key | Repository |
+| `AWS_REGION` | Default region (`us-east-1`) | Repository |
+
+### Nitro CI Workflow (`.github/workflows/nitro-enclave-ci.yml`)
+
+| Job | Trigger | Description |
+|-----|---------|-------------|
+| `build-test` | push, PR, manual | Build POC binary, verify 6 scenarios |
+| `docker-build` | push, PR, manual | Build Nitro EIF-ready Docker image |
+| `provision-nitro` | manual only | Provision spot instance, build EIF, run signing test, teardown |
+
+### Cost Controls
+
+- **Spot pricing:** m5.xlarge ~$0.06/hr (vs $0.192 on-demand)
+- **Auto-teardown:** 4h TTL tag on all instances; `always()` teardown in CI
+- **EBS:** 30 GB gp3 per instance (~$2.40/month if persistent)
+- **Estimated POC cost:** <$0.50 per CI run (build 5 min + provision 30 min + egress)
+
+### Path to Production
+
+1. **Minimum permissions** — Admin attaches following policy to `botshelo`:
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": ["ec2:RunInstances","ec2:TerminateInstances","ec2:CreateKeyPair","iam:CreateInstanceProfile","iam:AddRoleToInstanceProfile","iam:PassRole"],
+     "Resource": "*",
+     "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}}
+   }
+   ```
+2. **OIDC alternative** — Admin creates `github-actions-nitro-provisioner` IAM role
+   with trust for `token.actions.githubusercontent.com`, allowing CI to assume the
+   role without static credentials.
+3. **Production hardening:**
+   - Pre-bake EIF in CI, sign with AWS KMS, push to private ECR
+   - Use SSM Session Manager instead of SSH (no key pair needed)
+   - Add PCR preset verification in attestation chain
+   - Tag all resources with `Environment=production`, `BillingTag=nitro-enclave`
+
+
+## Session 52 Alignment Summary (2026-08-05)
+
+- **SDK**: conxius-enclave-sdk v2.0.16 (git tag), adapter 28 tests pass
+- **Toolchain**: rustc 1.97 across all repos (core, sdk, gateway, nexus)
+- **Nitro CI**: green end-to-end (build → docker → provision → teardown)
+- **Branch**: `docs/session-52-review-sync` — pending merge to `main`
+- **conxian-nexus**: PR #216 open (stable → 1.97)
+- **IAM**: `conxian-nitro-bootstrap` applied to `botshelo`
