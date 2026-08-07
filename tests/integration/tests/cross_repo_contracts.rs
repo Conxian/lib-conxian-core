@@ -9,9 +9,8 @@ use lib_conxian_core::control_model::{
     VerificationClass, VerificationStatus,
 };
 use lib_conxian_core::signing::{
-    ChainSigningCapability, SignRequest, SignResponse, SignerCapabilities,
-    SigningAlgorithm, SigningOperation,
-    AddressFormat, SigningTarget,
+    AddressFormat, ChainSigningCapability, SignRequest, SignResponse, SignerCapabilities,
+    SigningAlgorithm, SigningOperation, SigningTarget,
 };
 use lib_conxian_core::verifier::{
     BlockHeader, ChainId, LatestVerifiedBlock, TransactionFinalityResult,
@@ -100,16 +99,18 @@ fn nexus_sign_response_json_round_trip() {
 
 #[test]
 fn nexus_signer_capabilities_serde_round_trip() {
-    let caps = SignerCapabilities::new(1, vec![
-        ChainSigningCapability::new(
+    let caps = SignerCapabilities::new(
+        1,
+        vec![ChainSigningCapability::new(
             SigningTarget::new(Chain::Bitcoin, ChainFamily::BitcoinUtxo),
             vec![SigningAlgorithm::EcdsaSecp256k1],
             vec![SigningOperation::SignMessage],
             vec![AddressFormat::BitcoinBech32],
-        ),
-    ]);
+        )],
+    );
     let json = serde_json::to_value(&caps).expect("SignerCapabilities serializes");
-    let decoded: SignerCapabilities = serde_json::from_value(json).expect("SignerCapabilities deserializes");
+    let decoded: SignerCapabilities =
+        serde_json::from_value(json).expect("SignerCapabilities deserializes");
     assert_eq!(decoded.api_version, 1);
     assert_eq!(decoded.chains.len(), 1);
 }
@@ -135,8 +136,8 @@ fn verifier_finality_status_exhaustive_and_serde_round_trip() {
     ];
     for status in &all {
         let json = serde_json::to_value(status).expect("finality status serializes");
-        let decoded: TransactionFinalityStatus = serde_json::from_value(json)
-            .expect("finality status deserializes");
+        let decoded: TransactionFinalityStatus =
+            serde_json::from_value(json).expect("finality status deserializes");
         assert_eq!(decoded, *status);
     }
 }
@@ -188,6 +189,9 @@ fn verifier_finality_result_serde_round_trip() {
     assert_eq!(decoded.transaction_id, "tx-finality-1");
     assert_eq!(decoded.observed_confirmations, 3);
     assert_eq!(decoded.required_confirmations, 6);
-    assert_eq!(decoded.status, TransactionFinalityStatus::Confirmed { confirmations: 3 });
+    assert_eq!(
+        decoded.status,
+        TransactionFinalityStatus::Confirmed { confirmations: 3 }
+    );
     assert!(decoded.latest_block.is_some());
 }

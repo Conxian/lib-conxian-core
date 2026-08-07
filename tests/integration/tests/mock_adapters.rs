@@ -13,10 +13,9 @@ use lib_conxian_core::control_model::{
 };
 use lib_conxian_core::signing::{
     AddressFormat, ChainAddress, ChainSigningCapability, DerivationContext, DerivationIndex,
-    DerivationPath, DerivationPurpose, PublicVerificationKey, SignRequest, SignResponse,
-    Signature, SignatureEncoding, SignerCapabilities, SigningAlgorithm, SigningOperation,
-    SigningPayload, SigningTarget, UniversalChainSigner,
-    UNIVERSAL_CHAIN_SIGNER_API_VERSION,
+    DerivationPath, DerivationPurpose, PublicVerificationKey, SignRequest, SignResponse, Signature,
+    SignatureEncoding, SignerCapabilities, SigningAlgorithm, SigningOperation, SigningPayload,
+    SigningTarget, UniversalChainSigner, UNIVERSAL_CHAIN_SIGNER_API_VERSION,
 };
 use lib_conxian_core::verifier::{
     ChainId, LatestVerifiedBlock, ProofVerificationRequest, ProofVerificationResult,
@@ -39,7 +38,11 @@ pub fn dctx(purpose: DerivationPurpose) -> DerivationContext {
 }
 
 pub fn btc_sig(bytes: &[u8]) -> Signature {
-    Signature::new(SigningAlgorithm::EcdsaSecp256k1, SignatureEncoding::Der, bytes)
+    Signature::new(
+        SigningAlgorithm::EcdsaSecp256k1,
+        SignatureEncoding::Der,
+        bytes,
+    )
 }
 
 pub fn btc_pubkey(bytes: &[u8]) -> PublicVerificationKey {
@@ -252,9 +255,9 @@ impl MockSigner {
         SignResponse {
             signature: btc_sig(&[0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02]),
             verification_key: btc_pubkey(&[
-                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x01,
             ]),
             address: ChainAddress::new(Chain::Bitcoin, AddressFormat::BitcoinBech32, "bc1qtest"),
             derivation: request.derivation.clone(),
@@ -267,7 +270,10 @@ impl UniversalChainSigner for MockSigner {
         &self.capabilities
     }
 
-    fn sign_impl(&self, request: &SignRequest) -> Result<SignResponse, lib_conxian_core::signing::SigningError> {
+    fn sign_impl(
+        &self,
+        request: &SignRequest,
+    ) -> Result<SignResponse, lib_conxian_core::signing::SigningError> {
         self.sign_calls.lock().unwrap().push(request.clone());
 
         if let Some(response) = self.queued_responses.lock().unwrap().pop() {
@@ -284,27 +290,25 @@ impl UniversalChainSigner for MockSigner {
 fn mock_verifier_backend_records_finality_calls() {
     let backend = MockVerifierBackend::bitcoin_capable();
     let chain = btc_chain();
-    let request =
-        TransactionFinalityRequest::new(chain.clone(), "tx-abc123", 6, true);
+    let request = TransactionFinalityRequest::new(chain.clone(), "tx-abc123", 6, true);
 
-    backend.set_finality_status("tx-abc123", TransactionFinalityStatus::Confirmed { confirmations: 3 });
+    backend.set_finality_status(
+        "tx-abc123",
+        TransactionFinalityStatus::Confirmed { confirmations: 3 },
+    );
     let result = backend
         .backend_verify_transaction_finality(&request)
         .expect("should succeed");
 
     assert_eq!(result.transaction_id, "tx-abc123");
     assert_eq!(result.observed_confirmations, 3);
-    assert_eq!(
-        backend.verify_finality_calls.lock().unwrap().len(),
-        1
-    );
+    assert_eq!(backend.verify_finality_calls.lock().unwrap().len(), 1);
 }
 
 #[test]
 fn mock_verifier_backend_defaults_to_pending_when_no_status_set() {
     let backend = MockVerifierBackend::bitcoin_capable();
-    let request =
-        TransactionFinalityRequest::new(btc_chain(), "unknown-tx", 1, false);
+    let request = TransactionFinalityRequest::new(btc_chain(), "unknown-tx", 1, false);
 
     let result = backend
         .backend_verify_transaction_finality(&request)
@@ -333,15 +337,11 @@ fn mock_signer_returns_queued_response() {
     let queued = SignResponse {
         signature: btc_sig(&[0x30, 0x07, 0x02, 0x01, 0x02, 0x02, 0x02, 0x03, 0x04]),
         verification_key: btc_pubkey(&[
-            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x01,
         ]),
-        address: ChainAddress::new(
-            Chain::Bitcoin,
-            AddressFormat::BitcoinBech32,
-            "bc1qqueued",
-        ),
+        address: ChainAddress::new(Chain::Bitcoin, AddressFormat::BitcoinBech32, "bc1qqueued"),
         derivation: request.derivation.clone(),
     };
     signer.queue_response(queued);

@@ -9,8 +9,11 @@
 //! signing. If validation fails, [`suggestions`](Bip110SizeGuard::suggestions)
 //! returns human-readable optimization guidance.
 
-use crate::control_model::bip110::{Bip110TransactionShape, MAX_OP_RETURN_BYTES, MAX_PUSHDATA_BYTES, MAX_SCRIPT_PUBKEY_BYTES, MAX_WITNESS_ELEMENT_BYTES};
-use crate::control_model::trust::{Bip110Compliance, Bip110ValidationResult, Bip110Violation};
+use crate::control_model::bip110::{
+    Bip110TransactionShape, MAX_OP_RETURN_BYTES, MAX_PUSHDATA_BYTES, MAX_SCRIPT_PUBKEY_BYTES,
+    MAX_WITNESS_ELEMENT_BYTES,
+};
+use crate::control_model::trust::{Bip110Compliance, Bip110ValidationResult};
 
 /// Tracks BIP-110-constrained byte surfaces during transaction construction.
 ///
@@ -255,7 +258,10 @@ mod tests {
         assert_eq!(result.violations.len(), 1);
         assert!(matches!(
             result.violations[0],
-            Bip110Violation::PushdataExceedsLimit { size: 300, max: 256 }
+            Bip110Violation::PushdataExceedsLimit {
+                size: 300,
+                max: 256
+            }
         ));
     }
 
@@ -294,14 +300,20 @@ mod tests {
         assert!(!result.is_compliant);
         assert!(matches!(
             result.violations[0],
-            Bip110Violation::WitnessElementExceedsLimit { size: 300, max: 256 }
+            Bip110Violation::WitnessElementExceedsLimit {
+                size: 300,
+                max: 256
+            }
         ));
     }
 
     #[test]
     fn multiple_violations_aggregated() {
         let mut guard = Bip110SizeGuard::new();
-        guard.track_pushdata(300).track_op_return(100).track_witness(500);
+        guard
+            .track_pushdata(300)
+            .track_op_return(100)
+            .track_witness(500);
 
         let result = guard.validate();
         assert!(!result.is_compliant);
@@ -381,7 +393,10 @@ mod tests {
         assert!(!result.is_compliant);
         assert!(matches!(
             result.violations[0],
-            Bip110Violation::PushdataExceedsLimit { size: 200, max: 128 }
+            Bip110Violation::PushdataExceedsLimit {
+                size: 200,
+                max: 128
+            }
         ));
     }
 
@@ -420,7 +435,11 @@ mod tests {
         let mut guard = Bip110SizeGuard::new();
         assert_eq!(guard.element_count(), 0);
 
-        guard.track_pushdata(1).track_op_return(2).track_script_pubkey(22).track_witness(3);
+        guard
+            .track_pushdata(1)
+            .track_op_return(2)
+            .track_script_pubkey(22)
+            .track_witness(3);
         assert_eq!(guard.element_count(), 4);
     }
 
