@@ -42,6 +42,7 @@ pub struct Bip110SizeGuard {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 enum SizeWarning {
     #[allow(clippy::enum_variant_names)]
     PushdataApproaching {
