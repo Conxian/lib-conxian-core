@@ -2075,8 +2075,8 @@ dependencies = [
 
 [[package]]
 name = "conxius-enclave-sdk"
-version = "2.0.15"
-source = "git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.15#5cf890bfd6c6fc3ffcd43593d68fe9c94ea61a49"
+version = "2.0.16"
+source = "git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.16#4355a71010abc019abd8fe97b4c8db2f1861f6df"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -3575,7 +3575,7 @@ dependencies = [
  "base64 0.23.1",
  "bitcoin 0.32.102",
  "chrono",
- "conxius-enclave-sdk 2.0.15",
+ "conxius-enclave-sdk 2.0.16",
  "der 0.8.1",
  "getrandom 0.2.17",
  "hex",
