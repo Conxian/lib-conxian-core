@@ -1,6 +1,6 @@
 [package]
 name = "lib-conxian-core"
-version = "0.3.1"
+version = "0.3.2"
 description = "Foundational library and shared protocol primitives for the Conxian ecosystem."
 edition = "2021"
 rust-version = "1.97.1"
@@ -43,7 +43,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
 # Pinned to Git tag v2.0.14; its manifest package version remains 2.0.12.
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.14", default-features = false, optional = true }
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.15", default-features = false, optional = true }
 
 [features]
 default = []
