@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the opt-in Core/SDK v2.0.11 compatibility evidence matrix."""
+"""Run the opt-in Core/SDK v2.0.14 compatibility evidence matrix."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ MANIFEST = ROOT / "tests" / "sdk-compat" / "Cargo.toml"
 SUPPORTED_SDK_FEATURES = (
     "default",
     "mock-cloud-enclave",
-    "dev-attestation-bypass",
 )
 UNSUPPORTED_SDK_FEATURES = (
     "development-simulators",
@@ -23,7 +22,6 @@ UNSUPPORTED_SDK_FEATURES = (
 SDK_MATRIX = (
     ("default", ()),
     ("mock-cloud-enclave", ("mock-cloud-enclave",)),
-    ("dev-attestation-bypass", ("dev-attestation-bypass",)),
     ("all-supported", ("all-supported",)),
 )
 CORE_MATRIX = (
@@ -33,9 +31,9 @@ CORE_MATRIX = (
 
 
 def run_matrix(toolchain: str, offline: bool) -> None:
-    print("SDK v2.0.11 supported features: " + ", ".join(SUPPORTED_SDK_FEATURES))
+    print("SDK v2.0.14 supported features: " + ", ".join(SUPPORTED_SDK_FEATURES))
     print(
-        "SDK v2.0.11 unsupported candidates (not run): "
+        "SDK v2.0.14 unsupported candidates (not run): "
         + ", ".join(UNSUPPORTED_SDK_FEATURES)
     )
 

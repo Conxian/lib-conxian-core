@@ -13,7 +13,7 @@ autoexamples = false
 
 [dependencies]
 lib-conxian-core = { package = "lib-conxian-core", path = "../..", default-features = false }
-conxius-enclave-sdk = { version = "=2.0.11", default-features = false }
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.14", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
@@ -24,8 +24,7 @@ default = []
 run = []
 core-enclave = ["lib-conxian-core/enclave"]
 mock-cloud-enclave = ["conxius-enclave-sdk/mock-cloud-enclave"]
-dev-attestation-bypass = ["conxius-enclave-sdk/dev-attestation-bypass"]
-all-supported = ["mock-cloud-enclave", "dev-attestation-bypass"]
+all-supported = ["mock-cloud-enclave"]
 
 [[test]]
 name = "compatibility"
