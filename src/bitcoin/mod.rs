@@ -1,6 +1,7 @@
 //! Bitcoin-native protocol primitives
 //! Aligned with CXIP 20 Section 8.0
 
+pub mod bip110_builder;
 pub mod bip322;
 pub mod liquid_adapter;
 pub mod taproot;
