@@ -43,10 +43,23 @@ pub struct Bip110SizeGuard {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SizeWarning {
-    PushdataApproaching { size: usize, remaining: usize },
-    OpReturnApproaching { size: usize, remaining: usize },
-    ScriptPubKeyApproaching { size: usize, remaining: usize },
-    WitnessApproaching { size: usize, remaining: usize },
+    #[allow(clippy::enum_variant_names)]
+    PushdataApproaching {
+        size: usize,
+        remaining: usize,
+    },
+    OpReturnApproaching {
+        size: usize,
+        remaining: usize,
+    },
+    ScriptPubKeyApproaching {
+        size: usize,
+        remaining: usize,
+    },
+    WitnessApproaching {
+        size: usize,
+        remaining: usize,
+    },
 }
 
 impl Bip110SizeGuard {
@@ -231,8 +244,8 @@ impl Default for Bip110SizeGuard {
 
 #[cfg(test)]
 mod tests {
-    use crate::control_model::trust::Bip110Violation;
     use super::*;
+    use crate::control_model::trust::Bip110Violation;
 
     #[test]
     fn compliant_transaction_passes_validation() {
