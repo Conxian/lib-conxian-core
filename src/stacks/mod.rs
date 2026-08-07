@@ -73,17 +73,6 @@ impl StacksNakamoto {
         Err(StacksError::UnsupportedFinalityEvidence)
     }
 
-    /// Compatibility wrapper. It is intentionally fail-closed until real
-    /// Bitcoin evidence is supplied to a downstream verifier.
-    #[deprecated(
-        note = "use verify_bitcoin_finality_checked; a block number alone never authorizes finality"
-    )]
-    pub fn verify_bitcoin_finality(stacks_block: u64) -> bool {
-        matches!(
-            Self::verify_bitcoin_finality_checked(stacks_block),
-            Ok(true)
-        )
-    }
 }
 
 /// Core interface for the Stacks + sBTC Adapter (CON-709 Pilot).
@@ -173,10 +162,6 @@ mod tests {
             StacksNakamoto::verify_bitcoin_finality_checked(0),
             Err(StacksError::MalformedFinalityEvidence)
         );
-        #[allow(deprecated)]
-        {
-            assert!(!StacksNakamoto::verify_bitcoin_finality(100));
-        }
     }
 
     #[test]

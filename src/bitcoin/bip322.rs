@@ -72,14 +72,6 @@ impl Bip322Bridge {
         Err(Bip322VerificationError::Unsupported)
     }
 
-    /// Compatibility wrapper. It is intentionally fail-closed until an
-    /// audited downstream BIP-322 verifier is available.
-    #[deprecated(
-        note = "use verify_message_checked; Core returns false until audited BIP-322 verification is available"
-    )]
-    pub fn verify_message(msg: &Bip322Message) -> bool {
-        matches!(Self::verify_message_checked(msg), Ok(true))
-    }
 }
 
 #[cfg(test)]
@@ -107,10 +99,6 @@ mod tests {
             Bip322Bridge::verify_message_checked(&msg),
             Err(Bip322VerificationError::Unsupported)
         );
-        #[allow(deprecated)]
-        {
-            assert!(!Bip322Bridge::verify_message(&msg));
-        }
     }
 
     #[test]

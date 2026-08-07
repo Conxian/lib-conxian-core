@@ -85,16 +85,6 @@ impl ZKCompliance {
         Err(EnclaveVerificationError::UnsupportedProvider)
     }
 
-    /// Compatibility wrapper. Non-empty AML inputs are not authorization.
-    #[deprecated(
-        note = "use verify_aml_stateless_checked; Core returns false until provider-backed AML verification is available"
-    )]
-    pub fn verify_aml_stateless(identity_commitment: &str, tx_metadata: &str) -> bool {
-        matches!(
-            Self::verify_aml_stateless_checked(identity_commitment, tx_metadata),
-            Ok(true)
-        )
-    }
 }
 
 #[cfg(test)]
@@ -145,9 +135,5 @@ mod tests {
             ZKCompliance::verify_aml_stateless_checked("", "metadata"),
             Err(EnclaveVerificationError::EmptyEvidence)
         );
-        #[allow(deprecated)]
-        {
-            assert!(!ZKCompliance::verify_aml_stateless("id", "metadata"));
-        }
     }
 }

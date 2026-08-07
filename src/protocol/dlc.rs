@@ -206,17 +206,6 @@ impl DlcManager {
         Err(DlcVerificationError::UnsupportedExecutionContext)
     }
 
-    /// Compatibility wrapper. It is intentionally fail-closed until callers
-    /// provide the complete attestation and execution context.
-    #[deprecated(
-        note = "use verify_execution_checked or verify_oracle_attestation_for_intent; this wrapper returns false"
-    )]
-    pub fn verify_execution(intent: &DlcIntent, oracle_signature: &[u8]) -> bool {
-        matches!(
-            Self::verify_execution_checked(intent, oracle_signature),
-            Ok(true)
-        )
-    }
 }
 
 #[cfg(test)]
@@ -333,9 +322,5 @@ mod tests {
             DlcManager::verify_execution_checked(&intent, &[0x01; 31]),
             Err(DlcVerificationError::MalformedAttestation)
         );
-        #[allow(deprecated)]
-        {
-            assert!(!DlcManager::verify_execution(&intent, &[0x01; 32]));
-        }
     }
 }

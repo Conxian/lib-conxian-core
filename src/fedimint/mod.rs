@@ -155,15 +155,6 @@ impl FedimintAdapter {
         Ok(reconstructed == blinded)
     }
 
-    /// Compatibility wrapper for callers that only accept a boolean.
-    /// Malformed and unavailable evidence always returns `false`.
-    #[deprecated(note = "use verify_unblinded_checked for typed Fedimint errors")]
-    pub fn verify_unblinded(blinded: &[u8], blinding_factor: &[u8], secret: &[u8]) -> bool {
-        matches!(
-            Self::verify_unblinded_checked(blinded, blinding_factor, secret),
-            Ok(true)
-        )
-    }
 }
 
 #[cfg(test)]
