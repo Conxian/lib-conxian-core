@@ -82,5 +82,6 @@ full-sdk = [
 members = [
     "fuzz",
     "tests/sdk-compat",
+    "tests/integration",
     "addons/lib-conxian-core-enclave",
 ]

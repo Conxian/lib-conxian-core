@@ -3568,6 +3568,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lib-conxian-core-integration"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "lib-conxian-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lib-conxian-core-sdk-compat"
 version = "0.0.0"
 dependencies = [
