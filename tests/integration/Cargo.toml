@@ -1,0 +1,21 @@
+[package]
+name = "lib-conxian-core-integration"
+version = "0.0.0"
+description = "Integration test framework for Core ↔ SDK ↔ Gateway ↔ Nexus flows"
+edition = "2021"
+rust-version = "1.97.1"
+publish = false
+
+[dependencies]
+lib-conxian-core = { path = "../.." }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+
+[[test]]
+name = "mock_adapters"
+path = "tests/mock_adapters.rs"
+
+[[test]]
+name = "cross_repo_contracts"
+path = "tests/cross_repo_contracts.rs"
