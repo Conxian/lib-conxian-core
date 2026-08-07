@@ -154,7 +154,6 @@ impl FedimintAdapter {
         let reconstructed = Self::blind_note(secret, blinding_factor)?;
         Ok(reconstructed == blinded)
     }
-
 }
 
 #[cfg(test)]

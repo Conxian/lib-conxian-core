@@ -205,7 +205,6 @@ impl DlcManager {
 
         Err(DlcVerificationError::UnsupportedExecutionContext)
     }
-
 }
 
 #[cfg(test)]

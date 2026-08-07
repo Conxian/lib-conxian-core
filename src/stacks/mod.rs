@@ -72,7 +72,6 @@ impl StacksNakamoto {
         }
         Err(StacksError::UnsupportedFinalityEvidence)
     }
-
 }
 
 /// Core interface for the Stacks + sBTC Adapter (CON-709 Pilot).

@@ -71,7 +71,6 @@ impl Bip322Bridge {
 
         Err(Bip322VerificationError::Unsupported)
     }
-
 }
 
 #[cfg(test)]
