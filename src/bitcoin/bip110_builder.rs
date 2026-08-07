@@ -231,6 +231,7 @@ impl Default for Bip110SizeGuard {
 
 #[cfg(test)]
 mod tests {
+    use crate::control_model::trust::Bip110Violation;
     use super::*;
 
     #[test]
