@@ -4,6 +4,14 @@ This document defines the fail-closed release process for the protocol
 primitives crate. The source tree may intentionally contain a version that has
 not been published yet; normal CI must still be able to validate that state.
 
+
+## Workflow Security & Supply-Chain Integrity
+
+All GitHub Actions workflows in `.github/workflows/` (`main.yml`, `crates-publish.yml`, `neon_workflow.yml`, `nitro-enclave-ci.yml`, `hygiene.yml`, `cargo-audit.yml`, `dependency-review.yml`, `fuzz-regression.yml`, `sdk-compat.yml`, `secret-scan.yml`) enforce strict security controls:
+
+- **100% SHA Pinning:** Every external GitHub Action step is pinned to an explicit, immutable 40-character commit SHA with inline version comments (e.g., `# v9.0.2`).
+- **Least-Privilege Token Permissions:** All workflows declare explicit top-level or job-level `permissions` (e.g., `contents: read`) to enforce least-privilege token access.
+
 ## Authority and parity contract
 
 `Cargo.toml` `[package].version` is the authoritative candidate version. It
