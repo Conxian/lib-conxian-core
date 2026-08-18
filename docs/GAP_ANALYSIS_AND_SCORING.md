@@ -24,13 +24,13 @@ The SDK and proposal scores below must not be read as claims that
 
 ## Critical Discovery: SDK Integration (historical v0.2.10 baseline)
 
-**The production Vault SDK is in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) v2.0.11**, NOT in this repository.
+**The production Vault SDK is in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) v2.0.16**, NOT in this repository.
 
 ### Crate Relationship Matrix
 
 | Crate | Version | Purpose | Status |
 |-------|---------|---------|--------|
-| `conxius-enclave-sdk` | 2.0.11 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
+| `conxius-enclave-sdk` | 2.0.16 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
 | `lib-conxian-core` | 0.3.1 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Fail-closed boundary |
 | `conxian-gateway` | 0.1.4 | Runtime orchestration and middleware | ⚠️ WIP |
 
