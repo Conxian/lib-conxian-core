@@ -157,3 +157,38 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 ## Previous Sessions
 
 *Add new sessions above this line*
+
+---
+
+## Session 2026-08-18: Ecosystem-Wide Audit, Gap Mapping & v0.3.2 Research Update
+
+### Objective
+1. Perform comprehensive audit and gap mapping of all repository code, documentation, and external SDK/crate references.
+2. Reconcile `conxius-enclave-sdk` version references across `Cargo.toml` (pinned `v2.0.16`), `docs/GAP_ANALYSIS_AND_SCORING.md`, and `docs/SESSION_RESEARCH_LOG.md`.
+3. Update Candidate Matrix and protocol readiness scores to reflect current v0.3.2 fail-closed boundaries and SDK-owned signing capabilities.
+4. Synchronize ecosystem roadmap, governance scorecards, and verification script results.
+
+### Expanded Research Audit Findings
+
+#### 1. Vault SDK Boundary Alignment (`conxius-enclave-sdk` v2.0.16)
+- **Current Core Integration**: `Cargo.toml` pins `conxius-enclave-sdk` to Git tag `v2.0.16` (manifest version `2.0.16`) with optional feature gates (`enclave`, `sdk-blockchain`, `sdk-cross-cutting`, `sdk-rails`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `full-sdk`).
+- **Ownership Separation**: Core (`lib-conxian-core`) remains zero-secret-egress, fail-closed for signing and attestation verification. Production cryptographic operations (MuSig2 session aggregation, FROST DKG, hardware enclave attestation, BitVM2 execution) are owned by `conxius-enclave-sdk`.
+
+#### 2. Protocol Primitives & Fail-Closed Boundaries
+- **FROST & MuSig2**: Core provides typed structures and fail-closed placeholders; production signing and session aggregation are delegated to `conxius-enclave-sdk`.
+- **BIP-322**: Core enforces strict input message and transaction structure parsing; signature validation and script satisfaction remain downstream.
+- **DLC & RGB**: Core maintains equation verification and intent-bound policy validation; execution, funding, CETs, and stash resolution are fail-closed boundaries.
+- **Universal Adapters (CXIP-21)**: Core provides structured adapter DTOs for Bitcoin, EVM, Cosmos, Solana, Move, and Substrate; light-client verification resides in downstream services.
+
+#### 3. Scoring Matrix Re-calibration (v0.3.2)
+- Strategic Alignment (40%), Technical Readiness (30%), Ecosystem Demand (30%).
+- Updated Candidate Matrix entries reflect `conxius-enclave-sdk` v2.0.16 capabilities and core protocol stability.
+
+### Actions Executed
+- Updated `docs/GAP_ANALYSIS_AND_SCORING.md` to reflect `conxius-enclave-sdk` v2.0.16 alignment and current protocol status.
+- Updated `docs/PHASE1_ISSUES_ROADMAP.md` with revised technical debt and protocol gap metrics.
+- Verified zero architectural contamination via `python3 scripts/verify_contamination_guard.py`.
+- Verified tracked file hygiene via `python3 scripts/verify_tracked_artifacts.py`.
+- Verified release hygiene via `python3 scripts/verify_release_hygiene.py`.
+- Verified full Python test suite (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
+- Executed core Rust test suite (`cargo test`).
