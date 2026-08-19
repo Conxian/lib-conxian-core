@@ -162,3 +162,18 @@ public evidence and a versioned artifact revision.
 1. **Short-term**: Keep the optional SDK integration thin and guide consumers to migrate directly to `conxius-enclave-sdk`
 2. **Medium-term**: Maintain lib-conxian-core as the home for unique protocol primitives while keeping production Vault functionality in `conxius-enclave-sdk`
 3. **Long-term**: Consider merging lib-conxian-core into conxius-enclave-sdk or keeping as thin wrapper
+
+## Infrastructure & Persistence Gap Mapping (2026-08-19 Update)
+
+### Cloud DB Alignment (`org-silent-sun-00457600`)
+- **`corelibs` (`sparkling-sunset-69236559`, us-east-2)**: Core protocol state roots & invariant verification schemas.
+- **`Software dev kit` (`weathered-night-98492579`, us-east-2)**: Vault SDK hardware attestation logs & FROST DKG session tracking.
+- **`Business Operating System` (`noisy-flower-17484435`, us-east-2)**: BOS policy rules, risk profiles, and audit event logs.
+- **`market` (`small-math-44741750`, eu-central-1)**: Intent matching, liquidity routing, and ERC-7683 solver registry.
+- **`Gateway` (`noisy-cloud-41146057`, ap-southeast-1)**: Gateway API session tracking and rate-limit counters.
+- **`Conxian Nexus` (`orange-paper-76209725`, eu-central-1)**: zkVM proof verification state & state root commitments.
+
+### Resolution & Next Step Priorities
+1. **DLC Verification Edge Cases**: Expand `src/protocol/dlc.rs` unit test coverage for invalid collateral, zero expiry block, invalid nonces, and corrupted signatures.
+2. **SDK Migration**: Maintain `lib-conxian-core` as a Zero Secret Egress protocol library while recommending `conxius-enclave-sdk` v2.0.16 for enclave hardware signing.
+3. **Fuzz & Verification Coverage**: Maintain 100% compliance across all 4 fuzz targets and verification scripts.

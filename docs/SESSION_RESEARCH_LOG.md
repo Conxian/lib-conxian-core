@@ -207,3 +207,16 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **RGB Adapter Contract Lookup**: Hardened `RGBStockAdapter::get_contract_details` to return `RGBError::InvalidContractId` on empty or whitespace inputs, ensuring consistency with `RGBSkeletonAdapter`.
 - **Governance Alignment**: Updated candidate scores for BitVMX, BitVM3, and ZKCP in `docs/UNIVERSAL_SUPPORT_RESEARCH.md`.
 - **System Verification**: Verified core unit tests, scripts, contamination guard, and tracked artifact compliance.
+
+---
+
+## Session 2026-08-19 (Extended): Infrastructure Synthesis & DLC Edge Case Hardening
+
+### Objective
+1. Perform multi-cloud & Neon DB infrastructure audit across all 6 organization projects (`org-silent-sun-00457600`).
+2. Update knowledge bases (`UNIVERSAL_SUPPORT_RESEARCH.md`, `GAP_ANALYSIS_AND_SCORING.md`, `SESSION_RESEARCH_LOG.md`) to maintain complete end-to-end traceability.
+3. Harden DLC oracle attestation verification tests in `src/protocol/dlc.rs` for fail-closed edge case validation.
+
+### Expanded Infrastructure Findings
+- **Database Topology**: Mapped all 6 Neon database instances (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) to their respective architectural tiers in `lib-conxian-core` and downstream repos.
+- **Protocol Boundary Alignment**: Reconfirmed Zero Secret Egress invariant and verified that all protocol verifier boundaries operate fail-closed.

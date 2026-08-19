@@ -323,3 +323,129 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_dlc_intent_malformed_and_edge_case_validation() {
+        let valid_pk = vec![0x02; 33];
+        let outcome = [0x11; 32];
+        let valid_intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 100);
+
+        // Malformed intents: empty oracle_pubkey, 0 collateral, 0 expiry
+        let empty_pk_intent = DlcManager::create_intent(&[], 100_000, outcome, 100);
+        let zero_collateral_intent = DlcManager::create_intent(&valid_pk, 0, outcome, 100);
+        let zero_expiry_intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 0);
+
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &empty_pk_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &zero_collateral_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &zero_expiry_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+
+        // Malformed attestations: empty nonce point, invalid signature length
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &valid_intent,
+                10,
+                &[],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedAttestation)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &valid_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 31]
+            ),
+            Err(DlcVerificationError::MalformedAttestation)
+        );
+
+        // Direct verify_oracle_attestation with invalid bytes
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0xff; 10], // invalid pubkey
+            &[0x02; 33],
+            b"msg",
+            &[0x01; 32]
+        ));
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0x02; 33],
+            &[0xff; 10], // invalid nonce point
+            b"msg",
+            &[0x01; 32]
+        ));
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0x02; 33],
+            &[0x02; 33],
+            b"msg",
+            &[0x01; 10] // invalid sig scalar len
+        ));
+
+        // verify_execution_checked malformed intent check
+        assert_eq!(
+            DlcManager::verify_execution_checked(&empty_pk_intent, &[0x01; 32]),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+
+        // Display formatting check
+        assert_eq!(
+            DlcVerificationError::MalformedIntent.to_string(),
+            "malformed DLC intent"
+        );
+        assert_eq!(
+            DlcVerificationError::MalformedAttestation.to_string(),
+            "malformed DLC oracle attestation"
+        );
+        assert_eq!(
+            DlcVerificationError::OutcomeMismatch.to_string(),
+            "DLC outcome does not match intent commitment"
+        );
+        assert_eq!(
+            DlcVerificationError::Expired.to_string(),
+            "DLC intent has expired"
+        );
+        assert_eq!(
+            DlcVerificationError::VerificationFailed.to_string(),
+            "DLC oracle attestation verification failed"
+        );
+        assert_eq!(
+            DlcVerificationError::UnsupportedIntentBinding.to_string(),
+            "DLC attestation is not bound to the complete intent"
+        );
+        assert_eq!(
+            DlcVerificationError::UnsupportedExecutionContext.to_string(),
+            "DLC execution verification context is unsupported"
+        );
+    }
+}
