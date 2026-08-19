@@ -252,8 +252,14 @@ mod tests {
     #[test]
     fn test_rgb_stock_adapter_persistence() {
         let adapter = RGBStockAdapter::new();
-        assert_eq!(adapter.get_contract_details(""), Err(RGBError::InvalidContractId));
-        assert_eq!(adapter.get_contract_details("   "), Err(RGBError::InvalidContractId));
+        assert_eq!(
+            adapter.get_contract_details(""),
+            Err(RGBError::InvalidContractId)
+        );
+        assert_eq!(
+            adapter.get_contract_details("   "),
+            Err(RGBError::InvalidContractId)
+        );
         assert!(adapter
             .get_contract_details("rgb:2PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X")
             .is_err());
