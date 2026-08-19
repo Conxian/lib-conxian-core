@@ -50,17 +50,25 @@ The Nexus zkVM is a modular, extensible, and performant zkVM. It allows us to:
 BitVMX represents a significant optimization over BitVM2 by introducing **Adaptive Proofs**.
 - **Mechanism**: Introduces a bisection game over the execution trace, reducing the data required for on-chain resolution.
 - **Implementation Path**: Requires `src/protocol/bitvmx.rs` to manage the challenge-response state machine and sub-segment proof verification.
+- **Candidate Score**: Strategic 40, Readiness 15, Demand 30 (Total: 85) — Active research target for v0.3.x floor.
 
 ### BitVM3: Optimized Settlement Floor (G-20)
 BitVM3 targets the theoretical limit of Bitcoin-native optimistic settlement.
 - **ZKP-Enabled**: Explores using SNARKs/STARKs directly within the challenge tree to collapse verification steps.
 - **Recursive Finality**: Targets < 1-hour settlement finality for high-value vaults.
+- **Candidate Score**: Strategic 40, Readiness 10, Demand 30 (Total: 80) — Long-term directional research.
 
 ## 9. Zero-Knowledge Contingent Payments (ZKCP) (G-50)
 ZKCP allows for the atomic exchange of a secret (e.g., a digital good) for a payment, without either party trusting the other.
 - **Requirement**: Core library must support SHA256-preimage verification scripts and homomorphic commitment schemes.
-- **Status**: Scaffolding exists in `src/control_model.rs` via the `ZkVerified` class. Full logic implementation targeted for v2.0.5.
+- **Status**: Scaffolding exists in `src/control_model.rs` via the `ZkVerified` class. Core library provides fail-closed contract interfaces; full cryptographic execution remains downstream.
+- **Candidate Score**: Strategic 35, Readiness 15, Demand 20 (Total: 70) — Researching.
 
 ## 10. Research Update (2026-06-28): v2.0.4 Hardening Findings
 - **FROST Round 2**: Identified requirement for encrypted share distribution to prevent MITM attacks during key generation.
 - **X.509 DER**: Verified that enclave certificate chains require full ASN.1 SEQUENCE parsing to enforce hardware attestation boundaries.
+
+## 11. Research Update (2026-08-19): v0.3.2 Ecosystem Audit & Gap Alignment
+- **RGB Integration Boundary**: Hardened `RGBStockAdapter` in `src/rgb/mod.rs` to ensure contract ID lookups fail-closed with `RGBError::InvalidContractId` on empty or whitespace strings.
+- **DLC CET & Oracle Verification**: Core equations and intent validation are enforced; CET construction and oracle attestation verification remain downstream in `conxian-gateway`.
+- **SDK Boundary**: Confirmed `conxius-enclave-sdk` v2.0.16 as the canonical signing and attestation layer, maintaining `lib-conxian-core` as a Zero Secret Egress protocol primitives provider.

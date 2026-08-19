@@ -116,6 +116,9 @@ impl RGBAdapter for RGBStockAdapter {
     }
 
     fn get_contract_details(&self, contract_id: &str) -> Result<String, RGBError> {
+        if contract_id.trim().is_empty() {
+            return Err(RGBError::InvalidContractId);
+        }
         let cid = ContractId::from_str(contract_id).map_err(|_| RGBError::InvalidContractId)?;
         if self.contract_ids.contains(&cid) {
             Ok(format!("Contract details for {}", contract_id))
@@ -249,6 +252,8 @@ mod tests {
     #[test]
     fn test_rgb_stock_adapter_persistence() {
         let adapter = RGBStockAdapter::new();
+        assert_eq!(adapter.get_contract_details(""), Err(RGBError::InvalidContractId));
+        assert_eq!(adapter.get_contract_details("   "), Err(RGBError::InvalidContractId));
         assert!(adapter
             .get_contract_details("rgb:2PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X-98PrBy9X")
             .is_err());
