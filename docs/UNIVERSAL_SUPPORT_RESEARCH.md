@@ -72,3 +72,19 @@ ZKCP allows for the atomic exchange of a secret (e.g., a digital good) for a pay
 - **RGB Integration Boundary**: Hardened `RGBStockAdapter` in `src/rgb/mod.rs` to ensure contract ID lookups fail-closed with `RGBError::InvalidContractId` on empty or whitespace strings.
 - **DLC CET & Oracle Verification**: Core equations and intent validation are enforced; CET construction and oracle attestation verification remain downstream in `conxian-gateway`.
 - **SDK Boundary**: Confirmed `conxius-enclave-sdk` v2.0.16 as the canonical signing and attestation layer, maintaining `lib-conxian-core` as a Zero Secret Egress protocol primitives provider.
+
+## 12. Research Update (2026-08-19 Session Synthesis): Multi-Cloud & Neon DB Infrastructure Mapping
+An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-silent-sun-00457600`) confirms six dedicated Neon PostgreSQL project environments supporting the microservice architecture:
+
+| Project Name | Neon Project ID | Region | PG Version | Purpose / Architectural Layer |
+| :--- | :--- | :--- | :--- | :--- |
+| `corelibs` | `sparkling-sunset-69236559` | `aws-us-east-2` | 18 | `lib-conxian-core` persistent state models & protocol verification schemas |
+| `Software dev kit` | `weathered-night-98492579` | `aws-us-east-2` | 18 | `conxius-enclave-sdk` Vault SDK state, DKG sessions, and attestation logs |
+| `Business Operating System` | `noisy-flower-17484435` | `aws-us-east-2` | 18 | BOS enterprise risk control plane, policy enforcement & billing |
+| `market` | `small-math-44741750` | `aws-eu-central-1` | 18 | Cross-chain intent orderbooks, solver liquidity & market routing |
+| `Gateway` | `noisy-cloud-41146057` | `aws-ap-southeast-1` | 18 | `conxian-gateway` runtime state, rate limiting, and client sessions |
+| `Conxian Nexus` | `orange-paper-76209725` | `aws-eu-central-1` | 17 | Nexus zkVM proof aggregation, state roots, and logical replication |
+
+### Core Infrastructure & Security Directives
+1. **Zero Secret Egress (ZSE)**: Database persistence records only state commitments, proof roots, and public keys. Private keys and ephemeral signing material are restricted strictly to enclave RAM and `conxius-enclave-sdk`.
+2. **Fail-Closed Relational Verification**: All foreign key constraints and index bounds across the 6 database environments mirror the Rust `lib-conxian-core` fail-closed invariant types (`Bip110Compliance`, `DlcVerificationError`, `ProofVerificationRequest`).
