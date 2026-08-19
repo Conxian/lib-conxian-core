@@ -125,7 +125,7 @@ public evidence and a versioned artifact revision.
 7. **Fedimint**: Core provides deterministic point reconstruction only; authenticated mint, note, and status verification requires a provider, and mint status is unavailable without one.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
 9. **DLC**: Equation verification is retained and intent-bound policy checks are typed; shallow execution, funding, CET, and finality remain downstream (CON-1509).
-10. **RGB**: Fail-closed adapter boundary (CON-1509); Stock/node-backed verification remains follow-up work and Shadow mode is non-authoritative.
+10. **RGB**: Fail-closed adapter boundary (CON-1509, CON-1407); Stock/node-backed verification remains follow-up work, contract lookups reject empty/whitespace inputs with `InvalidContractId`, and Shadow mode is non-authoritative.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 

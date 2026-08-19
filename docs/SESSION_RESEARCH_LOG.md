@@ -192,3 +192,18 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - Verified release hygiene via `python3 scripts/verify_release_hygiene.py`.
 - Verified full Python test suite (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
 - Executed core Rust test suite (`cargo test`).
+
+
+---
+
+## Session 2026-08-19: RGB Adapter Guard Hardening & Governance Synthesis
+
+### Objective
+1. Perform research synthesis across all repository knowledge bases, open branches, and gap scorecards.
+2. Hardened fail-closed contract ID validation in `RGBStockAdapter` (`src/rgb/mod.rs`).
+3. Expand research documentation across `GAP_ANALYSIS_AND_SCORING.md`, `SESSION_RESEARCH_LOG.md`, and `UNIVERSAL_SUPPORT_RESEARCH.md`.
+
+### Expanded Findings & Execution
+- **RGB Adapter Contract Lookup**: Hardened `RGBStockAdapter::get_contract_details` to return `RGBError::InvalidContractId` on empty or whitespace inputs, ensuring consistency with `RGBSkeletonAdapter`.
+- **Governance Alignment**: Updated candidate scores for BitVMX, BitVM3, and ZKCP in `docs/UNIVERSAL_SUPPORT_RESEARCH.md`.
+- **System Verification**: Verified core unit tests, scripts, contamination guard, and tracked artifact compliance.
