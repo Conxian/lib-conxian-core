@@ -8,14 +8,14 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 | :--- | :--- | :--- | :--- |
 | **Launch** | 🟢 | None | Finalize audit engagement |
 | **Repo/Gov** | 🟢 | None | Finalize CXIP-21 approval |
-| **Release** | 🟢 | None | Confirm v0.3.1 stability |
+| **Release** | 🟢 | None | Confirm v0.3.2 stability |
 | **Growth** | 🟢 | None | Select primary Babylon Finality Provider |
 
 ## 2. Key Metrics
 
-- **Core Tests**: 74 Passing (100% success)
+- **Core Tests**: 126 Core Tests Passing (100% success; 183 total across all test binaries)
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
-- **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, and scheduled/manual fuzz regression active)
+- **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Nitro Enclave CI, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
   `musig2_aggregate`, and `proof_request_validate`. MuSig2 coverage is direct
   dependency-level key aggregation only; this repository has no PSBT, BIP-322,
@@ -27,4 +27,4 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 1. **Audit**: Execute external security audit for core cryptographic paths (CON-1333).
 2. **Alignment**: Repair broken submodule pins in `conxian-business` (CON-1308).
-3. **Research**: Progress BitVMX and BitVM3 research for v0.3.1 floor.
+3. **Research**: Progress BitVMX and BitVM3 research for v0.3.2 floor.
