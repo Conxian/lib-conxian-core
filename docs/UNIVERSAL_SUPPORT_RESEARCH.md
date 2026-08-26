@@ -94,3 +94,8 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **CET Construction Verification**: Hardened `DlcManager::validate_cet_structure` in `src/protocol/dlc.rs` to validate payout distributions against intent collateral satoshis.
 - **Invariant Enforcement**: Enforces non-empty recipient scripts, non-zero payout amounts, checked addition overflow guards, and total payout bounds (`total_payout <= collateral_sats`).
 - **Cloud Infrastructure Alignment**: Verified fail-closed relational integrity across Neon PostgreSQL database `corelibs` (`sparkling-sunset-69236559`) and Supabase BOS project `yauldfcpswnufgwfvnlr`.
+
+## 14. Research Update (2026-08-26 Session 58 Synthesis): ERC-7683 Intent Mapping & Transport Neutrality
+- **ERC-7683 Bidirectional Serialization**: Confirmed `Erc7683CrossChainOrder` in `src/chain/erc7683.rs` enables seamless conversion between Conxian `CrossChainIntent` structs and standard ERC-7683 EVM solver payloads while strictly validating open/fill deadlines.
+- **Transport Capability Isolation**: Re-verified `TransportAdapter` and `TransportCapability` in `src/chain/transport.rs` enforce transport neutrality by abstracting UTXO queries, transaction broadcasts, and fee estimation away from core protocol types, ensuring strict compliance with CON-700 architectural boundary rules.
+- **Ecosystem Topology Synchronization**: Confirmed state root schema compatibility across all 6 Neon database projects (`sparkling-sunset-69236559`, `weathered-night-98492579`, `noisy-flower-17484435`, `small-math-44741750`, `noisy-cloud-41146057`, `orange-paper-76209725`) and Supabase projects (`yauldfcpswnufgwfvnlr`, `iczqutrbbfudfzfplymc`).
