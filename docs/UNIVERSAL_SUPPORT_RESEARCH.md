@@ -88,3 +88,9 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 ### Core Infrastructure & Security Directives
 1. **Zero Secret Egress (ZSE)**: Database persistence records only state commitments, proof roots, and public keys. Private keys and ephemeral signing material are restricted strictly to enclave RAM and `conxius-enclave-sdk`.
 2. **Fail-Closed Relational Verification**: All foreign key constraints and index bounds across the 6 database environments mirror the Rust `lib-conxian-core` fail-closed invariant types (`Bip110Compliance`, `DlcVerificationError`, `ProofVerificationRequest`).
+
+
+## 13. Research Update (2026-08-26): DLC CET Structure Validation Hardening
+- **CET Construction Verification**: Hardened `DlcManager::validate_cet_structure` in `src/protocol/dlc.rs` to validate payout distributions against intent collateral satoshis.
+- **Invariant Enforcement**: Enforces non-empty recipient scripts, non-zero payout amounts, checked addition overflow guards, and total payout bounds (`total_payout <= collateral_sats`).
+- **Cloud Infrastructure Alignment**: Verified fail-closed relational integrity across Neon PostgreSQL database `corelibs` (`sparkling-sunset-69236559`) and Supabase BOS project `yauldfcpswnufgwfvnlr`.

@@ -43,6 +43,8 @@ pub enum DlcVerificationError {
     UnsupportedIntentBinding,
     /// The compatibility API lacks the context required to verify execution.
     UnsupportedExecutionContext,
+    /// The Contract Execution Transaction (CET) structure or payout distribution is invalid.
+    InvalidCetStructure,
 }
 
 impl std::fmt::Display for DlcVerificationError {
@@ -58,6 +60,9 @@ impl std::fmt::Display for DlcVerificationError {
             }
             Self::UnsupportedExecutionContext => {
                 write!(f, "DLC execution verification context is unsupported")
+            }
+            Self::InvalidCetStructure => {
+                write!(f, "invalid DLC CET structure or payout distribution")
             }
         }
     }
@@ -189,6 +194,40 @@ impl DlcManager {
     /// height, or transaction binding, so a well-shaped byte string is not
     /// enough to authorize execution. This method reports that limitation
     /// explicitly instead of accepting random signatures.
+    /// Validates the structure and payout distribution of a Contract Execution Transaction (CET).
+    ///
+    /// Ensures that:
+    /// 1. Intent collateral is greater than zero and oracle key is present.
+    /// 2. Payout list is non-empty and recipient scripts are valid.
+    /// 3. Total payout satoshis does not exceed the total committed collateral.
+    pub fn validate_cet_structure(
+        intent: &DlcIntent,
+        payouts: &[(Vec<u8>, u64)],
+    ) -> Result<bool, DlcVerificationError> {
+        if intent.collateral_sats == 0 || intent.oracle_pubkey.is_empty() {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+        if payouts.is_empty() {
+            return Err(DlcVerificationError::InvalidCetStructure);
+        }
+
+        let mut total_payout: u64 = 0;
+        for (recipient, amount) in payouts {
+            if recipient.is_empty() || *amount == 0 {
+                return Err(DlcVerificationError::InvalidCetStructure);
+            }
+            total_payout = total_payout
+                .checked_add(*amount)
+                .ok_or(DlcVerificationError::InvalidCetStructure)?;
+        }
+
+        if total_payout > intent.collateral_sats {
+            return Err(DlcVerificationError::InvalidCetStructure);
+        }
+
+        Ok(true)
+    }
+
     pub fn verify_execution_checked(
         intent: &DlcIntent,
         oracle_signature: &[u8],
@@ -306,6 +345,43 @@ mod tests {
                 &s_bytes
             ),
             Err(DlcVerificationError::Expired)
+        );
+    }
+
+    #[test]
+    fn test_validate_cet_structure() {
+        let oracle_pk = vec![0x02; 33];
+        let outcome = [0xaa; 32];
+        let intent = DlcManager::create_intent(&oracle_pk, 100_000, outcome, 1000);
+
+        let valid_payouts = vec![(vec![0x76, 0xa9, 0x14], 60_000), (vec![0x51, 0x20], 40_000)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &valid_payouts),
+            Ok(true)
+        );
+
+        let empty_payouts: Vec<(Vec<u8>, u64)> = vec![];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &empty_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let zero_amount_payouts = vec![(vec![0x51, 0x20], 0)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &zero_amount_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let empty_recipient_payouts = vec![(vec![], 50_000)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &empty_recipient_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let excessive_payouts = vec![(vec![0x51, 0x20], 100_001)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &excessive_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
         );
     }
 

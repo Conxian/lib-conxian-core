@@ -102,7 +102,7 @@ public evidence and a versioned artifact revision.
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **MuSig2 Aggregation (G-10)** | 40 | 30 | 30 | **100** | **Implemented** (SDK) |
 | **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **SDK-owned; core rejects placeholders** |
-| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Equation primitive; execution downstream** |
+| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Implemented** (Equation & CET structure validation; execution downstream) |
 | **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK; Core DER parse-only) |
 | **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** (SDK) |
@@ -124,7 +124,7 @@ public evidence and a versioned artifact revision.
 6. **MuSig2 Signature Aggregation**: Resolved (G-10). Production signing and session aggregation are owned by `conxius-enclave-sdk`; this crate retains only protocol primitives and direct dependency-level fuzz coverage.
 7. **Fedimint**: Core provides deterministic point reconstruction only; authenticated mint, note, and status verification requires a provider, and mint status is unavailable without one.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
-9. **DLC**: Equation verification is retained and intent-bound policy checks are typed; shallow execution, funding, CET, and finality remain downstream (CON-1509).
+9. **DLC**: Equation verification is retained, intent-bound policy checks are typed, and CET structure/payout validation is hardened (`DlcManager::validate_cet_structure`); execution, funding, and finality remain downstream (CON-1509).
 10. **RGB**: Fail-closed adapter boundary (CON-1509, CON-1407); Stock/node-backed verification remains follow-up work, contract lookups reject empty/whitespace inputs with `InvalidContractId`, and Shadow mode is non-authoritative.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
