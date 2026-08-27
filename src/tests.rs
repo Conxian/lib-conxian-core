@@ -56,6 +56,15 @@ mod cxip20_architecture_tests {
     fn test_witness_encryption_try_api_reports_unimplemented() {
         let result = WitnessEncryption::try_encrypt_to_bitcoin_finality(6, b"data");
         assert_eq!(result, Err(WitnessEncryptionError::Unimplemented));
+
+        assert_eq!(
+            WitnessEncryption::try_encrypt_to_bitcoin_finality(0, b"data"),
+            Err(WitnessEncryptionError::InvalidDepth)
+        );
+        assert_eq!(
+            WitnessEncryption::try_encrypt_to_bitcoin_finality(6, b""),
+            Err(WitnessEncryptionError::EmptyPayload)
+        );
     }
 
     #[test]
