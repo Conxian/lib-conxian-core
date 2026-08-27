@@ -48,6 +48,10 @@ impl PVDE {
 pub enum WitnessEncryptionError {
     /// Real witness encryption has not yet been implemented.
     Unimplemented,
+    /// Invalid depth parameter supplied (e.g. 0).
+    InvalidDepth,
+    /// Payload is empty.
+    EmptyPayload,
 }
 
 impl fmt::Display for WitnessEncryptionError {
@@ -55,6 +59,12 @@ impl fmt::Display for WitnessEncryptionError {
         match self {
             WitnessEncryptionError::Unimplemented => {
                 write!(f, "witness encryption is not implemented yet")
+            }
+            WitnessEncryptionError::InvalidDepth => {
+                write!(f, "invalid finality depth")
+            }
+            WitnessEncryptionError::EmptyPayload => {
+                write!(f, "empty payload provided")
             }
         }
     }
@@ -70,10 +80,10 @@ impl std::error::Error for WitnessEncryptionError {}
 pub struct WitnessEncryption;
 
 impl WitnessEncryption {
-    pub fn encrypt_to_bitcoin_finality(
-        _depth: u32,
-        _data: &[u8],
-    ) -> Result<String, CryptoStubError> {
+    pub fn encrypt_to_bitcoin_finality(depth: u32, data: &[u8]) -> Result<String, CryptoStubError> {
+        if depth == 0 || data.is_empty() {
+            return Err(CryptoStubError::InvalidKey);
+        }
         // Enforced fail-closed behavior for unproven Witness Encryption
         Err(CryptoStubError::NotImplemented(
             "WitnessEncryption::encrypt_to_bitcoin_finality",
@@ -87,9 +97,15 @@ impl WitnessEncryption {
     /// `Err(WitnessEncryptionError::Unimplemented)` until a real cryptographic
     /// implementation exists.
     pub fn try_encrypt_to_bitcoin_finality(
-        _depth: u32,
-        _data: &[u8],
+        depth: u32,
+        data: &[u8],
     ) -> Result<String, WitnessEncryptionError> {
+        if depth == 0 {
+            return Err(WitnessEncryptionError::InvalidDepth);
+        }
+        if data.is_empty() {
+            return Err(WitnessEncryptionError::EmptyPayload);
+        }
         Err(WitnessEncryptionError::Unimplemented)
     }
 }
