@@ -80,10 +80,7 @@ impl std::error::Error for WitnessEncryptionError {}
 pub struct WitnessEncryption;
 
 impl WitnessEncryption {
-    pub fn encrypt_to_bitcoin_finality(
-        depth: u32,
-        data: &[u8],
-    ) -> Result<String, CryptoStubError> {
+    pub fn encrypt_to_bitcoin_finality(depth: u32, data: &[u8]) -> Result<String, CryptoStubError> {
         if depth == 0 || data.is_empty() {
             return Err(CryptoStubError::InvalidKey);
         }
