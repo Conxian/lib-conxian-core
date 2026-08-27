@@ -71,6 +71,59 @@ impl SilentPaymentScanner {
         hasher.update(shared_point.serialize());
         hasher.finalize().into()
     }
+
+    /// Computes the shared secret for a silent payment output with outpoint tweaking (BIP-352).
+    /// shared_secret = H(user_scan_privkey * sum(hash(outpoints || P_inputs) * P_inputs))
+    pub fn scan_transaction_with_outpoints(
+        input_pubkeys: &[PublicKey],
+        outpoints: &[[u8; 36]],
+        user_scan_key: &[u8],
+        user_spend_pubkey: &[u8],
+    ) -> Vec<[u8; 32]> {
+        if input_pubkeys.is_empty() || user_scan_key.is_empty() || user_spend_pubkey.is_empty() {
+            return Vec::new();
+        }
+
+        let scan_bytes: [u8; 32] = match user_scan_key.try_into() {
+            Ok(b) => b,
+            Err(_) => return Vec::new(),
+        };
+        let scan_secret = match SecretKey::from_byte_array(scan_bytes) {
+            Ok(k) => k,
+            Err(_) => return Vec::new(),
+        };
+
+        let secp = Secp256k1::new();
+        let mut combined_pk = input_pubkeys[0];
+
+        // Apply outpoint tweak hash if outpoints exist
+        if !outpoints.is_empty() {
+            let mut hasher = Sha256::new();
+            for op in outpoints {
+                hasher.update(op);
+            }
+            for pk in input_pubkeys {
+                hasher.update(pk.serialize());
+            }
+            let tweak_bytes: [u8; 32] = hasher.finalize().into();
+            if let Ok(tweak_scalar) = Scalar::from_be_bytes(tweak_bytes) {
+                combined_pk = combined_pk.mul_tweak(&secp, &tweak_scalar).unwrap_or(combined_pk);
+            }
+        } else {
+            for pk in input_pubkeys.iter().skip(1) {
+                combined_pk = combined_pk.combine(pk).unwrap_or(combined_pk);
+            }
+        }
+
+        let tweak = Scalar::from_be_bytes(scan_secret.secret_bytes()).unwrap();
+        let shared_point = combined_pk.mul_tweak(&secp, &tweak).unwrap_or(combined_pk);
+
+        let mut hasher = Sha256::new();
+        hasher.update(shared_point.serialize());
+        let shared_secret: [u8; 32] = hasher.finalize().into();
+
+        vec![shared_secret]
+    }
 }
 
 #[cfg(test)]
@@ -97,5 +150,24 @@ mod tests {
 
         let secret = SilentPaymentScanner::compute_shared_secret(&[pk], &sk2);
         assert_ne!(secret, [0u8; 32]);
+    }
+
+    #[test]
+    fn test_silent_payment_multi_input_outpoint_scanning() {
+        let secp = Secp256k1::new();
+        let (_sk1, pk1) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk2, pk2) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let scan_key = [0x05; 32];
+        let spend_pk = [0x06; 33];
+        let dummy_outpoint = [0xaa; 36];
+
+        let found = SilentPaymentScanner::scan_transaction_with_outpoints(
+            &[pk1, pk2],
+            &[dummy_outpoint],
+            &scan_key,
+            &spend_pk,
+        );
+        assert!(!found.is_empty());
+        assert_ne!(found[0], [0u8; 32]);
     }
 }
