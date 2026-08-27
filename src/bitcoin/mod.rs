@@ -107,7 +107,9 @@ impl SilentPaymentScanner {
             }
             let tweak_bytes: [u8; 32] = hasher.finalize().into();
             if let Ok(tweak_scalar) = Scalar::from_be_bytes(tweak_bytes) {
-                combined_pk = combined_pk.mul_tweak(&secp, &tweak_scalar).unwrap_or(combined_pk);
+                combined_pk = combined_pk
+                    .mul_tweak(&secp, &tweak_scalar)
+                    .unwrap_or(combined_pk);
             }
         } else {
             for pk in input_pubkeys.iter().skip(1) {
