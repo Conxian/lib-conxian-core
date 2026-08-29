@@ -90,7 +90,7 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.16) defines the canonical 42
 
 ### SDK Re-exports (Session 57 — Full Alignment with conxius-enclave-sdk v2.0.16)
 
-The `sdk` module (`src/sdk.rs`) re-exports ALL 70 accessible conxius-enclave-sdk modules organized by category.
+The `sdk` module (`src/sdk.rs`) re-exports ALL 68 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
 
 ```toml
@@ -104,7 +104,7 @@ lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
 | Nexus | `sdk-nexus` | 2 | `sdk::nexus::{fedimint, roast}` |
 | Infrastructure | `sdk-infrastructure` | 5 | `sdk::infrastructure::{config, serde_big_array, state, telemetry, wasm_support}` |
 | Signing | `sdk-signing` | 13 | `sdk::signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml}` |
-| Enclave | `enclave` | 11 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
+| Enclave | `enclave` | 9 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
 
 **Blocked modules:**
 - Rails (6): `pub(crate)` in SDK — cannot re-export (bisq, boltz, changelly, wormhole, ntt, x402)
@@ -112,7 +112,7 @@ lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
 - `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
 - `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK
 
-**Meta-feature:** `full-sdk` enables all 6 categories at once. The full `conxius_enclave_sdk` crate is also
+**Meta-feature:** `full-sdk` enables all 7 categories at once. The full `conxius_enclave_sdk` crate is also
 re-exported at `sdk::conxius_enclave_sdk` for direct access.
 
 ## Consumer Wiring

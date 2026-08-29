@@ -51,7 +51,7 @@ enclave = ["conxius-enclave-sdk"]
 
 # ── SDK capability exposure (Session 52: align core with all SDK modules) ──
 # Each feature gate exposes a category of conxius-enclave-sdk modules through
-# conxian_core::sdk::*, making all 70 accessible SDK modules available to downstream crates
+# conxian_core::sdk::*, making all 68 accessible SDK modules available to downstream crates
 # that depend on lib-conxian-core.
 
 # Blockchain protocols (24 modules)
