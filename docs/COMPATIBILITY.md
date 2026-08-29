@@ -11,7 +11,7 @@ and optional feature sets alike.
 | --- | --- | --- | --- |
 | Package | Any published feature set | `1.97.1+` | The package metadata establishes the single supported floor. |
 | Default graph | `default = []` | `1.97.1+` | The package floor is intentionally shared across every feature set. |
-| Optional SDK graph | `enclave`, category features, or `full-sdk` | `1.97.1+` | Root SDK Git tag `v2.0.14` declares `rust-version = "1.97.1"`. Its stale package metadata still reports version `2.0.12`. |
+| Optional SDK graph | `enclave`, category features, or `full-sdk` | `1.97.1+` | Root SDK Git tag `v2.0.16` declares `rust-version = "1.97.1"`. |
 
 The default graph may have a lower transitive minimum than the package floor,
 but Rust versions below `1.97.1` are not supported for this crate release. CI
@@ -22,12 +22,12 @@ both the default and all-feature graphs.
 
 The root SDK features select
 [`conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) Git tag
-`v2.0.14`, locked to commit
-`d3adefa40b3db8ce72e4959227ff9afffcca3bc5`. The tag's manifest has a stale
-package `version = "2.0.12"`, but its selected Git tag is still `v2.0.14` and
-its declared Rust requirement is `1.97.1`. Hardware-backed signing,
-attestation, and policy behavior remain owned by that SDK; this crate exposes
-only the optional dependency and public re-export paths.
+`v2.0.16`, locked to commit
+`4355a71010abc019abd8fe97b4c8db2f1861f6df`. The tag's manifest reports
+package `version = "2.0.16"` and its declared Rust requirement is `1.97.1`.
+Hardware-backed signing, attestation, and policy behavior remain owned by that
+SDK; this crate exposes only the optional dependency and public re-export
+paths.
 
 When upgrading `conxius-enclave-sdk`:
 
@@ -39,12 +39,10 @@ When upgrading `conxius-enclave-sdk`:
    `clippy -D warnings` commands before publishing either side of the
    integration.
 
-Do not confuse the tag name with the stale package version field, and do not
-downgrade the Git tag, dependency graph, or re-export surface to match that
-field. Any dependency change requires separate compatibility validation and
+Any dependency change requires separate compatibility validation and
 coordination with the SDK release.
 
-## Opt-in SDK v2.0.11 compatibility evidence
+## Opt-in SDK v2.0.16 compatibility evidence
 
 The release-compatibility harness is a separate, non-published workspace package
 at [`tests/sdk-compat`](../tests/sdk-compat). It is opt-in through the local
@@ -53,30 +51,31 @@ default production graph.
 
 ### Evidence baseline
 
-This rebased checkpoint is based on Core `origin/main` commit
-`5325860499800ae440e03962605de9dd833e53e1` on **July 21, 2026**:
+The historical `v2.0.11` baseline (below) documents the original release
+checkpoint; the harness has since been aligned to `v2.0.16` to match the root
+optional dependency and the published crate.
 
 | Surface | Exact baseline |
 | --- | --- |
 | Core package | `lib-conxian-core` `0.3.1` |
 | Core Rust floor | `1.97.1` (exactly `1.97.1` in CI and the harness) |
-| SDK formal release | `conxius-enclave-sdk` `2.0.11` |
-| SDK release tag | `v2.0.11` at commit `d3e9a6a26da1bd4c15e612ce7051a0bfdf640a83` |
-| SDK release Rust floor | `1.85` as declared by the published release manifest |
-| Lockfile provenance | Root `Cargo.lock`; SDK registry checksum `e35d22138325b93283bab7afeeca5a121a0d2019bd7d9d81b69af7ec46db5f2d` |
+| SDK formal release | `conxius-enclave-sdk` `2.0.16` |
+| SDK release tag | `v2.0.16` at commit `4355a71010abc019abd8fe97b4c8db2f1861f6df` |
+| SDK release Rust floor | `1.97.1` as declared by the current release manifest |
+| Lockfile provenance | Root `Cargo.lock`; SDK Git source `4355a71010abc019abd8fe97b4c8db2f1861f6df` |
 
-The SDK release's declared `1.85` floor is distinct from the Core package
-floor: every harness invocation runs with Rust `1.97.1` because it compiles the
-current Core package. The harness's direct SDK `2.0.11` release dependency is a
-separate published compatibility baseline; it does not replace the root
-package's Git-tagged `v2.0.14` optional dependency.
+The SDK release's declared floor is distinct from the Core package floor:
+every harness invocation runs with Rust `1.97.1` because it compiles the
+current Core package. The harness's direct SDK `2.0.16` dependency is the
+current published compatibility baseline; it matches the root package's
+Git-tagged `v2.0.16` optional dependency.
 
 ### SDK feature matrix
 
-The published/tagged v2.0.11 manifest was checked directly. Its exact features
+The published/tagged v2.0.16 manifest was checked directly. Its exact features
 are:
 
-| SDK feature name | v2.0.11 status | Harness treatment |
+| SDK feature name | v2.0.16 status | Harness treatment |
 | --- | --- | --- |
 | `default` | Supported (`[]`) | Tested as the default SDK graph |
 | `mock-cloud-enclave` | Supported (`[]`) | Tested only as an explicit opt-in evidence graph |
@@ -128,8 +127,8 @@ cargo +1.97.1 clippy --manifest-path tests/sdk-compat/Cargo.toml --tests \
 ```text
 lib-conxian-core-sdk-compat (non-published, opt-in test evidence)
 ├── local lib-conxian-core 0.3.1
-│   └── conxius-enclave-sdk Git tag v2.0.14 when a Core SDK feature is enabled
-└── conxius-enclave-sdk =2.0.11 (direct evidence dependency)
+│   └── conxius-enclave-sdk Git tag v2.0.16 when a Core SDK feature is enabled
+└── conxius-enclave-sdk =2.0.16 (direct evidence dependency)
 ```
 
 The harness depends on both local Core and the exact SDK release; the SDK does
@@ -142,7 +141,7 @@ development features are never forwarded through Core's production features.
 
 The harness provides compile-time and deterministic offline evidence for:
 
-- explicit adapter-owned Core signing-tier requirements for SDK v2.0.11 rail
+- explicit adapter-owned Core signing-tier requirements for SDK v2.0.16 rail
   `TrustTier` (`Strict`/`Managed`/`Expedient` require `T1`/`T2`/`T3` or
   stronger); SDK `T4` is observation-only and is not a sign-capable
   `ObserverOnly` mapping;
@@ -155,7 +154,7 @@ The harness provides compile-time and deterministic offline evidence for:
 
 The trust mapping is an adapter-owned policy check, not an SDK or Core enum
 mutation. It does not make SDK `T4` production-eligible or authorize a signing
-or settlement operation. The v2.0.11 SDK exposes no
+or settlement operation. The v2.0.16 SDK exposes no
 BIP-110 module, validator, or `bip110_compliant` feature. Accordingly, the
 local BIP-110 evidence record is deliberately not an SDK enforcement claim;
 transaction parsing, classification, policy enforcement, signing, and
@@ -185,22 +184,19 @@ and the deterministic downstream fixture work
 
 ## Companion adapter crate
 
-`addons/lib-conxian-core-enclave` targets the exact published
-`conxius-enclave-sdk =2.0.11` release. It is a separate workspace member so the
-Core default feature graph remains SDK-independent and no SDK-to-Core
-dependency is introduced. The companion adapter depends on both Core and the
-published SDK; the SDK package itself remains standalone.
+`addons/lib-conxian-core-enclave` targets the Git-tagged
+`conxius-enclave-sdk v2.0.16` release (published as `2.0.16`). It is a separate
+workspace member so the Core default feature graph remains SDK-independent and
+no SDK-to-Core dependency is introduced. The companion adapter depends on both
+Core and the SDK; the SDK package itself remains standalone.
 
-The root package and companion surfaces intentionally use different sources:
-Core's optional SDK dependency selects Git tag `v2.0.14`, while the adapter and
-evidence harness remain pinned to the published `2.0.11` crate. The stale
-`2.0.12` package version in the `v2.0.14` manifest does not change the selected
-tag.
+The root package and companion surfaces all select the same Git tag `v2.0.16`
+(published as `2.0.16` on crates.io).
 
 | Surface | Feature selection | SDK target | Effective Rust | Default bypass features |
 | --- | --- | --- | --- | --- |
-| `lib-conxian-core-enclave` | Workspace member; no feature flags | Published `=2.0.11` | `1.97.1+` workspace floor | None; simulator/mock/dev paths are not enabled |
-| Core SDK features | Optional direct SDK dependency | Git tag `v2.0.14` at `d3adefa40b3db8ce72e4959227ff9afffcca3bc5` | `1.97.1+` | None by default |
+| `lib-conxian-core-enclave` | Workspace member; no feature flags | Git tag `v2.0.16` | `1.97.1+` workspace floor | None; simulator/mock/dev paths are not enabled |
+| Core SDK features | Optional direct SDK dependency | Git tag `v2.0.16` at `4355a71010abc019abd8fe97b4c8db2f1861f6df` | `1.97.1+` | None by default |
 
 The companion adapter is intentionally narrower than the SDK. It supports
 explicit algorithm conversion, a deny-by-default chain/algorithm allowlist,

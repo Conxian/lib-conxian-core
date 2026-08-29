@@ -1,5 +1,5 @@
 //! Fail-closed adapter contracts between `lib-conxian-core` and
-//! `conxius-enclave-sdk` `2.0.11`.
+//! `conxius-enclave-sdk` `2.0.16`.
 //!
 //! This crate is deliberately a companion crate rather than a feature inside
 //! Core. Core remains the owner of canonical request, invariant, trust-tier,
@@ -45,7 +45,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
 
 /// The exact published SDK release targeted by this adapter.
-pub const SUPPORTED_SDK_VERSION: &str = "2.0.11";
+pub const SUPPORTED_SDK_VERSION: &str = "2.0.16";
 
 /// Core permits at most this many structured derivation components.
 pub const MAX_DERIVATION_COMPONENTS: usize = 255;
@@ -359,7 +359,7 @@ impl ReplayBinding {
     }
 }
 
-/// Computes the domain-separated digest that is sent to SDK `2.0.11`.
+/// Computes the domain-separated digest that is sent to SDK `2.0.16`.
 ///
 /// The canonical descriptor fields are encoded independently with explicit
 /// length prefixes. This deliberately avoids Core's human-readable,
@@ -544,7 +544,7 @@ impl fmt::Display for AdapterError {
             Self::UnsupportedDigestAlgorithm(algorithm) => {
                 write!(
                     formatter,
-                    "digest algorithm {algorithm:?} is unsupported by SDK 2.0.11"
+                    "digest algorithm {algorithm:?} is unsupported by SDK 2.0.16"
                 )
             }
             Self::InvalidDigestLength { expected, actual } => write!(
@@ -564,7 +564,7 @@ impl fmt::Display for AdapterError {
             ),
             Self::UnsupportedPublicKeyDerivation(algorithm) => write!(
                 formatter,
-                "public-key derivation is unsupported for {algorithm:?} with SDK 2.0.11"
+                "public-key derivation is unsupported for {algorithm:?} with SDK 2.0.16"
             ),
             Self::PreflightRequired => {
                 formatter.write_str("Bitcoin signing requires a compliant Core BIP-110 preflight")
@@ -599,7 +599,7 @@ impl fmt::Display for AdapterError {
 
 impl std::error::Error for AdapterError {}
 
-/// Converts a Core algorithm to the exact SDK `2.0.11` enum.
+/// Converts a Core algorithm to the exact SDK `2.0.16` enum.
 pub fn to_sdk_algorithm(algorithm: SigningAlgorithm) -> SdkSigningAlgorithm {
     match algorithm {
         SigningAlgorithm::EcdsaSecp256k1 => SdkSigningAlgorithm::EcdsaSecp256k1,
@@ -608,7 +608,7 @@ pub fn to_sdk_algorithm(algorithm: SigningAlgorithm) -> SdkSigningAlgorithm {
     }
 }
 
-/// Converts an exact SDK `2.0.11` algorithm to the Core enum.
+/// Converts an exact SDK `2.0.16` algorithm to the Core enum.
 pub fn from_sdk_algorithm(algorithm: SdkSigningAlgorithm) -> SigningAlgorithm {
     match algorithm {
         SdkSigningAlgorithm::EcdsaSecp256k1 => SigningAlgorithm::EcdsaSecp256k1,
@@ -628,7 +628,7 @@ impl AttestationLevel {
     }
 }
 
-/// Returns whether the adapter's conservative SDK `2.0.11` capability
+/// Returns whether the adapter's conservative SDK `2.0.16` capability
 /// allowlist permits an algorithm for a canonical Core target.
 ///
 /// The allowlist intentionally names concrete chains instead of treating a
@@ -686,7 +686,7 @@ pub fn validate_chain_algorithm(
 }
 
 /// Renders Core's structured derivation context into the exact path string
-/// accepted by SDK `2.0.11`.
+/// accepted by SDK `2.0.16`.
 ///
 /// The Core purpose is intentionally not encoded: the SDK request has no
 /// purpose field, and inventing a purpose-to-path convention would change key
@@ -711,7 +711,7 @@ pub fn render_derivation_path(context: &DerivationContext) -> Result<String, Ada
 
 /// Extracts a digest without hashing, encoding, or otherwise changing caller bytes.
 ///
-/// SDK `2.0.11` exposes only `message_hash: Vec<u8>`, so the adapter supports
+/// SDK `2.0.16` exposes only `message_hash: Vec<u8>`, so the adapter supports
 /// the unambiguous 32-byte Core `Sha256` representation and rejects all other
 /// forms. In particular, a Core `Message` is never silently hashed.
 pub fn extract_sdk_digest(payload: &SigningPayload) -> Result<Vec<u8>, AdapterError> {
@@ -732,7 +732,7 @@ pub fn extract_sdk_digest(payload: &SigningPayload) -> Result<Vec<u8>, AdapterEr
     }
 }
 
-/// Injected-manager adapter over the exact SDK `2.0.11` `EnclaveManager`
+/// Injected-manager adapter over the exact SDK `2.0.16` `EnclaveManager`
 /// interface.
 pub struct EnclaveSdkAdapter {
     manager: Arc<dyn EnclaveManager>,

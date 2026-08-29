@@ -1,17 +1,15 @@
 # `lib-conxian-core-enclave`
 
-`lib-conxian-core-enclave` is the companion adapter crate for the exact
-published `conxius-enclave-sdk =2.0.11` release, which remains the latest
-published SDK target. Any `2.0.12` value on unreleased upstream `main` is
-metadata for that unreleased line only; this crate does not target it. The
-adapter keeps the Core crate's default feature graph SDK-independent while
-providing a small, fail-closed boundary for applications that inject an SDK
-`EnclaveManager`.
+`lib-conxian-core-enclave` is the companion adapter crate for the
+`conxius-enclave-sdk` `v2.0.16` release (Git tag `v2.0.16`, published as
+`2.0.16` on crates.io). The adapter keeps the Core crate's default feature
+graph SDK-independent while providing a small, fail-closed boundary for
+applications that inject an SDK `EnclaveManager`.
 
 This crate owns only protocol-to-SDK mappings and request/response validation.
 It does **not** own key custody, provider selection, attestation verification,
 replay-cache storage or TTLs, networking, persistence, telemetry, or
-environment-specific behavior. The published SDK `2.0.11` remains standalone
+environment-specific behavior. The published SDK `2.0.16` remains standalone
 and does not depend on Core; this companion adapter is the only layer here that
 depends on both Core and SDK. A future SDK-to-Core edge requires a separate
 graph review.
@@ -21,7 +19,7 @@ graph review.
 ```toml
 [dependencies]
 lib-conxian-core-enclave = "0.1.0"
-conxius-enclave-sdk = "=2.0.11"
+conxius-enclave-sdk = "=2.0.16"
 ```
 
 The application supplies an `Arc<dyn EnclaveManager>` from the SDK's concrete
@@ -61,17 +59,17 @@ read-only accessors; it is not accepted by any signing method. The colon-joined
 Core `idempotency_key()` remains a display value only and is not cryptographic
 input.
 
-## Capability matrix for SDK `2.0.11`
+## Capability matrix for SDK `2.0.16`
 
 | Surface | Adapter behavior | Ownership / caveat |
 | --- | --- | --- |
 | Algorithms | Explicit conversion for ECDSA secp256k1, Schnorr secp256k1, and Ed25519 | The overlap is limited to the exact SDK enum; no implicit algorithm fallback exists. |
 | Chain/algorithm gate | Bitcoin, Liquid, Lightning, and Babylon allow secp256k1; Stacks and Ethereum allow ECDSA secp256k1; Solana allows Ed25519 | This is a concrete deny-by-default allowlist based on Core `Chain`/`ChainFamily` semantics. Other chains and pairs are rejected before the manager is called. |
 | Payloads | 32-byte Core SHA-256 digests only | The SDK request has `message_hash` but no digest-algorithm field, so messages, SHA-512, Keccak-256, and Blake2b-256 are rejected. |
-| Derivation | Deterministic `m/<index>` rendering with `'` for hardened components; only ECDSA secp256k1 public-key derivation may use the SDK getter | Core purpose metadata is preserved in the Core request/result but is not invented as an SDK path component because SDK `2.0.11` has no purpose field. Schnorr and Ed25519 public-key derivation are unsupported because the getter is algorithm-agnostic; signing response validation remains separate. |
+| Derivation | Deterministic `m/<index>` rendering with `'` for hardened components; only ECDSA secp256k1 public-key derivation may use the SDK getter | Core purpose metadata is preserved in the Core request/result but is not invented as an SDK path component because SDK `2.0.16` has no purpose field. Schnorr and Ed25519 public-key derivation are unsupported because the getter is algorithm-agnostic; signing response validation remains separate. |
 | ECDSA response | 64-byte compact or 65-byte recoverable signatures; 33- or 65-byte public keys | Hex decoding and length checks are performed before Core response construction. |
-| Schnorr response | 64-byte compact signatures and exactly 32-byte x-only public keys | `EnclaveManager::get_public_key` accepts only a path and is algorithm-agnostic in SDK `2.0.11`; Schnorr public-key derivation therefore fails closed and never calls the getter. Signing response validation remains separate. |
-| Ed25519 response | 64-byte raw signatures; 32-byte public keys | SDK `2.0.11`'s getter is also algorithm-agnostic, so Ed25519 public-key derivation fails closed and never calls the getter. Signing response validation remains separate. |
+| Schnorr response | 64-byte compact signatures and exactly 32-byte x-only public keys | `EnclaveManager::get_public_key` accepts only a path and is algorithm-agnostic in SDK `2.0.16`; Schnorr public-key derivation therefore fails closed and never calls the getter. Signing response validation remains separate. |
+| Ed25519 response | 64-byte raw signatures; 32-byte public keys | SDK `2.0.16`'s getter is also algorithm-agnostic, so Ed25519 public-key derivation fails closed and never calls the getter. Signing response validation remains separate. |
 | Trust policy and attestation | `Strict` requires StrongBox/CloudTEE; `Managed` and `Expedient` require TEE or stronger; `ObserverOnly` never signs | Custom/deserialized policies are validated against the canonical Core floor. The report nonce must exactly match the adapter-bound SDK digest, and the complete opaque report/evidence is retained in the response. This layer performs request binding and level gating only; it does not cryptographically verify signatures, certificates, freshness, or hardware claims. |
 | Rail/network policy | Every signing call requires `RequestPolicyContext`, which maps the explicit SDK network and observed rail tier against the adapter's Core `TrustPolicy` | Weaker observed tiers, tier mismatches, ObserverOnly signing, and unknown rail/network values fail closed. SDK T4 is observation-only; URLs/configuration remain outside Core. |
 | Replay/idempotency binding | `ReplayBinding` commits descriptor fields (`publisher`, `event_id`, `sequence`, `payload_hash`, ordered commitments), the original digest, network, and rail policy using domain separation and length prefixes | The adapter derives the binding internally before `EnclaveManager::sign`; delimiter-collision descriptors therefore remain distinct. Duplicate detection, storage, and cache TTL remain SDK/higher-runtime-owned; this crate has no process-global replay state. |
@@ -81,10 +79,10 @@ input.
 ### Intentionally unsupported
 
 - Raw message signing or implicit hashing.
-- Digest algorithms not represented unambiguously by SDK `2.0.11`.
+- Digest algorithms not represented unambiguously by SDK `2.0.16`.
 - Silent fallback to legacy signing when a stronger typed API is absent.
 - Automatic Taproot tweak construction; the adapter sends `taproot_tweak: None`.
-- Schnorr and Ed25519 public-key derivation through the SDK `2.0.11`
+- Schnorr and Ed25519 public-key derivation through the SDK `2.0.16`
   algorithm-agnostic path-only getter. Signing response validation for both
   algorithms remains a separate supported boundary.
 - Attestation verification, replay storage, network calls, database access,
@@ -96,7 +94,7 @@ input.
 
 The effective workspace/package support floor is Rust `1.97.1+`, matching the
 Core package metadata and CI toolchain. This companion adapter intentionally
-continues to target the published SDK `2.0.11`; its lower manifest declaration
+continues to target the published SDK `2.0.16`; its lower manifest declaration
 does not lower the support floor of the current Core workspace.
 
 The adapter is a safe shared contract surface, not a production-readiness

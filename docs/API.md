@@ -231,7 +231,7 @@ Core package `lib-conxian-core` `0.3.1`, Rust `1.97.1`, the default feature set
 `BIP110_PREFLIGHT_API_VERSION = 1`, and
 `PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION = 1` with the Core evidence-binding
 domain constant. The known optional production SDK assumption is the existing
-`conxius-enclave-sdk` `2.0.11` declaration; this Core-only fixture layer deliberately does
+`conxius-enclave-sdk` `2.0.16` declaration; this Core-only fixture layer deliberately does
 not compile or force that optional SDK path. Direct release compatibility evidence is
 provided by the separate opt-in harness in
 [`docs/COMPATIBILITY.md`](COMPATIBILITY.md). The current `Conxian/conxian-nexus`
