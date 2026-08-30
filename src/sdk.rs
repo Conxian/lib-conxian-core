@@ -3,7 +3,7 @@
 //! Comprehensive re-exports of all publicly-accessible conxius-enclave-sdk modules,
 //! organized by category. Each category is gated behind a feature flag.
 //!
-//! ## Module Map (70 accessible modules → 7 categories; SDK Git tag v2.0.14)
+//! ## Module Map (68 accessible modules → 7 categories; SDK Git tag v2.0.17)
 //!
 //! | Category | Feature | Modules | Count |
 //! |----------|---------|---------|:-----:|
@@ -12,10 +12,8 @@
 //! | Nexus | `sdk-nexus` | nexus::{fedimint, roast} | 2 |
 //! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support | 5 |
 //! | Signing | `sdk-signing` | signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml} | 13 |
-//! | Enclave | `enclave` | android_authorization, android_strongbox*, attestation, cloud*, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | 11 |
+//! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | 9 |
 //! | Rails | `sdk-rails` | (none — all `pub(crate)` in SDK) | 0 |
-//!
-//! \* = gated behind `development-simulators` in SDK
 //!
 //! **Blocked modules:**
 //! - Rails (6): `pub(crate)` in SDK — cannot re-export
@@ -137,6 +135,8 @@ pub mod enclave_sdk {
     // pub use conxius_enclave_sdk::enclave::cloud;
     pub use conxius_enclave_sdk::enclave::attestation;
     pub use conxius_enclave_sdk::enclave::durable_replay;
+    // #[cfg(not(target_arch = "wasm32"))] in SDK:
+    #[cfg(not(target_arch = "wasm32"))]
     pub use conxius_enclave_sdk::enclave::nitro;
     pub use conxius_enclave_sdk::enclave::proof;
     pub use conxius_enclave_sdk::enclave::proofs;

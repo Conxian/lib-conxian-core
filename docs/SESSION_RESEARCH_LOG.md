@@ -164,14 +164,14 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 
 ### Objective
 1. Perform comprehensive audit and gap mapping of all repository code, documentation, and external SDK/crate references.
-2. Reconcile `conxius-enclave-sdk` version references across `Cargo.toml` (pinned `v2.0.16`), `docs/GAP_ANALYSIS_AND_SCORING.md`, and `docs/SESSION_RESEARCH_LOG.md`.
+2. Reconcile `conxius-enclave-sdk` version references across `Cargo.toml` (pinned `v2.0.17`), `docs/GAP_ANALYSIS_AND_SCORING.md`, and `docs/SESSION_RESEARCH_LOG.md`.
 3. Update Candidate Matrix and protocol readiness scores to reflect current v0.3.2 fail-closed boundaries and SDK-owned signing capabilities.
 4. Synchronize ecosystem roadmap, governance scorecards, and verification script results.
 
 ### Expanded Research Audit Findings
 
-#### 1. Vault SDK Boundary Alignment (`conxius-enclave-sdk` v2.0.16)
-- **Current Core Integration**: `Cargo.toml` pins `conxius-enclave-sdk` to Git tag `v2.0.16` (manifest version `2.0.16`) with optional feature gates (`enclave`, `sdk-blockchain`, `sdk-cross-cutting`, `sdk-rails`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `full-sdk`).
+#### 1. Vault SDK Boundary Alignment (`conxius-enclave-sdk` v2.0.17)
+- **Current Core Integration**: `Cargo.toml` pins `conxius-enclave-sdk` to Git tag `v2.0.17` (manifest version `2.0.17`) with optional feature gates (`enclave`, `sdk-blockchain`, `sdk-cross-cutting`, `sdk-rails`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `full-sdk`).
 - **Ownership Separation**: Core (`lib-conxian-core`) remains zero-secret-egress, fail-closed for signing and attestation verification. Production cryptographic operations (MuSig2 session aggregation, FROST DKG, hardware enclave attestation, BitVM2 execution) are owned by `conxius-enclave-sdk`.
 
 #### 2. Protocol Primitives & Fail-Closed Boundaries
@@ -182,10 +182,10 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 
 #### 3. Scoring Matrix Re-calibration (v0.3.2)
 - Strategic Alignment (40%), Technical Readiness (30%), Ecosystem Demand (30%).
-- Updated Candidate Matrix entries reflect `conxius-enclave-sdk` v2.0.16 capabilities and core protocol stability.
+- Updated Candidate Matrix entries reflect `conxius-enclave-sdk` v2.0.17 capabilities and core protocol stability.
 
 ### Actions Executed
-- Updated `docs/GAP_ANALYSIS_AND_SCORING.md` to reflect `conxius-enclave-sdk` v2.0.16 alignment and current protocol status.
+- Updated `docs/GAP_ANALYSIS_AND_SCORING.md` to reflect `conxius-enclave-sdk` v2.0.17 alignment and current protocol status.
 - Updated `docs/PHASE1_ISSUES_ROADMAP.md` with revised technical debt and protocol gap metrics.
 - Verified zero architectural contamination via `python3 scripts/verify_contamination_guard.py`.
 - Verified tracked file hygiene via `python3 scripts/verify_tracked_artifacts.py`.
@@ -270,7 +270,7 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 ### Objective
 1. Run `git fetch --all -p` across all remotes and prune obsolete branch tracking references.
 2. Perform comprehensive audit of all repository Knowledge Bases (KBs), AGENTS.md, GitHub issues, and multi-cloud connected infrastructure.
-3. Synchronize ERC-7683 intent mapping (`src/chain/erc7683.rs`), transport neutrality adapters (`src/chain/transport.rs`), and Vault SDK (`conxius-enclave-sdk` v2.0.16) alignment across research logs and scorecards.
+3. Synchronize ERC-7683 intent mapping (`src/chain/erc7683.rs`), transport neutrality adapters (`src/chain/transport.rs`), and Vault SDK (`conxius-enclave-sdk` v2.0.17) alignment across research logs and scorecards.
 4. Verify overall system integrity with 126 core Rust unit tests, 68 Python unit tests, and 100% pass rate across verification scripts.
 
 ### Expanded Research Audit Findings & Topology Mapping

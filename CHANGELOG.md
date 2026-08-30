@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.3.2] - 2026-08-07
 
 ### Changed
-- Bumped `conxius-enclave-sdk` dependency from v2.0.14 to v2.0.16 (crates.io publication with matching manifest `version` field).
+- Bumped `conxius-enclave-sdk` dependency from v2.0.14 to v2.0.17 (crates.io publication with matching manifest `version` field).
 - Added `version = "3.0.0"` to `frost-secp256k1-tr` git dependency for crates.io publish compatibility.
 - Published to crates.io — `lib-conxian-core = "0.3.2"` is now available on the registry.
 

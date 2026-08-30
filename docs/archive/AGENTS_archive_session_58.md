@@ -2,11 +2,11 @@
 
 This repository is the canonical home of shared protocol primitives and the Core type system for the Conxian ecosystem. It is a "protocol-first" library.
 
-> **Note:** The production Vault SDK (hardware-backed signing, attestation, FROST DKG, BitVM2) lives in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.16), NOT in this repository. See [docs/MIGRATION.md](docs/MIGRATION.md).
+> **Note:** The production Vault SDK (hardware-backed signing, attestation, FROST DKG, BitVM2) lives in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17), NOT in this repository. See [docs/MIGRATION.md](docs/MIGRATION.md).
 
 > **Session 52 review (2026-08-05):** Audited AGENTS.md, README.md, and PHASE1_ISSUES_ROADMAP.md. Fixed stale VaultSDK references, SDK version pins (v2.0.11→v2.0.14), SDK re-export module counts (50→70 with signing category), and Phase 1 status (6/9 CORE issues now closed). Blocked modules documented: Rails (6, pub(crate)), frost_crypto, wasm_bindings, android_strongbox, cloud.
 
-> **Session 52 AWS Nitro POC (2026-08-05):** Cross-referenced both repos (core v0.3.1 + SDK v2.0.16). Built `enclave-poc/` — a complete Nitro Enclave signing demo that exercises real Core types, the adapter boundary, and SDK's `EnclaveManager` trait. All 227 tests pass. POC demonstrates: Strict-tier Bitcoin signing with BIP-110 preflight ✅, ObserverOnly rejection ✅, 5-chain signing flow ✅. AWS Nitro deployment guide in `enclave-poc/README.md`. Docker artifacts in `enclave-poc/docker/`.
+> **Session 52 AWS Nitro POC (2026-08-05):** Cross-referenced both repos (core v0.3.1 + SDK v2.0.17). Built `enclave-poc/` — a complete Nitro Enclave signing demo that exercises real Core types, the adapter boundary, and SDK's `EnclaveManager` trait. All 227 tests pass. POC demonstrates: Strict-tier Bitcoin signing with BIP-110 preflight ✅, ObserverOnly rejection ✅, 5-chain signing flow ✅. AWS Nitro deployment guide in `enclave-poc/README.md`. Docker artifacts in `enclave-poc/docker/`.
 
 > **Session 52 Nitro CI + Extended POC (2026-08-05):** Created `.github/workflows/nitro-enclave-ci.yml` with build-test-docker-provision pipeline. Extended POC from 3→6 scenarios (error injection, key rotation, replay detection). Saved AWS secrets to GitHub repo secrets. Documented AWS permissions matrix — `botshelo` IAM user can read EC2 + manage SGs/roles but cannot launch instances or create OIDC providers. Full Nitro deployment requires either (a) adding `ec2:RunInstances`,`ec2:TerminateInstances`,`ec2:CreateKeyPair`,`iam:CreateInstanceProfile`,`iam:AddRoleToInstanceProfile`,`iam:PassRole` to the user, or (b) creating a `github-actions-nitro-provisioner` IAM role with OIDC trust for GitHub Actions. See [AWS Permissions Matrix](#aws-nitro-permissions-matrix) below.
 
@@ -88,7 +88,7 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v0.3.1) defines the canonical 42-
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
 - 30+ verifier types (from `verifier`)
 
-### SDK Re-exports (Session 57 — Full Alignment with conxius-enclave-sdk v2.0.16)
+### SDK Re-exports (Session 57 — Full Alignment with conxius-enclave-sdk v2.0.17)
 
 The `sdk` module (`src/sdk.rs`) re-exports ALL 70 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
@@ -222,7 +222,7 @@ Empirically audited permissions for IAM user `botshelo` (account `692112933743`,
 
 ## Session 52 Alignment Summary (2026-08-05)
 
-- **SDK**: conxius-enclave-sdk v2.0.16 (git tag), adapter 28 tests pass
+- **SDK**: conxius-enclave-sdk v2.0.17 (git tag), adapter 28 tests pass
 - **Toolchain**: rustc 1.97 across all repos (core, sdk, gateway, nexus)
 - **Nitro CI**: green end-to-end (build → docker → provision → teardown)
 - **Branch**: `docs/session-52-review-sync` — pending merge to `main`

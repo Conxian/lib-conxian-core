@@ -133,7 +133,7 @@ completion of that repository's tracked follow-up; it does not make Core a trans
 claim that BIP-110 is active consensus.
 
 1. **The `lib-conxian-core-enclave` companion adapter** targets the exact published
-   `conxius-enclave-sdk =2.0.11` API. For a Bitcoin signing request it invokes
+   `conxius-enclave-sdk =2.0.17` API. For a Bitcoin signing request it invokes
    `validate_bip110_preflight` first and refuses to call the injected
    `EnclaveManager` when the result is non-compliant, structurally invalid, or
    uses an unsupported context. This gate consumes Core's measurements; it does
