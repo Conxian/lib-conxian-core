@@ -42,8 +42,8 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-# Pinned to Git tag v2.0.16; manifest version 2.0.16. version field required for crates.io publish.
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.16", version = "2.0.16", default-features = false, optional = true }
+# Pinned to Git tag v2.0.17; manifest version 2.0.17. version field required for crates.io publish.
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.17", version = "2.0.17", default-features = false, optional = true }
 
 [features]
 default = []
