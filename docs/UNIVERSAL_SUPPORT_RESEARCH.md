@@ -71,7 +71,7 @@ ZKCP allows for the atomic exchange of a secret (e.g., a digital good) for a pay
 ## 11. Research Update (2026-08-19): v0.3.2 Ecosystem Audit & Gap Alignment
 - **RGB Integration Boundary**: Hardened `RGBStockAdapter` in `src/rgb/mod.rs` to ensure contract ID lookups fail-closed with `RGBError::InvalidContractId` on empty or whitespace strings.
 - **DLC CET & Oracle Verification**: Core equations and intent validation are enforced; CET construction and oracle attestation verification remain downstream in `conxian-gateway`.
-- **SDK Boundary**: Confirmed `conxius-enclave-sdk` v2.0.16 as the canonical signing and attestation layer, maintaining `lib-conxian-core` as a Zero Secret Egress protocol primitives provider.
+- **SDK Boundary**: Confirmed `conxius-enclave-sdk` v2.0.17 as the canonical signing and attestation layer, maintaining `lib-conxian-core` as a Zero Secret Egress protocol primitives provider.
 
 ## 12. Research Update (2026-08-19 Session Synthesis): Multi-Cloud & Neon DB Infrastructure Mapping
 An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-silent-sun-00457600`) confirms six dedicated Neon PostgreSQL project environments supporting the microservice architecture:

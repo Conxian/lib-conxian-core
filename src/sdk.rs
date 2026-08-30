@@ -3,7 +3,7 @@
 //! Comprehensive re-exports of all publicly-accessible conxius-enclave-sdk modules,
 //! organized by category. Each category is gated behind a feature flag.
 //!
-//! ## Module Map (68 accessible modules → 7 categories; SDK Git tag v2.0.16)
+//! ## Module Map (68 accessible modules → 7 categories; SDK Git tag v2.0.17)
 //!
 //! | Category | Feature | Modules | Count |
 //! |----------|---------|---------|:-----:|

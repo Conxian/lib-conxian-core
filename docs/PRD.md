@@ -3,7 +3,7 @@
 ## 1. Executive Summary
 Conxian builds native application infrastructure for Bitcoin. The `lib-conxian-core` is the foundational library for shared protocol primitives used across the Conxian ecosystem.
 
-> ⚠️ **Note:** The production **Vault SDK** (hardware-backed signing, attestation, FROST DKG, BitVM2) is now in the [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.16).
+> ⚠️ **Note:** The production **Vault SDK** (hardware-backed signing, attestation, FROST DKG, BitVM2) is now in the [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.17).
 
 ## 2. Strategic Focus: Protocol Primitives
 This repository's primary purpose is providing shared protocol primitives:
@@ -40,7 +40,7 @@ The library implements the programmatic hooks for the Conxian creator-first econ
 ## 7. Crate Relationships
 | Crate | Version | Purpose |
 |-------|---------|---------|
-| `conxius-enclave-sdk` | 2.0.16 | **Production Vault SDK** - Hardware signing, attestation |
+| `conxius-enclave-sdk` | 2.0.17 | **Production Vault SDK** - Hardware signing, attestation |
 | `lib-conxian-core` | 0.2.10 | **Protocol primitives** - Types, invariants, adapters |
 | `conxian-gateway` | 0.1.4 | Runtime orchestration and middleware |
 

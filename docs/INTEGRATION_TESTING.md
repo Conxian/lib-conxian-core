@@ -31,7 +31,7 @@ backends. Gateway owns orchestration, persistence, routing, retries, and externa
 ## Enclave SDK companion tests
 
 The workspace member `lib-conxian-core-enclave` is tested separately against the
-exact published `conxius-enclave-sdk =2.0.16` API. Its integration tests inject
+exact published `conxius-enclave-sdk =2.0.17` API. Its integration tests inject
 a deterministic in-process `EnclaveManager` double and verify the adapter
 boundary rather than a simulator or provider implementation. Coverage includes:
 
@@ -100,9 +100,9 @@ The exact pins represented by this checkpoint are:
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
-| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` Git tag `v2.0.16` (manifest package version `2.0.16`) |
-| Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.16`; default features remain minimal |
-| Companion SDK release | The adapter and evidence harness target the same Git-tagged SDK `2.0.16` as Core's optional dependency |
+| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` Git tag `v2.0.17` (manifest package version `2.0.17`) |
+| Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.17`; default features remain minimal |
+| Companion SDK release | The adapter and evidence harness target the same Git-tagged SDK `2.0.17` as Core's optional dependency |
 | Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `3b091d2700d840514427e4190c40d631b6d8132c`; this checkpoint does not change that downstream pin |
 | Gateway | local Core crate integration; no cross-repository dependency is added here |
 | Wallet | TypeScript boundary; no Rust runtime dependency is added here |
@@ -113,13 +113,13 @@ contains the exact `lib-conxian-core` revision pin
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
-floor is Rust `1.97.1+`; the SDK `2.0.16` companion dependency's lower
+floor is Rust `1.97.1+`; the SDK `2.0.17` companion dependency's lower
 declaration does not lower the current Core workspace floor. The tests
 run with default features for Core and do not enable simulator/mock/dev bypasses.
 
 This document describes the Core-only fixture layer. Direct compile and
 serde-boundary evidence against the exact SDK release is intentionally kept in
-the separate opt-in [`SDK v2.0.16 compatibility evidence`](COMPATIBILITY.md#opt-in-sdk-v2011-compatibility-evidence)
+the separate opt-in [`SDK v2.0.17 compatibility evidence`](COMPATIBILITY.md#opt-in-sdk-v2011-compatibility-evidence)
 harness. That harness does not change the ownership or production-readiness
 claims of these deterministic Core fixtures.
 

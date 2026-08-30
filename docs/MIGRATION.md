@@ -131,7 +131,7 @@ Add `conxius-enclave-sdk` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-conxius-enclave-sdk = "2.0.16"
+conxius-enclave-sdk = "2.0.17"
 lib-conxian-core = "0.3.1"
 ```
 
