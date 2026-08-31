@@ -345,3 +345,22 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
 - **Python Verification Suite**: 68 passed (100% success rate).
 - **Boundary Guards & Hygiene**: All 8 verification scripts passed without contamination or domain leakage.
+
+## Session 2026-08-31 (Session 61): Comprehensive Vault SDK Capability Audit & Upgrade Alignment
+
+### Objective
+1. Audit full usage of `conxius-enclave-sdk` (`v2.0.17`) capabilities across `lib-conxian-core`, `addons/lib-conxian-core-enclave`, `enclave-poc`, `tests/sdk-compat`, and `src/sdk.rs`.
+2. Verify full structural alignment of hardware signing request/response DTOs, trust tiers (T1-T4), BIP-110 policy evidence, and enclave attestation structures across all crates.
+3. Validate complete test matrix, boundary guards, and Python verification scripts.
+
+### Research Audit & Capability Alignment Summary
+- **Vault SDK Pinning**: All manifests (`Cargo.toml`, `addons/lib-conxian-core-enclave/Cargo.toml`, `enclave-poc/Cargo.toml`, `tests/sdk-compat/Cargo.toml`) and `README.md` strictly aligned to Git tag `v2.0.17` / manifest version `2.0.17`.
+- **SDK Module Coverage**: `src/sdk.rs` re-exports 68 SDK modules across 7 categories (`sdk-blockchain`, `sdk-cross-cutting`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `enclave`, `sdk-rails`).
+- **Enclave Adapter Integration**: `addons/lib-conxian-core-enclave` provides fail-closed request translation and domain separation for `EnclaveManager::sign`, verifying explicit 32-byte SHA256 message digests.
+- **SDK Compatibility Matrix**: Opt-in test suite `tests/sdk-compat` verified compatibility across 6 feature combinations (Core default/enclave x SDK default/mock-cloud-enclave/all-supported).
+
+### System Verification Status
+- **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
+- **SDK Compatibility Suite**: 6 feature matrices passed (100% success rate).
+- **Python Verification Suite**: 68 passed (100% success rate).
+- **Boundary Guards & Hygiene**: All dependency, contamination guard, and tracked artifact verification scripts passed without issues.
