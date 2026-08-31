@@ -88,9 +88,9 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
 - 30+ verifier types (from `verifier`)
 
-### SDK Re-exports (Session 57 — Full Alignment with conxius-enclave-sdk v2.0.17)
+### SDK Re-exports (Session 58 — Full Alignment with conxius-enclave-sdk v2.0.17)
 
-The `sdk` module (`src/sdk.rs`) re-exports ALL 68 accessible conxius-enclave-sdk modules organized by category.
+The `sdk` module (`src/sdk.rs`) re-exports ALL 74 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
 
 ```toml
@@ -99,20 +99,26 @@ lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
 
 | Category | Feature Flag | Modules | SDK Re-export Path |
 |----------|:-----------:|:-------:|-------------------|
-| Blockchain | `sdk-blockchain` | 24 | `sdk::blockchain::{ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router}` |
+| Blockchain | `sdk-blockchain` | 26 | `sdk::blockchain::{ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, frost_crypto, lightning, lightning_channel, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router}` |
 | Cross-cutting | `sdk-cross-cutting` | 15 | `sdk::cross_cutting::{a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml}` |
-| Nexus | `sdk-nexus` | 2 | `sdk::nexus::{fedimint, roast}` |
-| Infrastructure | `sdk-infrastructure` | 5 | `sdk::infrastructure::{config, serde_big_array, state, telemetry, wasm_support}` |
+| Nexus | `sdk-nexus` | 3 | `sdk::nexus::{fedimint, fedimint_crypto, roast}` |
+| Infrastructure | `sdk-infrastructure` | 6 | `sdk::infrastructure::{config, serde_big_array, state, telemetry, wasm_support, wasm_bindings}` |
 | Signing | `sdk-signing` | 13 | `sdk::signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml}` |
-| Enclave | `enclave` | 9 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
+| Enclave | `enclave` | 11 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, trust, trust_contracts, verifiers}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
 
-**Blocked modules:**
-- Rails (6): `pub(crate)` in SDK — cannot re-export (bisq, boltz, changelly, wormhole, ntt, x402)
-- `frost_crypto`: `#[cfg(feature = "frost-crypto")]` in SDK
+**Feature-gated modules (enabled via the matching `sdk-*` crypto feature):**
+- `frost_crypto`: requires `sdk-frost-crypto` (→ SDK `frost-crypto`)
+- `fedimint_crypto`: requires `sdk-fedimint-crypto` (→ SDK `fedimint-crypto`)
 - `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
-- `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK
+- `replay_store_file`, `nitro`, `verifiers::{nitro_trust, nitro_verifier}`: `#[cfg(not(target_arch = "wasm32"))]` in SDK
 
-**Meta-feature:** `full-sdk` enables all 7 categories at once. The full `conxius_enclave_sdk` crate is also
+**Blocked modules (not re-exportable without SDK changes):**
+- Rails (6): `pub(crate)` in SDK — cannot re-export (bisq, boltz, changelly, wormhole, ntt, x402)
+- `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK — dev/test-only boundary
+
+**Meta-feature:** `full-sdk` enables all 7 categories plus the 6 cryptographic capability features
+(`sdk-bip110-compliant`, `sdk-frost-crypto`, `sdk-fedimint-crypto`, `sdk-groth16`, `sdk-cryptoki`,
+`sdk-webauthn`) at once. The full `conxius_enclave_sdk` crate is also
 re-exported at `sdk::conxius_enclave_sdk` for direct access.
 
 ## Consumer Wiring
