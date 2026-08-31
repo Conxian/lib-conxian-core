@@ -108,9 +108,9 @@ pub mod infrastructure {
     pub use conxius_enclave_sdk::serde_big_array;
     pub use conxius_enclave_sdk::state;
     pub use conxius_enclave_sdk::telemetry;
-    pub use conxius_enclave_sdk::wasm_support;
     #[cfg(target_arch = "wasm32")]
     pub use conxius_enclave_sdk::wasm_bindings;
+    pub use conxius_enclave_sdk::wasm_support;
 }
 
 // ── Signing module (Session 57 — 13 modules, unblocked with v2.0.13) ──
