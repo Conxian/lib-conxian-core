@@ -27,7 +27,7 @@ This document provides a comprehensive analysis of the Conxian ecosystem crate r
 
 | Crate | Version | Owner | Purpose | Downloads | Status |
 |-------|---------|-------|---------|-----------|--------|
-| `conxius-enclave-sdk` | 2.0.11 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
+| `conxius-enclave-sdk` | 2.0.17 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
 | `conxian-core` | 0.1.4 | botshelomokoka | Gateway core | 23 | ⚠️ WIP |
 | `conxian_api` | 0.1.4 | botshelomokoka | HTTP API | 10 | ⚠️ WIP |
 | `conxian_compliance` | 0.1.4 | botshelomokoka | ZK compliance | 13 | ⚠️ WIP |
@@ -105,7 +105,7 @@ This is the **production SDK** for hardware-backed signing and security primitiv
 | Feature | Status | WASM |
 |---------|--------|------|
 | Hardware Attestation | ✅ Production | ✅ |
-| FROST DKG | ✅ v2.0.11 | ✅ |
+| FROST DKG | ✅ v2.0.17 | ✅ |
 | Fedimint | ✅ v2.0.7 | ✅ |
 | Ark | ✅ v2.0.7 | ✅ |
 | BitVM2 | ✅ Production | ✅ |
@@ -274,7 +274,7 @@ The following is the current ownership target after the historical extraction:
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
 | lib-conxian-core | 0.3.1 | 0.3.1 | ✅ Current intentional breaking release |
-| conxius-enclave-sdk | 2.0.11 | 2.1.0 | WASM completeness |
+| conxius-enclave-sdk | 2.0.17 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
 ## Open Issues Summary

@@ -13,7 +13,7 @@ For **hardware-backed signing, attestation, and policy primitives**, use the pro
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
-the exact published SDK `=2.0.11`, keeps Core's default features SDK-independent,
+the exact published SDK `=2.0.17`, keeps Core's default features SDK-independent,
 and does not enable simulator/mock/dev bypass features by default.
 
 > **v0.2.11 Breaking Change**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed.
@@ -83,7 +83,7 @@ For the exact published SDK contract boundary, add:
 ```toml
 [dependencies]
 lib-conxian-core-enclave = "0.1.0"
-conxius-enclave-sdk = "=2.0.11"
+conxius-enclave-sdk = "=2.0.17"
 ```
 
 The root package's optional `enclave` feature remains available for direct
