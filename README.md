@@ -1,7 +1,7 @@
 # lib-conxian-core
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 
 Shared protocol primitives for the Conxian ecosystem.
@@ -39,7 +39,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 ## Status
 
-**v0.3.2 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.3.3 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
 ## Scope
 
@@ -68,14 +68,14 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = "0.3.2"
+lib-conxian-core = "0.3.3"
 ```
 
 Or use a table declaration when selecting dependency features:
 
 ```toml
 [dependencies]
-lib-conxian-core = { version = "0.3.2", default-features = false }
+lib-conxian-core = { version = "0.3.3", default-features = false }
 ```
 
 For the exact published SDK contract boundary, add:

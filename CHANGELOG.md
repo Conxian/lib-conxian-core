@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.3] - 2026-08-31
+
+### Changed
+- Expanded `conxius-enclave-sdk` capability re-exports from 68 to 74 modules (`lightning_channel`, `nexus::fedimint_crypto`, `enclave::verifiers`, `enclave::replay_store_file`).
+- Propagated SDK cryptographic capability features 1:1 (`sdk-bip110-compliant`, `sdk-frost-crypto`, `sdk-fedimint-crypto`, `sdk-groth16`, `sdk-cryptoki`, `sdk-webauthn`); `full-sdk` now enables them all.
+- Hardened fail-closed validation across crypto, BIP-352 Bitcoin scanning, and DLC adapters.
+
+### Security
+- Enforced 100% SHA pinning and least-privilege permissions across GitHub workflows.
+
 ## [v0.3.2] - 2026-08-07
 
 ### Changed
