@@ -1,25 +1,29 @@
-//! # SDK Capability Re-exports (Session 52 → Session 57)
+//! # SDK Capability Re-exports (Session 52 → Session 58)
 //!
 //! Comprehensive re-exports of all publicly-accessible conxius-enclave-sdk modules,
 //! organized by category. Each category is gated behind a feature flag.
 //!
-//! ## Module Map (68 accessible modules → 7 categories; SDK Git tag v2.0.17)
+//! ## Module Map (74 accessible modules → 7 categories; SDK Git tag v2.0.17)
 //!
 //! | Category | Feature | Modules | Count |
 //! |----------|---------|---------|:-----:|
-//! | Blockchain | `sdk-blockchain` | ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, lightning, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router | 24 |
+//! | Blockchain | `sdk-blockchain` | ark, asset, babylon, bip110, bip322, bitcoin, bitvm, bitvm2, cctp, covenant, credit, dlc, ethereum, fiat, frost, frost_crypto, lightning, lightning_channel, mmr, musig2, rgb, sidl, solana, stacks, statechain, swap_router | 26 |
 //! | Cross-cutting | `sdk-cross-cutting` | a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml | 15 |
-//! | Nexus | `sdk-nexus` | nexus::{fedimint, roast} | 2 |
-//! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support | 5 |
+//! | Nexus | `sdk-nexus` | nexus::{fedimint, fedimint_crypto, roast} | 3 |
+//! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support, wasm_bindings | 6 |
 //! | Signing | `sdk-signing` | signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml} | 13 |
-//! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, trust, trust_contracts | 9 |
+//! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, trust, trust_contracts, verifiers | 11 |
 //! | Rails | `sdk-rails` | (none — all `pub(crate)` in SDK) | 0 |
 //!
-//! **Blocked modules:**
-//! - Rails (6): `pub(crate)` in SDK — cannot re-export
-//! - `frost_crypto`: `#[cfg(feature = "frost-crypto")]` in SDK
+//! **Feature-gated modules (enabled via the matching `sdk-*` crypto feature):**
+//! - `frost_crypto`: requires `sdk-frost-crypto` (→ SDK `frost-crypto`)
+//! - `fedimint_crypto`: requires `sdk-fedimint-crypto` (→ SDK `fedimint-crypto`)
 //! - `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
-//! - `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK
+//! - `replay_store_file`, `nitro`, `verifiers::{nitro_trust, nitro_verifier}`: `#[cfg(not(target_arch = "wasm32"))]` in SDK
+//!
+//! **Blocked modules (not re-exportable without SDK changes):**
+//! - Rails (6): `pub(crate)` in SDK — cannot re-export
+//! - `android_strongbox`, `cloud`: `#[cfg(any(test, feature = "development-simulators"))]` in SDK — dev/test-only boundary, intentionally not part of the production surface
 
 // ── Full SDK re-export (always available when any sdk feature is enabled) ──
 
@@ -53,7 +57,10 @@ pub mod blockchain {
     pub use conxius_enclave_sdk::protocol::ethereum;
     pub use conxius_enclave_sdk::protocol::fiat;
     pub use conxius_enclave_sdk::protocol::frost;
+    #[cfg(feature = "sdk-frost-crypto")]
+    pub use conxius_enclave_sdk::protocol::frost_crypto;
     pub use conxius_enclave_sdk::protocol::lightning;
+    pub use conxius_enclave_sdk::protocol::lightning_channel;
     pub use conxius_enclave_sdk::protocol::mmr;
     pub use conxius_enclave_sdk::protocol::musig2;
     pub use conxius_enclave_sdk::protocol::rgb;
@@ -62,8 +69,6 @@ pub mod blockchain {
     pub use conxius_enclave_sdk::protocol::stacks;
     pub use conxius_enclave_sdk::protocol::statechain;
     pub use conxius_enclave_sdk::protocol::swap_router;
-    // #[cfg(feature = "frost-crypto")] in SDK:
-    // pub use conxius_enclave_sdk::protocol::frost_crypto;
 }
 
 #[cfg(feature = "sdk-cross-cutting")]
@@ -92,6 +97,8 @@ pub mod cross_cutting {
 #[cfg(feature = "sdk-nexus")]
 pub mod nexus {
     pub use conxius_enclave_sdk::protocol::nexus::fedimint;
+    #[cfg(feature = "sdk-fedimint-crypto")]
+    pub use conxius_enclave_sdk::protocol::nexus::fedimint_crypto;
     pub use conxius_enclave_sdk::protocol::nexus::roast;
 }
 
@@ -101,9 +108,9 @@ pub mod infrastructure {
     pub use conxius_enclave_sdk::serde_big_array;
     pub use conxius_enclave_sdk::state;
     pub use conxius_enclave_sdk::telemetry;
+    #[cfg(target_arch = "wasm32")]
+    pub use conxius_enclave_sdk::wasm_bindings;
     pub use conxius_enclave_sdk::wasm_support;
-    // #[cfg(target_arch = "wasm32")] in SDK:
-    // pub use conxius_enclave_sdk::wasm_bindings;
 }
 
 // ── Signing module (Session 57 — 13 modules, unblocked with v2.0.13) ──
@@ -141,6 +148,9 @@ pub mod enclave_sdk {
     pub use conxius_enclave_sdk::enclave::proof;
     pub use conxius_enclave_sdk::enclave::proofs;
     pub use conxius_enclave_sdk::enclave::replay_guard;
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use conxius_enclave_sdk::enclave::replay_store_file;
     pub use conxius_enclave_sdk::enclave::trust;
     pub use conxius_enclave_sdk::enclave::trust_contracts;
+    pub use conxius_enclave_sdk::enclave::verifiers;
 }

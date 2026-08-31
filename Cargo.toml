@@ -49,23 +49,40 @@ conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", 
 default = []
 enclave = ["conxius-enclave-sdk"]
 
-# ── SDK capability exposure (Session 52: align core with all SDK modules) ──
+# ── SDK capability exposure (Session 52 → Session 58: align core with all SDK modules) ──
 # Each feature gate exposes a category of conxius-enclave-sdk modules through
-# conxian_core::sdk::*, making all 68 accessible SDK modules available to downstream crates
+# conxian_core::sdk::*, making all 74 accessible SDK modules available to downstream crates
 # that depend on lib-conxian-core.
 
-# Blockchain protocols (24 modules)
+# Blockchain protocols (26 modules)
 sdk-blockchain = ["conxius-enclave-sdk"]
 # Cross-cutting capabilities (15 modules)
 sdk-cross-cutting = ["conxius-enclave-sdk"]
 # Reserved compatibility feature; all six SDK rails are currently pub(crate).
 sdk-rails = ["conxius-enclave-sdk"]
-# Nexus verification (2 modules)
+# Nexus verification (3 modules)
 sdk-nexus = ["conxius-enclave-sdk"]
-# Infrastructure & tooling (5 modules)
+# Infrastructure & tooling (6 modules)
 sdk-infrastructure = ["conxius-enclave-sdk"]
 # Signing primitives (13 modules)
 sdk-signing = ["conxius-enclave-sdk"]
+
+# ── Cryptographic capability features (map 1:1 to conxius-enclave-sdk features) ──
+# Without these, the SDK boundary types validate structurally but fail closed
+# (ProtocolUnsupported / VerificationUnavailable). Enabling them activates the
+# value-bearing execution paths and unlocks the cfg-gated modules below.
+# BIP-110 executable validators (bip110, bip322, control_model_adapter)
+sdk-bip110-compliant = ["conxius-enclave-sdk/bip110_compliant"]
+# FROST threshold signing + `protocol::frost_crypto` module
+sdk-frost-crypto = ["conxius-enclave-sdk/frost-crypto"]
+# Fedimint e-cash mint ops + `protocol::nexus::fedimint_crypto` module
+sdk-fedimint-crypto = ["conxius-enclave-sdk/fedimint-crypto"]
+# Groth16/BitVM2 SNARK proof verification (BLS12-381 pairings)
+sdk-groth16 = ["conxius-enclave-sdk/groth16"]
+# PKCS#11 HSM/TPM integration
+sdk-cryptoki = ["conxius-enclave-sdk/cryptoki"]
+# WebAuthn/FIDO2 attestation
+sdk-webauthn = ["conxius-enclave-sdk/webauthn"]
 
 # Meta-feature: enable ALL SDK capabilities
 full-sdk = [
@@ -76,6 +93,12 @@ full-sdk = [
     "sdk-nexus",
     "sdk-infrastructure",
     "sdk-signing",
+    "sdk-bip110-compliant",
+    "sdk-frost-crypto",
+    "sdk-fedimint-crypto",
+    "sdk-groth16",
+    "sdk-cryptoki",
+    "sdk-webauthn",
 ]
 
 [workspace]
