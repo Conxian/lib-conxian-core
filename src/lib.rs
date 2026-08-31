@@ -16,6 +16,8 @@
 //! - `adapters`: Universal chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, +15 family adapters)
 //! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
+//! - `core_types`: Canonical core type re-exports for downstream integrations (Nexus, Gateway, Platform)
+//! - `compat`: Compatibility module mapping legacy integration paths (`compat::core_bridge::core_types`)
 //! - `sdk`: **Comprehensive SDK re-exports** — all 74 accessible conxius-enclave-sdk modules organized by category (Session 58)
 //!
 //! ## SDK Features (Session 58 — Full Alignment)
@@ -65,6 +67,36 @@ pub mod fedimint;
 pub mod protocol;
 pub mod verifier;
 
+/// Canonical core protocol type re-exports for downstream integrations (Nexus, Gateway, Platform).
+pub mod core_types {
+    pub use crate::adapters;
+    pub use crate::anchoring;
+    pub use crate::babylon;
+    pub use crate::bitcoin;
+    pub use crate::chain;
+    pub use crate::cjcs;
+    pub use crate::contract_bridge;
+    pub use crate::control_model;
+    pub use crate::crypto;
+    pub use crate::deployment;
+    pub use crate::enclave;
+    pub use crate::fedimint;
+    pub use crate::lightning;
+    pub use crate::protocol;
+    pub use crate::rgb;
+    pub use crate::signing;
+    pub use crate::stacks;
+    pub use crate::verifier;
+}
+
+/// Compatibility re-exports for legacy downstream path bindings.
+pub mod compat {
+    pub mod core_bridge {
+        pub use crate::contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
+        pub use crate::core_types;
+    }
+}
+
 // CXIP 20 Modular Architecture
 pub mod bitcoin;
 pub mod crypto;
@@ -94,13 +126,13 @@ pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
 
 // Re-export the platform-neutral protocol verification contract and models.
 pub use verifier::{
-    compute_evidence_binding_hash, validate_finality_result, validate_finality_result_at,
-    validate_finality_transition, validate_proof_envelope, validate_proof_envelope_at,
-    validate_proof_verification_result, validate_proof_verification_result_at, BlockHeader,
-    BlockReference, CapabilityAdvertisement, ChainId, ChainStateReference,
-    ChainStateVerificationRequest, DynProtocolVerifier, LatestVerifiedBlock, ProofData,
-    ProofFormat, ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
-    ProtocolVerifierBackend, ProtocolVerifierError, TransactionFinalityRequest,
+    compute_evidence_binding_hash, validate_evidence_binding, validate_finality_result,
+    validate_finality_result_at, validate_finality_transition, validate_proof_envelope,
+    validate_proof_envelope_at, validate_proof_verification_result,
+    validate_proof_verification_result_at, BlockHeader, BlockReference, CapabilityAdvertisement,
+    ChainId, ChainStateReference, ChainStateVerificationRequest, DynProtocolVerifier,
+    LatestVerifiedBlock, ProofData, ProofFormat, ProofVerificationRequest, ProofVerificationResult,
+    ProtocolVerifier, ProtocolVerifierBackend, ProtocolVerifierError, TransactionFinalityRequest,
     TransactionFinalityResult, TransactionFinalityStatus, VerificationProvenance,
     VerifiedBlockReference, VerifierCapabilities, VerifierCapability,
     PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN, PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION,

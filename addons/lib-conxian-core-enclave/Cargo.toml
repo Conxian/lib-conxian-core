@@ -11,7 +11,7 @@ keywords = ["bitcoin", "enclave", "signing", "conxian"]
 categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
-lib-conxian-core = { version = "0.3.1", path = "../.." }
+lib-conxian-core = { version = "0.3.2", path = "../.." }
 conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk.git", tag = "v2.0.17", default-features = false }
 hex = "0.4.3"
 serde = { version = "1.0", features = ["derive"] }

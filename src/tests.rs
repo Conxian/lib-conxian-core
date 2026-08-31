@@ -164,4 +164,34 @@ mod additional_protocol_tests {
             Err(crate::protocol::dlc::DlcVerificationError::MalformedAttestation)
         );
     }
+
+    #[test]
+    fn test_core_types_and_compat_reexports() {
+        use crate::compat::core_bridge::{
+            core_types as compat_types, ContractBridge as CompatBridge,
+        };
+        use crate::core_types;
+
+        // Verify core_types re-exports
+        let chain_id = core_types::verifier::ChainId::new(
+            core_types::control_model::ChainFamily::BitcoinUtxo,
+            "mainnet",
+        );
+        assert_eq!(chain_id.canonical_id(), "bitcoin_utxo:mainnet");
+
+        // Verify compat re-exports
+        let _bridge = CompatBridge;
+        let _tier = compat_types::control_model::TrustTier::Strict;
+
+        // Verify validate_evidence_binding
+        let request = crate::verifier::ProofVerificationRequest::new(
+            chain_id,
+            crate::verifier::ChainStateReference::new("0x1234", 100, Some("0x5678".to_string())),
+            crate::verifier::ProofData::new(
+                crate::verifier::ProofFormat::HeaderChain,
+                vec![1, 2, 3],
+            ),
+        );
+        assert!(crate::validate_evidence_binding(&request).is_ok());
+    }
 }
