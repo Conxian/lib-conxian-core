@@ -25,7 +25,7 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 
 ## Protocol Coverage — SDK → Core Alignment
 
-The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42-chain `AssetRegistry` and 52 protocol modules (24 blockchain + 28 infrastructure). lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
+The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42-chain `AssetRegistry` and 43 protocol modules (25 blockchain + 18 infrastructure). lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
 
 ### Core Type Coverage Requirements
 
