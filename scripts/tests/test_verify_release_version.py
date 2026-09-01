@@ -394,8 +394,7 @@ class ReleaseVersionGuardTests(unittest.TestCase):
         opener = FakeOpener(
             [
                 {
-                    "crate": {"name": PACKAGE},
-                    "version": {"num": VERSION, "yanked": True},
+                    "version": {"crate": PACKAGE, "num": VERSION, "yanked": True},
                 }
             ]
         )
@@ -416,8 +415,7 @@ class ReleaseVersionGuardTests(unittest.TestCase):
         opener = FakeOpener(
             [
                 {
-                    "crate": {"name": PACKAGE},
-                    "version": {"num": VERSION},
+                    "version": {"crate": PACKAGE, "num": VERSION},
                 }
             ]
         )
@@ -425,6 +423,24 @@ class ReleaseVersionGuardTests(unittest.TestCase):
 
         with self.assertRaisesRegex(guard.RemoteCheckError, "boolean version.yanked"):
             client.get_version(PACKAGE, VERSION)
+
+    def test_crates_io_client_accepts_legacy_crate_object_name(self) -> None:
+        opener = FakeOpener(
+            [
+                {
+                    "crate": {"name": PACKAGE},
+                    "version": {"num": VERSION, "yanked": False},
+                }
+            ]
+        )
+        client = guard.CratesIoClient(opener=opener)
+
+        published = client.get_version(PACKAGE, VERSION)
+
+        self.assertEqual(
+            published,
+            guard.RegistryVersion(number=VERSION, yanked=False, crate_name=PACKAGE),
+        )
 
     def test_remote_tag_lookup_failure_is_not_reported_as_missing_tag(self) -> None:
         temporary, root = self.repo()
