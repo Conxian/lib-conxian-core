@@ -8,7 +8,7 @@ Only the current stable release line (`0.3.x`) receives security patches and act
 
 | Version Line | Supported | Status | Notes |
 | ------------ | --------- | ------ | ----- |
-| `0.3.x`      | ✅         | Active | Current release line (v0.3.2 stable) |
+| `0.3.x`      | ✅         | Active | Current release line (v0.3.3 stable) |
 | `< 0.3.0`    | ❌         | End of Life | Deprecated; upgrade to `0.3.x` |
 
 Downstream consumers are strongly advised to keep their dependency on `lib-conxian-core` updated to the latest patch release within the `0.3.x` series.

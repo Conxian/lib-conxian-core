@@ -1,4 +1,4 @@
-# Conxian Agent Guidelines: lib-conxian-core (v0.3.2 — Session 58, Aug 2026)
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.3 — Session 58, Aug 2026)
 
 This repository is the canonical home of shared protocol primitives and the Core type system for the Conxian ecosystem. It is a "protocol-first" library.
 
