@@ -28,6 +28,10 @@ jobs:
             "target"
             "dist"
             "build"
+            "*.pyc"
+            "*.pyo"
+            "*.pyd"
+            "__pycache__"
           )
 
           FOUND_FILES=""
