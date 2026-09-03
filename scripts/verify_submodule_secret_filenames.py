@@ -42,8 +42,8 @@ def is_exempt(filename: str) -> bool:
     return any(fnmatch.fnmatch(name, pat) for pat in EXEMPTION_PATTERNS)
 
 
-def check_git_files(git_dir: str | None = None) -> list[str]:
-    violations: list[str] = []
+def check_git_files(git_dir: str | None = None) -> list[tuple[str, str]]:
+    violations: list[tuple[str, str]] = []
     cmd = ["git"]
     if git_dir:
         cmd.extend(["-C", git_dir])
@@ -60,8 +60,8 @@ def check_git_files(git_dir: str | None = None) -> list[str]:
         for pattern in FORBIDDEN_SECRET_PATTERNS:
             if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(filepath, pattern):
                 if not is_exempt(filename):
-                    prefix = f"[{git_dir}] " if git_dir else ""
-                    violations.append(f"{prefix}{filepath} (matches '{pattern}')")
+                    scope = "submodule" if git_dir else "repository"
+                    violations.append((scope, pattern))
                 break
 
     return violations
@@ -69,7 +69,7 @@ def check_git_files(git_dir: str | None = None) -> list[str]:
 
 def main() -> int:
     print("Verifying submodule and repository secret filenames...")
-    violations: list[str] = []
+    violations: list[tuple[str, str]] = []
 
     # Check main repository tracked files
     violations.extend(check_git_files())
@@ -91,9 +91,14 @@ def main() -> int:
         pass
 
     if violations:
-        print("Error: Forbidden secret filenames found in tracked git repository/submodules:")
-        for v in violations:
-            print(f"  - {v}")
+        print("Error: Forbidden secret filenames found in tracked git repository/submodules.")
+        print(f"Total violations: {len(violations)}")
+        pattern_counts: dict[str, int] = {}
+        for _, pattern in violations:
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+        print("Matched forbidden patterns:")
+        for pattern, count in sorted(pattern_counts.items()):
+            print(f"  - {pattern}: {count}")
         return 1
 
     print("No forbidden secret filenames detected in tracked files or submodules.")
