@@ -95,6 +95,14 @@ impl DlcManager {
         outcome_msg: &[u8],
         signature_scalar: &[u8],
     ) -> bool {
+        if oracle_pubkey.is_empty()
+            || nonce_point.is_empty()
+            || outcome_msg.is_empty()
+            || signature_scalar.len() != 32
+        {
+            return false;
+        }
+
         let secp = Secp256k1::new();
 
         let pk = match PublicKey::from_slice(oracle_pubkey) {
@@ -164,7 +172,7 @@ impl DlcManager {
         if current_block > intent.expiry_block {
             return Err(DlcVerificationError::Expired);
         }
-        if nonce_point.is_empty() || signature_scalar.len() != 32 {
+        if nonce_point.is_empty() || signature_scalar.len() != 32 || outcome_msg.is_empty() {
             return Err(DlcVerificationError::MalformedAttestation);
         }
 

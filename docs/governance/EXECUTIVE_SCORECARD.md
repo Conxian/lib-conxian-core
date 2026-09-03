@@ -13,7 +13,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 ## 2. Key Metrics
 
-- **Core Tests**: 128 Core Tests Passing (100% success; 183 total across all test binaries)
+- **Core Tests**: 183 Total Rust Tests Passing (128 Core Unit/Doc Tests + 55 Integration/Conformance Tests; 69 Python Guard Tests)
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Nitro Enclave CI, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
