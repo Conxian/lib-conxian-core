@@ -18,10 +18,16 @@ impl std::fmt::Display for CovenantError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidPubkeyLength(len) => {
-                write!(f, "invalid covenant pubkey length: {len} (expected 32 or 33 bytes)")
+                write!(
+                    f,
+                    "invalid covenant pubkey length: {len} (expected 32 or 33 bytes)"
+                )
             }
             Self::InvalidTargetHashLength(len) => {
-                write!(f, "invalid covenant target hash length: {len} (expected 32 bytes)")
+                write!(
+                    f,
+                    "invalid covenant target hash length: {len} (expected 32 bytes)"
+                )
             }
             Self::MalformedPreimage => write!(f, "malformed covenant preimage component"),
         }
