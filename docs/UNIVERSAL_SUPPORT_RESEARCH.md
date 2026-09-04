@@ -115,3 +115,8 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Org-Wide Multi-Cloud Fleet Verified**: Neon PostgreSQL 6-project fleet (`sparkling-sunset-69236559`, `weathered-night-98492579`, `noisy-flower-17484435`, `small-math-44741750`, `noisy-cloud-41146057`, `orange-paper-76209725`) and Render workspace services (`srv-d9h2nu2b6mfs738i6gb0`, `srv-d9gam3m1a83c73bmrfc0`, `srv-d96fl2mq1p3s73c2e8k0`, `srv-d8fmr7v40ujc73b7ba8g`, `srv-d7b0el3uibrs73b2qjg0`) verified active and structurally aligned.
 - **Protocol Test Coverage**: 183 Rust workspace tests (128 core unit/doc tests + 55 integration/conformance tests) and 69 Python verification guard tests in `scripts/tests/` operating at 100% pass rate.
 - **Code Gaps & Research Mapping**: DLC CET structure validation and oracle attestation verification in `src/protocol/dlc.rs` hardened with fail-closed bounds.
+
+## 18. Research Update (2026-09-04 Session 66 Synthesis): End-to-End Synthesis & OP_CAT Covenant Hardening
+- **OP_CAT Recursive Covenant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths (expected 32 x-only or 33 compressed SEC1 bytes) or malformed target hash inputs (expected 32 bytes).
+- **Workspace Test Suite Metrics**: 262 Rust workspace tests and 69 Python verification guard tests in `scripts/tests/` operating at 100% pass rate.
+- **Multi-Cloud Fleet Status**: Confirmed 6 Neon PostgreSQL projects and 5 Render team services operating normally with zero active locks or replication lag.
