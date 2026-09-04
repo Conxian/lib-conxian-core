@@ -200,3 +200,11 @@ public evidence and a versioned artifact revision.
   - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
   - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
   - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+
+## Session 66 Research & Protocol Invariant Hardening (2026-09-04)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 262 total Rust workspace tests passing (100% pass rate).
+- **Python Verification Guard Suite**: 69 test cases passing in `scripts/tests/` (100% pass rate).
+- **Covenant Invariant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths or malformed target hash inputs.
+- **Zero Architectural Contamination**: `scripts/verify_contamination_guard.py` and `scripts/verify_tracked_artifacts.py` confirm zero forbidden I/O leaks or unindexed tracking risks.

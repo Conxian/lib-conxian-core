@@ -9,7 +9,7 @@ This scorecard tracks the readiness of the Conxian ecosystem across active devel
 | **Launch Gates** | Critical blockers for public release. | 🟡 In Progress | PRD, CXIP index |
 | **Repo Trust** | CI/CD, security hygiene, and governance standards. | 🟢 Healthy | `.github` workflows |
 | **Release Maturity** | Versioning, changelogs, and deployment stability. | 🟢 v0.3.3 | CHANGELOG.md |
-| **Product Proof** | Core protocol verification (Tests, Audits). | 🟢 128 Core Tests | src/tests.rs |
+| **Product Proof** | Core protocol verification (Tests, Audits). | 🟢 262 Workspace Tests | src/tests.rs |
 | **Commercial Safety** | Claim evidence and regulatory alignment. | 🟡 In Progress | docs/ECONOMY.md |
 
 ## 2. Evidence Requirements
