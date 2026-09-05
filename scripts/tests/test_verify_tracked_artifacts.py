@@ -44,6 +44,29 @@ class VerifyTrackedArtifactsTests(unittest.TestCase):
         self.assertFalse(result)
 
     @patch("subprocess.run")
+    def test_expanded_forbidden_patterns_coverage(self, mock_run: MagicMock) -> None:
+        # Verify that new secret/artifact patterns exist in FORBIDDEN_PATTERNS
+        expected_patterns = [
+            "credentials.json",
+            "*.pfx",
+            "*.p12",
+            "*.jks",
+            "*.keystore",
+            "id_rsa*",
+            "id_ed25519*",
+            ".aws/",
+            ".gcloud/",
+            ".terraform/",
+            ".vault/",
+            "gateway/target/",
+            "target-install/",
+            ".pytest_cache/",
+            "htmlcov/",
+        ]
+        for pattern in expected_patterns:
+            self.assertIn(pattern, tracker.FORBIDDEN_PATTERNS)
+
+    @patch("subprocess.run")
     def test_git_ls_files_error(self, mock_run: MagicMock) -> None:
         # Simulate subprocess.CalledProcessError for a pattern (should be handled gracefully)
         mock_run.side_effect = subprocess.CalledProcessError(1, ["git", "ls-files"])

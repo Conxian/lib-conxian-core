@@ -5,16 +5,32 @@ import sys
 FORBIDDEN_PATTERNS = [
     # Generated/runtime directories
     "target/",
+    "gateway/target/",
+    "target-install/",
     "dist/",
     "node_modules/",
     "build/",
     "test-results/",
     "playwright-report/",
+    ".pytest_cache/",
+    "htmlcov/",
     # Sensitive configuration & secrets
     ".env*",
     "*.pem",
     "*.key",
     "*.pub",
+    "id_rsa*",
+    "id_ed25519*",
+    "*.pfx",
+    "*.p12",
+    "*.jks",
+    "*.keystore",
+    "credentials.json",
+    # Cloud & Tooling Credentials
+    ".aws/",
+    ".gcloud/",
+    ".terraform/",
+    ".vault/",
 ]
 
 def verify_patterns(patterns=None, git_dir=None):
