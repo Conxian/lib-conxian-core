@@ -21,8 +21,14 @@ pub enum BabylonError {
 impl fmt::Display for BabylonError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidStakerPubkey => write!(f, "Invalid staker public key dimension (must be 32 or 33 bytes)"),
-            Self::InvalidFinalityProviderPubkey => write!(f, "Invalid finality provider public key dimension (must be 32 or 33 bytes)"),
+            Self::InvalidStakerPubkey => write!(
+                f,
+                "Invalid staker public key dimension (must be 32 or 33 bytes)"
+            ),
+            Self::InvalidFinalityProviderPubkey => write!(
+                f,
+                "Invalid finality provider public key dimension (must be 32 or 33 bytes)"
+            ),
             Self::InvalidAmount => write!(f, "Staking satoshis amount must be greater than zero"),
             Self::InvalidLockTime => write!(f, "Lock time must be at least 10 block confirmations"),
         }
@@ -149,13 +155,19 @@ mod tests {
             staker_pubkey: vec![0u8; 16],
             ..valid_intent.clone()
         };
-        assert_eq!(invalid_staker.validate(), Err(BabylonError::InvalidStakerPubkey));
+        assert_eq!(
+            invalid_staker.validate(),
+            Err(BabylonError::InvalidStakerPubkey)
+        );
 
         let invalid_finality = StakingIntent {
             finality_provider_pubkey: vec![1u8; 64],
             ..valid_intent.clone()
         };
-        assert_eq!(invalid_finality.validate(), Err(BabylonError::InvalidFinalityProviderPubkey));
+        assert_eq!(
+            invalid_finality.validate(),
+            Err(BabylonError::InvalidFinalityProviderPubkey)
+        );
 
         let invalid_amount = StakingIntent {
             amount_sats: 0,
