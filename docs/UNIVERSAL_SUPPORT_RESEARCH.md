@@ -120,3 +120,13 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **OP_CAT Recursive Covenant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths (expected 32 x-only or 33 compressed SEC1 bytes) or malformed target hash inputs (expected 32 bytes).
 - **Workspace Test Suite Metrics**: 262 Rust workspace tests and 69 Python verification guard tests in `scripts/tests/` operating at 100% pass rate.
 - **Multi-Cloud Fleet Status**: Confirmed 6 Neon PostgreSQL projects and 5 Render team services operating normally with zero active locks or replication lag.
+
+
+## 19. Research Update (2026-09-06 Session 68 Synthesis): Babylon Staking Invariant Hardening
+- **Babylon Staking Intent Validation**: Hardened `StakingIntent` in `src/babylon/mod.rs` with fail-closed `StakingIntent::validate` method and typed `BabylonError` variants (`InvalidPubkey`, `InvalidAmount`, `InvalidLockTime`, `StakingFailed`).
+- **Validation Bounds**: Enforces 32-byte (x-only) or 33-byte (compressed SEC1) public keys for both staker and finality provider, non-zero satoshi amounts (`amount_sats > 0`), and minimum block lock time confirmations (`lock_blocks > 0`).
+- **Protocol Test Coverage**: Expanded unit test matrix to 263 Rust workspace tests and 70 Python verification guard tests passing cleanly (100% pass rate).
+
+## 20. Research Update (2026-09-06 Session 69 Synthesis): Stacks Nakamoto & sBTC Bridge Parameter Hardening
+- **Stacks & sBTC Parameter Hardening**: Enhanced `SBTCBridge` and `StacksAdapter` in `src/stacks/mod.rs` to enforce fail-closed parameter validation for peg-in (`amount_sats > 0` and non-empty `btc_txid`), peg-out (`amount_sats > 0` and valid non-empty `stacks_address`), and sBTC intent state tracking.
+- **Multi-Cloud Fleet & Ecosystem Alignment**: Verified 6 Neon PostgreSQL projects (`conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), 5 Render workspace team services, and repository hygiene guard scripts operating at 100% compliance.

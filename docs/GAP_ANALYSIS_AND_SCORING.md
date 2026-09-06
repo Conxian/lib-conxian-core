@@ -105,6 +105,7 @@ public evidence and a versioned artifact revision.
 | **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Implemented** (Equation & CET structure validation; execution downstream) |
 | **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK; Core DER parse-only) |
 | **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
+| **Stacks Nakamoto / sBTC (CON-709)** | 35 | 25 | 30 | **90** | **Implemented** (Fail-closed parameter & address validation) |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** (SDK) |
 | **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Strict parser; verifier downstream** |
 | **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK; Core provider status unavailable) |
@@ -128,6 +129,7 @@ public evidence and a versioned artifact revision.
 10. **RGB**: Fail-closed adapter boundary (CON-1509, CON-1407); Stock/node-backed verification remains follow-up work, contract lookups reject empty/whitespace inputs with `InvalidContractId`, and Shadow mode is non-authoritative.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
+13. **Stacks Nakamoto & sBTC Adapter**: Resolved (CON-709). Parameter validation for peg-in/peg-out and sBTC intent creation hardened with fail-closed checks for zero satoshi amounts and invalid address inputs.
 
 ## Open GitHub Issues (Cross-Repository)
 
