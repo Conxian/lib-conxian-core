@@ -51,7 +51,7 @@ pub enum SBTCState {
     Failed,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct SBTCIntent {
     pub intent_id: String,
     pub amount_sats: u64,
@@ -59,6 +59,27 @@ pub struct SBTCIntent {
     pub bitcoin_txid: Option<String>,
     pub state: SBTCState,
     pub created_at_epoch: u64,
+}
+
+impl SBTCIntent {
+    /// Enforces fail-closed parameter validation for sBTC intents.
+    pub fn validate(&self) -> Result<(), StacksError> {
+        if self.intent_id.trim().is_empty() {
+            return Err(StacksError::UnknownIntent);
+        }
+        if self.amount_sats == 0 {
+            return Err(StacksError::InvalidTransaction);
+        }
+        if self.stacks_address.trim().is_empty() {
+            return Err(StacksError::InvalidAddress);
+        }
+        if let Some(ref txid) = self.bitcoin_txid {
+            if txid.trim().is_empty() {
+                return Err(StacksError::InvalidTransaction);
+            }
+        }
+        Ok(())
+    }
 }
 
 pub struct StacksNakamoto;
@@ -106,18 +127,21 @@ impl SBTCBridge {
 
 impl StacksAdapter for SBTCBridge {
     fn initiate_peg_in(&self, amount_sats: u64, btc_txid: &str) -> Result<SBTCIntent, StacksError> {
-        if btc_txid.is_empty() {
+        if amount_sats == 0 || btc_txid.trim().is_empty() {
             return Err(StacksError::InvalidTransaction);
         }
 
-        Ok(SBTCIntent {
-            intent_id: format!("sbtc-pegin-{}", btc_txid),
+        let intent = SBTCIntent {
+            intent_id: format!("sbtc-pegin-{}", btc_txid.trim()),
             amount_sats,
             stacks_address: "ST123...".to_string(), // Placeholder
-            bitcoin_txid: Some(btc_txid.to_string()),
+            bitcoin_txid: Some(btc_txid.trim().to_string()),
             state: SBTCState::BitcoinConfirmed,
             created_at_epoch: 1718363200, // Placeholder
-        })
+        };
+
+        intent.validate()?;
+        Ok(intent)
     }
 
     fn initiate_peg_out(
@@ -125,18 +149,24 @@ impl StacksAdapter for SBTCBridge {
         amount_sats: u64,
         stacks_address: &str,
     ) -> Result<SBTCIntent, StacksError> {
-        if stacks_address.is_empty() {
+        if amount_sats == 0 {
+            return Err(StacksError::InvalidTransaction);
+        }
+        if stacks_address.trim().is_empty() {
             return Err(StacksError::InvalidAddress);
         }
 
-        Ok(SBTCIntent {
-            intent_id: format!("sbtc-pegout-{}", stacks_address),
+        let intent = SBTCIntent {
+            intent_id: format!("sbtc-pegout-{}", stacks_address.trim()),
             amount_sats,
-            stacks_address: stacks_address.to_string(),
+            stacks_address: stacks_address.trim().to_string(),
             bitcoin_txid: None,
             state: SBTCState::Pending,
             created_at_epoch: 1718363200, // Placeholder
-        })
+        };
+
+        intent.validate()?;
+        Ok(intent)
     }
 
     fn get_status(&self, intent_id: &str) -> Result<SBTCState, StacksError> {
@@ -169,6 +199,7 @@ mod tests {
         let intent = bridge.initiate_peg_in(1000000, "abc123").unwrap();
         assert_eq!(intent.amount_sats, 1000000);
         assert_eq!(intent.state, SBTCState::BitcoinConfirmed);
+        assert!(intent.validate().is_ok());
     }
 
     #[test]
@@ -177,13 +208,70 @@ mod tests {
         let intent = bridge.initiate_peg_out(500000, "ST_ADDRESS").unwrap();
         assert_eq!(intent.stacks_address, "ST_ADDRESS");
         assert_eq!(intent.state, SBTCState::Pending);
+        assert!(intent.validate().is_ok());
     }
 
     #[test]
-    fn test_invalid_btc_txid() {
+    fn test_invalid_btc_txid_and_zero_amount() {
         let bridge = SBTCBridge::new();
-        let result = bridge.initiate_peg_in(1000000, "");
-        assert!(result.is_err());
+        assert_eq!(
+            bridge.initiate_peg_in(1000000, ""),
+            Err(StacksError::InvalidTransaction)
+        );
+        assert_eq!(
+            bridge.initiate_peg_in(1000000, "   "),
+            Err(StacksError::InvalidTransaction)
+        );
+        assert_eq!(
+            bridge.initiate_peg_in(0, "abc123"),
+            Err(StacksError::InvalidTransaction)
+        );
+    }
+
+    #[test]
+    fn test_invalid_pegout_parameters() {
+        let bridge = SBTCBridge::new();
+        assert_eq!(
+            bridge.initiate_peg_out(0, "ST_ADDRESS"),
+            Err(StacksError::InvalidTransaction)
+        );
+        assert_eq!(
+            bridge.initiate_peg_out(100000, ""),
+            Err(StacksError::InvalidAddress)
+        );
+        assert_eq!(
+            bridge.initiate_peg_out(100000, "   "),
+            Err(StacksError::InvalidAddress)
+        );
+    }
+
+    #[test]
+    fn test_sbtc_intent_validation() {
+        let valid = SBTCIntent {
+            intent_id: "intent-1".into(),
+            amount_sats: 1000,
+            stacks_address: "ST_ADDR".into(),
+            bitcoin_txid: Some("tx-1".into()),
+            state: SBTCState::Pending,
+            created_at_epoch: 100,
+        };
+        assert!(valid.validate().is_ok());
+
+        let mut zero_amount = valid.clone();
+        zero_amount.amount_sats = 0;
+        assert_eq!(zero_amount.validate(), Err(StacksError::InvalidTransaction));
+
+        let mut empty_id = valid.clone();
+        empty_id.intent_id = "".into();
+        assert_eq!(empty_id.validate(), Err(StacksError::UnknownIntent));
+
+        let mut empty_addr = valid.clone();
+        empty_addr.stacks_address = "".into();
+        assert_eq!(empty_addr.validate(), Err(StacksError::InvalidAddress));
+
+        let mut empty_txid = valid.clone();
+        empty_txid.bitcoin_txid = Some("".into());
+        assert_eq!(empty_txid.validate(), Err(StacksError::InvalidTransaction));
     }
 
     #[test]
