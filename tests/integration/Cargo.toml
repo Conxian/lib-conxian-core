@@ -3,7 +3,7 @@ name = "lib-conxian-core-integration"
 version = "0.0.0"
 description = "Integration test framework for Core ↔ SDK ↔ Gateway ↔ Nexus flows"
 edition = "2021"
-rust-version = "1.97.1"
+rust-version = "1.98.0"
 publish = false
 
 [dependencies]
