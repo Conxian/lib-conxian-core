@@ -3487,7 +3487,7 @@ dependencies = [
  "lightning",
  "rand 0.10.2",
  "ripemd",
- "secp256k1 0.31.1",
+ "secp256k1 0.33.1",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -3514,7 +3514,7 @@ dependencies = [
  "lib-conxian-core",
  "libfuzzer-sys",
  "musig2",
- "secp256k1 0.31.1",
+ "secp256k1 0.33.1",
  "serde_json",
 ]
 
