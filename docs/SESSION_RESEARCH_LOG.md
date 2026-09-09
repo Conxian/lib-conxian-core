@@ -7,6 +7,61 @@
 
 ---
 
+
+---
+
+## Session 2026-09-09 (Session 70): Full System Installation, Client Purchasing & Unified Installer Architecture Review
+
+### Objective
+1. Review full system installation, setup, and management process from clean operating system to complete production deployment.
+2. Analyze client purchasing workflows (what clients buy, how software assets are delivered from the Conxian organization, which parts are installed).
+3. Review client required setup, inputs, and environment configurations (RPCs, Enclave credentials, DB strings, API keys).
+4. Verify end-to-end asset connectivity across connected systems (Neon PostgreSQL 6-DB fleet, Render workspace services, Supabase projects).
+5. Evaluate software delivery mechanics and formulate concrete recommendations for a Unified Installer / CLI (`conxian-installer` / `conxian-cli`).
+
+### 1. Client Purchasing & Software Component Map
+
+When an enterprise or institutional client purchases Conxian infrastructure, they acquire a modular suite of open-source libraries and enterprise software licenses:
+
+| Component | License / Source | What Client Installs & Runs | Purpose |
+| :--- | :--- | :--- | :--- |
+| **lib-conxian-core** | Open Source (MIT/Apache 2.0) | Dependency Crate (`lib-conxian-core = "0.3.3"`) | Protocol data models, control models, universal chain adapters, risk contracts, and invariant verifiers. |
+| **conxius-enclave-sdk** | Open Source / Crates.io (`v2.0.17`) | Dependency Crate / WASM module | Hardware-backed signing, AWS Nitro Enclave / StrongBox attestation, FROST DKG, BitVM2. |
+| **conxian-gateway** | Enterprise / Org Repo (`v0.1.4`) | Docker Container / Binary Service | Runtime orchestration, REST/MCP API Gateway, rate limiting, and protocol routing middleware. |
+| **conxian-nexus** | Enterprise / Org Repo | Docker Container / Binary Service | zkVM proof aggregation engine, state root commitments, and cross-chain settlement verification. |
+| **Business Operating System (BOS)** | Enterprise Platform | SaaS / Hosted Instance / On-Prem | Enterprise risk control plane, policy rule enforcement, M&A audit logs, and billing. |
+| **Universal Adapters** | Open Source | Rust Trait Impls / Middleware | Chain-specific connectors (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, Solana, Cosmos). |
+
+### 2. Full System Installation & Setup Process (First-Time Client Walkthrough)
+
+#### Step A: Organization Onboarding & Asset Delivery
+1. Client signs enterprise agreement and receives organization credentials and API keys.
+2. Access granted to private GitHub organization repositories (`conxian-gateway`, `conxian-nexus`, `conxian-ui`).
+3. Client registers their primary database instance (or connects to Conxian Neon Cloud fleet: `Gateway` DB `noisy-cloud-41146057`).
+
+#### Step B: Client Infrastructure Requirements & Required Inputs
+Clients must provide the following environment configurations from their side:
+- **Chain RPC Endpoints**: Bitcoin Mainnet/Testnet RPC, Stacks Node API (`https://api.mainnet.hiro.so`), Lightning LND/LDK gRPC endpoint, Babylon Cosmos RPC, Solana/Cosmos RPCs.
+- **Hardware Enclave Key Material**: AWS Nitro Enclave image hash or AWS KMS ARN for TEE hardware-backed signing.
+- **Database Connection Strings**: PostgreSQL connection string for Gateway runtime session storage (`PGCONNECT_URL`).
+- **Domain & TLS Certificates**: FQDN for REST/MCP endpoints with TLS termination.
+
+#### Step C: Deployment & Connectivity Verification
+- **Zero Secret Egress Invariant**: All secret signing key material remains inside the client's local HSM/Nitro Enclave (`conxius-enclave-sdk`); `lib-conxian-core` never sees or logs raw private keys.
+- **Cross-Chain Asset Flow**: Assets deployed by clients maintain connectivity via `Erc7683CrossChainOrder` and `TransportAdapter` interfaces, allowing atomic cross-chain intent swaps.
+
+### 3. Recommendation: Unified Installer & CLI (`conxian-installer` / `conxian-cli`)
+
+To eliminate manual setup friction and ensure consistent deployment across environments, we recommend building a unified installer CLI:
+
+1. **Unified CLI Utility (`conxian-cli`)**:
+   - `conxian init`: Interactively prompts client for RPC endpoints, Enclave credentials, and DB strings, producing a validated `conxian.env` and `deployment.json`.
+   - `conxian verify`: Exercises pre-flight connectivity checks against all configured chain RPCs, Enclaves, and PostgreSQL DBs.
+   - `conxian deploy`: Launches the complete containerized stack (`conxian-gateway`, `conxian-nexus`, `conxian-ui`) using pre-tested Docker Compose or Helm charts.
+2. **Standardized Container Stack**:
+   - Provide off-the-shelf Docker Compose templates for single-node deployment and Kubernetes Helm charts for high-availability enterprise clusters.
+
+---
 ## Session 2026-07-15: SDK Integration & Ecosystem Alignment
 
 ### Objective

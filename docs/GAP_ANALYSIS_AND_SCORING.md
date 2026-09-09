@@ -210,3 +210,11 @@ public evidence and a versioned artifact revision.
 - **Python Verification Guard Suite**: 69 test cases passing in `scripts/tests/` (100% pass rate).
 - **Covenant Invariant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths or malformed target hash inputs.
 - **Zero Architectural Contamination**: `scripts/verify_contamination_guard.py` and `scripts/verify_tracked_artifacts.py` confirm zero forbidden I/O leaks or unindexed tracking risks.
+
+
+## Session 70 Deployment & Installer Gap Mapping (2026-09-09)
+
+### System Installation & Client Delivery Gaps
+1. **Unified Installer CLI (`conxian-installer` / `conxian-cli`)**: Currently, client installation requires manual container orchestration across Gateway, Nexus, and Enclave SDK components. Recommended: Build `conxian-cli` with `init`, `verify`, and `deploy` commands.
+2. **Standardized Helm / Compose Templates**: Provide off-the-shelf single-node Docker Compose templates and enterprise Kubernetes Helm charts with automated health check probes.
+3. **Automated Pre-Flight Connectivity Checks**: Implement automated pre-flight RPC, Nitro Enclave, and PostgreSQL connection verification before starting Gateway runtime services.
