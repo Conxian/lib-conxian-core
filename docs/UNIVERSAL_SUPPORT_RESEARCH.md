@@ -136,3 +136,8 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Advanced Cryptography Hardening**: Refactored `src/crypto/mod.rs` to replace placeholder `CryptoStubError` with a production-grade `CryptoError` enum (`InvalidKey`, `InvalidDepth`, `EmptyPayload`, `InvalidMessage`, `VerificationFailed`, `NotImplemented`). Preserved `pub type CryptoStubError = CryptoError;` for backward compatibility.
 - **PVDE & PTLC Adaptor Signatures**: Added fail-closed parameter validation for PVDE delay puzzles (`PVDE::verify_puzzle_checked`) and PTLC Adaptor Signatures (`AdaptorSignature::verify_adaptor_signature_checked`), with strict 32-byte secret/message checks and `secp256k1` key validation.
 - **Verification Metrics**: Confirmed 268 Rust workspace tests and 79 Python verification guard tests pass cleanly.
+
+## 21. Research Update (2026-09-10 Session 72 Synthesis): Liquid Sidechain Adapter Hardening
+- **Liquid Sidechain Peg Hardening**: Enhanced `src/bitcoin/liquid_adapter.rs` with typed `LiquidError` variants (`InvalidAddress`, `InvalidAmount`, `InvalidAssetId`, `InvalidTxid`, `InvalidProof`, `PegInFailed`, `PegOutFailed`, `StatusUnavailable`, `UnknownIntent`).
+- **Liquid Peg Intent & Bridge Implementation**: Added `LiquidPegState` lifecycle enum, `LiquidPegIntent` with fail-closed `validate()` method (checking amount, receiver bech32 address, asset ID, and txids), and `LiquidBridge` implementing `LiquidPegAdapter` (`initiate_peg_in`, `initiate_peg_out`, `get_peg_status`).
+- **Verification Metrics**: Verified 274 total Rust workspace tests and 70 Python verification guard tests passing 100%.
