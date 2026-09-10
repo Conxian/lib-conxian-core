@@ -26,9 +26,18 @@ pub enum LiquidError {
 impl fmt::Display for LiquidError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidAddress => write!(f, "Invalid Liquid address: expected Elements bech32 format (ex1/tlq1)"),
-            Self::InvalidAmount => write!(f, "Invalid transaction or peg amount: must be non-zero satoshis"),
-            Self::InvalidAssetId => write!(f, "Invalid Elements asset ID: expected 32-byte hex string or asset tag"),
+            Self::InvalidAddress => write!(
+                f,
+                "Invalid Liquid address: expected Elements bech32 format (ex1/tlq1)"
+            ),
+            Self::InvalidAmount => write!(
+                f,
+                "Invalid transaction or peg amount: must be non-zero satoshis"
+            ),
+            Self::InvalidAssetId => write!(
+                f,
+                "Invalid Elements asset ID: expected 32-byte hex string or asset tag"
+            ),
             Self::InvalidTxid => write!(f, "Invalid Bitcoin or Elements transaction ID"),
             Self::InvalidProof => write!(f, "Invalid state or confidential transaction proof"),
             Self::PegInFailed(msg) => write!(f, "Liquid peg-in failed: {msg}"),
@@ -278,7 +287,9 @@ mod tests {
     #[test]
     fn test_liquid_peg_in_interface() {
         let bridge = LiquidBridge::new();
-        let intent = bridge.initiate_peg_in(1_000_000, "6f02...lbtc", "btc_txid_123").unwrap();
+        let intent = bridge
+            .initiate_peg_in(1_000_000, "6f02...lbtc", "btc_txid_123")
+            .unwrap();
         assert_eq!(intent.amount_sats, 1_000_000);
         assert_eq!(intent.asset_id, "6f02...lbtc");
         assert_eq!(intent.state, LiquidPegState::BitcoinConfirmed);
@@ -289,7 +300,9 @@ mod tests {
     fn test_liquid_peg_out_interface() {
         let bridge = LiquidBridge::new();
         let addr = "ex1q_valid_liquid_address_for_peg_out_39_chars";
-        let intent = bridge.initiate_peg_out(500_000, "6f02...lbtc", addr).unwrap();
+        let intent = bridge
+            .initiate_peg_out(500_000, "6f02...lbtc", addr)
+            .unwrap();
         assert_eq!(intent.liquid_address, addr);
         assert_eq!(intent.state, LiquidPegState::Pending);
         assert!(intent.validate().is_ok());
