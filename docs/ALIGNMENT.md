@@ -15,7 +15,7 @@ Conxian Labs **supports BIP-110** (Reduced Data Temporary Softfork) as it aligns
 | Sound money | Focus on monetary use | Trust tier enforcement |
 | Original vision | Bitcoin as money | "User owns the train" |
 
-See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full guidance.
+See [BIP110_ALIGNMENT.md](BIP110_ALIGNMENT.md) for full guidance.
 
 ## Executive Summary
 
@@ -355,7 +355,7 @@ secp256k1 = "0.31"             # Align with SDK
 - [ ] Verify Silent Payments (BIP-352) compatibility with BIP-110
 - [ ] Document BIP-110 compliance in all Bitcoin-related code
 
-See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full BIP-110 guidance.
+See [BIP110_ALIGNMENT.md](BIP110_ALIGNMENT.md) for full BIP-110 guidance.
 
 ## Contact
 

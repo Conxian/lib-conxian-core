@@ -52,4 +52,4 @@ Proposals move through the following lifecycle:
 4. **Implemented**: Code merged and verified in `lib-conxian-core` or `conxian-gateway`.
 5. **Deprecated**: Superseded by a newer proposal.
 
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to submit a new CXIP.
+Refer to [CONTRIBUTING.md](../../CONTRIBUTING.md) for instructions on how to submit a new CXIP.
