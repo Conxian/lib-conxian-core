@@ -92,7 +92,7 @@ input.
 
 ## Toolchain and production posture
 
-The effective workspace/package support floor is Rust `1.97.1+`, matching the
+The effective workspace/package support floor is Rust `1.98.1+`, matching the
 Core package metadata and CI toolchain. This companion adapter intentionally
 continues to target the published SDK `2.0.17`; its lower manifest declaration
 does not lower the support floor of the current Core workspace.

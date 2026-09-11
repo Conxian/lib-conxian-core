@@ -4,7 +4,7 @@
 //!   lib-conxian-core (types) в†’ lib-conxian-core-enclave (adapter) в†’ conxius-enclave-sdk (signing)
 //!
 //! Uses real types from BOTH repos at their exact published versions:
-//!   - Core v0.3.1 (canonical types, trust tiers, signing contracts)
+//!   - Core v0.3.3 (canonical types, trust tiers, signing contracts)
 //!   - Adapter v0.1.0 (fail-closed Coreв†’SDK bridge)
 //!   - SDK v2.0.17 (EnclaveManager trait, signing primitives)
 
@@ -258,7 +258,7 @@ fn print_aws_deployment_guide() {
     println!("в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ");
     println!(r#"
 Both repositories verified and cross-referenced:
-  lib-conxian-core        v0.3.1  вЂ” canonical types, trust tiers
+  lib-conxian-core        v0.3.3  вЂ” canonical types, trust tiers
   conxius-enclave-sdk     v2.0.17 вЂ” EnclaveManager trait, Nitro module
   lib-conxian-core-enclave v0.1.0 вЂ” fail-closed adapter bridge
 
@@ -564,7 +564,7 @@ fn demo_replay_detection() {
 fn main() {
     println!("в•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—");
     println!("в•‘  Conxian AWS Nitro Enclave Signing POC v0.1.0            в•‘");
-    println!("в•‘  Core v0.3.1 + lib-conxian-core-enclave v0.1.0           в•‘");
+    println!("в•‘  Core v0.3.3 + lib-conxian-core-enclave v0.1.0           в•‘");
     println!("в•‘  SDK: conxius-enclave-sdk =2.0.17                        в•‘");
     println!("в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ");
 

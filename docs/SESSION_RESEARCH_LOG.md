@@ -9,6 +9,23 @@
 
 
 ---
+## Session 2026-09-11 (Session 75): Documentation, Version & Toolchain Reconciliation Audit
+
+### Objective
+1. Reconcile every repository document against the authoritative `Cargo.toml` metadata (`version = "0.3.3"`, `rust-version = "1.98.1"`) and the current `conxius-enclave-sdk` v2.0.17 contract.
+2. Correct stale version/toolchain references across docs, tests, scripts, and POC artifacts (`0.3.1` → `0.3.3`, `1.97.1` → `1.98.1`, `0.2.10` → `0.3.3`, `2.0.14` → `2.0.17`).
+3. Synchronize changelog, research logs, governance scorecards, audit reports, and coverage targets with the current baseline (279 Rust workspace tests + 70 Python guard tests).
+4. Verify module catalogs, SDK re-export counts (74 modules), BIP-110 limits, fuzz targets, and named coverage targets against source.
+
+### Execution & Verification Summary
+- **Version/Toolchain Reconciliation**: Corrected `docs/PRD.md` title and crate matrix, `tests/fixtures/manifest.json`, `tests/golden_serialization.rs`, `enclave-poc/src/main.rs`, `scripts/run_sdk_compat.py`, `scripts/tests/test_verify_core_dependency_boundary.py`, `addons/lib-conxian-core-enclave/README.md`, `docs/signing/{dlc,rgb,babylon}.md`, `docs/governance/CXIP_INDEX.md`, and `docs/ADVISORY_REPORT_2026_07_06.md` to reflect v0.3.3 / Rust 1.98.1 / SDK v2.0.17.
+- **Changelog Sync**: Added Session 71 (crypto hardening) and Session 72 (Liquid adapter) entries to the Unreleased section and a clarifying note that v0.3.0-era SDK references reflect the v2.0.11 baseline at release time.
+- **Scorecard/Audit Sync**: Updated `GAP_ANALYSIS_AND_SCORING.md`, `DEPENDENCY_SECURITY_REPORT.md`, `AUDIT_LIB_CONXIAN_CORE.md`, `CONTROL_MAPPING.md`, `METRIC_SPECS.md`, `PHASE1_ISSUES_ROADMAP.md` (5 implemented / 4 open), and `COVERAGE.md` (added UCS target, aligned coverage floors) with current dates and test counts.
+- **Protocol Test Matrix**: Verified 279 Rust workspace tests and 70 Python guard tests remain the current baseline (no code changes made this session).
+- **Zero Architectural Contamination**: Documentation-only changes; no `src/` behavior modified.
+
+---
+
 ## Session 2026-09-11 (Session 74): Autonomous Research Synthesis, Multi-Cloud Fleet Audit & CJCS Hardening
 
 ### Objective

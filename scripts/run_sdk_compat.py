@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the opt-in Core/SDK v2.0.14 compatibility evidence matrix."""
+"""Run the opt-in Core/SDK v2.0.17 compatibility evidence matrix."""
 
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ CORE_MATRIX = (
 
 
 def run_matrix(toolchain: str, offline: bool) -> None:
-    print("SDK v2.0.14 supported features: " + ", ".join(SUPPORTED_SDK_FEATURES))
+    print("SDK v2.0.17 supported features: " + ", ".join(SUPPORTED_SDK_FEATURES))
     print(
-        "SDK v2.0.14 unsupported candidates (not run): "
+        "SDK v2.0.17 unsupported candidates (not run): "
         + ", ".join(UNSUPPORTED_SDK_FEATURES)
     )
 
@@ -69,8 +69,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--toolchain",
-        default="1.97.1",
-        help="Rust toolchain passed to Cargo (default: 1.97.1)",
+        default="1.98.1",
+        help="Rust toolchain passed to Cargo (default: 1.98.1)",
     )
     parser.add_argument(
         "--offline",

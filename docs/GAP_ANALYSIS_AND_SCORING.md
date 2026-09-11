@@ -6,7 +6,7 @@
 
 This document maps identified protocol gaps to research status and implementation priority scoring.
 
-## Current Core boundary (2026-08-01)
+## Current Core boundary (2026-09-11)
 
 The SDK and proposal scores below must not be read as claims that
 `lib-conxian-core` itself provides production verification. In Core:
