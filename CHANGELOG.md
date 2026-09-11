@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Hardened Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, fail-closed `WorkIntent::validate()` and `JobCard::validate()` methods, JSON-LD schema context enforcement, constructors, serialization methods, and full unit test coverage.
+- Updated session research logs, gap analysis, and executive/readiness governance scorecards with 279 Rust workspace tests and 70 Python verification tests passing.
+
 ## [v0.3.3] - 2026-08-31
 
 ### Changed
