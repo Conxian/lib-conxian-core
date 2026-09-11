@@ -138,8 +138,7 @@ impl JobCard {
     /// Serializes the job card to a canonical JSON string.
     pub fn to_json(&self) -> Result<String, CjcsError> {
         self.validate()?;
-        serde_json::to_string(self)
-            .map_err(|e| CjcsError::SerializationFailed(e.to_string()))
+        serde_json::to_string(self).map_err(|e| CjcsError::SerializationFailed(e.to_string()))
     }
 
     /// Deserializes and validates a job card from a JSON string.
@@ -157,7 +156,8 @@ mod tests {
 
     #[test]
     fn test_valid_work_intent_and_job_card() {
-        let intent = WorkIntent::new("SP123_SENDER", "SP456_RECEIVER", "task-888", 100_000).unwrap();
+        let intent =
+            WorkIntent::new("SP123_SENDER", "SP456_RECEIVER", "task-888", 100_000).unwrap();
         let card = JobCard::new(intent.clone()).unwrap();
 
         assert_eq!(card.context, JobCard::DEFAULT_CONTEXT);
