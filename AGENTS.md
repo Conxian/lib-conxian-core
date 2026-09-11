@@ -1,4 +1,4 @@
-# Conxian Agent Guidelines: lib-conxian-core (v0.3.3 — Session 58, Aug 2026)
+# Conxian Agent Guidelines: lib-conxian-core (v0.3.3 — Session 75, Sep 2026)
 
 This repository is the canonical home of shared protocol primitives and the Core type system for the Conxian ecosystem. It is a "protocol-first" library.
 
@@ -10,7 +10,7 @@ This repository is the canonical home of shared protocol primitives and the Core
 
 > **Session 52 Nitro CI + Extended POC (2026-08-05):** Created `.github/workflows/nitro-enclave-ci.yml` with build-test-docker-provision pipeline. Extended POC from 3→6 scenarios (error injection, key rotation, replay detection). Saved AWS secrets to GitHub repo secrets. Documented AWS permissions matrix — `botshelo` IAM user can read EC2 + manage SGs/roles but cannot launch instances or create OIDC providers. Full Nitro deployment requires either (a) adding `ec2:RunInstances`,`ec2:TerminateInstances`,`ec2:CreateKeyPair`,`iam:CreateInstanceProfile`,`iam:AddRoleToInstanceProfile`,`iam:PassRole` to the user, or (b) creating a `github-actions-nitro-provisioner` IAM role with OIDC trust for GitHub Actions. See [AWS Permissions Matrix](#aws-nitro-permissions-matrix) below.
 
-> **Session 52 end-to-end Nitro provisioning (2026-08-05):** Pipeline now fully operational: build-test → docker-build → provision-nitro → teardown. 7 spot instance types tried (fallback chain), c5.xlarge used. SG `conxian-nitro-sg`, instance profile `conxian-nitro-enclave-profile`, role `conxian-nitro-enclave-role` all created. Dynamic AMI/subnet discovery. IAM policy attached to `botshelo`. Main CI + SDK compat workflows use rustc 1.97.1.
+> **Session 52 end-to-end Nitro provisioning (2026-08-05):** Pipeline now fully operational: build-test → docker-build → provision-nitro → teardown. 7 spot instance types tried (fallback chain), c5.xlarge used. SG `conxian-nitro-sg`, instance profile `conxian-nitro-enclave-profile`, role `conxian-nitro-enclave-role` all created. Dynamic AMI/subnet discovery. IAM policy attached to `botshelo`. CI toolchain has since moved to rustc 1.98.1.
 
 ## Architectural Boundaries (CON-700)
 - **Core (`src/`):** Ownership of canonical types, state machines, invariant validation, and interface contracts.
@@ -22,6 +22,7 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 - `Strict` (T1)
 - `Managed` (T2)
 - `Expedient` (T3)
+- `ObserverOnly` (T4 — excluded from production via `is_production_allowed()`)
 
 ## Protocol Coverage — SDK → Core Alignment
 
@@ -53,8 +54,9 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42
 | T1 Strict | Bitcoin L1 finality, BitVM2 SNARK verification, RGB state proofs | Full validation, no trust assumptions |
 | T2 Managed | Lightning channel state, Fedimint consensus, Canton Daml state | Consortium/multi-sig governance |
 | T3 Expedient | EVM L2 bridges (Arbitrum/Base/OP), Cosmos IBC, Solana | Optimistic or fast-finality, economic security |
+| T4 ObserverOnly | Shadow/observation-only modes | No production signing; `is_production_allowed()` returns false |
 
-## Module Catalog (Session 48 — Aug 2026)
+## Module Catalog (Session 75 — Sep 2026)
 
 ### Core Modules
 
@@ -63,9 +65,10 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42
 | adapters | `src/adapters/mod.rs` | StateProofError, chain adapter abstraction | ✅ |
 | anchoring | `src/anchoring.rs` | AnchoringPublisher, TablelandAnchoringPublisher, OnChainAnchoringPublisher | ✅ |
 | babylon | `src/babylon/mod.rs` | BabylonAdapter, StakingIntent | ✅ |
-| cjcs | `src/cjcs.rs` | Canonical Job Card System types | ✅ |
+| chain | `src/chain/mod.rs` | ERC-7683 intent mapping, transport adapters | ✅ |
+| cjcs | `src/cjcs.rs` | CjcsError, WorkIntent, JobCard (JSON-LD serialization, fail-closed validation) | ✅ |
 | contract_bridge | `src/contract_bridge.rs` | ClarityCall, ContractBridge, SignedContractCall | ✅ |
-| control_model | `src/control_model/` | BIP110, TrustTier, LifecycleState, RiskProfile, Chain, ChainFamily | ✅ |
+| control_model | `src/control_model/` | TrustTier (4 variants), Chain (48 variants), ChainFamily (17 variants), Bip110Compliance, Bip110ValidationResult, Bip110Violation, BridgeSystem (28 variants), ProofEnvelope, VerificationClass, FinalityClass, VerificationStatus, RiskAssessment, RailMetadata, SessionLifecycleStatus, WalletAuthority, TimelockInvariant, QuorumInvariant, ProtectedActionInvariantSet, SignedEnvelopeDescriptor, SessionTrustClaims, IntentAuthorizationRequest, IntentAuthorizationDecision, SessionIssuanceRequest, ControlModelAdapter trait, IdentityRecord, BtcTxOrchestrationRecord, BtcTxEventRecord, CanonicalRiskProfileSet, RiskProfile, RiskScore, RiskDimensions, EvidenceReference, StaticPolicyAssumptions, VersionedRailMetadata, Bip110PreflightRequest/Result/Validator, validate_trust_tier_policy, chain_family_for | ✅ |
 | deployment | `src/deployment.rs` | DeploymentPlan, contract deployment configuration | ✅ |
 | fedimint | `src/fedimint/mod.rs` | FedimintAdapter, FedimintMint | ✅ |
 | protocol | `src/protocol/` | covenant, dlc, frost, intent | ✅ |
@@ -76,25 +79,25 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42
 | Module | Path | Key Public Types | Status |
 |--------|------|-----------------|--------|
 | bitcoin | `src/bitcoin/mod.rs` | bip322, taproot, liquid_adapter, SilentPaymentScanner | ✅ |
-| crypto | `src/crypto/mod.rs` | CryptoStubError, advanced cryptography utilities | ✅ |
+| crypto | `src/crypto/mod.rs` | CryptoError (6 variants), PVDE, WitnessEncryption, AdaptorSignature, WitnessEncryptionError | ✅ |
 | enclave | `src/enclave/mod.rs` | AttestationCertificate, EnclaveVerificationError | ✅ |
 | lightning | `src/lightning/mod.rs` | LightningAdapter, LightningPaymentIntent/Event/State, LightningNode | ✅ |
 | rgb | `src/rgb/mod.rs` | RGBAdapter, RGBStockAdapter, RGBSkeletonAdapter, RGBRuntime | ✅ |
-| signing | `src/signing.rs` | SigningAlgorithm, SigningTarget, SignerCapabilities | ✅ |
+| signing | `src/signing.rs` | SigningAlgorithm, DigestAlgorithm, SignatureEncoding, AddressFormat (21 variants), SigningOperation, SigningTarget, DerivationPath, DerivationPurpose, DerivationContext, SigningPayload, SignRequest, SignResponse, PublicVerificationKey, Signature, ChainAddress, AddressDerivationRequest/Response, VerificationRequest/Result, ChainSigningCapability, SignerCapabilities, UniversalChainSigner trait, 6 typed error enums | ✅ |
 | stacks | `src/stacks/mod.rs` | sBTC, StacksNakamoto, StacksAdapter, SBTCBridge | ✅ |
 
 ### Re-exported at Crate Root
 
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
-- 30+ verifier types (from `verifier`)
+- 30+ verifier types (from `verifier`): ProtocolVerifier, ProtocolVerifierBackend, ProtocolVerifierError, ProofVerificationRequest, ProofVerificationResult, ChainId, ProofFormat, ProofData, ChainStateReference, BlockHeader, BlockReference, VerifiedBlockReference, LatestVerifiedBlock, TransactionFinalityStatus, TransactionFinalityResult, TransactionFinalityRequest, VerifierCapabilities, VerifierCapability, CapabilityAdvertisement, VerificationProvenance, DynProtocolVerifier, compute_evidence_binding_hash, validate_evidence_binding, validate_finality_result, validate_finality_result_at, validate_finality_transition, validate_proof_envelope, validate_proof_envelope_at, validate_proof_verification_result, validate_proof_verification_result_at, PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN, PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION
 
-### SDK Re-exports (Session 58 — Full Alignment with conxius-enclave-sdk v2.0.17)
+### SDK Re-exports (Session 75 — Full Alignment with conxius-enclave-sdk v2.0.17)
 
 The `sdk` module (`src/sdk.rs`) re-exports ALL 74 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
 
 ```toml
-lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
+lib-conxian-core = { version = "0.3.3", features = ["full-sdk"] }
 ```
 
 | Category | Feature Flag | Modules | SDK Re-export Path |
@@ -103,7 +106,7 @@ lib-conxian-core = { version = "0.3.1", features = ["full-sdk"] }
 | Cross-cutting | `sdk-cross-cutting` | 15 | `sdk::cross_cutting::{a2p, account_abstraction, business, chain_abstraction, control_model_adapter, economy, identity, intent, job_card, opportunity, settlement, settlement_service, solver, stablecoin_orchestrator, zkml}` |
 | Nexus | `sdk-nexus` | 3 | `sdk::nexus::{fedimint, fedimint_crypto, roast}` |
 | Infrastructure | `sdk-infrastructure` | 6 | `sdk::infrastructure::{config, serde_big_array, state, telemetry, wasm_support, wasm_bindings}` |
-| Signing | `sdk-signing` | 13 | `sdk::signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml}` |
+| Signing | `sdk-signing` | 13 | `sdk::signing::{bip110_signing, bip322_signing, bitvm2_signing, covenant_signing, dlc_signing, lightning_signing, musig2_signing, statechain_signing, taproot, threshold, ucs, wasm_runtime, zkml_signing}` |
 | Enclave | `enclave` | 11 | `sdk::enclave_sdk::{android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, trust, trust_contracts, verifiers}` + crate-root `EnclaveManager, SignRequest, SignResponse, SigningAlgorithm, ConclaveError, ConclaveResult` |
 
 **Feature-gated modules (enabled via the matching `sdk-*` crypto feature):**
@@ -125,7 +128,7 @@ re-exported at `sdk::conxius_enclave_sdk` for direct access.
 
 | Consumer | Modules Used | Wiring Path |
 |----------|-------------|-------------|
-| conxian-nexus | 12/17 | `compat::core_bridge::core_types` re-exports: control_model, signing, verifier, anchoring, bitcoin(taproot,bip322), protocol(dlc,frost,covenant,intent), lightning, adapters |
+| conxian-nexus | 12/19 | `compat::core_bridge::core_types` re-exports: control_model, signing, verifier, anchoring, bitcoin(taproot,bip322), protocol(dlc,frost,covenant,intent), lightning, adapters |
 | conxian-gateway | Own `conxian_core` + contract_bridge | Separate operational types crate; uses contract_bridge types through engine |
 | conxius-wallet | None directly | Uses `conxius-enclave-sdk` for signing (feature-gated via silent-payments crate) |
 | conxius-platform | None directly | TS orchestration; CI scripts reference canonical paths |
@@ -154,4 +157,5 @@ re-exported at `sdk::conxius_enclave_sdk` for direct access.
 - **Compatibility matrix**: `docs/COMPATIBILITY.md`
 - **Architecture boundaries**: `docs/ARCHITECTURE_BOUNDARIES.md`
 - **Session archive**: `docs/archive/AGENTS_archive_session_58.md` (AWS Nitro matrix, session history)
+- **Session research log**: `docs/SESSION_RESEARCH_LOG.md` (current session history)
 - **Build**: `cargo build --locked && cargo test --locked && cargo clippy -- -D warnings`

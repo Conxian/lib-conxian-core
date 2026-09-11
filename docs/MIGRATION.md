@@ -1,6 +1,6 @@
-# Migration Guide: lib-conxian-core v0.2.x → v0.3.1
+# Migration Guide: lib-conxian-core v0.2.x → v0.3.3
 
-> **Current release:** `lib-conxian-core` v0.3.1 is the intentional breaking
+> **Current release:** `lib-conxian-core` v0.3.3 is the intentional breaking
 > verifier/API release. The v0.2.11 Vault SDK removal described below is
 > historical; all Vault SDK functionality is available in the production
 > [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
@@ -132,14 +132,14 @@ Add `conxius-enclave-sdk` to your `Cargo.toml`:
 ```toml
 [dependencies]
 conxius-enclave-sdk = "2.0.17"
-lib-conxian-core = "0.3.1"
+lib-conxian-core = "0.3.3"
 ```
 
 For Vault SDK re-exports (optional):
 
 ```toml
 [dependencies]
-lib-conxian-core = { version = "0.3.1", features = ["enclave"] }
+lib-conxian-core = { version = "0.3.3", features = ["enclave"] }
 ```
 
 ### Step 2: Migrate VaultSDK Usage

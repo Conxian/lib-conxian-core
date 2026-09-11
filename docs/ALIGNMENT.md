@@ -1,6 +1,6 @@
 # Conxian Ecosystem Alignment Report
 
-> **Status**: Active | **Last Updated**: 2026-08-01 | **Version**: 0.3.1
+> **Status**: Active | **Last Updated**: 2026-09-11 | **Version**: 0.3.3
 
 ## BIP-110 Position Statement
 
@@ -70,11 +70,11 @@ This repository provides **shared protocol primitives** that are consumed by all
 
 | Module | Purpose | Lines | Strategic Value |
 |--------|---------|-------|-----------------|
-| `control_model/` | Trust tiers, lifecycle states, invariant validation | ~300 | **HIGH** - Core taxonomy |
+| `control_model/` | Trust tiers, lifecycle states, invariant validation, BIP-110, risk profiles, wallet authority | ~679 | **HIGH** - Core taxonomy |
 | `anchoring.rs` | State root persistence models | ~285 | **HIGH** - Protocol contract |
-| `adapters/` | Universal chain adapter trait | ~366 | **HIGH** - CXIP-21 |
+| `adapters/` | UniversalChainAdapter trait, 6 chain adapters, StateProofError | ~864 | **HIGH** - CXIP-21 |
 | `deployment.rs` | Deployment manifests and verification | ~200 | **MEDIUM** - Platform contract |
-| `cjcs.rs` | CJC protocol types | ~15 | **LOW** - Legacy |
+| `cjcs.rs` | CjcsError, WorkIntent, JobCard (JSON-LD) | ~268 | **MEDIUM** - Platform contract |
 | `contract_bridge.rs` | Clarity contract interfaces | ~75 | **MEDIUM** - Stacks integration |
 
 #### ⚠️ Historical extraction notes (not current Core modules)
@@ -273,7 +273,7 @@ The following is the current ownership target after the historical extraction:
 
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
-| lib-conxian-core | 0.3.1 | 0.3.1 | ✅ Current intentional breaking release |
+| lib-conxian-core | 0.3.3 | 0.3.3 | ✅ Current intentional breaking release |
 | conxius-enclave-sdk | 2.0.17 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
@@ -338,7 +338,7 @@ secp256k1 = "0.31"             # Align with SDK
 
 - [ ] Create Conxian Labs crates.io organization
 - [ ] Transfer crate ownership to organization
-- [ ] Publish lib-conxian-core v0.3.1 after the release/tag workflow and registry checks complete
+- [x] Publish lib-conxian-core v0.3.3 after the release/tag workflow and registry checks complete
 
 ### Long-term (Strategic)
 

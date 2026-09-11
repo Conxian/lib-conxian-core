@@ -6,13 +6,13 @@
 layer shared by all Conxian services. It is **transport-neutral**: core owns
 deterministic contracts and types; network I/O lives in consumer crates.
 
-### Module Map (17 modules)
+### Module Map (19 modules)
 
 | Module | Purpose | Consumer(s) |
 |--------|---------|-------------|
-| `control_model` | TrustTier (4 variants), Chain, BridgeSystem | Nexus, Gateway, Platform, SDK |
-| `signing` | SignerCapabilities, SigningAlgorithm, SigningTarget | Nexus |
-| `verifier` | 10+ protocol verification types | Nexus |
+| `control_model` | TrustTier (4 variants), Chain (48 variants), ChainFamily (17 variants), Bip110Compliance, BridgeSystem (28 variants), ProofEnvelope, RailMetadata, WalletAuthority, ControlModelAdapter trait, CanonicalRiskProfileSet, Bip110PreflightValidator | Nexus, Gateway, Platform, SDK |
+| `signing` | SigningAlgorithm, DigestAlgorithm, SignatureEncoding, AddressFormat (21 variants), SigningOperation, SigningPayload, SignRequest, SignResponse, UniversalChainSigner trait, SignerCapabilities | Nexus |
+| `verifier` | 30+ protocol verification types (ProtocolVerifier, ProofVerificationRequest/Result, VerifierCapabilities, TransactionFinalityStatus, etc.) | Nexus |
 | `anchoring` | AnchoringPublisher, 8 types | Nexus |
 | `bitcoin` | taproot, bip322 | Nexus |
 | `protocol` | dlc, frost, covenant, intent | Nexus |
@@ -22,11 +22,13 @@ deterministic contracts and types; network I/O lives in consumer crates.
 | `contract_bridge` | typed ContractCall, DeploymentPlan | Gateway, Orbit |
 | `babylon` | StakingIntent | Gateway |
 | `fedimint` | FedimintMint | Gateway |
-| `cjcs` | JobCard {context, type, work_intent} | Platform |
+| `cjcs` | CjcsError, WorkIntent, JobCard (JSON-LD, fail-closed validation) | Platform |
 | `stacks` | SBTCBridge, Emily API | Gateway |
 | `rgb` | GatewayRgbAdapter | Gateway |
 | `chain` | ERC-7683 intent mapping, transport adapters | Gateway, Nexus |
-| `crypto` | Key derivation | Internal |
+| `crypto` | CryptoError, PVDE, WitnessEncryption, AdaptorSignature | Internal |
+| `deployment` | DeploymentPlan, contract deployment manifests | Internal |
+| `sdk` | 74 SDK module re-exports (feature-gated) | Nexus, Gateway |
 
 ### Feature Gates
 

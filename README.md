@@ -56,7 +56,7 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 ## Rust and feature compatibility
 
-This crate supports Rust `1.97.1+` for both the default feature set and the
+This crate supports Rust `1.98.1+` for both the default feature set and the
 optional SDK features. The root optional dependency selects Git tag `v2.0.17`
 (also published to crates.io with matching `version = "2.0.17"`). See the
 [compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
@@ -90,7 +90,7 @@ The root package's optional `enclave` feature remains available for direct
 dependency compatibility, but the companion crate is the documented adapter
 surface. See [docs/SIGNING_ARCHITECTURE.md](docs/SIGNING_ARCHITECTURE.md) and
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for supported capabilities and
-the Rust `1.97.1+` effective toolchain floor.
+the Rust `1.98.1+` effective toolchain floor.
 
 ### Quick Start
 

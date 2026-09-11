@@ -61,7 +61,7 @@ Golden JSON files are under [`../tests/fixtures/`](../tests/fixtures/) and are i
 `manifest.json`. The manifest requires:
 
 - fixture schema version `1`;
-- package `lib-conxian-core` version `0.3.1`;
+- package `lib-conxian-core` version `0.3.3`;
 - UCS API version `1`;
 - BIP-110 preflight API version `1`;
 - ProtocolVerifier evidence-binding version `1` and domain
@@ -96,7 +96,7 @@ The exact pins represented by this checkpoint are:
 
 | Surface | Current checkpoint |
 | --- | --- |
-| Core package | `lib-conxian-core` `0.3.1` |
+| Core package | `lib-conxian-core` `0.3.3` |
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
@@ -113,7 +113,7 @@ contains the exact `lib-conxian-core` revision pin
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
-floor is Rust `1.97.1+`; the SDK `2.0.17` companion dependency's lower
+floor is Rust `1.98.1+`; the SDK `2.0.17` companion dependency's lower
 declaration does not lower the current Core workspace floor. The tests
 run with default features for Core and do not enable simulator/mock/dev bypasses.
 
@@ -146,8 +146,8 @@ cargo package -p lib-conxian-core-enclave --locked --allow-dirty --no-verify
 
 The add-on package check is a release/package dry-run for the workspace
 member. Its manifest keeps the local path for workspace builds and declares
-the compatible published Core requirement `lib-conxian-core = "0.3.1"` so Cargo
-can produce a registry-ready package manifest. The check requires Core `0.3.1`
+the compatible published Core requirement `lib-conxian-core = "0.3.3"` so Cargo
+can produce a registry-ready package manifest. The check requires Core `0.3.3`
 to be available from the configured registry; before that publication Cargo
 must reject resolution rather than silently selecting the older published
 `0.2.11` Core release.
