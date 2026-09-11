@@ -141,3 +141,9 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Liquid Sidechain Peg Hardening**: Enhanced `src/bitcoin/liquid_adapter.rs` with typed `LiquidError` variants (`InvalidAddress`, `InvalidAmount`, `InvalidAssetId`, `InvalidTxid`, `InvalidProof`, `PegInFailed`, `PegOutFailed`, `StatusUnavailable`, `UnknownIntent`).
 - **Liquid Peg Intent & Bridge Implementation**: Added `LiquidPegState` lifecycle enum, `LiquidPegIntent` with fail-closed `validate()` method (checking amount, receiver bech32 address, asset ID, and txids), and `LiquidBridge` implementing `LiquidPegAdapter` (`initiate_peg_in`, `initiate_peg_out`, `get_peg_status`).
 - **Verification Metrics**: Verified 274 total Rust workspace tests and 70 Python verification guard tests passing 100%.
+
+
+## 22. Research Update (2026-09-11 Session 75 Synthesis): Documentation, Version & Toolchain Reconciliation
+- **Documentation & Version Reconciliation**: No protocol code changes this session. Reconciled stale version/toolchain references across the repository to the authoritative `Cargo.toml` metadata (`version = "0.3.3"`, `rust-version = "1.98.1"`) and the current `conxius-enclave-sdk` v2.0.17 contract: `0.3.1` → `0.3.3`, `1.97.1` → `1.98.1`, `0.2.10` → `0.3.3`, and `2.0.14` → `2.0.17`.
+- **Artifact Synchronization**: Synced CHANGELOG, SESSION_RESEARCH_LOG, gap analysis, governance scorecards, audit reports, Phase 1 roadmap (5 implemented / 4 open), and coverage targets (added UCS target; aligned coverage floors) with the current 279 Rust workspace tests + 70 Python guard tests baseline.
+- **Verification Metrics**: Confirmed 279 Rust workspace tests and 70 Python verification guard tests remain the current passing baseline (no source behavior modified).

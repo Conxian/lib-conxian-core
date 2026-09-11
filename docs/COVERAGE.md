@@ -113,10 +113,11 @@ environment/configuration dumps, credentials, or private keys.
 | Target | Scope | Metric | Initial target |
 | --- | --- | --- | ---: |
 | Overall | All denominator files | Lines | **>= 85%** |
-| Signing | `src/signing.rs` | Lines | **>= 95%** |
-| Verification | `src/verifier.rs` | Lines | **>= 95%** |
+| Signing | `src/signing.rs` | Lines | **>= 100%** |
+| Verification | `src/verifier.rs` | Lines | **>= 100%** |
 | Trust policy | `src/control_model/trust.rs` | Functions | **100%** |
-| BIP-110 | `src/control_model/bip110.rs` and `src/control_model/bip110_preflight.rs` | Lines | **>= 95%** |
+| BIP-110 | `src/control_model/bip110.rs`, `src/control_model/bip110_preflight.rs`, and `src/bitcoin/bip110_builder.rs` | Lines | **>= 100%** |
+| UCS | `src/signing.rs` | Functions | **100%** |
 
 The trust-policy target is a function-coverage floor paired with review of all
 decision/branch intent. It is not a claim that function coverage proves every

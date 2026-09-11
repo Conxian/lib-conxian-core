@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Hardened Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, fail-closed `WorkIntent::validate()` and `JobCard::validate()` methods, JSON-LD schema context enforcement, constructors, serialization methods, and full unit test coverage.
+- Refactored `src/crypto/mod.rs` to replace the placeholder `CryptoStubError` with a production-grade `CryptoError` enum, adding fail-closed PVDE and PTLC adaptor-signature parameter validation (Session 71).
+- Hardened the Liquid sidechain adapter (`src/bitcoin/liquid_adapter.rs`) with typed `LiquidError` variants and a fail-closed `LiquidBridge` implementing peg-in/peg-out lifecycle validation (Session 72).
 - Updated session research logs, gap analysis, and executive/readiness governance scorecards with 279 Rust workspace tests and 70 Python verification tests passing.
 
 ## [v0.3.3] - 2026-08-31
@@ -97,6 +99,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   harness with explicit release features, deterministic serde/BIP-110/trust
   boundary checks, and a CI entry point that runs automatically on pull requests
   targeting `main` and pushes to `main`, while remaining manually dispatchable.
+- **Note:** SDK references in this section reflect the v2.0.11 baseline at
+  release time; the current SDK is v2.0.17.
 
 ### Added
 - **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.
