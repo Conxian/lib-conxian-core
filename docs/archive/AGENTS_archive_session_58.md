@@ -2,7 +2,7 @@
 
 This repository is the canonical home of shared protocol primitives and the Core type system for the Conxian ecosystem. It is a "protocol-first" library.
 
-> **Note:** The production Vault SDK (hardware-backed signing, attestation, FROST DKG, BitVM2) lives in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17), NOT in this repository. See [docs/MIGRATION.md](docs/MIGRATION.md).
+> **Note:** The production Vault SDK (hardware-backed signing, attestation, FROST DKG, BitVM2) lives in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17), NOT in this repository. See [docs/MIGRATION.md](../MIGRATION.md).
 
 > **Session 52 review (2026-08-05):** Audited AGENTS.md, README.md, and PHASE1_ISSUES_ROADMAP.md. Fixed stale VaultSDK references, SDK version pins (v2.0.11→v2.0.14), SDK re-export module counts (50→70 with signing category), and Phase 1 status (6/9 CORE issues now closed). Blocked modules documented: Rails (6, pub(crate)), frost_crypto, wasm_bindings, android_strongbox, cloud.
 
