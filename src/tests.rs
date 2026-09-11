@@ -69,7 +69,7 @@ mod cxip20_architecture_tests {
 
     #[test]
     fn test_lightning_advanced_features() {
-        use secp256k1::{PublicKey, Secp256k1, SecretKey};
+        use secp256k1::{PublicKey, SecretKey};
 
         let offer_result = LightningNode::create_bolt12_offer(50000, "invoice");
         assert!(offer_result.is_err()); // Currently fails closed
@@ -79,9 +79,8 @@ mod cxip20_architecture_tests {
             Err(LightningError::JITProvisioningFailed)
         );
 
-        let secp = Secp256k1::new();
-        let secret_key = SecretKey::from_byte_array([1u8; 32]).expect("test scalar is valid");
-        let valid_pubkey = hex::encode(PublicKey::from_secret_key(&secp, &secret_key).serialize());
+        let secret_key = SecretKey::from_secret_bytes([1u8; 32]).expect("test scalar is valid");
+        let valid_pubkey = hex::encode(PublicKey::from_secret_key(&secret_key).serialize());
         assert_eq!(
             LightningNode::request_jit_channel(&valid_pubkey),
             Err(LightningError::JitProvisioningUnavailable)
@@ -121,7 +120,6 @@ mod additional_protocol_tests {
     use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
     use crate::protocol::dlc::DlcManager;
-    use secp256k1::Secp256k1;
 
     #[test]
     fn test_fedimint_unblinding_verification() {
@@ -134,9 +132,8 @@ mod additional_protocol_tests {
 
     #[test]
     fn test_silent_payment_scanning_uniqueness() {
-        let secp = Secp256k1::new();
-        let (_sk1, pk1) = secp.generate_keypair(&mut secp256k1::rand::rng());
-        let (_sk2, pk2) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk1, pk1) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk2, pk2) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
 
         let scan_key = [0x01; 32];
         let spend_pk = [0x02; 33];
