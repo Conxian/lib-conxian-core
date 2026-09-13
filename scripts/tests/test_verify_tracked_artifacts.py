@@ -54,6 +54,8 @@ class VerifyTrackedArtifactsTests(unittest.TestCase):
             "*.keystore",
             "id_rsa*",
             "id_ed25519*",
+            "id_ecdsa*",
+            "id_dsa*",
             ".aws/",
             ".gcloud/",
             ".terraform/",
@@ -62,6 +64,16 @@ class VerifyTrackedArtifactsTests(unittest.TestCase):
             "target-install/",
             ".pytest_cache/",
             "htmlcov/",
+            ".parcel-cache/",
+            ".next/",
+            "out/",
+            "coverage/",
+            "*.lcov",
+            "junit.xml",
+            "service_account.json",
+            "client_secret*.json",
+            ".npmrc",
+            ".yarnrc",
         ]
         for pattern in expected_patterns:
             self.assertIn(pattern, tracker.FORBIDDEN_PATTERNS)

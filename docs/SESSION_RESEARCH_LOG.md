@@ -678,3 +678,20 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Stacks & sBTC Bridge Hardening**: Added explicit parameter validation in `SBTCBridge::initiate_peg_in`, `initiate_peg_out`, and `SBTCIntent::validate`, ensuring zero satoshi amounts or malformed inputs fail closed with `StacksError`.
 - **Protocol Test Matrix**: Verified 268 Rust workspace test cases and 79 Python verification guard tests passing cleanly (100% pass rate).
 - **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 69 audit findings, multi-cloud fleet health, and zero architectural contamination.
+
+
+---
+
+## Session 2026-09-06 (Session 75): Repository Hygiene & Artifact Tracking Security Hardening Pass
+
+### Objective
+1. Perform a security-first improvement pass prioritizing secret exposure, sensitive file tracking, and generated/runtime artifact exposure across the repository and CI workflows.
+2. Unify and expand automated git tracking verification in `scripts/verify_tracked_artifacts.py` and `scripts/verify_submodule_secret_filenames.py` to cover cloud credentials (`service_account.json`, `client_secret*.json`), package manager configuration files (`.npmrc`, `.yarnrc`), SSH key variants (`id_ecdsa*`, `id_dsa*`), and runtime/generated build artifacts (`.parcel-cache/`, `.next/`, `out/`, `coverage/`, `*.lcov`, `junit.xml`).
+3. Update `.github/workflows/hygiene.yml` to replace fragmented inline bash scripts with direct execution of the authoritative Python verifiers.
+4. Update unit test coverage in `scripts/tests/test_verify_tracked_artifacts.py` and synchronize security documentation in `SECURITY.md`.
+
+### Execution & Verification Summary
+- **Tracked Artifact & Secret Hardening**: Expanded `FORBIDDEN_PATTERNS` and `FORBIDDEN_SECRET_PATTERNS` across Python verifiers and updated unit test assertions.
+- **CI Workflow Unification**: Configured `hygiene.yml` to set up Python 3.10 and execute `verify_tracked_artifacts.py` and `verify_submodule_secret_filenames.py` on every push and PR.
+- **Verification Suite**: Executed 70 Python verification tests cleanly (`python3 -m unittest discover scripts/tests`) with a 100% pass rate.
+- **Documentation Alignment**: Synchronized `SECURITY.md` and `docs/SESSION_RESEARCH_LOG.md` reflecting unified automated hygiene controls.
