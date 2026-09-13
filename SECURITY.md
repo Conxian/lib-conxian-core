@@ -51,7 +51,7 @@ To help us triage and investigate reports efficiently, please include:
 
 - **Immutable Dependency Pins:** All GitHub Actions workflows in `.github/workflows/` are pinned to verified, immutable commit SHAs.
 - **Automated Dependency Auditing:** `cargo-audit` scans dependency trees for known vulnerabilities on every commit and PR.
-- **Forbidden Tracked Artifacts:** Automated hygiene checks (`scripts/verify_tracked_artifacts.py`) prevent tracked `.env`, secret keys, credentials, or transient build outputs.
+- **Forbidden Tracked Artifacts & Secrets:** Automated hygiene checks (`scripts/verify_tracked_artifacts.py` and `scripts/verify_submodule_secret_filenames.py`) in CI (`.github/workflows/hygiene.yml`) prevent tracked `.env`, secret keys, credentials (`service_account.json`, `client_secret*.json`, `.npmrc`, `.yarnrc`), SSH/GPG keys, or transient build and test outputs (`node_modules/`, `test-results/`, `playwright-report/`, `.next/`, `coverage/`, `junit.xml`).
 - **Fuzz Testing:** Bounded fuzzing targets in `fuzz/` continuously test intent parsing, key aggregation, anchoring receipts, and proof validation.
 
 ## Security Advisories & Disclosure Policy

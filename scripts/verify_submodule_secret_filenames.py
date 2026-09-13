@@ -20,11 +20,17 @@ FORBIDDEN_SECRET_PATTERNS = [
     "*.key",
     "id_rsa*",
     "id_ed25519*",
+    "id_ecdsa*",
+    "id_dsa*",
     "*.pfx",
     "*.p12",
     "*.jks",
     "*.keystore",
     "credentials.json",
+    "service_account.json",
+    "client_secret*.json",
+    ".npmrc",
+    ".yarnrc",
     "*.pub",
 ]
 
