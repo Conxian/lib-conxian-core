@@ -126,10 +126,18 @@ let signed_call = ContractBridge::create_signed_call(
 
 ## Development
 
+For full build, test, and verification procedures, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ```bash
+# 1. Rust compilation and tests
 cargo build
-cargo test --workspace
-cargo clippy --workspace -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# 2. Architectural boundary and repository hygiene checks
+python3 scripts/verify_contamination_guard.py
+python3 scripts/verify_tracked_artifacts.py
+python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 ```
 
 ## Contact
