@@ -372,15 +372,18 @@ mod tests {
         assert_eq!(adapter.list_contracts().len(), 2);
 
         // Removal tests
-        assert_eq!(adapter.remove_contract(valid_hex).unwrap(), true);
+        assert!(adapter.remove_contract(valid_hex).unwrap());
         assert!(!adapter.has_contract(valid_hex));
         assert_eq!(adapter.list_contracts().len(), 1);
 
         // Remove non-registered valid contract
-        assert_eq!(adapter.remove_contract(valid_hex).unwrap(), false);
+        assert!(!adapter.remove_contract(valid_hex).unwrap());
 
         // Remove invalid contract
-        assert_eq!(adapter.remove_contract("invalid").unwrap_err(), RGBError::InvalidContractId);
+        assert_eq!(
+            adapter.remove_contract("invalid").unwrap_err(),
+            RGBError::InvalidContractId
+        );
 
         // Clear contracts
         adapter.clear_contracts();
