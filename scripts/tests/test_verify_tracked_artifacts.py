@@ -74,6 +74,8 @@ class VerifyTrackedArtifactsTests(unittest.TestCase):
             "client_secret*.json",
             ".npmrc",
             ".yarnrc",
+            "package-lock.json",
+            "commit_message*.txt",
         ]
         for pattern in expected_patterns:
             self.assertIn(pattern, tracker.FORBIDDEN_PATTERNS)
