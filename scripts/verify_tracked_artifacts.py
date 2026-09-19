@@ -9,6 +9,7 @@ FORBIDDEN_PATTERNS = [
     "target-install/",
     "dist/",
     "node_modules/",
+    "package-lock.json",
     "build/",
     "test-results/",
     "playwright-report/",
@@ -38,6 +39,7 @@ FORBIDDEN_PATTERNS = [
     "client_secret*.json",
     ".npmrc",
     ".yarnrc",
+    "commit_message*.txt",
     # Cloud & Tooling Credentials
     ".aws/",
     ".gcloud/",
