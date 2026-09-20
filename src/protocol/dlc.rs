@@ -103,7 +103,6 @@ impl DlcManager {
             return false;
         }
 
-
         let pk = match PublicKey::from_slice(oracle_pubkey) {
             Ok(p) => p,
             Err(_) => return false,
@@ -269,7 +268,6 @@ mod tests {
 
     #[test]
     fn test_oracle_attestation_verification() {
-
         // Oracle setup
         // Use deterministic scalars for testing
         let oracle_sk = SecretKey::from_secret_bytes([0x01; 32]).unwrap();

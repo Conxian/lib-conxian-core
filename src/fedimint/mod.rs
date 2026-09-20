@@ -81,7 +81,6 @@ impl FedimintAdapter {
     /// note primitive (G-16). This is not provider-backed mint verification.
     /// Uses ECC point addition: blinded_note = H(secret)*G + r*G
     pub fn blind_note(secret: &[u8], blinding_factor: &[u8]) -> Result<Vec<u8>, FedimintError> {
-
         if secret.is_empty() {
             return Err(FedimintError::EmptyInput("secret"));
         }
