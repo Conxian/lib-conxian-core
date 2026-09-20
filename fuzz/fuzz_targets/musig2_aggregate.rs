@@ -6,7 +6,6 @@
 //! attestation, use conxius-enclave-sdk.
 use libfuzzer_sys::fuzz_target;
 use musig2::{secp, KeyAggContext};
-use secp256k1::PublicKey;
 
 const MAX_KEYS: usize = 32;
 const MAX_INPUT_BYTES: usize = MAX_KEYS * 33;
@@ -16,8 +15,8 @@ fuzz_target!(|data: &[u8]| {
     let mut points: Vec<secp::Point> = Vec::new();
     let (chunks, _) = data.as_chunks::<33>();
     for chunk in chunks {
-        if let Ok(pk) = PublicKey::from_slice(chunk) {
-            points.push(secp::Point::from(pk));
+        if let Ok(point) = secp::Point::from_slice(chunk) {
+            points.push(point);
         }
     }
 

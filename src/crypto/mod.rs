@@ -2,7 +2,7 @@
 //! Aligned with CXIP 20 Section 3.0
 
 use core::fmt;
-use secp256k1::{Secp256k1, SecretKey};
+use secp256k1::SecretKey;
 use sha2::{Digest, Sha256};
 
 /// Core error variants for advanced cryptographic operations.
@@ -151,7 +151,6 @@ impl AdaptorSignature {
         secret_hex: &str,
         message_hex: &str,
     ) -> Result<String, CryptoError> {
-        let secp = Secp256k1::new();
         let secret_bytes = hex::decode(secret_hex).map_err(|_| CryptoError::InvalidKey)?;
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoError::InvalidMessage)?;
 
@@ -166,8 +165,8 @@ impl AdaptorSignature {
             .try_into()
             .map_err(|_| CryptoError::InvalidKey)?;
         let secret_key =
-            SecretKey::from_byte_array(secret_array).map_err(|_| CryptoError::InvalidKey)?;
-        let pubkey = secret_key.public_key(&secp);
+            SecretKey::from_secret_bytes(secret_array).map_err(|_| CryptoError::InvalidKey)?;
+        let pubkey = secret_key.public_key();
 
         let mut hasher = Sha256::new();
         hasher.update(b"ADAPTOR-SIG-V1");

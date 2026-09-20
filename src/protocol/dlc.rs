@@ -1,7 +1,7 @@
 //! DLC: Discreet Log Contracts
 //! Native Bitcoin finance primitives aligned with G-06.
 
-use secp256k1::{PublicKey, Scalar, Secp256k1};
+use secp256k1::{PublicKey, Scalar};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -103,7 +103,6 @@ impl DlcManager {
             return false;
         }
 
-        let secp = Secp256k1::new();
 
         let pk = match PublicKey::from_slice(oracle_pubkey) {
             Ok(p) => p,
@@ -136,7 +135,7 @@ impl DlcManager {
         };
 
         // Right side: R + e*P
-        let ep = match pk.mul_tweak(&secp, &e) {
+        let ep = match pk.mul_tweak(&e) {
             Ok(p) => p,
             Err(_) => return false,
         };
@@ -146,8 +145,8 @@ impl DlcManager {
         };
 
         // Left side: s*G
-        let lhs = match secp256k1::SecretKey::from_byte_array(s_bytes) {
-            Ok(sk) => PublicKey::from_secret_key(&secp, &sk),
+        let lhs = match secp256k1::SecretKey::from_secret_bytes(s_bytes) {
+            Ok(sk) => PublicKey::from_secret_key(&sk),
             Err(_) => return false,
         };
 
@@ -270,15 +269,14 @@ mod tests {
 
     #[test]
     fn test_oracle_attestation_verification() {
-        let secp = Secp256k1::new();
 
         // Oracle setup
         // Use deterministic scalars for testing
-        let oracle_sk = SecretKey::from_byte_array([0x01; 32]).unwrap();
-        let oracle_pk = PublicKey::from_secret_key(&secp, &oracle_sk);
+        let oracle_sk = SecretKey::from_secret_bytes([0x01; 32]).unwrap();
+        let oracle_pk = PublicKey::from_secret_key(&oracle_sk);
 
-        let nonce_sk = SecretKey::from_byte_array([0x02; 32]).unwrap();
-        let nonce_pk = PublicKey::from_secret_key(&secp, &nonce_sk);
+        let nonce_sk = SecretKey::from_secret_bytes([0x02; 32]).unwrap();
+        let nonce_pk = PublicKey::from_secret_key(&nonce_sk);
 
         let msg = b"outcome-a";
 
@@ -298,10 +296,10 @@ mod tests {
         s_sk = s_sk.mul_tweak(&e).unwrap();
         // s_sk = a*e + k
         s_sk = s_sk
-            .add_tweak(&Scalar::from_be_bytes(nonce_sk.secret_bytes()).unwrap())
+            .add_tweak(&Scalar::from_be_bytes(nonce_sk.to_secret_bytes()).unwrap())
             .unwrap();
 
-        let s_bytes = s_sk.secret_bytes();
+        let s_bytes = s_sk.to_secret_bytes();
 
         assert!(DlcManager::verify_oracle_attestation(
             &oracle_pk.serialize(),

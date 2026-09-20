@@ -1,7 +1,7 @@
 //! Fedimint deterministic primitives and provider boundary
 //! Aligned with CXIP 20 and G-16
 
-use secp256k1::{PublicKey, Scalar, Secp256k1, SecretKey};
+use secp256k1::{PublicKey, Scalar, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -81,7 +81,6 @@ impl FedimintAdapter {
     /// note primitive (G-16). This is not provider-backed mint verification.
     /// Uses ECC point addition: blinded_note = H(secret)*G + r*G
     pub fn blind_note(secret: &[u8], blinding_factor: &[u8]) -> Result<Vec<u8>, FedimintError> {
-        let secp = Secp256k1::new();
 
         if secret.is_empty() {
             return Err(FedimintError::EmptyInput("secret"));
@@ -122,14 +121,14 @@ impl FedimintAdapter {
         };
 
         // note_point = secret * G
-        let sk = match SecretKey::from_byte_array(secret_scalar.to_be_bytes()) {
+        let sk = match SecretKey::from_secret_bytes(secret_scalar.to_be_bytes()) {
             Ok(k) => k,
             Err(_) => return Err(FedimintError::InvalidScalar("secret hash")),
         };
-        let note_point = PublicKey::from_secret_key(&secp, &sk);
+        let note_point = PublicKey::from_secret_key(&sk);
 
         // blinded_point = note_point + bf * G
-        let blinded_point = match note_point.add_exp_tweak(&secp, &bf_scalar) {
+        let blinded_point = match note_point.add_exp_tweak(&bf_scalar) {
             Ok(p) => p,
             Err(_) => return Err(FedimintError::InvalidPoint),
         };

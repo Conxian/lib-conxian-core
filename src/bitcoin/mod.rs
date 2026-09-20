@@ -8,7 +8,7 @@ pub mod taproot;
 
 pub use taproot::*;
 
-use secp256k1::{PublicKey, Scalar, Secp256k1, SecretKey};
+use secp256k1::{PublicKey, Scalar, SecretKey};
 use sha2::{Digest, Sha256};
 
 /// BIP-352 Silent Payments: Core interface for transaction scanning (G-05).
@@ -31,7 +31,7 @@ impl SilentPaymentScanner {
             Ok(b) => b,
             Err(_) => return Vec::new(),
         };
-        let scan_secret = match SecretKey::from_byte_array(scan_bytes) {
+        let scan_secret = match SecretKey::from_secret_bytes(scan_bytes) {
             Ok(k) => k,
             Err(_) => return Vec::new(),
         };
@@ -51,7 +51,6 @@ impl SilentPaymentScanner {
         input_pubkeys: &[PublicKey],
         scan_privkey: &SecretKey,
     ) -> [u8; 32] {
-        let secp = Secp256k1::new();
         if input_pubkeys.is_empty() {
             return [0u8; 32];
         }
@@ -63,8 +62,8 @@ impl SilentPaymentScanner {
         }
 
         // Multiply by scan private key: P_shared = a * sum(P_in)
-        let tweak = Scalar::from_be_bytes(scan_privkey.secret_bytes()).unwrap();
-        let shared_point = combined_pk.mul_tweak(&secp, &tweak).unwrap_or(combined_pk);
+        let tweak = Scalar::from_be_bytes(scan_privkey.to_secret_bytes()).unwrap();
+        let shared_point = combined_pk.mul_tweak(&tweak).unwrap_or(combined_pk);
 
         // shared_secret = H(P_shared)
         let mut hasher = Sha256::new();
@@ -88,12 +87,11 @@ impl SilentPaymentScanner {
             Ok(b) => b,
             Err(_) => return Vec::new(),
         };
-        let scan_secret = match SecretKey::from_byte_array(scan_bytes) {
+        let scan_secret = match SecretKey::from_secret_bytes(scan_bytes) {
             Ok(k) => k,
             Err(_) => return Vec::new(),
         };
 
-        let secp = Secp256k1::new();
         let mut combined_pk = input_pubkeys[0];
 
         // Apply outpoint tweak hash if outpoints exist
@@ -108,7 +106,7 @@ impl SilentPaymentScanner {
             let tweak_bytes: [u8; 32] = hasher.finalize().into();
             if let Ok(tweak_scalar) = Scalar::from_be_bytes(tweak_bytes) {
                 combined_pk = combined_pk
-                    .mul_tweak(&secp, &tweak_scalar)
+                    .mul_tweak(&tweak_scalar)
                     .unwrap_or(combined_pk);
             }
         } else {
@@ -117,8 +115,8 @@ impl SilentPaymentScanner {
             }
         }
 
-        let tweak = Scalar::from_be_bytes(scan_secret.secret_bytes()).unwrap();
-        let shared_point = combined_pk.mul_tweak(&secp, &tweak).unwrap_or(combined_pk);
+        let tweak = Scalar::from_be_bytes(scan_secret.to_secret_bytes()).unwrap();
+        let shared_point = combined_pk.mul_tweak(&tweak).unwrap_or(combined_pk);
 
         let mut hasher = Sha256::new();
         hasher.update(shared_point.serialize());
@@ -134,8 +132,7 @@ mod tests {
 
     #[test]
     fn test_silent_payment_scanning_logic() {
-        let secp = Secp256k1::new();
-        let (_sk, pk) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk, pk) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
         let scan_key = [0x01; 32];
         let spend_pk = [0x02; 33];
 
@@ -146,9 +143,8 @@ mod tests {
 
     #[test]
     fn test_shared_secret_computation() {
-        let secp = Secp256k1::new();
-        let (_sk, pk) = secp.generate_keypair(&mut secp256k1::rand::rng());
-        let sk2 = SecretKey::from_byte_array([0x02; 32]).unwrap();
+        let (_sk, pk) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
+        let sk2 = SecretKey::from_secret_bytes([0x02; 32]).unwrap();
 
         let secret = SilentPaymentScanner::compute_shared_secret(&[pk], &sk2);
         assert_ne!(secret, [0u8; 32]);
@@ -156,9 +152,8 @@ mod tests {
 
     #[test]
     fn test_silent_payment_multi_input_outpoint_scanning() {
-        let secp = Secp256k1::new();
-        let (_sk1, pk1) = secp.generate_keypair(&mut secp256k1::rand::rng());
-        let (_sk2, pk2) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk1, pk1) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk2, pk2) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
         let scan_key = [0x05; 32];
         let spend_pk = [0x06; 33];
         let dummy_outpoint = [0xaa; 36];
