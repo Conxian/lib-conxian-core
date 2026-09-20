@@ -12,7 +12,7 @@ pub struct LightningNode;
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum LightningFailureClass {
-    /// Permenent failure: invalid parameters, policy violation, etc. No retry.
+    /// Permanent failure: invalid parameters, policy violation, etc. No retry.
     Permanent,
     /// Transient failure: temporary connection or liquidity issue. Bounded retry.
     Transient,
@@ -124,16 +124,19 @@ pub trait LightningAdapter {
 impl LightningNode {
     /// BOLT 12 Offers (Section 5.2)
     pub fn create_bolt12_offer(
-        _amount_msat: u64,
-        _description: &str,
+        amount_msat: u64,
+        description: &str,
     ) -> Result<Offer, LightningError> {
+        if amount_msat == 0 || description.trim().is_empty() {
+            return Err(LightningError::InvalidOffer);
+        }
         // Implementation defers to LDK's OfferBuilder in production
         Err(LightningError::InvalidOffer)
     }
 
     /// BIP-353 DNS Payment Instructions
     pub fn resolve_bip353(dns_name: &str) -> Result<Offer, LightningError> {
-        if dns_name.is_empty() {
+        if dns_name.trim().is_empty() || !dns_name.contains('.') {
             return Err(LightningError::InvalidOffer);
         }
         Err(LightningError::InvalidOffer)
@@ -287,6 +290,44 @@ mod additional_tests {
             LightningFailureClass::Transient,
             LightningFailureClass::Indeterminate
         );
+    }
+
+    #[test]
+    fn test_lightning_node_methods() {
+        // BOLT-12 offer validation
+        assert_eq!(
+            LightningNode::create_bolt12_offer(0, "test").unwrap_err(),
+            LightningError::InvalidOffer
+        );
+        assert_eq!(
+            LightningNode::create_bolt12_offer(1000, " ").unwrap_err(),
+            LightningError::InvalidOffer
+        );
+
+        // BIP-353 DNS resolution validation
+        assert_eq!(
+            LightningNode::resolve_bip353("").unwrap_err(),
+            LightningError::InvalidOffer
+        );
+        assert_eq!(
+            LightningNode::resolve_bip353("invalid_dns").unwrap_err(),
+            LightningError::InvalidOffer
+        );
+
+        // JIT channel provisioning invalid pubkey
+        assert_eq!(
+            LightningNode::request_jit_channel("invalid_hex").unwrap_err(),
+            LightningError::JITProvisioningFailed
+        );
+
+        // Splicing zero channel ID
+        let zero_channel = [0u8; 32];
+        assert_eq!(
+            LightningNode::initiate_splicing(&zero_channel, 1000).unwrap_err(),
+            LightningError::ChannelNotFound
+        );
+        let valid_channel = [1u8; 32];
+        assert!(LightningNode::initiate_splicing(&valid_channel, 1000).is_ok());
     }
 
     #[test]

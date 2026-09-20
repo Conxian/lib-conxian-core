@@ -1,7 +1,7 @@
 # lib-conxian-core
 
 [![Rust CI](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml/badge.svg)](https://github.com/Conxian/lib-conxian-core/actions/workflows/main.yml)
-[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache%202.0-blue.svg)](LICENSE)
 
 Shared protocol primitives for the Conxian ecosystem.
@@ -9,11 +9,11 @@ Shared protocol primitives for the Conxian ecosystem.
 ## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use the production
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.11) instead.
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.17) instead.
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
-the exact published SDK `=2.0.11`, keeps Core's default features SDK-independent,
+the exact published SDK `=2.0.17`, keeps Core's default features SDK-independent,
 and does not enable simulator/mock/dev bypass features by default.
 
 > **v0.2.11 Breaking Change**: Deprecated modules (VaultSDK, Musig2, BitVM2, Wallet) have been removed.
@@ -39,7 +39,14 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 ## Status
 
-**v0.3.1 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+**v0.3.3 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
+
+## Repository Categorization & Support Tier
+
+- **Categorization:** Primary Strategic Platform Core (Tier 1).
+- **Target Audience:** Core protocol developers, security auditors, and system integrators building on the Conxian ecosystem.
+- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 24-hour response for security vulnerabilities. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+- **Ownership & Release Guidance:** Governed by strict CODEOWNERS policies and fail-closed automated release pipelines. See [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md) and [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
 
 ## Scope
 
@@ -56,10 +63,9 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 ## Rust and feature compatibility
 
-This crate supports Rust `1.91+` for both the default feature set and the
-optional `enclave` feature. The enclave path uses
-`conxius-enclave-sdk 2.0.11`, whose locked dependency graph includes Alloy
-components requiring Rust `1.91`. See the
+This crate supports Rust `1.98.1+` for both the default feature set and the
+optional SDK features. The root optional dependency selects Git tag `v2.0.17`
+(also published to crates.io with matching `version = "2.0.17"`). See the
 [compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
 coverage, and SDK release-coordination requirements.
 
@@ -69,14 +75,14 @@ Add `lib-conxian-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lib-conxian-core = "0.3.1"
+lib-conxian-core = "0.3.3"
 ```
 
 Or use a table declaration when selecting dependency features:
 
 ```toml
 [dependencies]
-lib-conxian-core = { version = "0.3.1", default-features = false }
+lib-conxian-core = { version = "0.3.3", default-features = false }
 ```
 
 For the exact published SDK contract boundary, add:
@@ -84,14 +90,14 @@ For the exact published SDK contract boundary, add:
 ```toml
 [dependencies]
 lib-conxian-core-enclave = "0.1.0"
-conxius-enclave-sdk = "=2.0.11"
+conxius-enclave-sdk = "=2.0.17"
 ```
 
 The root package's optional `enclave` feature remains available for direct
 dependency compatibility, but the companion crate is the documented adapter
 surface. See [docs/SIGNING_ARCHITECTURE.md](docs/SIGNING_ARCHITECTURE.md) and
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for supported capabilities and
-the Rust `1.91+` effective toolchain floor.
+the Rust `1.98.1+` effective toolchain floor.
 
 ### Quick Start
 
@@ -122,15 +128,26 @@ let signed_call = ContractBridge::create_signed_call(
 - **API Reference:** [docs/API.md](docs/API.md)
 - **Boundaries:** [docs/ARCHITECTURE_BOUNDARIES.md](docs/ARCHITECTURE_BOUNDARIES.md)
 - **Signing Guides:** [docs/signing/README.md](docs/signing/README.md)
+- **Compatibility Matrix:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)
+- **Release Process:** [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md)
+- **Repo Ownership:** [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md)
 - **CXIP Index:** [docs/governance/CXIP_INDEX.md](docs/governance/CXIP_INDEX.md)
 - **Alignment:** [docs/ALIGNMENT.md](docs/ALIGNMENT.md)
 
 ## Development
 
+For full build, test, and verification procedures, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ```bash
+# 1. Rust compilation and tests
 cargo build
-cargo test --workspace
-cargo clippy --workspace -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# 2. Architectural boundary and repository hygiene checks
+python3 scripts/verify_contamination_guard.py
+python3 scripts/verify_tracked_artifacts.py
+python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 ```
 
 ## Contact

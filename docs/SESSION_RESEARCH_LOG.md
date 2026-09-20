@@ -6,7 +6,252 @@
 > companion is `lib-conxian-core-enclave`.
 
 ---
+---
+## Session 2026-09-17 (Session 78): Ecosystem Research Synthesis, Cloud Fleet Topology & RGB Stock Adapter Hardening
 
+### Objective
+1. Synchronize repository state, submodules, and verify multi-cloud connected infrastructure assets across Neon (6 PostgreSQL fleet databases), Render (team workspace services), and Supabase.
+2. Review cross-repository GitHub issues, research gaps, and scorecards against the codebase.
+3. Harden `RGBStockAdapter` in `src/rgb/mod.rs` by implementing fail-closed in-memory contract management (`register_contract`, `register_contract_id`, `has_contract`, `remove_contract`, `list_contracts`, `clear_contracts`) with strict 64-character hex `ContractId` validation and unit tests.
+4. Verify Rust workspace test suite (281 total workspace tests passing) and Python hygiene guard scripts (70 test cases passing).
+
+### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
+- **Neon Cloud Fleet (6 Active PostgreSQL Databases)**:
+  - `conxian-core` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
+- **Supabase Projects**: Active API connections verified (`Conxian BOS`, `Conxian-platform`).
+
+### 2. RGB Stock Adapter In-Memory Contract Management Hardening (`src/rgb/mod.rs`)
+- **Contract Management Methods**: Implemented `register_contract(&mut self, contract_id: &str)`, `register_contract_id(&mut self, cid: ContractId)`, `has_contract(&self, contract_id: &str)`, `remove_contract(&mut self, contract_id: &str)`, `list_contracts(&self)`, and `clear_contracts(&mut self)`.
+- **Fail-Closed Format Validation**: All string input contract arguments strictly validate 64-character hex strings using `ContractId::from_str`.
+- **Unit Test Coverage**: Added comprehensive test cases covering contract registration, idempotency, lookup, removal, invalid hex rejection, and clearing.
+
+### 3. System Verification Status
+- **Rust Workspace**: 281 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version`).
+- **Python Verification Guards**: 70 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+---
+## Session 2026-09-16 (Session 77): Conxian Master Reconnaissance, Architecture Review & B2B Deployment Simulation
+
+### Objective
+1. Act as Lead Systems Engineer for Conxian B2B Deep-Tech infrastructure vendor, performing org-wide master reconnaissance across core repositories and multi-cloud infrastructure.
+2. Enforce strict legal and architectural firewall routing separating `conxian.org` (open-source protocol & tech distribution) from `conxian-labs.com` (corporate & governance).
+3. Conduct end-to-end B2B Client Deployment Simulation tracing enterprise client purchasing, `.env` inputs, Zero Secret Egress via AWS Nitro Enclave / StrongBox, ISO 20022 -> CJCS -> Bitcoin L1 settlement flows, and `conxian-cli` unified installer specs.
+4. Execute cross-repository gap analysis, issue mapping, and candidate solution scoring (Security > Enterprise Routing > UI/UX).
+5. Verify Rust workspace test suite (279 total workspace tests passing) and Python hygiene guard scripts (70 test cases passing).
+
+### 1. Strict Domain Separation & Routing Enforcement Map
+- **Protocol & Dev Surface (`conxian.org`)** - Pure tech distribution & open-source protocol APIs (No corporate marketing):
+  - `conxian-nexus` -> `nexus.conxian.org` (zkVM proof aggregation & state root commitments)
+  - `conxian-gateway` -> `gateway.conxian.org` (REST/MCP runtime gateway)
+  - `conxius-enclave-sdk` -> `sdk.conxian.org` (Hardware-backed enclave SDK)
+  - `conxius-platform` -> `platform.conxian.org` (Container image & helm distribution platform)
+  - `conxian_market` -> `market.conxian.org` (ERC-7683 cross-chain orderbook & solver registry)
+- **Corporate & Governance Surface (`conxian-labs.com`)** - B2B Sales, Legal, and Operations:
+  - `conxian-business` -> `bos.conxian-labs.com` (Enterprise Business Operating System control plane)
+  - `conxian-labs-site` -> `www.conxian-labs.com` (Corporate website & marketing)
+
+### 2. B2B Client Deployment Journey & Simulation
+- **Purchase & Asset Pull**: Enterprise clients license stateless container images (`conxian-gateway:v0.1.4`, `conxian-nexus:latest`) and hardware execution parameters from `platform.conxian.org` / `sdk.conxian.org`.
+- **Client Configuration & Required `.env` Inputs**:
+  - `BITCOIN_RPC_URL`, `STACKS_RPC_URL`, `LND_GRPC_URL`, `BABYLON_COSMOS_RPC`
+  - `AWS_NITRO_ENCLAVE_KMS_ARN` or TEE hardware key parameter
+  - `PGCONNECT_URL` (`noisy-cloud-41146057` or private PostgreSQL DB)
+- **Settlement Flow**: Legacy ISO 20022 messages (pain.001 / pacs.008) -> converted to Canonical Job Cards (`src/cjcs.rs`) -> serialized to Taproot / Miniscript contracts -> settled on Bitcoin L1 with zero secret egress.
+- **Unified Installer Specification (`conxian-cli`)**:
+  - `conxian init`: Pre-flight environment template generator.
+  - `conxian verify`: Pre-flight connectivity checker for chain RPCs, Nitro Enclaves, and PostgreSQL DBs.
+  - `conxian deploy`: Container stack launcher via Helm / Docker Compose.
+
+### 3. Verification & Metrics Baseline
+- **Rust Workspace**: 279 total workspace tests passing cleanly (`RUSTUP_HOME=/tmp/rustup_env cargo +1.98.1 test --workspace`).
+- **Python Hygiene Guards**: 70 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+
+
+
+---
+## Session 2026-09-15 (Session 76): Org-Wide Ecosystem Audit, Installation & Delivery Review, Research Synthesis
+
+### Objective
+1. Perform a full org-wide ecosystem audit across all connected cloud infrastructure (Neon 6-DB PostgreSQL fleet, Render team services, Supabase projects), submodules, and protocol code.
+2. Conduct an end-to-end review of system installation, setup, management, client purchasing workflows, required client inputs, and deployment connectivity.
+3. Review cross-repository GitHub issues (`conxian-gateway`, `conxius-wallet`, `conxian-nexus`, `lib-conxian-core`), open PRs, research gaps, and candidate scoring.
+4. Formulate concrete recommendations for software delivery and unified installer CLI (`conxian-cli` / `conxian-installer`).
+5. Verify Rust workspace tests (279 total workspace tests passing) and Python verification guard tests (70 test cases passing).
+
+### 1. Ecosystem Component & Purchasing Map
+- **Client Purchased Assets**:
+  - `lib-conxian-core` (`v0.3.3`): Protocol data models, control models, universal chain adapters, risk contracts, and verifier contracts.
+  - `conxius-enclave-sdk` (`v2.0.17`): Hardware-backed signing, AWS Nitro Enclave / StrongBox attestation, FROST DKG, BitVM2.
+  - `conxian-gateway` (`v0.1.4`): Runtime orchestration, REST/MCP API Gateway, rate limiting, and routing middleware.
+  - `conxian-nexus`: zkVM proof aggregation engine, state root commitments, and cross-chain settlement verification.
+  - `Business Operating System (BOS)`: Enterprise risk control plane, policy enforcement, M&A audit logs, and billing dashboard.
+
+### 2. First-Time Setup & Client Connectivity Walkthrough
+- **Onboarding & Inputs**: Client receives org credentials and provides chain RPCs (Bitcoin, Stacks, LND, Babylon, Solana, Cosmos), Nitro Enclave/KMS key ARN, PostgreSQL connection strings (`PGCONNECT_URL`), and domain/TLS certificates.
+- **Security Invariant**: Zero Secret Egress maintained; private signing keys remain localized inside client Nitro Enclaves via `conxius-enclave-sdk`.
+- **Connectivity**: Cross-chain asset swaps and intents maintain atomic connectivity via `Erc7683CrossChainOrder` and `TransportAdapter`.
+
+### 3. Unified Installer Recommendation (`conxian-cli`)
+- Recommended building a unified CLI (`conxian init`, `conxian verify`, `conxian deploy`) to automate pre-flight connectivity checks against configured RPCs, Nitro Enclaves, and PostgreSQL DBs, launching stack containers via pre-tested Helm charts or Docker Compose templates.
+
+### 4. System Verification Status
+- **Rust Workspace**: 279 total workspace tests passing (`cargo test --workspace`).
+- **Python Verification Guards**: 70 unit/governance guard tests passing (`python3 -m unittest discover -s scripts/tests`).
+
+---
+## Session 2026-09-11 (Session 75): Documentation, Version & Toolchain Reconciliation Audit
+
+### Objective
+1. Reconcile every repository document against the authoritative `Cargo.toml` metadata (`version = "0.3.3"`, `rust-version = "1.98.1"`) and the current `conxius-enclave-sdk` v2.0.17 contract.
+2. Correct stale version/toolchain references across docs, tests, scripts, and POC artifacts (`0.3.1` → `0.3.3`, `1.97.1` → `1.98.1`, `0.2.10` → `0.3.3`, `2.0.14` → `2.0.17`).
+3. Synchronize changelog, research logs, governance scorecards, audit reports, and coverage targets with the current baseline (279 Rust workspace tests + 70 Python guard tests).
+4. Verify module catalogs, SDK re-export counts (74 modules), BIP-110 limits, fuzz targets, and named coverage targets against source.
+
+### Execution & Verification Summary
+- **Version/Toolchain Reconciliation**: Corrected `docs/PRD.md` title and crate matrix, `tests/fixtures/manifest.json`, `tests/golden_serialization.rs`, `enclave-poc/src/main.rs`, `scripts/run_sdk_compat.py`, `scripts/tests/test_verify_core_dependency_boundary.py`, `addons/lib-conxian-core-enclave/README.md`, `docs/signing/{dlc,rgb,babylon}.md`, `docs/governance/CXIP_INDEX.md`, and `docs/ADVISORY_REPORT_2026_07_06.md` to reflect v0.3.3 / Rust 1.98.1 / SDK v2.0.17.
+- **Changelog Sync**: Added Session 71 (crypto hardening) and Session 72 (Liquid adapter) entries to the Unreleased section and a clarifying note that v0.3.0-era SDK references reflect the v2.0.11 baseline at release time.
+- **Scorecard/Audit Sync**: Updated `GAP_ANALYSIS_AND_SCORING.md`, `DEPENDENCY_SECURITY_REPORT.md`, `AUDIT_LIB_CONXIAN_CORE.md`, `CONTROL_MAPPING.md`, `METRIC_SPECS.md`, `PHASE1_ISSUES_ROADMAP.md` (5 implemented / 4 open), and `COVERAGE.md` (added UCS target, aligned coverage floors) with current dates and test counts.
+- **Protocol Test Matrix**: Verified 279 Rust workspace tests and 70 Python guard tests remain the current baseline (no code changes made this session).
+- **Zero Architectural Contamination**: Documentation-only changes; no `src/` behavior modified.
+
+---
+
+## Session 2026-09-11 (Session 74): Autonomous Research Synthesis, Multi-Cloud Fleet Audit & CJCS Hardening
+
+### Objective
+1. Execute recursive Git fetch and submodule update (`git fetch origin main -p`, `git submodule update --init --recursive`).
+2. Conduct an end-to-end multi-dimensional audit across code, research papers, knowledge bases, connected cloud infrastructure (Neon 6-DB fleet, Render team services, Supabase), open PRs, and repository gaps.
+3. Harden the Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, `WorkIntent` and `JobCard` fail-closed validation, constructors, JSON-LD serialization/deserialization methods, and unit tests.
+4. Verify workspace test coverage (279 Rust workspace tests) and repository governance guard scripts (70 Python verification tests).
+
+### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
+- **Supabase Projects**: Active API connections verified.
+
+### 2. Canonical Job Card System Hardening (`src/cjcs.rs`)
+- **Typed Error Handling**: Introduced `CjcsError` with variants `InvalidContext`, `InvalidType`, `InvalidSenderAddress`, `InvalidReceiverAddress`, `InvalidTaskId`, `InvalidAmount`, `SerializationFailed`, and `DeserializationFailed`.
+- **Work Intent & Job Card Validation**: Implemented fail-closed `WorkIntent::validate()` and `JobCard::validate()` enforcing non-empty addresses, non-empty task IDs, `amount_sbtc > 0`, non-empty `@context`, and non-empty `@type`.
+- **Constructors & Serialization**: Added `WorkIntent::new()`, `JobCard::new()`, `JobCard::new_with_context()`, `to_json()`, and `from_json()` methods.
+- **Unit Testing**: Added unit test suite covering valid job cards, invalid parameters, JSON round-trips, and error display formatting.
+
+### 3. Verification & Test Metrics
+- **Rust Workspace**: 279 total workspace tests passing cleanly (`cargo test --workspace`).
+- **Python Verification Guards**: 70 unit/governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+
+
+## Session 2026-09-10 (Session 72): Repository Audit, Multi-Cloud Fleet & Liquid Sidechain Adapter Hardening
+
+### Objective
+1. Execute recursive Git fetch and submodule update (`git fetch origin main -p --recurse-submodules`, `git submodule update --init --recursive`).
+2. Conduct an end-to-end multi-dimensional audit across code, research papers, knowledge bases, connected cloud infrastructure (Neon 6-DB fleet, Render team services, Supabase), and open issues.
+3. Harden the Liquid Sidechain Adapter (`src/bitcoin/liquid_adapter.rs`) with typed `LiquidError` variants, `LiquidPegState`, `LiquidPegIntent` fail-closed validation, and `LiquidBridge` peg-in/peg-out interfaces.
+4. Verify workspace test coverage (274 Rust workspace tests) and repository governance guard scripts (70 Python verification tests).
+
+### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
+- **Supabase Projects**: Active API connections verified.
+
+### 2. Liquid Sidechain Adapter Hardening (`src/bitcoin/liquid_adapter.rs`)
+- **Typed Error Handling**: Introduced `LiquidError` with variants `InvalidAddress`, `InvalidAmount`, `InvalidAssetId`, `InvalidTxid`, `InvalidProof`, `PegInFailed`, `PegOutFailed`, `StatusUnavailable`, and `UnknownIntent`.
+- **Peg Lifecycle & Intent Model**: Implemented `LiquidPegState` enum and `LiquidPegIntent` struct with fail-closed `LiquidPegIntent::validate()` enforcing non-zero satoshis, non-empty receiver addresses (Elements bech32 `ex1`/`tlq1`), non-empty asset IDs, and valid option fields.
+- **Bridge Trait & Implementation**: Implemented `LiquidPegAdapter` trait and `LiquidBridge` struct providing fail-closed `initiate_peg_in`, `initiate_peg_out`, and `get_peg_status` methods.
+- **Unit Testing**: Added unit tests covering successful peg-in/out, invalid/empty parameters, zero amounts, invalid liquid addresses, and status queries.
+
+### 3. Verification & Test Metrics
+- **Rust Workspace**: 274 total workspace tests passing cleanly (`cargo test --workspace`).
+- **Python Verification Guards**: 70 unit/governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+
+## Session 2026-09-10 (Session 71): Codebase Audit, Multi-Cloud Verification & Advanced Cryptography Hardening
+
+### Objective
+1. Synchronize repository state, submodules, and verify multi-cloud infrastructure assets across Neon (6 PostgreSQL databases), Render (team workspace services), and Supabase.
+2. Conduct an end-to-end audit of codebase gaps, research papers, knowledge bases, and scorecards.
+3. Harden the core Advanced Cryptography module (`src/crypto/mod.rs`) by replacing placeholder stub errors with production-grade `CryptoError` variants, parameter validation, and deterministic commitment verification methods.
+4. Verify workspace test suite (268 Rust workspace tests) and repository governance scripts (79 Python verification tests).
+
+### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
+- **Supabase Projects**: API connectivity verified and active.
+
+### 2. Cryptographic Module Hardening (`src/crypto/mod.rs`)
+- **CryptoError Refactoring**: Replaced placeholder `CryptoStubError` with a production-grade `CryptoError` enum (`InvalidKey`, `InvalidDepth`, `EmptyPayload`, `InvalidMessage`, `VerificationFailed`, `NotImplemented`). Preserved `pub type CryptoStubError = CryptoError;` for backward compatibility.
+- **Verifiable Delay Encryption (PVDE)**: Added fail-closed parameter validation (`delay == 0`, `data.is_empty()`) and implemented `PVDE::verify_puzzle_checked`.
+- **Witness Encryption**: Enforced secret-safe parameter validation ensuring error messages never leak sensitive payload bytes.
+- **Adaptor Signatures (PTLC)**: Hardened `create_adaptor_signature` with strict 32-byte secret/message length and `secp256k1` secret key validation, and implemented `verify_adaptor_signature_checked`.
+
+### 3. Verification & Test Metrics
+- **Rust Workspace**: 268 total workspace tests passing cleanly (`cargo +1.98.1 test --workspace`).
+- **Python Verification Guards**: 79 unit/governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+
+## Session 2026-09-09 (Session 70): Full System Installation, Client Purchasing & Unified Installer Architecture Review
+
+### Objective
+1. Review full system installation, setup, and management process from clean operating system to complete production deployment.
+2. Analyze client purchasing workflows (what clients buy, how software assets are delivered from the Conxian organization, which parts are installed).
+3. Review client required setup, inputs, and environment configurations (RPCs, Enclave credentials, DB strings, API keys).
+4. Verify end-to-end asset connectivity across connected systems (Neon PostgreSQL 6-DB fleet, Render workspace services, Supabase projects).
+5. Evaluate software delivery mechanics and formulate concrete recommendations for a Unified Installer / CLI (`conxian-installer` / `conxian-cli`).
+
+### 1. Client Purchasing & Software Component Map
+
+When an enterprise or institutional client purchases Conxian infrastructure, they acquire a modular suite of open-source libraries and enterprise software licenses:
+
+| Component | License / Source | What Client Installs & Runs | Purpose |
+| :--- | :--- | :--- | :--- |
+| **lib-conxian-core** | Open Source (MIT/Apache 2.0) | Dependency Crate (`lib-conxian-core = "0.3.3"`) | Protocol data models, control models, universal chain adapters, risk contracts, and invariant verifiers. |
+| **conxius-enclave-sdk** | Open Source / Crates.io (`v2.0.17`) | Dependency Crate / WASM module | Hardware-backed signing, AWS Nitro Enclave / StrongBox attestation, FROST DKG, BitVM2. |
+| **conxian-gateway** | Enterprise / Org Repo (`v0.1.4`) | Docker Container / Binary Service | Runtime orchestration, REST/MCP API Gateway, rate limiting, and protocol routing middleware. |
+| **conxian-nexus** | Enterprise / Org Repo | Docker Container / Binary Service | zkVM proof aggregation engine, state root commitments, and cross-chain settlement verification. |
+| **Business Operating System (BOS)** | Enterprise Platform | SaaS / Hosted Instance / On-Prem | Enterprise risk control plane, policy rule enforcement, M&A audit logs, and billing. |
+| **Universal Adapters** | Open Source | Rust Trait Impls / Middleware | Chain-specific connectors (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, Solana, Cosmos). |
+
+### 2. Full System Installation & Setup Process (First-Time Client Walkthrough)
+
+#### Step A: Organization Onboarding & Asset Delivery
+1. Client signs enterprise agreement and receives organization credentials and API keys.
+2. Access granted to private GitHub organization repositories (`conxian-gateway`, `conxian-nexus`, `conxian-ui`).
+3. Client registers their primary database instance (or connects to Conxian Neon Cloud fleet: `Gateway` DB `noisy-cloud-41146057`).
+
+#### Step B: Client Infrastructure Requirements & Required Inputs
+Clients must provide the following environment configurations from their side:
+- **Chain RPC Endpoints**: Bitcoin Mainnet/Testnet RPC, Stacks Node API (`https://api.mainnet.hiro.so`), Lightning LND/LDK gRPC endpoint, Babylon Cosmos RPC, Solana/Cosmos RPCs.
+- **Hardware Enclave Key Material**: AWS Nitro Enclave image hash or AWS KMS ARN for TEE hardware-backed signing.
+- **Database Connection Strings**: PostgreSQL connection string for Gateway runtime session storage (`PGCONNECT_URL`).
+- **Domain & TLS Certificates**: FQDN for REST/MCP endpoints with TLS termination.
+
+#### Step C: Deployment & Connectivity Verification
+- **Zero Secret Egress Invariant**: All secret signing key material remains inside the client's local HSM/Nitro Enclave (`conxius-enclave-sdk`); `lib-conxian-core` never sees or logs raw private keys.
+- **Cross-Chain Asset Flow**: Assets deployed by clients maintain connectivity via `Erc7683CrossChainOrder` and `TransportAdapter` interfaces, allowing atomic cross-chain intent swaps.
+
+### 3. Recommendation: Unified Installer & CLI (`conxian-installer` / `conxian-cli`)
+
+To eliminate manual setup friction and ensure consistent deployment across environments, we recommend building a unified installer CLI:
+
+1. **Unified CLI Utility (`conxian-cli`)**:
+   - `conxian init`: Interactively prompts client for RPC endpoints, Enclave credentials, and DB strings, producing a validated `conxian.env` and `deployment.json`.
+   - `conxian verify`: Exercises pre-flight connectivity checks against all configured chain RPCs, Enclaves, and PostgreSQL DBs.
+   - `conxian deploy`: Launches the complete containerized stack (`conxian-gateway`, `conxian-nexus`, `conxian-ui`) using pre-tested Docker Compose or Helm charts.
+2. **Standardized Container Stack**:
+   - Provide off-the-shelf Docker Compose templates for single-node deployment and Kubernetes Helm charts for high-availability enterprise clusters.
+
+---
 ## Session 2026-07-15: SDK Integration & Ecosystem Alignment
 
 ### Objective
@@ -157,3 +402,394 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 ## Previous Sessions
 
 *Add new sessions above this line*
+
+---
+
+## Session 2026-08-18: Ecosystem-Wide Audit, Gap Mapping & v0.3.2 Research Update
+
+### Objective
+1. Perform comprehensive audit and gap mapping of all repository code, documentation, and external SDK/crate references.
+2. Reconcile `conxius-enclave-sdk` version references across `Cargo.toml` (pinned `v2.0.17`), `docs/GAP_ANALYSIS_AND_SCORING.md`, and `docs/SESSION_RESEARCH_LOG.md`.
+3. Update Candidate Matrix and protocol readiness scores to reflect current v0.3.2 fail-closed boundaries and SDK-owned signing capabilities.
+4. Synchronize ecosystem roadmap, governance scorecards, and verification script results.
+
+### Expanded Research Audit Findings
+
+#### 1. Vault SDK Boundary Alignment (`conxius-enclave-sdk` v2.0.17)
+- **Current Core Integration**: `Cargo.toml` pins `conxius-enclave-sdk` to Git tag `v2.0.17` (manifest version `2.0.17`) with optional feature gates (`enclave`, `sdk-blockchain`, `sdk-cross-cutting`, `sdk-rails`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `full-sdk`).
+- **Ownership Separation**: Core (`lib-conxian-core`) remains zero-secret-egress, fail-closed for signing and attestation verification. Production cryptographic operations (MuSig2 session aggregation, FROST DKG, hardware enclave attestation, BitVM2 execution) are owned by `conxius-enclave-sdk`.
+
+#### 2. Protocol Primitives & Fail-Closed Boundaries
+- **FROST & MuSig2**: Core provides typed structures and fail-closed placeholders; production signing and session aggregation are delegated to `conxius-enclave-sdk`.
+- **BIP-322**: Core enforces strict input message and transaction structure parsing; signature validation and script satisfaction remain downstream.
+- **DLC & RGB**: Core maintains equation verification and intent-bound policy validation; execution, funding, CETs, and stash resolution are fail-closed boundaries.
+- **Universal Adapters (CXIP-21)**: Core provides structured adapter DTOs for Bitcoin, EVM, Cosmos, Solana, Move, and Substrate; light-client verification resides in downstream services.
+
+#### 3. Scoring Matrix Re-calibration (v0.3.2)
+- Strategic Alignment (40%), Technical Readiness (30%), Ecosystem Demand (30%).
+- Updated Candidate Matrix entries reflect `conxius-enclave-sdk` v2.0.17 capabilities and core protocol stability.
+
+### Actions Executed
+- Updated `docs/GAP_ANALYSIS_AND_SCORING.md` to reflect `conxius-enclave-sdk` v2.0.17 alignment and current protocol status.
+- Updated `docs/PHASE1_ISSUES_ROADMAP.md` with revised technical debt and protocol gap metrics.
+- Verified zero architectural contamination via `python3 scripts/verify_contamination_guard.py`.
+- Verified tracked file hygiene via `python3 scripts/verify_tracked_artifacts.py`.
+- Verified release hygiene via `python3 scripts/verify_release_hygiene.py`.
+- Verified full Python test suite (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
+- Executed core Rust test suite (`cargo test`).
+
+
+---
+
+## Session 2026-08-19: RGB Adapter Guard Hardening & Governance Synthesis
+
+### Objective
+1. Perform research synthesis across all repository knowledge bases, open branches, and gap scorecards.
+2. Hardened fail-closed contract ID validation in `RGBStockAdapter` (`src/rgb/mod.rs`).
+3. Expand research documentation across `GAP_ANALYSIS_AND_SCORING.md`, `SESSION_RESEARCH_LOG.md`, and `UNIVERSAL_SUPPORT_RESEARCH.md`.
+
+### Expanded Findings & Execution
+- **RGB Adapter Contract Lookup**: Hardened `RGBStockAdapter::get_contract_details` to return `RGBError::InvalidContractId` on empty or whitespace inputs, ensuring consistency with `RGBSkeletonAdapter`.
+- **Governance Alignment**: Updated candidate scores for BitVMX, BitVM3, and ZKCP in `docs/UNIVERSAL_SUPPORT_RESEARCH.md`.
+- **System Verification**: Verified core unit tests, scripts, contamination guard, and tracked artifact compliance.
+
+---
+
+## Session 2026-08-19 (Extended): Infrastructure Synthesis & DLC Edge Case Hardening
+
+### Objective
+1. Perform multi-cloud & Neon DB infrastructure audit across all 6 organization projects (`org-silent-sun-00457600`).
+2. Update knowledge bases (`UNIVERSAL_SUPPORT_RESEARCH.md`, `GAP_ANALYSIS_AND_SCORING.md`, `SESSION_RESEARCH_LOG.md`) to maintain complete end-to-end traceability.
+3. Harden DLC oracle attestation verification tests in `src/protocol/dlc.rs` for fail-closed edge case validation.
+
+### Expanded Infrastructure Findings
+- **Database Topology**: Mapped all 6 Neon database instances (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) to their respective architectural tiers in `lib-conxian-core` and downstream repos.
+- **Protocol Boundary Alignment**: Reconfirmed Zero Secret Egress invariant and verified that all protocol verifier boundaries operate fail-closed.
+
+---
+
+## Session 2026-08-26: Knowledge Base Audit, Multi-Cloud Topology & Protocol Research Alignment
+
+### Objective
+1. Audit all repository Knowledge Bases (KBs), AGENTS.md guidelines, GitHub issues, and multi-cloud connected infrastructure.
+2. Synchronize Neon cloud databases, Supabase projects, and Render web services mapping across all governance and research documentation.
+3. Validate fail-closed Zero Secret Egress (ZSE) boundaries across core protocol verification primitives.
+
+### Expanded Research Findings & Cloud Topology
+- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
+  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Supabase Environments (`dmhmarjqzgodyovlhamv`)**:
+  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
+  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Web Services (`tea-d4ufhh8gjchc73c80mu0`)**:
+  - `conxian-labs-site` (`srv-d9ndhr2jnfac73as7te0`): Production web portal and API landing page.
+
+#---
+
+## Session 2026-08-26 (Extended): Knowledge Base Audit, DLC CET Hardening & Multi-Cloud DB Alignment
+
+### Objective
+1. Perform comprehensive audit of all repository Knowledge Bases (KBs), AGENTS.md, GitHub issues, and cloud project topology (`org-silent-sun-00457600`).
+2. Harden DLC (Discreet Log Contracts) CET structure and payout validation in `src/protocol/dlc.rs`.
+3. Synchronize all KBs (`GAP_ANALYSIS_AND_SCORING.md`, `UNIVERSAL_SUPPORT_RESEARCH.md`, `SESSION_RESEARCH_LOG.md`).
+
+### Expanded Research Findings & Implementation
+- **DLC CET Structure Validation**: Implemented `DlcManager::validate_cet_structure` in `src/protocol/dlc.rs` to enforce recipient script validity, non-zero payout amounts, overflow guards, and total payout bounds against intent collateral satoshis (`DlcVerificationError::InvalidCetStructure`).
+- **Multi-Cloud Topology Alignment**: Verified Neon PostgreSQL database fleet (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) and Supabase projects (`Conxian BOS`, `Conxian-platform`).
+- **Test Verification**: All 126 Rust core unit tests passed and 68 Python unit tests passed cleanly.
+
+## Actions Executed
+1. Audit and verified all Knowledge Bases (`docs/GAP_ANALYSIS_AND_SCORING.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/SESSION_RESEARCH_LOG.md`).
+2. Confirmed 100% compliance of core Rust unit tests (125 passed) and Python test suite (68 passed).
+3. Verified zero contamination across architectural boundaries and tracked file hygiene.
+
+---
+
+## Session 2026-08-26 (Session 58 Synthesis): Git Synchronization, Multi-Cloud Topology & Protocol Research Alignment
+
+### Objective
+1. Run `git fetch --all -p` across all remotes and prune obsolete branch tracking references.
+2. Perform comprehensive audit of all repository Knowledge Bases (KBs), AGENTS.md, GitHub issues, and multi-cloud connected infrastructure.
+3. Synchronize ERC-7683 intent mapping (`src/chain/erc7683.rs`), transport neutrality adapters (`src/chain/transport.rs`), and Vault SDK (`conxius-enclave-sdk` v2.0.17) alignment across research logs and scorecards.
+4. Verify overall system integrity with 126 core Rust unit tests, 68 Python unit tests, and 100% pass rate across verification scripts.
+
+### Expanded Research Audit Findings & Topology Mapping
+- **Git Remote Alignment**: Pruned stale remote tracking branches across `origin` (`https://github.com/Conxian/lib-conxian-core`), ensuring clean workspace state on working branch.
+- **Cross-Chain Intent Mapping (ERC-7683)**: Verified bidirectional conversion between Conxian's `CrossChainIntent` and wire-level `Erc7683CrossChainOrder` in `src/chain/erc7683.rs`, ensuring deadline validation (`is_open`, `is_fillable`) and fail-closed JSON payload parsing.
+- **Transport Neutrality**: Confirmed `TransportAdapter` trait in `src/chain/transport.rs` abstracts network I/O, UTXO queries, and transaction broadcasts behind explicit `TransportCapability` tokens without leaking network I/O into core domain types (CON-700).
+- **Multi-Cloud DB & Infrastructure**: Re-verified Neon PostgreSQL database fleet (`corelibs` `sparkling-sunset-69236559`, `Software dev kit` `weathered-night-98492579`, `Business Operating System` `noisy-flower-17484435`, `market` `small-math-44741750`, `Gateway` `noisy-cloud-41146057`, `Conxian Nexus` `orange-paper-76209725`), Supabase environments (`yauldfcpswnufgwfvnlr`, `iczqutrbbfudfzfplymc`), and Render web service (`conxian-labs-site` `srv-d9ndhr2jnfac73as7te0`).
+
+### System Verification Status
+- Core Rust tests: 126 passed (100% success).
+- Python unit test suite (`scripts/tests`): 68 passed (100% success).
+- Verification scripts (`verify_contamination_guard.py`, `verify_tracked_artifacts.py`, `verify_release_hygiene.py`, `verify_knowledge_retention.py`, `verify_signing_docs.py`, `verify_core_dependency_boundary.py`, `verify_bos_production_boundary.py`, `verify_release_version.py`): All 8 passed cleanly.
+
+
+## Session 2026-08-27 (Session 59): Org-Wide Infrastructure Audit & BIP-352 Silent Payment Multi-Input Scanning Enhancement
+
+### Objective
+1. Execute org-wide functionality map and audit of connected cloud infrastructure across Neon, Supabase, and Render.
+2. Enhance BIP-352 Silent Payment scanning capabilities in `src/bitcoin/mod.rs` to support multi-input outpoint tweaking (`scan_transaction_with_outpoints`).
+3. Synchronize Knowledge Bases, research logs, executive scorecards, and cross-lane readiness metrics.
+
+### Expanded Research Findings & Infrastructure Audit
+- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
+  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Supabase Connected Projects (`dmhmarjqzgodyovlhamv`)**:
+  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
+  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Service Topology (`tea-d6u0edngi27c73dvhsg0`)**:
+  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
+  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+
+### System Verification Status
+- **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
+- **Python Verification Suite**: 68 passed (100% success rate).
+- **Boundary Guards & Hygiene**: All 8 verification scripts passed without contamination or domain leakage.
+
+
+## Session 2026-08-27 (Session 60): Org-Wide Topology & Fail-Closed Witness Encryption Hardening
+
+### Objective
+1. Perform org-wide topology audit across connected cloud databases (Neon, Supabase) and Render web services.
+2. Hardened fail-closed input validation on cryptographic witness encryption (`WitnessEncryption::encrypt_to_bitcoin_finality` and `try_encrypt_to_bitcoin_finality`) in `src/crypto/mod.rs`.
+3. Synchronize Knowledge Bases, research logs, and governance scorecards.
+
+### Expanded Research Audit & Topology Mapping
+- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
+  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Supabase Connected Projects (`dmhmarjqzgodyovlhamv`)**:
+  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Operational metrics, M&A milestones, and IP audit logs.
+  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Service Topology (`tea-d6u0edngi27c73dvhsg0`)**:
+  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
+  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+
+### System Verification Status
+- **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
+- **Python Verification Suite**: 68 passed (100% success rate).
+- **Boundary Guards & Hygiene**: All 8 verification scripts passed without contamination or domain leakage.
+
+## Session 2026-09-01 (Master Prompt Audit): Jules Master Prompt Autonomous Repository Review & Hygiene Hardening
+
+### Objective
+1. Execute single highest-value repository review and remediation cycle guided by the Jules-optimized master prompt baseline.
+2. Conduct deep multi-layered review across public/private security boundaries, tracked secret filenames, tracked generated artifacts, governance completeness, versioning discipline, and public clarity.
+3. Harden `.github/workflows/hygiene.yml` to incorporate Python bytecode artifact rules (`*.pyc`, `*.pyo`, `*.pyd`, `__pycache__`) aligning CI workflow with `.gitignore` and `scripts/verify_tracked_artifacts.py`.
+4. Validate workspace test matrix across Rust workspace binaries (`cargo +1.97.1 test --workspace`) and Python test runner (`python3 -m unittest discover scripts/tests`).
+
+### Audit Findings & Decision Analysis
+- **Security & Secret Scanning**: Zero tracked secret files or credentials found in git index (`.env`, `*.pem`, `*.key`, `*.pub`).
+- **Generated Artifact Tracking**: Zero untracked or erroneously committed build artifacts (`node_modules`, `test-results`, `playwright-report`, `target/`).
+- **Governance & Public Surface**: Repository governance files (`README.md`, `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `CHANGELOG.md`, `.github/CODEOWNERS`) are properly positioned at the root and verified by `verify_signing_docs.py` and `verify_knowledge_retention.py`.
+- **Hygiene Policy Alignment**: Found slight pattern asymmetry between `.gitignore` / `scripts/verify_tracked_artifacts.py` and `.github/workflows/hygiene.yml` regarding Python bytecode files. Explicitly added `*.pyc`, `*.pyo`, `*.pyd`, and `__pycache__` to `FORBIDDEN_PATTERNS` in `hygiene.yml`.
+
+### System Verification Status
+- **Core Unit & Workspace Tests**: All core protocol, integration, and enclave adapter tests passed cleanly (127 core unit tests, 183 total across binaries) using Rust `1.97.1`.
+- **Python Verification Suite**: 69 test cases passed in `scripts/tests/` (100% pass rate).
+- **Boundary Guards & Hygiene**: All 8 verification scripts (`verify_tracked_artifacts.py`, `verify_contamination_guard.py`, `verify_release_hygiene.py`, `verify_knowledge_retention.py`, `verify_signing_docs.py`, `verify_core_dependency_boundary.py`, `verify_bos_production_boundary.py`, `verify_release_version.py`) passed cleanly.
+
+---
+
+## Session 2026-08-31 (Session 61): Comprehensive Vault SDK Capability Audit & Upgrade Alignment
+
+### Objective
+1. Audit full usage of `conxius-enclave-sdk` (`v2.0.17`) capabilities across `lib-conxian-core`, `addons/lib-conxian-core-enclave`, `enclave-poc`, `tests/sdk-compat`, and `src/sdk.rs`.
+2. Verify full structural alignment of hardware signing request/response DTOs, trust tiers (T1-T4), BIP-110 policy evidence, and enclave attestation structures across all crates.
+3. Validate complete test matrix, boundary guards, and Python verification scripts.
+
+### Research Audit & Capability Alignment Summary
+- **Vault SDK Pinning**: All manifests (`Cargo.toml`, `addons/lib-conxian-core-enclave/Cargo.toml`, `enclave-poc/Cargo.toml`, `tests/sdk-compat/Cargo.toml`) and `README.md` strictly aligned to Git tag `v2.0.17` / manifest version `2.0.17`.
+- **SDK Module Coverage**: `src/sdk.rs` re-exports 68 SDK modules across 7 categories (`sdk-blockchain`, `sdk-cross-cutting`, `sdk-nexus`, `sdk-infrastructure`, `sdk-signing`, `enclave`, `sdk-rails`).
+- **Enclave Adapter Integration**: `addons/lib-conxian-core-enclave` provides fail-closed request translation and domain separation for `EnclaveManager::sign`, verifying explicit 32-byte SHA256 message digests.
+- **SDK Compatibility Matrix**: Opt-in test suite `tests/sdk-compat` verified compatibility across 6 feature combinations (Core default/enclave x SDK default/mock-cloud-enclave/all-supported).
+
+### System Verification Status
+- **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
+- **SDK Compatibility Suite**: 6 feature matrices passed (100% success rate).
+- **Python Verification Suite**: 68 passed (100% success rate).
+- **Boundary Guards & Hygiene**: All dependency, contamination guard, and tracked artifact verification scripts passed without issues.
+
+---
+
+## Session 2026-09-03 (Session 62): Org-Wide Ecosystem Audit, Cloud DB & Infrastructure Synthesis & Research Alignment
+
+### Objective
+1. Conduct an end-to-end audit across all connected cloud infrastructure (Neon PostgreSQL projects, Render services, Supabase projects), repository knowledge bases, and core protocol primitives.
+2. Verify full alignment between `lib-conxian-core` (v0.3.3) fail-closed boundaries and `conxius-enclave-sdk` (v2.0.17) Vault SDK signing layer.
+3. Map and update all research gaps, protocol scoring matrices, and multi-cloud database topology across documentation and governance scorecards.
+4. Execute complete test suite and boundary verification scripts (128 Rust core unit tests, 69 Python tests, zero architectural contamination).
+
+### Research Audit & Infrastructure Mapping Summary
+- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
+  - `conxian-core` / `corelibs` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace Services (`tea-d6u0edngi27c73dvhsg0`)**:
+  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
+  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+
+### System Verification Status
+- **Core Unit & Doc Tests**: 128 passed (100% success rate across core protocol suite).
+- **Python Verification Suite**: 69 passed in `scripts/tests/` (100% success rate).
+- **Boundary Guards & Hygiene**: All 8 verification scripts (`verify_tracked_artifacts.py`, `verify_contamination_guard.py`, `verify_release_hygiene.py`, `verify_knowledge_retention.py`, `verify_signing_docs.py`, `verify_core_dependency_boundary.py`, `verify_bos_production_boundary.py`, `verify_release_version.py`) passed cleanly without domain leaks or contamination.
+
+---
+
+## Session 2026-09-03 (Session 63): Systems Navigator Autonomous Exploration & Multi-Cloud Infrastructure Audit
+
+### Objective
+1. Execute an autonomous ecosystem exploration as Systems Navigator across connected cloud infrastructure, repository state, and governance boundaries.
+2. Verify live Neon PostgreSQL projects, Render services, and Supabase integration points.
+3. Validate Python verification suite and boundary guard scripts against the v0.3.3 release line.
+
+### Research & Navigation Summary
+- **Cloud Database Fleet & Infrastructure**:
+  - Live query to Neon API confirmed 6 active PostgreSQL projects in org `org-silent-sun-00457600`: `conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, and `Conxian Nexus`.
+  - All projects operating normally on PG18/PG17 with automated maintenance windows and zero active connection or replication locks.
+- **Repository Health & Boundary Guards**:
+  - All 11 verification scripts in `scripts/` executed and passed cleanly (`verify_bos_production_boundary.py`, `verify_contamination_guard.py`, `verify_core_dependency_boundary.py`, `verify_knowledge_retention.py`, `verify_pr_bos_classification.py`, `verify_release_hygiene.py`, `verify_signing_docs.py`, `verify_submodule_secret_filenames.py`, `verify_tracked_artifacts.py`, and `verify_release_version.py`).
+  - Python test suite passed 69 test cases in `scripts/tests/` without failure.
+
+### System Verification Status
+- **Python Verification Suite**: 69 passed (100% success rate).
+- **Boundary Guards & Hygiene**: All repository verification scripts passed cleanly without domain leaks or contamination.
+
+---
+
+## Session 2026-09-03 (Session 64): End-to-End Multi-Dimensional Gap Audit, DLC Verification Invariant Hardening & Governance Alignment
+
+### Objective
+1. Conduct an end-to-end multi-dimensional audit across all open issues, KBs, org cloud infrastructure, submodules, code gaps, and documentation.
+2. Expand research logs (`docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/SESSION_RESEARCH_LOG.md`) and scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`) reflecting test suite metrics (183 total Rust test cases + 69 Python verification tests).
+3. Harden DLC attestation verification in `src/protocol/dlc.rs` for fail-closed input validation on oracle keys, nonce points, messages, and signature scalars.
+
+### Execution & Verification Summary
+- **Multi-Dimensional Audit**: Audited repository workspace state, all 6 Neon PostgreSQL projects, Render services, and Supabase projects. Verified 183 total Rust workspace test cases (128 core unit/doc tests + 55 integration/conformance tests) and 69 Python verification tests passing.
+- **DLC Invariant Hardening**: Enhanced `DlcManager` in `src/protocol/dlc.rs` and added test cases for fail-closed validation on invalid/zero oracle public key slices, zero/malformed nonce points, empty outcome message payloads, and malformed signature scalar lengths.
+- **Ecosystem Scorecard Synchronization**: Updated `docs/governance/EXECUTIVE_SCORECARD.md` and `docs/governance/READINESS_SCORECARD.md` to record 183 total Rust test binary cases passing and 69 Python verification tests.
+
+---
+
+## Session 2026-09-03 (Session 65): End-to-End Multi-Dimensional Research Synthesis & Infrastructure Synchronization
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis across all open issues, KBs, connected multi-cloud infrastructure (Neon 6-DB fleet, Render workspace, Supabase projects), submodules, and protocol code gaps.
+2. Verify full test suite pass rate (183 total Rust test binary cases + 69 Python verification guard tests).
+3. Synchronize research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and candidate matrix in `docs/GAP_ANALYSIS_AND_SCORING.md`.
+
+### Execution & Verification Summary
+- **Multi-Cloud Audit**: Confirmed 6 Neon PostgreSQL projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) and 5 Render team services operating normally.
+- **Protocol Test Matrix**: Verified 183 Rust workspace test binary cases (128 core unit/doc tests + 55 integration/conformance test cases) and 69 Python guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect comprehensive research synthesis, multi-cloud fleet health, and zero architectural contamination.
+
+---
+
+## Session 2026-09-04 (Session 66): End-to-End Multi-Dimensional Research Synthesis, OP_CAT Covenant Hardening & Infrastructure Synchronization
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis across all open issues, KBs, connected multi-cloud infrastructure (Neon 6-DB fleet, Render workspace, Supabase projects), submodules, and protocol code gaps.
+2. Hardened OP_CAT recursive covenant logic in `src/protocol/covenant.rs` by introducing `generate_cat_vault_script_checked` and `CovenantError` fail-closed validation on pubkey and target hash dimensions.
+3. Verify full test suite pass rate (262 Rust workspace tests + 69 Python verification guard tests).
+4. Synchronize research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and candidate matrix in `docs/GAP_ANALYSIS_AND_SCORING.md`.
+
+### Execution & Verification Summary
+- **Multi-Cloud Audit**: Confirmed 6 Neon PostgreSQL projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) and 5 Render team services operating normally.
+- **Covenant Invariant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths or malformed target hash inputs.
+- **Protocol Test Matrix**: Verified 262 Rust workspace test cases and 69 Python guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect comprehensive research synthesis, multi-cloud fleet health, and zero architectural contamination.
+
+
+
+---
+
+## Session 2026-09-05 (Session 67): Multi-Cloud Infrastructure Synchronization & Lightning Invariant Hardening
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis and audit across open issues, KBs, connected cloud infrastructure (Neon 6-DB PostgreSQL fleet, Render team services, Supabase), submodules, and protocol code gaps.
+2. Hardened Lightning payment channel interface and LDK integration in `src/lightning/mod.rs` with fail-closed parameter validation for BOLT-12 offer amounts and BIP-353 DNS payment instructions.
+3. Expanded unit test suite in `src/lightning/mod.rs` covering BOLT-12 zero-amount offers, invalid BIP-353 DNS formatting, invalid JIT node pubkey hexes, and splicing channel ID validation.
+4. Synchronized research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and candidate matrix in `docs/GAP_ANALYSIS_AND_SCORING.md`.
+
+### Execution & Verification Summary
+- **Multi-Cloud Audit**: Confirmed 6 Neon PostgreSQL projects (`conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`) and 5 Render workspace services operating normally.
+- **Lightning Invariant Hardening**: Added input validation in `LightningNode::create_bolt12_offer` and `LightningNode::resolve_bip353`, ensuring zero-amount offers and malformed DNS inputs fail closed with `LightningError::InvalidOffer`.
+- **Protocol Test Matrix**: Verified 262 Rust workspace test cases and 69 Python guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 67 audit findings, multi-cloud fleet health, and zero architectural contamination.
+
+---
+
+## Session 2026-09-06 (Session 68): End-to-End Multi-Dimensional Audit, Babylon Staking Hardening & Infrastructure Alignment
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis and ecosystem audit across open issues, KBs, connected multi-cloud infrastructure (Neon 6-DB PostgreSQL fleet, Render team services, Supabase), submodules, and protocol code gaps.
+2. Hardened Babylon Bitcoin Staking parameter validation in `src/babylon/mod.rs` by introducing fail-closed `StakingIntent::validate` and typed `BabylonError` error variants for staker/finality provider pubkey lengths (32/33 bytes), non-zero satoshi amounts, and minimum lock time confirmations.
+3. Expanded unit test suite in `src/babylon/mod.rs` covering positive and negative staking intent validation paths.
+4. Synchronized research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and candidate matrix in `docs/GAP_ANALYSIS_AND_SCORING.md`.
+
+### Execution & Verification Summary
+- **Multi-Cloud Audit**: Confirmed 6 Neon PostgreSQL projects (`conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), 5 Render workspace team services, and 14 GitHub organization repositories operating normally.
+- **Babylon Staking Hardening**: Added explicit parameter validation for Babylon staking intents, ensuring invalid pubkeys, zero satoshi values, or insufficient block lock times fail closed with `BabylonError`.
+- **Protocol Test Matrix**: Verified 263 Rust workspace test cases and 70 Python verification guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 68 audit findings, multi-cloud fleet health, and zero architectural contamination.
+
+
+---
+
+## Session 2026-09-06 (Session 69): Multi-Cloud Audit, Stacks Nakamoto / sBTC Parameter Hardening & Research Alignment
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis and ecosystem audit across open issues, KBs, connected multi-cloud infrastructure (Neon 6-DB PostgreSQL fleet, Render team services, Supabase), submodules, and protocol code gaps.
+2. Hardened Stacks Nakamoto and sBTC bridge parameter validation in `src/stacks/mod.rs` by introducing fail-closed `SBTCIntent::validate` and typed `StacksError` error variants for zero satoshi amounts, empty/whitespace transaction IDs, and malformed Stacks addresses.
+3. Expanded unit test suite in `src/stacks/mod.rs` covering positive and negative validation paths for peg-in, peg-out, and intent parameter checks.
+4. Synchronized research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and candidate matrix in `docs/GAP_ANALYSIS_AND_SCORING.md`.
+
+### Execution & Verification Summary
+- **Multi-Cloud Audit**: Confirmed 6 Neon PostgreSQL projects (`conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), 5 Render workspace team services, and git workspace remotes operating normally.
+- **Stacks & sBTC Bridge Hardening**: Added explicit parameter validation in `SBTCBridge::initiate_peg_in`, `initiate_peg_out`, and `SBTCIntent::validate`, ensuring zero satoshi amounts or malformed inputs fail closed with `StacksError`.
+- **Protocol Test Matrix**: Verified 268 Rust workspace test cases and 79 Python verification guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 69 audit findings, multi-cloud fleet health, and zero architectural contamination.
+
+
+---
+
+## Session 2026-09-06 (Session 75): Repository Hygiene & Artifact Tracking Security Hardening Pass
+
+### Objective
+1. Perform a security-first improvement pass prioritizing secret exposure, sensitive file tracking, and generated/runtime artifact exposure across the repository and CI workflows.
+2. Unify and expand automated git tracking verification in `scripts/verify_tracked_artifacts.py` and `scripts/verify_submodule_secret_filenames.py` to cover cloud credentials (`service_account.json`, `client_secret*.json`), package manager configuration files (`.npmrc`, `.yarnrc`), SSH key variants (`id_ecdsa*`, `id_dsa*`), and runtime/generated build artifacts (`.parcel-cache/`, `.next/`, `out/`, `coverage/`, `*.lcov`, `junit.xml`).
+3. Update `.github/workflows/hygiene.yml` to replace fragmented inline bash scripts with direct execution of the authoritative Python verifiers.
+4. Update unit test coverage in `scripts/tests/test_verify_tracked_artifacts.py` and synchronize security documentation in `SECURITY.md`.
+
+### Execution & Verification Summary
+- **Tracked Artifact & Secret Hardening**: Expanded `FORBIDDEN_PATTERNS` and `FORBIDDEN_SECRET_PATTERNS` across Python verifiers and updated unit test assertions.
+- **CI Workflow Unification**: Configured `hygiene.yml` to set up Python 3.10 and execute `verify_tracked_artifacts.py` and `verify_submodule_secret_filenames.py` on every push and PR.
+- **Verification Suite**: Executed 70 Python verification tests cleanly (`python3 -m unittest discover scripts/tests`) with a 100% pass rate.
+- **Documentation Alignment**: Synchronized `SECURITY.md` and `docs/SESSION_RESEARCH_LOG.md` reflecting unified automated hygiene controls.

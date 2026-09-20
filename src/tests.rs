@@ -56,11 +56,20 @@ mod cxip20_architecture_tests {
     fn test_witness_encryption_try_api_reports_unimplemented() {
         let result = WitnessEncryption::try_encrypt_to_bitcoin_finality(6, b"data");
         assert_eq!(result, Err(WitnessEncryptionError::Unimplemented));
+
+        assert_eq!(
+            WitnessEncryption::try_encrypt_to_bitcoin_finality(0, b"data"),
+            Err(WitnessEncryptionError::InvalidDepth)
+        );
+        assert_eq!(
+            WitnessEncryption::try_encrypt_to_bitcoin_finality(6, b""),
+            Err(WitnessEncryptionError::EmptyPayload)
+        );
     }
 
     #[test]
     fn test_lightning_advanced_features() {
-        use secp256k1::{PublicKey, Secp256k1, SecretKey};
+        use secp256k1::{PublicKey, SecretKey};
 
         let offer_result = LightningNode::create_bolt12_offer(50000, "invoice");
         assert!(offer_result.is_err()); // Currently fails closed
@@ -70,9 +79,8 @@ mod cxip20_architecture_tests {
             Err(LightningError::JITProvisioningFailed)
         );
 
-        let secp = Secp256k1::new();
-        let secret_key = SecretKey::from_byte_array([1u8; 32]).expect("test scalar is valid");
-        let valid_pubkey = hex::encode(PublicKey::from_secret_key(&secp, &secret_key).serialize());
+        let secret_key = SecretKey::from_secret_bytes([1u8; 32]).expect("test scalar is valid");
+        let valid_pubkey = hex::encode(PublicKey::from_secret_key(&secret_key).serialize());
         assert_eq!(
             LightningNode::request_jit_channel(&valid_pubkey),
             Err(LightningError::JitProvisioningUnavailable)
@@ -112,7 +120,6 @@ mod additional_protocol_tests {
     use crate::bitcoin::SilentPaymentScanner;
     use crate::fedimint::FedimintAdapter;
     use crate::protocol::dlc::DlcManager;
-    use secp256k1::Secp256k1;
 
     #[test]
     fn test_fedimint_unblinding_verification() {
@@ -125,9 +132,8 @@ mod additional_protocol_tests {
 
     #[test]
     fn test_silent_payment_scanning_uniqueness() {
-        let secp = Secp256k1::new();
-        let (_sk1, pk1) = secp.generate_keypair(&mut secp256k1::rand::rng());
-        let (_sk2, pk2) = secp.generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk1, pk1) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
+        let (_sk2, pk2) = secp256k1::generate_keypair(&mut secp256k1::rand::rng());
 
         let scan_key = [0x01; 32];
         let spend_pk = [0x02; 33];
@@ -154,5 +160,35 @@ mod additional_protocol_tests {
             DlcManager::verify_execution_checked(&intent, &[]),
             Err(crate::protocol::dlc::DlcVerificationError::MalformedAttestation)
         );
+    }
+
+    #[test]
+    fn test_core_types_and_compat_reexports() {
+        use crate::compat::core_bridge::{
+            core_types as compat_types, ContractBridge as CompatBridge,
+        };
+        use crate::core_types;
+
+        // Verify core_types re-exports
+        let chain_id = core_types::verifier::ChainId::new(
+            core_types::control_model::ChainFamily::BitcoinUtxo,
+            "mainnet",
+        );
+        assert_eq!(chain_id.canonical_id(), "bitcoin_utxo:mainnet");
+
+        // Verify compat re-exports
+        let _bridge = CompatBridge;
+        let _tier = compat_types::control_model::TrustTier::Strict;
+
+        // Verify validate_evidence_binding
+        let request = crate::verifier::ProofVerificationRequest::new(
+            chain_id,
+            crate::verifier::ChainStateReference::new("0x1234", 100, Some("0x5678".to_string())),
+            crate::verifier::ProofData::new(
+                crate::verifier::ProofFormat::HeaderChain,
+                vec![1, 2, 3],
+            ),
+        );
+        assert!(crate::validate_evidence_binding(&request).is_ok());
     }
 }

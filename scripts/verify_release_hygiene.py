@@ -962,9 +962,12 @@ def fetch_crates_io_state(
 
     crate = payload.get("crate")
     published_version = payload.get("version")
-    if not isinstance(crate, dict) or not isinstance(published_version, dict):
-        return RemoteCheck(REMOTE_ERROR, "crates.io response omitted crate/version identity")
-    if crate.get("name") != crate_name or published_version.get("num") != version:
+    if not isinstance(published_version, dict):
+        return RemoteCheck(REMOTE_ERROR, "crates.io response omitted version identity")
+    resolved_name = published_version.get("crate")
+    if not isinstance(resolved_name, str) or not resolved_name:
+        resolved_name = crate.get("name") if isinstance(crate, dict) else None
+    if resolved_name != crate_name or published_version.get("num") != version:
         return RemoteCheck(
             REMOTE_MISMATCH,
             "crates.io response identity did not match the expected crate/version",

@@ -6,6 +6,7 @@ Cargo.lock.lock
 
 # --- Node.js & Web ---
 node_modules/
+package-lock.json
 dist/
 build/
 .parcel-cache/
@@ -47,6 +48,7 @@ junit.xml
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+commit_message*.txt
 
 # --- OS & Editor Specific ---
 .DS_Store
@@ -64,3 +66,5 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+enclave-poc/Cargo.lock
+.env
