@@ -218,3 +218,12 @@ public evidence and a versioned artifact revision.
 1. **Unified Installer CLI (`conxian-installer` / `conxian-cli`)**: Currently, client installation requires manual container orchestration across Gateway, Nexus, and Enclave SDK components. Recommended: Build `conxian-cli` with `init`, `verify`, and `deploy` commands.
 2. **Standardized Helm / Compose Templates**: Provide off-the-shelf single-node Docker Compose templates and enterprise Kubernetes Helm charts with automated health check probes.
 3. **Automated Pre-Flight Connectivity Checks**: Implement automated pre-flight RPC, Nitro Enclave, and PostgreSQL connection verification before starting Gateway runtime services.
+
+
+## Session 78 Research & RGB Stock Adapter Contract Management Hardening (2026-09-17)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 281 total Rust workspace tests passing (100% pass rate).
+- **Python Verification Guard Suite**: 70 test cases passing in `scripts/tests/` (100% pass rate).
+- **RGB Stock Adapter Hardening**: Enhanced `RGBStockAdapter` in `src/rgb/mod.rs` with `register_contract`, `register_contract_id`, `has_contract`, `remove_contract`, `list_contracts`, and `clear_contracts` enforcing strict 64-character hex format validation.
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.

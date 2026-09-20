@@ -131,10 +131,59 @@ pub struct RGBStockAdapter {
 }
 
 impl RGBStockAdapter {
+    /// Creates a new `RGBStockAdapter` with an empty contract list.
     pub fn new() -> Self {
         Self {
             contract_ids: Vec::new(),
         }
+    }
+
+    /// Registers a new RGB contract ID from a 64-character hex string.
+    /// Returns the parsed `ContractId` or `RGBError::InvalidContractId`.
+    pub fn register_contract(&mut self, contract_id: &str) -> Result<ContractId, RGBError> {
+        let cid = ContractId::from_str(contract_id)?;
+        if !self.contract_ids.contains(&cid) {
+            self.contract_ids.push(cid);
+        }
+        Ok(cid)
+    }
+
+    /// Registers a `ContractId` directly.
+    pub fn register_contract_id(&mut self, cid: ContractId) {
+        if !self.contract_ids.contains(&cid) {
+            self.contract_ids.push(cid);
+        }
+    }
+
+    /// Checks if a contract ID string is registered in stock.
+    pub fn has_contract(&self, contract_id: &str) -> bool {
+        if let Ok(cid) = ContractId::from_str(contract_id) {
+            self.contract_ids.contains(&cid)
+        } else {
+            false
+        }
+    }
+
+    /// Removes a registered contract ID from stock.
+    /// Returns `true` if found and removed, or `false` if not found.
+    pub fn remove_contract(&mut self, contract_id: &str) -> Result<bool, RGBError> {
+        let cid = ContractId::from_str(contract_id)?;
+        if let Some(pos) = self.contract_ids.iter().position(|id| id == &cid) {
+            self.contract_ids.remove(pos);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Returns a list of all registered contract IDs.
+    pub fn list_contracts(&self) -> &[ContractId] {
+        &self.contract_ids
+    }
+
+    /// Clears all registered contract IDs from stock.
+    pub fn clear_contracts(&mut self) {
+        self.contract_ids.clear();
     }
 }
 
@@ -293,6 +342,53 @@ mod tests {
             shadow.verify_seal("utxo", "commitment"),
             Err(RGBError::NonAuthoritativeShadow)
         );
+    }
+
+    #[test]
+    fn test_rgb_stock_adapter_contract_management() {
+        let mut adapter = RGBStockAdapter::new();
+        let valid_hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let valid_hex2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+
+        assert!(!adapter.has_contract(valid_hex));
+        assert_eq!(adapter.list_contracts().len(), 0);
+
+        let _cid = adapter.register_contract(valid_hex).unwrap();
+        assert!(adapter.has_contract(valid_hex));
+        assert_eq!(adapter.list_contracts().len(), 1);
+        assert_eq!(
+            adapter.get_contract_details(valid_hex).unwrap(),
+            format!("Contract details for {}", valid_hex)
+        );
+
+        // Duplicate registration should be idempotent
+        adapter.register_contract(valid_hex).unwrap();
+        assert_eq!(adapter.list_contracts().len(), 1);
+
+        // Register second contract via register_contract_id
+        let cid2 = ContractId::from_str(valid_hex2).unwrap();
+        adapter.register_contract_id(cid2);
+        assert!(adapter.has_contract(valid_hex2));
+        assert_eq!(adapter.list_contracts().len(), 2);
+
+        // Removal tests
+        assert!(adapter.remove_contract(valid_hex).unwrap());
+        assert!(!adapter.has_contract(valid_hex));
+        assert_eq!(adapter.list_contracts().len(), 1);
+
+        // Remove non-registered valid contract
+        assert!(!adapter.remove_contract(valid_hex).unwrap());
+
+        // Remove invalid contract
+        assert_eq!(
+            adapter.remove_contract("invalid").unwrap_err(),
+            RGBError::InvalidContractId
+        );
+
+        // Clear contracts
+        adapter.clear_contracts();
+        assert_eq!(adapter.list_contracts().len(), 0);
+        assert!(!adapter.has_contract(valid_hex2));
     }
 
     #[test]

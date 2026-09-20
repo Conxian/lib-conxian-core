@@ -41,6 +41,13 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 **v0.3.3 Stable.** This repository is the foundational platform core. Runtime implementation for the Unified API and protocol routing belongs in the standalone [`conxian-gateway`](https://github.com/Conxian/conxian-gateway).
 
+## Repository Categorization & Support Tier
+
+- **Categorization:** Primary Strategic Platform Core (Tier 1).
+- **Target Audience:** Core protocol developers, security auditors, and system integrators building on the Conxian ecosystem.
+- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 24-hour response for security vulnerabilities. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+- **Ownership & Release Guidance:** Governed by strict CODEOWNERS policies and fail-closed automated release pipelines. See [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md) and [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+
 ## Scope
 
 This repository owns shared primitives and reusable foundations. It adheres to strict architectural boundaries (CON-700) and does not contain environment-specific side effects or network IO.
@@ -121,6 +128,9 @@ let signed_call = ContractBridge::create_signed_call(
 - **API Reference:** [docs/API.md](docs/API.md)
 - **Boundaries:** [docs/ARCHITECTURE_BOUNDARIES.md](docs/ARCHITECTURE_BOUNDARIES.md)
 - **Signing Guides:** [docs/signing/README.md](docs/signing/README.md)
+- **Compatibility Matrix:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)
+- **Release Process:** [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md)
+- **Repo Ownership:** [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md)
 - **CXIP Index:** [docs/governance/CXIP_INDEX.md](docs/governance/CXIP_INDEX.md)
 - **Alignment:** [docs/ALIGNMENT.md](docs/ALIGNMENT.md)
 
