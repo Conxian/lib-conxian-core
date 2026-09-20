@@ -486,7 +486,8 @@ impl ProofVerificationRequest {
     }
 }
 
-fn validate_evidence_binding(
+/// Validates that a [`ProofVerificationRequest`] matches its attached [`ProofEnvelope`].
+pub fn validate_evidence_binding(
     request: &ProofVerificationRequest,
 ) -> Result<(), ProtocolVerifierError> {
     let Some(envelope) = request.envelope.as_ref() else {

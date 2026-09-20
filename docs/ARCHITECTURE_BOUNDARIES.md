@@ -58,7 +58,7 @@ not add runtime, network, persistence, or cross-repository dependencies.
 - Biometric auth and Passkey (FIDO2) implementation.
 
 **Constraints**:
-- The published `conxius-enclave-sdk =2.0.11` package is standalone and does
+- The published `conxius-enclave-sdk =2.0.17` package is standalone and does
   **not** depend on `lib-conxian-core`.
 - The SDK contains the "How" of secure execution. Core contains the canonical
   "What"; the companion adapter is the integration layer that depends on both.
@@ -69,7 +69,7 @@ not add runtime, network, persistence, or cross-repository dependencies.
 
 The workspace companion crate at
 [`addons/lib-conxian-core-enclave`](../addons/lib-conxian-core-enclave/) targets
-the exact published `conxius-enclave-sdk =2.0.11` API. It is an adapter boundary,
+the exact published `conxius-enclave-sdk =2.0.17` API. It is an adapter boundary,
 not a second SDK implementation. It owns only:
 
 - explicit conversion for the three overlapping signing algorithms;
@@ -111,7 +111,7 @@ protocol/provider.
 1. **standalone Conxian Gateway** uses **lib-conxian-core** for state and control-model types.
 2. **standalone Conxian Gateway** implements runtime adapters and provider workflows against core traits.
 3. **Wallet/application runtime** uses **conxius-enclave-sdk** through the companion adapter for enclave-anchored signing.
-4. **lib-conxian-core-enclave** depends on both Core and the published SDK; the published `conxius-enclave-sdk =2.0.11` remains standalone and does not depend on Core.
+4. **lib-conxian-core-enclave** depends on both Core and the published SDK; the published `conxius-enclave-sdk =2.0.17` remains standalone and does not depend on Core.
 5. Any future SDK-to-Core edge is a separate graph-review decision, not an implicit adapter dependency.
 
 ## 5. Core-vs-standalone Conxian Gateway guardrail (CON-700)
@@ -210,14 +210,14 @@ metadata; it intentionally does not assert that an adapter's placeholder proof
 method is authoritative cryptographic verification.
 
 This is the initial Core-owned serialized-contract checkpoint. Its known
-compatibility assumptions are limited to Core `0.3.1`, Rust `1.91+`, the Core
+compatibility assumptions are limited to Core `0.3.3`, Rust `1.98.1+`, the Core
 default feature set (`default = []`), signing API version `1`, BIP-110 preflight
 API version `1`, and protocol-verifier evidence binding version `1`.
 
 The repository keeps three deliberately separate evidence surfaces. This
 Core-only fixture layer does not compile the optional SDK or enable an
 `--all-features` path. The companion `lib-conxian-core-enclave` workspace member
-directly compiles against the exact published `conxius-enclave-sdk` `2.0.11` API
+directly compiles against the exact published `conxius-enclave-sdk` `2.0.17` API
 without simulator/mock/dev bypass features. The separate non-published
 `tests/sdk-compat` harness provides opt-in direct release compatibility evidence
 and an explicit SDK feature matrix; see [docs/COMPATIBILITY.md](COMPATIBILITY.md).

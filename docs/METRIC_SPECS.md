@@ -75,4 +75,4 @@ observation, or Gateway risk calculation must not be serialized as an approved C
 unknown or stale metadata must fail closed downstream.
 
 ---
-*Last Updated: 2026-05-27*
+*Last Updated: 2026-09-11*

@@ -445,7 +445,9 @@ class CratesIoClient:
 
         crate_payload = payload.get("crate") if isinstance(payload, dict) else None
         version_payload = payload.get("version") if isinstance(payload, dict) else None
-        crate_name = crate_payload.get("name") if isinstance(crate_payload, dict) else None
+        crate_name = version_payload.get("crate") if isinstance(version_payload, dict) else None
+        if not isinstance(crate_name, str) or not crate_name:
+            crate_name = crate_payload.get("name") if isinstance(crate_payload, dict) else None
         number = version_payload.get("num") if isinstance(version_payload, dict) else None
         if not isinstance(number, str):
             raise RemoteCheckError(f"crates.io response for {url} lacked version.num")

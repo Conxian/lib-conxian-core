@@ -1,7 +1,7 @@
 //! DLC: Discreet Log Contracts
 //! Native Bitcoin finance primitives aligned with G-06.
 
-use secp256k1::{PublicKey, Scalar, Secp256k1};
+use secp256k1::{PublicKey, Scalar};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -43,6 +43,8 @@ pub enum DlcVerificationError {
     UnsupportedIntentBinding,
     /// The compatibility API lacks the context required to verify execution.
     UnsupportedExecutionContext,
+    /// The Contract Execution Transaction (CET) structure or payout distribution is invalid.
+    InvalidCetStructure,
 }
 
 impl std::fmt::Display for DlcVerificationError {
@@ -58,6 +60,9 @@ impl std::fmt::Display for DlcVerificationError {
             }
             Self::UnsupportedExecutionContext => {
                 write!(f, "DLC execution verification context is unsupported")
+            }
+            Self::InvalidCetStructure => {
+                write!(f, "invalid DLC CET structure or payout distribution")
             }
         }
     }
@@ -90,7 +95,13 @@ impl DlcManager {
         outcome_msg: &[u8],
         signature_scalar: &[u8],
     ) -> bool {
-        let secp = Secp256k1::new();
+        if oracle_pubkey.is_empty()
+            || nonce_point.is_empty()
+            || outcome_msg.is_empty()
+            || signature_scalar.len() != 32
+        {
+            return false;
+        }
 
         let pk = match PublicKey::from_slice(oracle_pubkey) {
             Ok(p) => p,
@@ -123,7 +134,7 @@ impl DlcManager {
         };
 
         // Right side: R + e*P
-        let ep = match pk.mul_tweak(&secp, &e) {
+        let ep = match pk.mul_tweak(&e) {
             Ok(p) => p,
             Err(_) => return false,
         };
@@ -133,8 +144,8 @@ impl DlcManager {
         };
 
         // Left side: s*G
-        let lhs = match secp256k1::SecretKey::from_byte_array(s_bytes) {
-            Ok(sk) => PublicKey::from_secret_key(&secp, &sk),
+        let lhs = match secp256k1::SecretKey::from_secret_bytes(s_bytes) {
+            Ok(sk) => PublicKey::from_secret_key(&sk),
             Err(_) => return false,
         };
 
@@ -159,7 +170,7 @@ impl DlcManager {
         if current_block > intent.expiry_block {
             return Err(DlcVerificationError::Expired);
         }
-        if nonce_point.is_empty() || signature_scalar.len() != 32 {
+        if nonce_point.is_empty() || signature_scalar.len() != 32 || outcome_msg.is_empty() {
             return Err(DlcVerificationError::MalformedAttestation);
         }
 
@@ -189,6 +200,40 @@ impl DlcManager {
     /// height, or transaction binding, so a well-shaped byte string is not
     /// enough to authorize execution. This method reports that limitation
     /// explicitly instead of accepting random signatures.
+    /// Validates the structure and payout distribution of a Contract Execution Transaction (CET).
+    ///
+    /// Ensures that:
+    /// 1. Intent collateral is greater than zero and oracle key is present.
+    /// 2. Payout list is non-empty and recipient scripts are valid.
+    /// 3. Total payout satoshis does not exceed the total committed collateral.
+    pub fn validate_cet_structure(
+        intent: &DlcIntent,
+        payouts: &[(Vec<u8>, u64)],
+    ) -> Result<bool, DlcVerificationError> {
+        if intent.collateral_sats == 0 || intent.oracle_pubkey.is_empty() {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+        if payouts.is_empty() {
+            return Err(DlcVerificationError::InvalidCetStructure);
+        }
+
+        let mut total_payout: u64 = 0;
+        for (recipient, amount) in payouts {
+            if recipient.is_empty() || *amount == 0 {
+                return Err(DlcVerificationError::InvalidCetStructure);
+            }
+            total_payout = total_payout
+                .checked_add(*amount)
+                .ok_or(DlcVerificationError::InvalidCetStructure)?;
+        }
+
+        if total_payout > intent.collateral_sats {
+            return Err(DlcVerificationError::InvalidCetStructure);
+        }
+
+        Ok(true)
+    }
+
     pub fn verify_execution_checked(
         intent: &DlcIntent,
         oracle_signature: &[u8],
@@ -204,18 +249,6 @@ impl DlcManager {
         }
 
         Err(DlcVerificationError::UnsupportedExecutionContext)
-    }
-
-    /// Compatibility wrapper. It is intentionally fail-closed until callers
-    /// provide the complete attestation and execution context.
-    #[deprecated(
-        note = "use verify_execution_checked or verify_oracle_attestation_for_intent; this wrapper returns false"
-    )]
-    pub fn verify_execution(intent: &DlcIntent, oracle_signature: &[u8]) -> bool {
-        matches!(
-            Self::verify_execution_checked(intent, oracle_signature),
-            Ok(true)
-        )
     }
 }
 
@@ -235,15 +268,13 @@ mod tests {
 
     #[test]
     fn test_oracle_attestation_verification() {
-        let secp = Secp256k1::new();
-
         // Oracle setup
         // Use deterministic scalars for testing
-        let oracle_sk = SecretKey::from_byte_array([0x01; 32]).unwrap();
-        let oracle_pk = PublicKey::from_secret_key(&secp, &oracle_sk);
+        let oracle_sk = SecretKey::from_secret_bytes([0x01; 32]).unwrap();
+        let oracle_pk = PublicKey::from_secret_key(&oracle_sk);
 
-        let nonce_sk = SecretKey::from_byte_array([0x02; 32]).unwrap();
-        let nonce_pk = PublicKey::from_secret_key(&secp, &nonce_sk);
+        let nonce_sk = SecretKey::from_secret_bytes([0x02; 32]).unwrap();
+        let nonce_pk = PublicKey::from_secret_key(&nonce_sk);
 
         let msg = b"outcome-a";
 
@@ -263,10 +294,10 @@ mod tests {
         s_sk = s_sk.mul_tweak(&e).unwrap();
         // s_sk = a*e + k
         s_sk = s_sk
-            .add_tweak(&Scalar::from_be_bytes(nonce_sk.secret_bytes()).unwrap())
+            .add_tweak(&Scalar::from_be_bytes(nonce_sk.to_secret_bytes()).unwrap())
             .unwrap();
 
-        let s_bytes = s_sk.secret_bytes();
+        let s_bytes = s_sk.to_secret_bytes();
 
         assert!(DlcManager::verify_oracle_attestation(
             &oracle_pk.serialize(),
@@ -322,6 +353,43 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_cet_structure() {
+        let oracle_pk = vec![0x02; 33];
+        let outcome = [0xaa; 32];
+        let intent = DlcManager::create_intent(&oracle_pk, 100_000, outcome, 1000);
+
+        let valid_payouts = vec![(vec![0x76, 0xa9, 0x14], 60_000), (vec![0x51, 0x20], 40_000)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &valid_payouts),
+            Ok(true)
+        );
+
+        let empty_payouts: Vec<(Vec<u8>, u64)> = vec![];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &empty_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let zero_amount_payouts = vec![(vec![0x51, 0x20], 0)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &zero_amount_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let empty_recipient_payouts = vec![(vec![], 50_000)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &empty_recipient_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+
+        let excessive_payouts = vec![(vec![0x51, 0x20], 100_001)];
+        assert_eq!(
+            DlcManager::validate_cet_structure(&intent, &excessive_payouts),
+            Err(DlcVerificationError::InvalidCetStructure)
+        );
+    }
+
+    #[test]
     fn test_execution_verification_rejects_random_signature() {
         let intent = DlcManager::create_intent(&[0x02; 33], 50_000, [0xbb; 32], 2_000);
 
@@ -333,9 +401,131 @@ mod tests {
             DlcManager::verify_execution_checked(&intent, &[0x01; 31]),
             Err(DlcVerificationError::MalformedAttestation)
         );
-        #[allow(deprecated)]
-        {
-            assert!(!DlcManager::verify_execution(&intent, &[0x01; 32]));
-        }
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_dlc_intent_malformed_and_edge_case_validation() {
+        let valid_pk = vec![0x02; 33];
+        let outcome = [0x11; 32];
+        let valid_intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 100);
+
+        // Malformed intents: empty oracle_pubkey, 0 collateral, 0 expiry
+        let empty_pk_intent = DlcManager::create_intent(&[], 100_000, outcome, 100);
+        let zero_collateral_intent = DlcManager::create_intent(&valid_pk, 0, outcome, 100);
+        let zero_expiry_intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 0);
+
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &empty_pk_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &zero_collateral_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &zero_expiry_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+
+        // Malformed attestations: empty nonce point, invalid signature length
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &valid_intent,
+                10,
+                &[],
+                b"msg",
+                &[0x01; 32]
+            ),
+            Err(DlcVerificationError::MalformedAttestation)
+        );
+        assert_eq!(
+            DlcManager::verify_oracle_attestation_for_intent(
+                &valid_intent,
+                10,
+                &[0x02; 33],
+                b"msg",
+                &[0x01; 31]
+            ),
+            Err(DlcVerificationError::MalformedAttestation)
+        );
+
+        // Direct verify_oracle_attestation with invalid bytes
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0xff; 10], // invalid pubkey
+            &[0x02; 33],
+            b"msg",
+            &[0x01; 32]
+        ));
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0x02; 33],
+            &[0xff; 10], // invalid nonce point
+            b"msg",
+            &[0x01; 32]
+        ));
+        assert!(!DlcManager::verify_oracle_attestation(
+            &[0x02; 33],
+            &[0x02; 33],
+            b"msg",
+            &[0x01; 10] // invalid sig scalar len
+        ));
+
+        // verify_execution_checked malformed intent check
+        assert_eq!(
+            DlcManager::verify_execution_checked(&empty_pk_intent, &[0x01; 32]),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+
+        // Display formatting check
+        assert_eq!(
+            DlcVerificationError::MalformedIntent.to_string(),
+            "malformed DLC intent"
+        );
+        assert_eq!(
+            DlcVerificationError::MalformedAttestation.to_string(),
+            "malformed DLC oracle attestation"
+        );
+        assert_eq!(
+            DlcVerificationError::OutcomeMismatch.to_string(),
+            "DLC outcome does not match intent commitment"
+        );
+        assert_eq!(
+            DlcVerificationError::Expired.to_string(),
+            "DLC intent has expired"
+        );
+        assert_eq!(
+            DlcVerificationError::VerificationFailed.to_string(),
+            "DLC oracle attestation verification failed"
+        );
+        assert_eq!(
+            DlcVerificationError::UnsupportedIntentBinding.to_string(),
+            "DLC attestation is not bound to the complete intent"
+        );
+        assert_eq!(
+            DlcVerificationError::UnsupportedExecutionContext.to_string(),
+            "DLC execution verification context is unsupported"
+        );
     }
 }

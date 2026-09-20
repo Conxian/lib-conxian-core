@@ -1,4 +1,4 @@
-//! Adapter-owned policy mappings for the exact `conxius-enclave-sdk 2.0.11`
+//! Adapter-owned policy mappings for the exact `conxius-enclave-sdk 2.0.17`
 //! release.
 //!
 //! These types deliberately do not extend or reinterpret Core or SDK enums.
@@ -38,7 +38,7 @@ impl RailTrustTier {
         }
     }
 
-    /// Converts an exact SDK `2.0.11` rail tier without relying on enum layout.
+    /// Converts an exact SDK `2.0.17` rail tier without relying on enum layout.
     pub const fn from_sdk(value: SdkRailTrustTier) -> Self {
         match value {
             SdkRailTrustTier::T1 => Self::T1,
@@ -48,7 +48,7 @@ impl RailTrustTier {
         }
     }
 
-    /// Converts to the exact SDK `2.0.11` rail tier.
+    /// Converts to the exact SDK `2.0.17` rail tier.
     pub const fn to_sdk(self) -> SdkRailTrustTier {
         match self {
             Self::T1 => SdkRailTrustTier::T1,
@@ -209,7 +209,7 @@ impl NetworkPolicy {
         }
     }
 
-    /// Converts an exact SDK `2.0.11` network enum.
+    /// Converts an exact SDK `2.0.17` network enum.
     pub const fn from_sdk(value: SdkNetwork) -> Self {
         match value {
             SdkNetwork::Mainnet => Self::Mainnet,
@@ -218,7 +218,7 @@ impl NetworkPolicy {
         }
     }
 
-    /// Converts to the exact SDK `2.0.11` network enum.
+    /// Converts to the exact SDK `2.0.17` network enum.
     pub const fn to_sdk(self) -> SdkNetwork {
         match self {
             Self::Mainnet => SdkNetwork::Mainnet,
