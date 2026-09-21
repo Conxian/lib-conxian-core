@@ -1,6 +1,6 @@
 # Conxian Ecosystem Alignment Report
 
-> **Status**: Active | **Last Updated**: 2026-08-01 | **Version**: 0.3.1
+> **Status**: Active | **Last Updated**: 2026-09-11 | **Version**: 0.3.3
 
 ## BIP-110 Position Statement
 
@@ -15,7 +15,7 @@ Conxian Labs **supports BIP-110** (Reduced Data Temporary Softfork) as it aligns
 | Sound money | Focus on monetary use | Trust tier enforcement |
 | Original vision | Bitcoin as money | "User owns the train" |
 
-See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full guidance.
+See [BIP110_ALIGNMENT.md](BIP110_ALIGNMENT.md) for full guidance.
 
 ## Executive Summary
 
@@ -27,7 +27,7 @@ This document provides a comprehensive analysis of the Conxian ecosystem crate r
 
 | Crate | Version | Owner | Purpose | Downloads | Status |
 |-------|---------|-------|---------|-----------|--------|
-| `conxius-enclave-sdk` | 2.0.11 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
+| `conxius-enclave-sdk` | 2.0.17 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
 | `conxian-core` | 0.1.4 | botshelomokoka | Gateway core | 23 | ⚠️ WIP |
 | `conxian_api` | 0.1.4 | botshelomokoka | HTTP API | 10 | ⚠️ WIP |
 | `conxian_compliance` | 0.1.4 | botshelomokoka | ZK compliance | 13 | ⚠️ WIP |
@@ -70,11 +70,11 @@ This repository provides **shared protocol primitives** that are consumed by all
 
 | Module | Purpose | Lines | Strategic Value |
 |--------|---------|-------|-----------------|
-| `control_model/` | Trust tiers, lifecycle states, invariant validation | ~300 | **HIGH** - Core taxonomy |
+| `control_model/` | Trust tiers, lifecycle states, invariant validation, BIP-110, risk profiles, wallet authority | ~679 | **HIGH** - Core taxonomy |
 | `anchoring.rs` | State root persistence models | ~285 | **HIGH** - Protocol contract |
-| `adapters/` | Universal chain adapter trait | ~366 | **HIGH** - CXIP-21 |
+| `adapters/` | UniversalChainAdapter trait, 6 chain adapters, StateProofError | ~864 | **HIGH** - CXIP-21 |
 | `deployment.rs` | Deployment manifests and verification | ~200 | **MEDIUM** - Platform contract |
-| `cjcs.rs` | CJC protocol types | ~15 | **LOW** - Legacy |
+| `cjcs.rs` | CjcsError, WorkIntent, JobCard (JSON-LD) | ~268 | **MEDIUM** - Platform contract |
 | `contract_bridge.rs` | Clarity contract interfaces | ~75 | **MEDIUM** - Stacks integration |
 
 #### ⚠️ Historical extraction notes (not current Core modules)
@@ -105,7 +105,7 @@ This is the **production SDK** for hardware-backed signing and security primitiv
 | Feature | Status | WASM |
 |---------|--------|------|
 | Hardware Attestation | ✅ Production | ✅ |
-| FROST DKG | ✅ v2.0.11 | ✅ |
+| FROST DKG | ✅ v2.0.17 | ✅ |
 | Fedimint | ✅ v2.0.7 | ✅ |
 | Ark | ✅ v2.0.7 | ✅ |
 | BitVM2 | ✅ Production | ✅ |
@@ -273,8 +273,8 @@ The following is the current ownership target after the historical extraction:
 
 | Crate | Current | Target | Blocker |
 |-------|---------|--------|---------|
-| lib-conxian-core | 0.3.1 | 0.3.1 | ✅ Current intentional breaking release |
-| conxius-enclave-sdk | 2.0.11 | 2.1.0 | WASM completeness |
+| lib-conxian-core | 0.3.3 | 0.3.3 | ✅ Current intentional breaking release |
+| conxius-enclave-sdk | 2.0.17 | 2.1.0 | WASM completeness |
 | conxian-core | 0.1.4 | 0.2.0 | Feature freeze |
 
 ## Open Issues Summary
@@ -338,7 +338,7 @@ secp256k1 = "0.31"             # Align with SDK
 
 - [ ] Create Conxian Labs crates.io organization
 - [ ] Transfer crate ownership to organization
-- [ ] Publish lib-conxian-core v0.3.1 after the release/tag workflow and registry checks complete
+- [x] Publish lib-conxian-core v0.3.3 after the release/tag workflow and registry checks complete
 
 ### Long-term (Strategic)
 
@@ -355,7 +355,7 @@ secp256k1 = "0.31"             # Align with SDK
 - [ ] Verify Silent Payments (BIP-352) compatibility with BIP-110
 - [ ] Document BIP-110 compliance in all Bitcoin-related code
 
-See [docs/BIP110_ALIGNMENT.md](docs/BIP110_ALIGNMENT.md) for full BIP-110 guidance.
+See [BIP110_ALIGNMENT.md](BIP110_ALIGNMENT.md) for full BIP-110 guidance.
 
 ## Contact
 

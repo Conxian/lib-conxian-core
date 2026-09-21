@@ -30,7 +30,7 @@ external side effects belong to `conxian-gateway` or other downstream consumers.
 Core does not own a production `VaultSDK`, hardware/provider implementation, or
 runtime contract.
 
-## 3. Enforcement Status (Audit Date: 2026-06-14)
+## 3. Enforcement Status (Audit Date: 2026-06-14; Last reviewed: 2026-09-11)
 
 - **Branch Protections:** Enabled across all primary public repositories.
 - **Push Protection:** Active on the Conxian organization.

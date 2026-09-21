@@ -37,16 +37,32 @@
         "src/signing.rs"
       ],
       "metric": "lines",
-      "minimum_percent": 95.0,
-      "description": "Universal signing contracts and validation"
+      "minimum_percent": 100.0,
+      "description": "Universal signing contracts and validation — critical path; all signing operations must be covered",
+      "chain_matrix": [
+        "bitcoin",
+        "stacks",
+        "ethereum",
+        "solana",
+        "cosmos",
+        "lightning"
+      ]
     },
     "verification": {
       "files": [
         "src/verifier.rs"
       ],
       "metric": "lines",
-      "minimum_percent": 95.0,
-      "description": "Protocol verifier facade and policy enforcement"
+      "minimum_percent": 100.0,
+      "description": "Protocol verifier facade and policy enforcement — critical path; all capability and finality branches covered",
+      "chain_matrix": [
+        "bitcoin",
+        "stacks",
+        "ethereum",
+        "solana",
+        "cosmos",
+        "lightning"
+      ]
     },
     "trust_policy": {
       "files": [
@@ -60,12 +76,21 @@
     "bip110": {
       "files": [
         "src/control_model/bip110.rs",
-        "src/control_model/bip110_preflight.rs"
+        "src/control_model/bip110_preflight.rs",
+        "src/bitcoin/bip110_builder.rs"
       ],
       "metric": "lines",
-      "minimum_percent": 95.0,
-      "description": "BIP-110 limits and transaction preflight",
+      "minimum_percent": 100.0,
+      "description": "BIP-110 limits, transaction preflight, and builder guard — critical path; all edge cases covered",
       "boundary_matrix": "docs/COVERAGE.md#bip-110-boundary-matrix"
+    },
+    "ucs": {
+      "files": [
+        "src/signing.rs"
+      ],
+      "metric": "functions",
+      "minimum_percent": 100.0,
+      "description": "Universal Chain Signer method combinations across SignMessage, SignDigest, DeriveAddress, VerifySignature"
     }
   }
 }

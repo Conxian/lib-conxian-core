@@ -16,19 +16,37 @@
 //! - `adapters`: Universal chain adapters (Bitcoin, Stacks, Lightning, RGB, Babylon, Fedimint, +15 family adapters)
 //! - `verifier`: Platform-neutral proof, block-reference, finality, and capability contracts
 //! - `contract_bridge`: Clarity contract interfaces for Stacks
+//! - `core_types`: Canonical core type re-exports for downstream integrations (Nexus, Gateway, Platform)
+//! - `compat`: Compatibility module mapping legacy integration paths (`compat::core_bridge::core_types`)
+//! - `sdk`: **Comprehensive SDK re-exports** — all 74 accessible conxius-enclave-sdk modules organized by category (Session 58)
 //!
-//! ## SDK Features
+//! ## SDK Features (Session 58 — Full Alignment)
 //!
-//! Enable the `enclave` feature for Vault SDK re-exports:
+//! Enable the `full-sdk` feature for access to all 74 accessible SDK modules:
 //!
 //! ```toml
-//! lib-conxian-core = { version = "0.2", features = ["enclave"] }
+//! lib-conxian-core = { version = "0.3", features = ["full-sdk"] }
+//! ```
+//!
+//! Or enable individual categories:
+//!
+//! ```toml
+//! lib-conxian-core = { version = "0.3", features = ["sdk-blockchain", "sdk-cross-cutting"] }
+//! ```
+//!
+//! Then access via `conxian_core::sdk::*`:
+//!
+//! ```rust,ignore
+//! use conxian_core::sdk::blockchain::{bitcoin, statechain, dlc};
+//! use conxian_core::sdk::cross_cutting::{intent, settlement, economy};
+//! use conxian_core::sdk::enclave_sdk::verifiers;
 //! ```
 //!
 //! ## Vault SDK Migration
 //!
 //! For Vault SDK features (hardware-backed signing, MuSig2, BitVM2), use
-//! [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) directly.
+//! [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) directly
+//! OR enable `full-sdk` on lib-conxian-core for re-exported access.
 //! See [docs/MIGRATION.md](docs/MIGRATION.md) for migration instructions from v0.2.x.
 //!
 //! ## Contact
@@ -40,6 +58,7 @@
 pub mod adapters;
 pub mod anchoring;
 pub mod babylon;
+pub mod chain;
 pub mod cjcs;
 pub mod contract_bridge;
 pub mod control_model;
@@ -47,6 +66,36 @@ pub mod deployment;
 pub mod fedimint;
 pub mod protocol;
 pub mod verifier;
+
+/// Canonical core protocol type re-exports for downstream integrations (Nexus, Gateway, Platform).
+pub mod core_types {
+    pub use crate::adapters;
+    pub use crate::anchoring;
+    pub use crate::babylon;
+    pub use crate::bitcoin;
+    pub use crate::chain;
+    pub use crate::cjcs;
+    pub use crate::contract_bridge;
+    pub use crate::control_model;
+    pub use crate::crypto;
+    pub use crate::deployment;
+    pub use crate::enclave;
+    pub use crate::fedimint;
+    pub use crate::lightning;
+    pub use crate::protocol;
+    pub use crate::rgb;
+    pub use crate::signing;
+    pub use crate::stacks;
+    pub use crate::verifier;
+}
+
+/// Compatibility re-exports for legacy downstream path bindings.
+pub mod compat {
+    pub mod core_bridge {
+        pub use crate::contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
+        pub use crate::core_types;
+    }
+}
 
 // CXIP 20 Modular Architecture
 pub mod bitcoin;
@@ -57,6 +106,18 @@ pub mod rgb;
 pub mod signing;
 pub mod stacks;
 
+// ── SDK re-exports (Session 58: all 74 accessible modules) ──
+#[cfg(any(
+    feature = "enclave",
+    feature = "sdk-blockchain",
+    feature = "sdk-cross-cutting",
+    feature = "sdk-rails",
+    feature = "sdk-nexus",
+    feature = "sdk-infrastructure",
+    feature = "sdk-signing",
+))]
+pub mod sdk;
+
 #[cfg(test)]
 mod tests;
 
@@ -65,13 +126,13 @@ pub use contract_bridge::{ClarityCall, ContractBridge, SignedContractCall};
 
 // Re-export the platform-neutral protocol verification contract and models.
 pub use verifier::{
-    compute_evidence_binding_hash, validate_finality_result, validate_finality_result_at,
-    validate_finality_transition, validate_proof_envelope, validate_proof_envelope_at,
-    validate_proof_verification_result, validate_proof_verification_result_at, BlockHeader,
-    BlockReference, CapabilityAdvertisement, ChainId, ChainStateReference,
-    ChainStateVerificationRequest, DynProtocolVerifier, LatestVerifiedBlock, ProofData,
-    ProofFormat, ProofVerificationRequest, ProofVerificationResult, ProtocolVerifier,
-    ProtocolVerifierBackend, ProtocolVerifierError, TransactionFinalityRequest,
+    compute_evidence_binding_hash, validate_evidence_binding, validate_finality_result,
+    validate_finality_result_at, validate_finality_transition, validate_proof_envelope,
+    validate_proof_envelope_at, validate_proof_verification_result,
+    validate_proof_verification_result_at, BlockHeader, BlockReference, CapabilityAdvertisement,
+    ChainId, ChainStateReference, ChainStateVerificationRequest, DynProtocolVerifier,
+    LatestVerifiedBlock, ProofData, ProofFormat, ProofVerificationRequest, ProofVerificationResult,
+    ProtocolVerifier, ProtocolVerifierBackend, ProtocolVerifierError, TransactionFinalityRequest,
     TransactionFinalityResult, TransactionFinalityStatus, VerificationProvenance,
     VerifiedBlockReference, VerifierCapabilities, VerifierCapability,
     PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN, PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION,
