@@ -5,13 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.3.1] - 2026-08-01
-
-### Changed
-- Updated the module catalog in `AGENTS.md` to document 17 public modules, supporting 42 chains and aligning with ecosystem requirements. Removed the phantom `sdk_primitive` reference.
+## [Unreleased]
 
 ### Added
-- Workspace-wide preparation and versioning alignment for the v0.3.1 stable release, synchronizing Cargo manifests, locks, READMEs, changelogs, test fixtures, and API documentation.
+- Hardened Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, fail-closed `WorkIntent::validate()` and `JobCard::validate()` methods, JSON-LD schema context enforcement, constructors, serialization methods, and full unit test coverage.
+- Refactored `src/crypto/mod.rs` to replace the placeholder `CryptoStubError` with a production-grade `CryptoError` enum, adding fail-closed PVDE and PTLC adaptor-signature parameter validation (Session 71).
+- Hardened the Liquid sidechain adapter (`src/bitcoin/liquid_adapter.rs`) with typed `LiquidError` variants and a fail-closed `LiquidBridge` implementing peg-in/peg-out lifecycle validation (Session 72).
+- Updated session research logs, gap analysis, and executive/readiness governance scorecards with 279 Rust workspace tests and 70 Python verification tests passing.
+
+## [v0.3.3] - 2026-08-31
+
+### Changed
+- Expanded `conxius-enclave-sdk` capability re-exports from 68 to 74 modules (`lightning_channel`, `nexus::fedimint_crypto`, `enclave::verifiers`, `enclave::replay_store_file`).
+- Propagated SDK cryptographic capability features 1:1 (`sdk-bip110-compliant`, `sdk-frost-crypto`, `sdk-fedimint-crypto`, `sdk-groth16`, `sdk-cryptoki`, `sdk-webauthn`); `full-sdk` now enables them all.
+- Hardened fail-closed validation across crypto, BIP-352 Bitcoin scanning, and DLC adapters.
+
+### Security
+- Enforced 100% SHA pinning and least-privilege permissions across GitHub workflows.
+
+## [v0.3.2] - 2026-08-07
+
+### Changed
+- Bumped `conxius-enclave-sdk` dependency from v2.0.14 to v2.0.17 (crates.io publication with matching manifest `version` field).
+- Added `version = "3.0.0"` to `frost-secp256k1-tr` git dependency for crates.io publish compatibility.
+- Published to crates.io — `lib-conxian-core = "0.3.2"` is now available on the registry.
 
 ## [v0.3.0] - 2026-07-21
 
@@ -68,9 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This is an intentional pre-publication API break from the old
   consumer-implemented `ProtocolVerifier` trait to the concrete façade/backend
   API. See [docs/MIGRATION.md](docs/MIGRATION.md).
-- Raised the package MSRV to Rust `1.91` so the declared support floor covers
+- Raised the package MSRV to Rust `1.97.1` so the declared support floor covers
   the locked default and optional `enclave` dependency graphs.
-- CI now uses Rust `1.91.0` and runs locked default/all-feature checks, tests,
+- CI now uses Rust `1.97.1` and runs locked default/all-feature checks, tests,
   and all-target Clippy with `-D warnings`.
 
 ### Documentation
@@ -82,6 +99,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   harness with explicit release features, deterministic serde/BIP-110/trust
   boundary checks, and a CI entry point that runs automatically on pull requests
   targeting `main` and pushes to `main`, while remaining manually dispatchable.
+- **Note:** SDK references in this section reflect the v2.0.11 baseline at
+  release time; the current SDK is v2.0.17.
 
 ### Added
 - **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.

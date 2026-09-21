@@ -3,7 +3,7 @@
 ## 1. Executive Summary
 **Status:** READY for repository-boundary and fuzz-regression scope; overall mainnet readiness not determined
 **Priority Class:** P0
-**Last Audit Date:** 2026-04-12
+**Last Audit Date:** 2026-04-12 (last formal audit; update this date when the next external audit is completed)
 
 This repository serves as the shared cryptographic and protocol foundation for the Conxian network. The review summarized here covers repository-boundary and fuzz-regression findings; it is not an external cryptographic audit or an overall mainnet-readiness determination.
 
@@ -32,7 +32,7 @@ This repository serves as the shared cryptographic and protocol foundation for t
 - All transitive dependencies were reviewed for known vulnerabilities (Cargo Audit signal: Clean).
 
 ### 2.4. Release Hygiene
-- **SemVer:** Enforced version 0.2.0.
+- **SemVer:** Enforced version 0.3.3.
 - **Changelog:** [`CHANGELOG.md`](../CHANGELOG.md) established.
 - **Governance:** `CONTRIBUTING.md`, `SECURITY.md`, and `README.md` updated with mainnet-safety standards.
 

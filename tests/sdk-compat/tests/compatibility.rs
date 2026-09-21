@@ -1,4 +1,6 @@
-use conxius_enclave_sdk::enclave::attestation::{AttestationLevel, DeviceIntegrityReport};
+use conxius_enclave_sdk::enclave::attestation::{
+    AttestationLevel, AttestationReportType, DeviceIntegrityReport,
+};
 use conxius_enclave_sdk::enclave::{
     SignRequest as SdkSignRequest, SigningAlgorithm as SdkSigningAlgorithm,
 };
@@ -289,15 +291,20 @@ fn sdk_signing_and_attestation_dtos_round_trip_without_invoking_hardware() {
     assert_eq!(decoded_request.key_id, sdk_request.key_id);
 
     let report = DeviceIntegrityReport {
+        report_version: 1,
+        report_type: AttestationReportType::DeviceIntegrity,
         level: AttestationLevel::TEE,
         challenge_nonce: vec![1, 2, 3, 4],
         signature: vec![0; 64],
+        attested_operation_public_key: vec![0xAA; 32],
+        signer_key_binding: None,
         certificate_chain: vec![
             "fixture-public-key".to_string(),
             "CONCLAVE_ROOT_CA_V1".to_string(),
         ],
         timestamp: 1_000,
         extension_data: "fixture".to_string(),
+        extensions: vec![],
     };
     let encoded_report = serde_json::to_value(&report).expect("SDK attestation serializes");
     let decoded_report: DeviceIntegrityReport =

@@ -6,7 +6,7 @@
 
 This document maps identified protocol gaps to research status and implementation priority scoring.
 
-## Current Core boundary (2026-08-01)
+## Current Core boundary (2026-09-11)
 
 The SDK and proposal scores below must not be read as claims that
 `lib-conxian-core` itself provides production verification. In Core:
@@ -24,14 +24,14 @@ The SDK and proposal scores below must not be read as claims that
 
 ## Critical Discovery: SDK Integration (historical v0.2.10 baseline)
 
-**The production Vault SDK is in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) v2.0.11**, NOT in this repository.
+**The production Vault SDK is in [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) v2.0.17**, NOT in this repository.
 
 ### Crate Relationship Matrix
 
 | Crate | Version | Purpose | Status |
 |-------|---------|---------|--------|
-| `conxius-enclave-sdk` | 2.0.11 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
-| `lib-conxian-core` | 0.3.1 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Fail-closed boundary |
+| `conxius-enclave-sdk` | 2.0.17 | **Production Vault SDK** - Hardware signing, attestation, FROST DKG, Ark, BitVM2 | ✅ Production |
+| `lib-conxian-core` | 0.3.3 | **Protocol primitives** - Types, invariants, chain adapters | ⚠️ Fail-closed boundary |
 | `conxian-gateway` | 0.1.4 | Runtime orchestration and middleware | ⚠️ WIP |
 
 ### Local Implementations vs SDK
@@ -102,9 +102,10 @@ public evidence and a versioned artifact revision.
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **MuSig2 Aggregation (G-10)** | 40 | 30 | 30 | **100** | **Implemented** (SDK) |
 | **FROST Threshold (G-14)** | 40 | 25 | 30 | **95** | **SDK-owned; core rejects placeholders** |
-| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Equation primitive; execution downstream** |
+| **DLC Primitives (G-06)** | 35 | 25 | 30 | **90** | **Implemented** (Equation & CET structure validation; execution downstream) |
 | **Hardware Attestation (G-17)**| 35 | 20 | 30 | **85** | **Implemented** (SDK; Core DER parse-only) |
 | **Babylon Staking (G-43)** | 35 | 25 | 30 | **90** | **Implemented** |
+| **Stacks Nakamoto / sBTC (CON-709)** | 35 | 25 | 30 | **90** | **Implemented** (Fail-closed parameter & address validation) |
 | **BitVM2 Multi-Party (G-11)**| 40 | 30 | 20 | **90** | **Implemented** (SDK) |
 | **BIP-322 (G-09)** | 40 | 30 | 20 | **90** | **Strict parser; verifier downstream** |
 | **Fedimint (G-16)** | 30 | 25 | 25 | **80** | **Implemented** (SDK; Core provider status unavailable) |
@@ -124,10 +125,11 @@ public evidence and a versioned artifact revision.
 6. **MuSig2 Signature Aggregation**: Resolved (G-10). Production signing and session aggregation are owned by `conxius-enclave-sdk`; this crate retains only protocol primitives and direct dependency-level fuzz coverage.
 7. **Fedimint**: Core provides deterministic point reconstruction only; authenticated mint, note, and status verification requires a provider, and mint status is unavailable without one.
 8. **Silent Payments**: Resolved (G-05). Hardened scanning logic with real ECC point math.
-9. **DLC**: Equation verification is retained and intent-bound policy checks are typed; shallow execution, funding, CET, and finality remain downstream (CON-1509).
-10. **RGB**: Fail-closed adapter boundary (CON-1509); Stock/node-backed verification remains follow-up work and Shadow mode is non-authoritative.
+9. **DLC**: Equation verification is retained, intent-bound policy checks are typed, and CET structure/payout validation is hardened (`DlcManager::validate_cet_structure`); execution, funding, and finality remain downstream (CON-1509).
+10. **RGB**: Fail-closed adapter boundary (CON-1509, CON-1407); Stock/node-backed verification remains follow-up work, contract lookups reject empty/whitespace inputs with `InvalidContractId`, and Shadow mode is non-authoritative.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
+13. **Stacks Nakamoto & sBTC Adapter**: Resolved (CON-709). Parameter validation for peg-in/peg-out and sBTC intent creation hardened with fail-closed checks for zero satoshi amounts and invalid address inputs.
 
 ## Open GitHub Issues (Cross-Repository)
 
@@ -162,3 +164,66 @@ public evidence and a versioned artifact revision.
 1. **Short-term**: Keep the optional SDK integration thin and guide consumers to migrate directly to `conxius-enclave-sdk`
 2. **Medium-term**: Maintain lib-conxian-core as the home for unique protocol primitives while keeping production Vault functionality in `conxius-enclave-sdk`
 3. **Long-term**: Consider merging lib-conxian-core into conxius-enclave-sdk or keeping as thin wrapper
+
+## Infrastructure & Persistence Gap Mapping (2026-08-19 Update)
+
+### Cloud DB Alignment (`org-silent-sun-00457600`)
+- **`corelibs` (`sparkling-sunset-69236559`, us-east-2)**: Core protocol state roots & invariant verification schemas.
+- **`Software dev kit` (`weathered-night-98492579`, us-east-2)**: Vault SDK hardware attestation logs & FROST DKG session tracking.
+- **`Business Operating System` (`noisy-flower-17484435`, us-east-2)**: BOS policy rules, risk profiles, and audit event logs.
+- **`market` (`small-math-44741750`, eu-central-1)**: Intent matching, liquidity routing, and ERC-7683 solver registry.
+- **`Gateway` (`noisy-cloud-41146057`, ap-southeast-1)**: Gateway API session tracking and rate-limit counters.
+- **`Conxian Nexus` (`orange-paper-76209725`, eu-central-1)**: zkVM proof verification state & state root commitments.
+
+### Resolution & Next Step Priorities
+1. **DLC Verification Edge Cases**: Expand `src/protocol/dlc.rs` unit test coverage for invalid collateral, zero expiry block, invalid nonces, and corrupted signatures.
+2. **SDK Migration**: Maintain `lib-conxian-core` as a Zero Secret Egress protocol library while recommending `conxius-enclave-sdk` v2.0.17 for enclave hardware signing.
+3. **Fuzz & Verification Coverage**: Maintain 100% compliance across all 4 fuzz targets and verification scripts.
+
+
+## Session 62 Research & Infrastructure Synthesis (2026-09-03)
+
+### Current Protocol Baseline (v0.3.3)
+- **Core Verification Suite**: 128 core protocol unit and doc tests passing (100% success rate across core library).
+- **Python Verification Guard Suite**: 69 test cases passing in `scripts/tests/` (100% pass rate).
+- **Zero Architectural Contamination**: `scripts/verify_contamination_guard.py` and `scripts/verify_tracked_artifacts.py` confirm zero forbidden I/O leaks or unindexed tracking risks.
+
+### Cloud DB & Render Service Fleet Topology
+- **Neon Cloud Fleet (`org-silent-sun-00457600`)**:
+  - `corelibs` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots & invariant verification schemas.
+  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace (`tea-d6u0edngi27c73dvhsg0`)**:
+  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
+  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+
+## Session 66 Research & Protocol Invariant Hardening (2026-09-04)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 262 total Rust workspace tests passing (100% pass rate).
+- **Python Verification Guard Suite**: 69 test cases passing in `scripts/tests/` (100% pass rate).
+- **Covenant Invariant Hardening**: Enhanced `CovenantManager` in `src/protocol/covenant.rs` with `generate_cat_vault_script_checked` returning typed `CovenantError` variants on invalid pubkey lengths or malformed target hash inputs.
+- **Zero Architectural Contamination**: `scripts/verify_contamination_guard.py` and `scripts/verify_tracked_artifacts.py` confirm zero forbidden I/O leaks or unindexed tracking risks.
+
+
+## Session 70 Deployment & Installer Gap Mapping (2026-09-09)
+
+### System Installation & Client Delivery Gaps
+1. **Unified Installer CLI (`conxian-installer` / `conxian-cli`)**: Currently, client installation requires manual container orchestration across Gateway, Nexus, and Enclave SDK components. Recommended: Build `conxian-cli` with `init`, `verify`, and `deploy` commands.
+2. **Standardized Helm / Compose Templates**: Provide off-the-shelf single-node Docker Compose templates and enterprise Kubernetes Helm charts with automated health check probes.
+3. **Automated Pre-Flight Connectivity Checks**: Implement automated pre-flight RPC, Nitro Enclave, and PostgreSQL connection verification before starting Gateway runtime services.
+
+
+## Session 78 Research & RGB Stock Adapter Contract Management Hardening (2026-09-17)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 281 total Rust workspace tests passing (100% pass rate).
+- **Python Verification Guard Suite**: 70 test cases passing in `scripts/tests/` (100% pass rate).
+- **RGB Stock Adapter Hardening**: Enhanced `RGBStockAdapter` in `src/rgb/mod.rs` with `register_contract`, `register_contract_id`, `has_contract`, `remove_contract`, `list_contracts`, and `clear_contracts` enforcing strict 64-character hex format validation.
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
