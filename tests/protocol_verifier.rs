@@ -129,8 +129,7 @@ fn envelope(
 }
 
 fn bound_request() -> ProofVerificationRequest {
-    let mut request =
-        valid_request().with_envelope(envelope(&bitcoin(), 1_000, 2_000_000_000));
+    let mut request = valid_request().with_envelope(envelope(&bitcoin(), 1_000, 2_000_000_000));
     let binding = compute_evidence_binding_hash(&request).expect("placeholder envelope is valid");
     request.proof.evidence_hash = Some(binding.clone());
     request.envelope.as_mut().expect("envelope").evidence_hash = binding;
@@ -813,9 +812,7 @@ fn evidence_binding_is_deterministic_and_detects_every_material_mutation() {
             request.envelope.as_mut().unwrap().finality_class = FinalityClass::Deterministic
         }),
         Box::new(|request| request.envelope.as_mut().unwrap().min_confirmations += 1),
-        Box::new(|request| {
-            request.envelope.as_mut().unwrap().observed_at = timestamp(1_001)
-        }),
+        Box::new(|request| request.envelope.as_mut().unwrap().observed_at = timestamp(1_001)),
         Box::new(|request| {
             request.envelope.as_mut().unwrap().expires_at = timestamp(2_000_000_001)
         }),
