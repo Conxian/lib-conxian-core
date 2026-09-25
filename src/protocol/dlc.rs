@@ -505,9 +505,15 @@ mod additional_tests {
 
         // DlcIntent::validate test
         assert_eq!(valid_intent.validate(), Ok(()));
-        assert_eq!(empty_pk_intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            empty_pk_intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
         let zero_outcome_intent = DlcManager::create_intent(&valid_pk, 100_000, [0u8; 32], 100);
-        assert_eq!(zero_outcome_intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            zero_outcome_intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
 
         // Display formatting check
         assert_eq!(
