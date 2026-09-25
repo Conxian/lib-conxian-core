@@ -14,6 +14,21 @@ pub struct DlcIntent {
     pub expiry_block: u32,
 }
 
+impl DlcIntent {
+    /// Validates internal intent constraints fail-closed.
+    pub fn validate(&self) -> Result<(), DlcVerificationError> {
+        if self.oracle_pubkey.is_empty()
+            || self.collateral_sats == 0
+            || self.expiry_block == 0
+            || self.outcome_hash == [0u8; 32]
+        {
+            Err(DlcVerificationError::MalformedIntent)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Status of a DLC contract.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum DlcStatus {
@@ -161,12 +176,7 @@ impl DlcManager {
         outcome_msg: &[u8],
         signature_scalar: &[u8],
     ) -> Result<bool, DlcVerificationError> {
-        if intent.oracle_pubkey.is_empty()
-            || intent.collateral_sats == 0
-            || intent.expiry_block == 0
-        {
-            return Err(DlcVerificationError::MalformedIntent);
-        }
+        intent.validate()?;
         if current_block > intent.expiry_block {
             return Err(DlcVerificationError::Expired);
         }
@@ -238,12 +248,7 @@ impl DlcManager {
         intent: &DlcIntent,
         oracle_signature: &[u8],
     ) -> Result<bool, DlcVerificationError> {
-        if intent.oracle_pubkey.is_empty()
-            || intent.collateral_sats == 0
-            || intent.expiry_block == 0
-        {
-            return Err(DlcVerificationError::MalformedIntent);
-        }
+        intent.validate()?;
         if oracle_signature.len() < 32 {
             return Err(DlcVerificationError::MalformedAttestation);
         }
@@ -497,6 +502,12 @@ mod additional_tests {
             DlcManager::verify_execution_checked(&empty_pk_intent, &[0x01; 32]),
             Err(DlcVerificationError::MalformedIntent)
         );
+
+        // DlcIntent::validate test
+        assert_eq!(valid_intent.validate(), Ok(()));
+        assert_eq!(empty_pk_intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        let zero_outcome_intent = DlcManager::create_intent(&valid_pk, 100_000, [0u8; 32], 100);
+        assert_eq!(zero_outcome_intent.validate(), Err(DlcVerificationError::MalformedIntent));
 
         // Display formatting check
         assert_eq!(
