@@ -227,3 +227,23 @@ public evidence and a versioned artifact revision.
 - **Python Verification Guard Suite**: 70 test cases passing in `scripts/tests/` (100% pass rate).
 - **RGB Stock Adapter Hardening**: Enhanced `RGBStockAdapter` in `src/rgb/mod.rs` with `register_contract`, `register_contract_id`, `has_contract`, `remove_contract`, `list_contracts`, and `clear_contracts` enforcing strict 64-character hex format validation.
 - **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## 10. Ecosystem SLA Framework & Governance Risk Scoring
+
+### Overview & Operational Risk Assessment
+
+An ecosystem evaluation of Conxian's multi-layered surface area (`lib-conxian-core`, `conxius-enclave-sdk`, `conxius-wallet`, `conxian-nexus`, `conxian-gateway`) highlights the critical need to separate public open-source protocol code from enterprise commercial SLAs.
+
+### SLA Scoring & Tiering Matrix
+
+| Tier / Component | Surface Area | SLA Strategy | Liability Scope | Score / Status |
+| --- | --- | --- | --- | --- |
+| **Tier 1: Core Protocol** (`lib-conxian-core`) | Sovereign cryptographic primitives & protocol intent models. | **No SLA / Best-Effort** (Target 48h triage). | Zero legal or uptime liability. | **Protected** |
+| **Tier 2: Enclave SDK** (`conxius-enclave-sdk`) | AWS Nitro & TEE hardware attestation / signing wrappers. | **No SLA / Best-Effort** (Target 48h triage). | Excludes hardware vendor firmware deprecations. | **Protected** |
+| **Tier 3: Sovereign Wallet** (`conxius-wallet`) | Non-custodial client wallet applications. | **No SLA / Best-Effort**. | Excludes Mobile OS TEE API deprecations. | **Protected** |
+| **Tier 4: Enterprise Gateway** (`conxian-gateway`) | ISO 20022 and B2B enterprise messaging middleware. | **Signed B2B Contract Only** (Next-Business-Day response). | Bounded to middleware integration & ticket response times. | **Monetized Tier** |
+
+### Force Majeure Exclusions
+1. **L1/L2 Network Congestion & Stalls**: Unpredictable Bitcoin, Stacks, or Liquid fee spikes and consensus halts.
+2. **Hardware & TEE Firmware Deprecations**: AWS Nitro Enclave, SE, or Android StrongBox vendor updates.
+3. **Upstream Protocol Upgrades**: Unexpected BIP/CXIP rule changes across connected chains.

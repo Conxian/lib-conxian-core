@@ -130,7 +130,7 @@ fn envelope(
 
 fn bound_request() -> ProofVerificationRequest {
     let mut request =
-        valid_request().with_envelope(envelope(&bitcoin(), 1_784_000_000, 1_790_000_000));
+        valid_request().with_envelope(envelope(&bitcoin(), 1_784_000_000, 2_000_000_000));
     let binding = compute_evidence_binding_hash(&request).expect("placeholder envelope is valid");
     request.proof.evidence_hash = Some(binding.clone());
     request.envelope.as_mut().expect("envelope").evidence_hash = binding;
