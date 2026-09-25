@@ -10,7 +10,7 @@ This scorecard tracks the readiness of the Conxian ecosystem across active devel
 | **Repo Trust** | CI/CD, security hygiene, and governance standards. | 🟢 Healthy | `.github` workflows |
 | **Release Maturity** | Versioning, changelogs, and deployment stability. | 🟢 v0.3.3 | CHANGELOG.md |
 | **Product Proof** | Core protocol verification (Tests, Audits). | 🟢 281 Workspace Tests | src/tests.rs |
-| **Commercial Safety** | Claim evidence and regulatory alignment. | 🟡 In Progress | docs/ECONOMY.md |
+| **Commercial Safety** | Claim evidence, SLA tiering, and regulatory alignment. | 🟢 Aligned | SUPPORT.md, docs/ECONOMY.md |
 
 ## 2. Evidence Requirements
 
@@ -20,7 +20,7 @@ This scorecard tracks the readiness of the Conxian ecosystem across active devel
 
 ## 3. Active Lane Status
 
-- **Protocol Core**: 🟢 Ready (v0.3.3)
-- **Gateway Runtime**: 🟡 Hardening
-- **Enclave SDK**: 🟡 Boundary Audit (v2.0.17)
-- **Wallet UI**: 🟡 Integration Testing
+- **Protocol Core**: 🟢 Ready (v0.3.3) - Open Source / No SLA
+- **Gateway Runtime**: 🟡 Hardening - Enterprise B2B SLA Tier
+- **Enclave SDK**: 🟡 Boundary Audit (v2.0.17) - Hardware Attestation
+- **Wallet UI**: 🟡 Integration Testing - Sovereign / Non-Custodial

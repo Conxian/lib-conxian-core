@@ -7,9 +7,12 @@ This repository follows Conxian's parent-level governance defaults (policy docs,
 `lib-conxian-core` is categorized as **Primary Strategic Platform Core (Tier 1)** within the Conxian ecosystem.
 
 - **Primary Audience:** Protocol engineers, security auditors, SDK integrators, and infrastructure builders.
-- **Response SLA:**
-  - **Non-Security Issues & Bug Reports:** Initial triage and response within **48 hours** (business days).
-  - **Security Vulnerabilities:** Initial acknowledgement within **48 hours** and triage within **5 business days** per [SECURITY.md](SECURITY.md).
+- **Support & SLA Policy:**
+  - **Public Open-Source Core (`lib-conxian-core` & Conxian org repos):** Provided on a community-best-effort basis under standard open-source disclaimers (MIT/Apache-2.0). **No runtime, uptime, consensus finality, or protocol execution SLAs are provided.**
+  - **Community Target Response Windows:**
+    - **Non-Security Issues & Bug Reports:** Target initial triage within **48 hours** (business days).
+    - **Security Vulnerabilities:** Target initial acknowledgement within **48 hours** and triage within **5 business days** per [SECURITY.md](SECURITY.md).
+  - **Enterprise Commercial Tier (`conxian-gateway` & Enterprise Adapters):** Legally binding commercial SLAs (e.g. 99.9% middleware uptime, guaranteed ticket response times) are available **exclusively under signed B2B commercial contracts**. Commercial SLAs cover integration support and application wrapper availability, never underlying L1/L2 network consensus or hardware enclave firmware stability.
 
 ## Where to get help
 

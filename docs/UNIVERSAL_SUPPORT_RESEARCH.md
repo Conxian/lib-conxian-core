@@ -147,3 +147,17 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Documentation & Version Reconciliation**: No protocol code changes this session. Reconciled stale version/toolchain references across the repository to the authoritative `Cargo.toml` metadata (`version = "0.3.3"`, `rust-version = "1.98.1"`) and the current `conxius-enclave-sdk` v2.0.17 contract: `0.3.1` → `0.3.3`, `1.97.1` → `1.98.1`, `0.2.10` → `0.3.3`, and `2.0.14` → `2.0.17`.
 - **Artifact Synchronization**: Synced CHANGELOG, SESSION_RESEARCH_LOG, gap analysis, governance scorecards, audit reports, Phase 1 roadmap (5 implemented / 4 open), and coverage targets (added UCS target; aligned coverage floors) with the current 279 Rust workspace tests + 70 Python guard tests baseline.
 - **Verification Metrics**: Confirmed 279 Rust workspace tests and 70 Python verification guard tests remain the current passing baseline (no source behavior modified).
+
+## 23. Research Update (2026-09-25 Session 80 Synthesis): Ecosystem SLA Positioning, Risk Taxonomy & Strategic Framework
+- **Open-Source Funding vs. Enterprise SLAs**: Evaluated structural constraints in open-source deep tech infrastructure. Commercial SLAs (e.g. 99.9% uptime, 1-hour critical response) carry binding legal/financial liabilities. Applying these to sovereign/decentralized components introduces asymmetric risk due to maintainer bottlenecks, unpredictable funding, and external network dependencies.
+- **Conxian Stack Surface Area vs. Peer Infrastructure**:
+  | Dimension | Peer Open-Source Infra Players | Conxian Ecosystem Profile |
+  | --- | --- | --- |
+  | **Surface Area** | Focused (1-3 tightly coupled SDKs). | Expansive: L1 primitives (`lib-conxian-core`), TEE enclaves (`conxius-enclave-sdk`), sovereign wallets (`conxius-wallet`), and enterprise middleware (`conxian-gateway` / ISO 20022). |
+  | **Support Model** | Community-best-effort via GitHub; paid enterprise tiers strictly bounded. | Bridges decentralized tech with legacy financial systems (ISO 20022), inviting enterprise SLA expectations. |
+  | **SLA Strategy** | No SLAs for free open-source; paid enterprise tiers cover middleware integration support, not underlying network uptime. | Strict separation required to avoid over-committing uptime/support metrics on external consensus/hardware layers. |
+- **Tiered Support & SLA Matrix**:
+  - **Public Protocol Core (`lib-conxian-core` & public repos)**: Explicitly state **No SLA**. Community-best-effort support with target response windows (48h non-security triage; 48h/5-day security triage).
+  - **Enterprise Gateway Tier (`conxian-gateway` & Enterprise Adapters)**: SLAs offered exclusively under signed B2B commercial contracts. Scope is strictly limited to integration support, configuration assistance, and business-hour ticket response, excluding L1 network congestion and vendor hardware deprecations.
+- **Force Majeure & External Exclusions**: Formally exclude L1 Bitcoin congestion, Stacks network finality stalls, AWS Nitro Enclave / Android StrongBox TEE firmware deprecations, and upstream consensus halts from all SLA liability.
+- **Automated Guardrails & Verification**: Automated CI/CD guardrails, strict staging, and 100% test coverage protect core release candidate branches before human intervention.
