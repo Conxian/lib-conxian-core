@@ -14,6 +14,33 @@ pub struct DlcIntent {
     pub expiry_block: u32,
 }
 
+
+
+impl DlcIntent {
+    /// Validates internal intent invariants in a fail-closed manner.
+    ///
+    /// Ensures that:
+    /// 1. `oracle_pubkey` is non-empty and a valid secp256k1 public key (33 or 65 bytes).
+    /// 2. `collateral_sats` is strictly greater than zero.
+    /// 3. `outcome_hash` is not the all-zero array (`[0u8; 32]`).
+    /// 4. `expiry_block` is strictly greater than zero.
+    pub fn validate(&self) -> Result<(), DlcVerificationError> {
+        if self.oracle_pubkey.is_empty()
+            || self.collateral_sats == 0
+            || self.expiry_block == 0
+            || self.outcome_hash == [0u8; 32]
+        {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+
+        if PublicKey::from_slice(&self.oracle_pubkey).is_err() {
+            return Err(DlcVerificationError::MalformedIntent);
+        }
+
+        Ok(())
+    }
+}
+
 /// Status of a DLC contract.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum DlcStatus {
@@ -161,12 +188,7 @@ impl DlcManager {
         outcome_msg: &[u8],
         signature_scalar: &[u8],
     ) -> Result<bool, DlcVerificationError> {
-        if intent.oracle_pubkey.is_empty()
-            || intent.collateral_sats == 0
-            || intent.expiry_block == 0
-        {
-            return Err(DlcVerificationError::MalformedIntent);
-        }
+        intent.validate()?;
         if current_block > intent.expiry_block {
             return Err(DlcVerificationError::Expired);
         }
@@ -210,9 +232,7 @@ impl DlcManager {
         intent: &DlcIntent,
         payouts: &[(Vec<u8>, u64)],
     ) -> Result<bool, DlcVerificationError> {
-        if intent.collateral_sats == 0 || intent.oracle_pubkey.is_empty() {
-            return Err(DlcVerificationError::MalformedIntent);
-        }
+        intent.validate()?;
         if payouts.is_empty() {
             return Err(DlcVerificationError::InvalidCetStructure);
         }
@@ -238,12 +258,7 @@ impl DlcManager {
         intent: &DlcIntent,
         oracle_signature: &[u8],
     ) -> Result<bool, DlcVerificationError> {
-        if intent.oracle_pubkey.is_empty()
-            || intent.collateral_sats == 0
-            || intent.expiry_block == 0
-        {
-            return Err(DlcVerificationError::MalformedIntent);
-        }
+        intent.validate()?;
         if oracle_signature.len() < 32 {
             return Err(DlcVerificationError::MalformedAttestation);
         }
@@ -256,6 +271,41 @@ impl DlcManager {
 mod tests {
     use super::*;
     use secp256k1::SecretKey;
+
+
+    #[test]
+    fn test_dlc_intent_validate_success() {
+        let valid_pk = vec![0x02; 33];
+        let outcome = [0x11; 32];
+        let intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 100);
+        assert_eq!(intent.validate(), Ok(()));
+    }
+
+    #[test]
+    fn test_dlc_intent_validate_rejections() {
+        let valid_pk = vec![0x02; 33];
+        let outcome = [0x11; 32];
+
+        // Empty pubkey
+        let intent = DlcManager::create_intent(&[], 100_000, outcome, 100);
+        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+
+        // Invalid pubkey bytes
+        let intent = DlcManager::create_intent(&[0xff; 10], 100_000, outcome, 100);
+        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+
+        // Zero collateral
+        let intent = DlcManager::create_intent(&valid_pk, 0, outcome, 100);
+        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+
+        // All-zero outcome hash
+        let intent = DlcManager::create_intent(&valid_pk, 100_000, [0u8; 32], 100);
+        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+
+        // Zero expiry block
+        let intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 0);
+        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+    }
 
     #[test]
     fn test_dlc_intent_creation() {
