@@ -848,3 +848,19 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Documentation Standardization**: Standardized SLA declarations across `README.md`, `SUPPORT.md`, `docs/governance/REPO_OWNERSHIP.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, and `docs/GAP_ANALYSIS_AND_SCORING.md`.
 - **Automated Verification**: Confirmed all 281 Rust workspace tests and 70 Python verification guard scripts pass cleanly with 100% compliance.
 - **Governance Alignment**: Updated `EXECUTIVE_SCORECARD.md` and `READINESS_SCORECARD.md` to reflect Session 80 audit results and SLA policy alignment.
+
+
+## Session Record: DLC Protocol Hardening & Multi-Cloud Fleet Audit (2026-09-26)
+
+### Baseline Protocol Verification & Test Suite Metrics
+- **Rust Workspace Tests**: 283 passed, 0 failed.
+- **Python Guard Suite**: 70 passed, 0 failed.
+
+### Core Changes & Hardening Executed
+1. **DlcIntent Invariant Hardening**: Implemented `DlcIntent::validate` in `src/protocol/dlc.rs` enforcing fail-closed parameter validation:
+   - Valid secp256k1 oracle public key (33 or 65 bytes).
+   - Collateral satoshis > 0.
+   - Non-zero outcome hash (`outcome_hash != [0u8; 32]`).
+   - Expiry block height > 0.
+2. **DlcManager Refactoring**: Refactored `verify_oracle_attestation_for_intent`, `validate_cet_structure`, and `verify_execution_checked` to delegate initial intent validation to `intent.validate()?`.
+3. **Unit Test Expansion**: Added `test_dlc_intent_validate_success` and `test_dlc_intent_validate_rejections` to `src/protocol/dlc.rs`.

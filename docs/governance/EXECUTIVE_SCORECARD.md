@@ -13,7 +13,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 ## 2. Key Metrics
 
-- **Core Tests**: 281 Total Rust Workspace Tests Passing (153 Core Unit/Doc Tests + 128 Integration/Enclave/Conformance Tests; 70 Python Guard Tests)
+- **Core Tests**: 283 Total Rust Workspace Tests Passing (153 Core Unit/Doc Tests + 128 Integration/Enclave/Conformance Tests; 70 Python Guard Tests)
 - **SLA & Support Policy**: Standardized Tier 1 governance. Public open-source code carries **No SLA / Best-Effort**. Legally binding SLAs restricted exclusively to signed B2B commercial contracts.
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Nitro Enclave CI, and scheduled/manual fuzz regression active)
