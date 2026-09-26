@@ -31,7 +31,10 @@ pub enum Erc7683Error {
     /// Fill deadline timestamp is zero or invalid.
     InvalidFillDeadline,
     /// Fill deadline precedes the open deadline timestamp.
-    DeadlineMismatch { open_deadline: u32, fill_deadline: u32 },
+    DeadlineMismatch {
+        open_deadline: u32,
+        fill_deadline: u32,
+    },
     /// Order data byte payload is empty.
     EmptyOrderData,
     /// Order data cannot be parsed into a valid [`CrossChainIntent`].
@@ -157,7 +160,8 @@ impl Erc7683CrossChainOrder {
     /// Extract and strictly validate a Conxian [`CrossChainIntent`] from `order_data`.
     pub fn to_cross_chain_intent_checked(&self) -> Result<CrossChainIntent, Erc7683Error> {
         self.validate()?;
-        serde_json::from_slice(&self.order_data).map_err(|e| Erc7683Error::MalformedOrderData(e.to_string()))
+        serde_json::from_slice(&self.order_data)
+            .map_err(|e| Erc7683Error::MalformedOrderData(e.to_string()))
     }
 
     /// Validate that the order has not expired for initiation.
@@ -264,7 +268,10 @@ mod tests {
             0,
             200,
         );
-        assert_eq!(order_zero_open.validate(), Err(Erc7683Error::InvalidOpenDeadline));
+        assert_eq!(
+            order_zero_open.validate(),
+            Err(Erc7683Error::InvalidOpenDeadline)
+        );
 
         let order_zero_fill = Erc7683CrossChainOrder::from_cross_chain_intent(
             &intent,
@@ -275,7 +282,10 @@ mod tests {
             100,
             0,
         );
-        assert_eq!(order_zero_fill.validate(), Err(Erc7683Error::InvalidFillDeadline));
+        assert_eq!(
+            order_zero_fill.validate(),
+            Err(Erc7683Error::InvalidFillDeadline)
+        );
     }
 
     #[test]
