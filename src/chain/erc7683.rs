@@ -19,12 +19,46 @@
 use conxius_enclave_sdk::protocol::intent::{CrossChainIntent, ResolvedCrossChainOrder};
 use serde::{Deserialize, Serialize};
 
+/// Error conditions encountered during ERC-7683 order validation and conversion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Erc7683Error {
+    /// The settlement contract address is empty or whitespace.
+    EmptySettlementContract,
+    /// The swapper address is empty or whitespace.
+    EmptySwapper,
+    /// The open deadline is zero or past the fill deadline.
+    InvalidDeadlines { open_deadline: u32, fill_deadline: u32 },
+    /// The order data payload is empty.
+    EmptyOrderData,
+    /// The order data payload cannot be deserialized as a valid [`CrossChainIntent`].
+    InvalidOrderData(String),
+}
+
+impl std::fmt::Display for Erc7683Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptySettlementContract => write!(f, "settlement contract address cannot be empty"),
+            Self::EmptySwapper => write!(f, "swapper address cannot be empty"),
+            Self::InvalidDeadlines { open_deadline, fill_deadline } => {
+                write!(
+                    f,
+                    "invalid deadlines: open_deadline ({open_deadline}) must be > 0 and <= fill_deadline ({fill_deadline})"
+                )
+            }
+            Self::EmptyOrderData => write!(f, "order data payload cannot be empty"),
+            Self::InvalidOrderData(reason) => write!(f, "invalid order data payload: {reason}"),
+        }
+    }
+}
+
+impl std::error::Error for Erc7683Error {}
+
 /// Full ERC-7683 cross-chain order, compatible with the Solidity `CrossChainOrder` struct.
 ///
 /// This struct mirrors [`ResolvedCrossChainOrder`] from the SDK and adds
 /// the `settlement_contract` field required by ERC-7683 for destination-chain
 /// settlement routing.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Erc7683CrossChainOrder {
     /// Contract address that settles the order on the destination chain.
     pub settlement_contract: String,
@@ -62,6 +96,30 @@ impl Erc7683CrossChainOrder {
             fill_deadline,
             order_data: intent.to_order_data(),
         }
+    }
+
+    /// Perform fail-closed validation of all structural parameters and internal intent integrity.
+    pub fn validate(&self) -> Result<(), Erc7683Error> {
+        if self.settlement_contract.trim().is_empty() {
+            return Err(Erc7683Error::EmptySettlementContract);
+        }
+        if self.swapper.trim().is_empty() {
+            return Err(Erc7683Error::EmptySwapper);
+        }
+        if self.open_deadline == 0 || self.open_deadline > self.fill_deadline {
+            return Err(Erc7683Error::InvalidDeadlines {
+                open_deadline: self.open_deadline,
+                fill_deadline: self.fill_deadline,
+            });
+        }
+        if self.order_data.is_empty() {
+            return Err(Erc7683Error::EmptyOrderData);
+        }
+
+        // Verify that order_data deserializes into a valid CrossChainIntent
+        self.to_cross_chain_intent()
+            .map(|_| ())
+            .ok_or_else(|| Erc7683Error::InvalidOrderData("failed to deserialize CrossChainIntent from order_data".into()))
     }
 
     /// Convert to the SDK's [`ResolvedCrossChainOrder`].
@@ -130,9 +188,100 @@ mod tests {
             2100000000,
         );
 
+        assert!(order.validate().is_ok());
         let recovered = order.to_cross_chain_intent().unwrap();
         assert_eq!(recovered.input_amount, intent.input_amount);
         assert_eq!(recovered.recipient, intent.recipient);
+    }
+
+    #[test]
+    fn validation_rejects_empty_settlement_contract() {
+        let intent = sample_intent();
+        let mut order = Erc7683CrossChainOrder::from_cross_chain_intent(
+            &intent,
+            "   ".into(),
+            "SP2PABAF9...".into(),
+            42,
+            1,
+            1000,
+            2000,
+        );
+
+        assert_eq!(order.validate(), Err(Erc7683Error::EmptySettlementContract));
+    }
+
+    #[test]
+    fn validation_rejects_empty_swapper() {
+        let intent = sample_intent();
+        let mut order = Erc7683CrossChainOrder::from_cross_chain_intent(
+            &intent,
+            "0xSettlement".into(),
+            "".into(),
+            42,
+            1,
+            1000,
+            2000,
+        );
+
+        assert_eq!(order.validate(), Err(Erc7683Error::EmptySwapper));
+    }
+
+    #[test]
+    fn validation_rejects_invalid_deadlines() {
+        let intent = sample_intent();
+
+        // Zero open_deadline
+        let order_zero = Erc7683CrossChainOrder::from_cross_chain_intent(
+            &intent,
+            "0xSettlement".into(),
+            "0xSwapper".into(),
+            1,
+            1,
+            0,
+            100,
+        );
+        assert_eq!(
+            order_zero.validate(),
+            Err(Erc7683Error::InvalidDeadlines {
+                open_deadline: 0,
+                fill_deadline: 100
+            })
+        );
+
+        // Inverted deadlines
+        let order_inverted = Erc7683CrossChainOrder::from_cross_chain_intent(
+            &intent,
+            "0xSettlement".into(),
+            "0xSwapper".into(),
+            1,
+            1,
+            200,
+            100,
+        );
+        assert_eq!(
+            order_inverted.validate(),
+            Err(Erc7683Error::InvalidDeadlines {
+                open_deadline: 200,
+                fill_deadline: 100
+            })
+        );
+    }
+
+    #[test]
+    fn validation_rejects_empty_and_corrupted_order_data() {
+        let mut order = Erc7683CrossChainOrder {
+            settlement_contract: "0xSettlement".into(),
+            swapper: "0xSwapper".into(),
+            nonce: 1,
+            origin_chain_id: 1,
+            open_deadline: 100,
+            fill_deadline: 200,
+            order_data: vec![],
+        };
+        assert_eq!(order.validate(), Err(Erc7683Error::EmptyOrderData));
+
+        order.order_data = b"not-valid-json".to_vec();
+        assert!(matches!(order.validate(), Err(Erc7683Error::InvalidOrderData(_))));
     }
 
     #[test]
@@ -151,19 +300,5 @@ mod tests {
         assert!(!order.is_open(150));
         assert!(order.is_fillable(150));
         assert!(!order.is_fillable(250));
-    }
-
-    #[test]
-    fn invalid_order_data_returns_none() {
-        let order = Erc7683CrossChainOrder {
-            settlement_contract: "0x".into(),
-            swapper: "0x".into(),
-            nonce: 0,
-            origin_chain_id: 0,
-            open_deadline: 0,
-            fill_deadline: 0,
-            order_data: b"not-valid-json".to_vec(),
-        };
-        assert!(order.to_cross_chain_intent().is_none());
     }
 }
