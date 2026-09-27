@@ -112,7 +112,7 @@ public evidence and a versioned artifact revision.
 | **Silent Payments (G-05)** | 35 | 25 | 20 | **80** | **Implemented** (SDK) |
 | **RGB Integration (CXIP-20)** | 35 | 20 | 30 | **85** | **Fail-closed adapter boundary** |
 | **Fuzz Testing (CON-1332 / GitHub #147)** | 30 | 30 | 20 | **80** | **Implemented** (4 bounded targets; weekly/manual CI) |
-| **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
+| **BitVMX (G-44)** | 40 | 15 | 30 | **85** | **Implemented** (Protocol Primitive) |
 | **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
 | **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
 
@@ -130,6 +130,8 @@ public evidence and a versioned artifact revision.
 11. **Fuzz Testing**: Resolved (CON-1332 / GitHub #147). A weekly/manual cargo-fuzz regression workflow covers intent parsing, MuSig2 aggregation, anchoring receipt deserialization, and proof-request deserialization plus structural validation; when an optional proof envelope is present, its fail-closed contract and policy validation also runs. The proof-request target does not claim cryptographic BitVM2 proof verification; see [docs/FUZZING.md](FUZZING.md).
 12. **SDK Integration**: Resolved (CON-1420). Added conxius-enclave-sdk as optional dependency.
 13. **Stacks Nakamoto & sBTC Adapter**: Resolved (CON-709). Parameter validation for peg-in/peg-out and sBTC intent creation hardened with fail-closed checks for zero satoshi amounts and invalid address inputs.
+14. **BitVMX**: Resolved (G-44). Implemented `src/protocol/bitvmx.rs` with `BitVmxError` taxonomy, `BitVmxInstance` challenge-response state machine, fail-closed validation, timeout handler, and sub-segment trace proof verification (`verify_subsegment_proof_checked`).
+
 
 ## Open GitHub Issues (Cross-Repository)
 
