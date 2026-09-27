@@ -161,3 +161,9 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
   - **Enterprise Gateway Tier (`conxian-gateway` & Enterprise Adapters)**: SLAs offered exclusively under signed B2B commercial contracts. Scope is strictly limited to integration support, configuration assistance, and business-hour ticket response, excluding L1 network congestion and vendor hardware deprecations.
 - **Force Majeure & External Exclusions**: Formally exclude L1 Bitcoin congestion, Stacks network finality stalls, AWS Nitro Enclave / Android StrongBox TEE firmware deprecations, and upstream consensus halts from all SLA liability.
 - **Automated Guardrails & Verification**: Automated CI/CD guardrails, strict staging, and 100% test coverage protect core release candidate branches before human intervention.
+
+## 24. Research Update (2026-09-26 Session 82 Synthesis): BitVMX Protocol Primitive Implementation
+- **BitVMX Primitive Hardening (G-44)**: Implemented protocol primitive in `src/protocol/bitvmx.rs` with `BitVmxError` typed taxonomy (`InvalidParameters`, `InvalidPubkey`, `InvalidStepIndex`, `InvalidProofLength`, `StateMismatch`, `TimeoutNotReached`, `ExecutionTraceVerificationFailed`, `EmptyTraceHash`).
+- **Challenge-Response State Machine**: Implemented `ChallengeState` lifecycle enum (`Initialized`, `Challenged`, `Responded`, `Resolved`, `TimedOut`) and `BitVmxInstance` bisection challenge-response manager.
+- **Fail-Closed Subsegment Proof Verification**: Implemented deterministic step trace verification (`verify_subsegment_proof_checked()`) and timeout checking (`check_timeout()`).
+- **System Metrics**: 287 total Rust workspace tests passing (155 core unit/doc tests) and 70 Python verification guard tests passing cleanly.
