@@ -14,6 +14,8 @@ fuzz_target!(|data: &[u8]| {
             isin: Some(s.to_string()),
             conxian_asset_id: s.to_string(),
         };
+        let _ = instrument.validate();
         let _ = IntentManager::resolve_fdc3_intent(&instrument, 100, s);
+        let _ = IntentManager::resolve_fdc3_intent_checked(&instrument, 100, s);
     }
 });
