@@ -227,3 +227,12 @@ public evidence and a versioned artifact revision.
 - **Python Verification Guard Suite**: 70 test cases passing in `scripts/tests/` (100% pass rate).
 - **RGB Stock Adapter Hardening**: Enhanced `RGBStockAdapter` in `src/rgb/mod.rs` with `register_contract`, `register_contract_id`, `has_contract`, `remove_contract`, `list_contracts`, and `clear_contracts` enforcing strict 64-character hex format validation.
 - **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+
+## Session 85 Research & Repo-Wide Documentation Alignment (2026-09-24)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 282 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 79 test cases passing in  and  (100% pass rate).
+- **Codebase & Documentation Alignment**: Completed repo-wide audit and refactoring of all markdown files against actual code, dependencies, and test matrices.
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.

@@ -123,7 +123,7 @@ cargo package -p lib-conxian-core-enclave --locked --allow-dirty --no-verify
 
 The package check is intentionally explicit because the add-on's local Core
 dependency is also declared with the compatible published requirement
-`lib-conxian-core = "0.3.2"`; Cargo rewrites the path dependency to that
+`lib-conxian-core = "0.3.3"`; Cargo rewrites the path dependency to that
 registry requirement in the packaged manifest. It can complete only after
 Core `0.3.2` is available from the configured registry. Until then, Cargo
 fails closed during dependency resolution rather than accepting an older Core

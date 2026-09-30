@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - Hardened Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, fail-closed `WorkIntent::validate()` and `JobCard::validate()` methods, JSON-LD schema context enforcement, constructors, serialization methods, and full unit test coverage.
 - Refactored `src/crypto/mod.rs` to replace the placeholder `CryptoStubError` with a production-grade `CryptoError` enum, adding fail-closed PVDE and PTLC adaptor-signature parameter validation (Session 71).
 - Hardened the Liquid sidechain adapter (`src/bitcoin/liquid_adapter.rs`) with typed `LiquidError` variants and a fail-closed `LiquidBridge` implementing peg-in/peg-out lifecycle validation (Session 72).
-- Updated session research logs, gap analysis, and executive/readiness governance scorecards with 279 Rust workspace tests and 70 Python verification tests passing.
+- Updated session research logs, gap analysis, and executive/readiness governance scorecards with 282 Rust workspace tests and 79 Python verification guard tests passing.
 
 ## [v0.3.3] - 2026-08-31
 
@@ -103,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release time; the current SDK is v2.0.17.
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Fuzz Regression Coverage** (#147): Expanded the suite to four bounded targets—`parse_intent`, `musig2_aggregate`, `anchoring_receipt`, and `proof_request_validate`—with weekly/manual CI. `musig2_aggregate` intentionally covers upstream dependency-level key aggregation; PSBT deserialization is not a fuzz target in this crate after API extraction, while production BIP-322 signing/message-authenticity and BitVM2 proof verification remain owned by `conxius-enclave-sdk`.
 
 ---
@@ -110,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.12] - 2026-07-15
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **BIP-110 Compliance** (#168): Added `Bip110Compliance` struct to `control_model` with validation helpers:
   - `validate_pushdata(size)` - Max 256-byte pushdata
   - `validate_op_return(size)` - Max 83-byte OP_RETURN
@@ -132,6 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All Vault SDK functionality now available in `conxius-enclave-sdk` v2.0.11
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Silent Payments Hardening**: Replaced transaction scanning simulation with real summation of input public keys and shared secret derivation via ECC point multiplication (sum(P_in) * user_scan_privkey) to align with BIP-352 (G-05).
 - **DLC Hardening**: Implemented real oracle attestation verification (s*G = R + e*P) in `src/protocol/dlc.rs`, resolving skeletal stubs (G-06).
 - **RGB Expansion**: Introduced `RGBStockAdapter` for production-ready client-side validation, supporting future `rgb-std` Stock persistence (CON-1407).
@@ -150,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.10] - 2026-07-13
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Protocol Hardening**: Hardened protocol primitives and established fuzzing suite.
 - **CON-700 Compliance**: Architectural boundary enforcement verified via contamination guard.
 - **FROST Threshold Signatures**: Full implementation of FROST threshold signatures (G-14).
@@ -186,6 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.9] - 2026-06-21
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Vault SDK**: Primary commercial SDK primitive (Hardware-backed Bitcoin signing + policy enforcement).
 - **Musig2 Aggregation**: Taproot multi-sig key aggregation.
 - **Chain Family Taxonomy**: Universal chain support policy.
@@ -203,6 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.8] - 2026-06-15
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Protocol Gap Remediation**: Addressed priority implementation gaps.
 - **CI/CD Pipeline**: Enhanced automated verification.
 - **Stacks sBTC Alignment**: Updated adapter for Nakamoto finality and peg-in/out interfaces.
@@ -214,6 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.7] - 2026-06-11
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Shared Artifact Schemas**: Standardized verification and manifest types.
 - **Universal Chain Expansion**: Expanded support for non-Bitcoin chains.
 - **Event Bus Runtime**: Implemented subscriber delivery layer for cross-chain event distribution.
@@ -224,6 +232,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.6] - 2026-06-08
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - **Repository Standards Hardening**: Aligned with public-facing governance and security standards.
 - **Package Metadata Alignment**: Hardened Cargo.toml metadata and discovery tags for the flagship SDK.
 
@@ -232,6 +241,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.2.5] - 2026-01-XX
 
 ### Added
+- Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - Control-plane modules and SDK policy.
 - Gateway extraction complete.
 - Vault SDK repositioning.

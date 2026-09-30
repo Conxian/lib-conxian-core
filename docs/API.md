@@ -9,7 +9,7 @@ This library provides the Rust-native API for Conxian protocol primitives. It is
 
 ## 2. Core Modules
 
-### v0.3.0 Breaking-Release Migration
+### v0.3.x Breaking-Release Migration
 
 Version `0.3.0` intentionally changes the fail-closed verifier APIs from the
 `0.2.12` baseline:
