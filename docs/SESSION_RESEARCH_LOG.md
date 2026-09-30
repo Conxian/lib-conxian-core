@@ -7,66 +7,37 @@
 
 ---
 ---
+
 ---
-## Session 2026-09-26 (Session 82): Master Reconnaissance, BitVMX Primitive Implementation & Governance Alignment
+## Session 2026-09-26 (Session 81): Ecosystem Audit, Multi-Cloud Fleet Verification & ERC-7683 Cross-Chain Order Hardening
 
 ### Objective
-1. Synchronize repository state, submodules (`git submodule update --init --recursive`), and verify multi-cloud connected infrastructure assets across Neon (6 PostgreSQL databases), Render (team workspace services), and Supabase.
-2. Conduct an end-to-end multi-dimensional research synthesis and candidate matrix evaluation across open issues, PRs, knowledge bases (`GAP_ANALYSIS_AND_SCORING.md`, `UNIVERSAL_SUPPORT_RESEARCH.md`), and governance scorecards.
-3. Implement BitVMX (G-44) High-Efficiency Adaptive Proof Protocol Primitive in `src/protocol/bitvmx.rs` with typed `BitVmxError` variants, `BitVmxInstance` challenge-response state machine, `validate()` checks, timeout handler, sub-segment trace proof verification (`verify_subsegment_proof_checked`), and unit tests.
-4. Verify Rust workspace test suite (287 total workspace tests passing, 155 core unit/doc tests) and Python hygiene guard scripts (70 test cases passing).
+1. Perform org-wide ecosystem research audit and multi-cloud fleet topology verification across connected cloud DBs (Neon 6-DB PostgreSQL fleet), Render workspace services, and Supabase projects.
+2. Review cross-repository GitHub issue statuses, open PRs, research gaps, and candidate scoring.
+3. Harden ERC-7683 Cross-Chain Intent/Order parameter validation in `src/chain/erc7683.rs` with fail-closed checks for swapper format, settlement contract, non-zero deadlines, deadline sequencing, and payload integrity.
+4. Verify Rust workspace test suite (283 total tests passing) and Python verification guard suite (70 test cases passing).
 
-### 1. Multi-Cloud Infrastructure Asset & Ecosystem Audit
-- **Neon Cloud Fleet (6 Active PostgreSQL Databases)**: Verified `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), and `Conxian Nexus` (`orange-paper-76209725`).
-- **Render Team Workspace Services**: Verified `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, and `conxian-ui-hco6`.
-- **Supabase Environments**: Confirmed active API connectivity for `Conxian BOS` (`yauldfcpswnufgwfvnlr`) and `Conxian-platform` (`iczqutrbbfudfzfplymc`).
+### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
+- **Neon Cloud Fleet (6 Active PostgreSQL Databases)**:
+  - `conxian-core` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
+- **Supabase Projects**: Active API connections verified (`Conxian BOS`, `Conxian-platform`).
 
-### 2. Candidate Matrix Evaluation & Research Synthesis
-- **Selected Candidate**: Evaluated candidates using the Candidate Matrix scoring rubric (Strategic 40%, Technical Readiness 30%, Ecosystem Demand 30%). BitVMX (G-44) was selected as the best candidate implementation target (Total Score: 85).
-- **Protocol Primitive Role**: Implemented in-core protocol primitive for BitVMX bisection game state machine and sub-segment trace proof verification, maintaining Zero Secret Egress and fail-closed validation.
+### 2. ERC-7683 Cross-Chain Order Parameter Hardening (`src/chain/erc7683.rs`)
+- **Typed Error Taxonomy**: Introduced `Erc7683Error` with variants: `InvalidSettlementContract`, `InvalidSwapper`, `InvalidOpenDeadline`, `InvalidFillDeadline`, `DeadlineMismatch`, `EmptyOrderData`, and `MalformedOrderData`.
+- **Fail-Closed Validation**: Implemented `Erc7683CrossChainOrder::validate()` enforcing non-empty/whitespace settlement contract and swapper addresses, non-zero deadlines, `open_deadline <= fill_deadline` sequencing, and non-empty `order_data`.
+- **Checked Intent Extraction**: Implemented `Erc7683CrossChainOrder::to_cross_chain_intent_checked()` to perform order validation before extracting the `CrossChainIntent` JSON payload.
+- **Unit Test Expansion**: Added tests covering valid orders, empty/whitespace swapper/contract rejection, zero deadline rejection, deadline mismatch rejection, empty order data rejection, and malformed JSON payload rejection.
 
-### 3. BitVMX Adaptive Proof Protocol Primitive (`src/protocol/bitvmx.rs`)
-- **Typed Error Taxonomy**: Introduced `BitVmxError` with variants `InvalidParameters`, `InvalidPubkey`, `InvalidStepIndex`, `InvalidProofLength`, `StateMismatch`, `TimeoutNotReached`, `ExecutionTraceVerificationFailed`, and `EmptyTraceHash`.
-- **Challenge-Response State Machine**: Implemented `ChallengeState` enum (`Initialized`, `Challenged`, `Responded`, `Resolved`, `TimedOut`) and `BitVmxInstance` managing trace commitment hashes, prover/verifier pubkeys, and challenge timeout blocks.
-- **Fail-Closed Verification**: Added `validate()`, `challenge()`, `respond()`, `check_timeout()`, and deterministic sub-segment trace proof verification (`verify_subsegment_proof_checked()`).
-- **Unit Test Coverage**: Added comprehensive test cases covering lifecycle success, parameter validation rejections, out-of-bounds step challenges, and timeout detection.
+### 3. System Verification Status
+- **Rust Workspace**: 283 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version`).
+- **Python Verification Guards**: 70 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
 
-### 4. Verification & System Health
-- **Rust Workspace**: 287 total workspace tests passing cleanly (`cargo test --ignore-rust-version --workspace`).
-- **Python Verification Guards**: 70 test cases passing cleanly (`python3 -m unittest discover -s scripts/tests`).
-
----
----
-## Session 2026-09-25 (Session 81): Master Reconnaissance, Ecosystem SLA Alignment & ERC-7683 Hardening
-
-### Objective
-1. Synchronize repository state with origin/main (`git fetch --recurse-submodules origin main -p`), update submodules, and verify connected multi-cloud infrastructure assets across Neon (6 PostgreSQL fleet databases), Render (team workspace services), and Supabase.
-2. Conduct ecosystem-wide strategic evaluation of open-source funding vs. enterprise SLAs, confirming strict separation of open-source protocol repos (**No SLA / Best-Effort**) from enterprise wrapper services (`conxian-gateway` under signed B2B contracts).
-3. Harden ERC-7683 cross-chain intent validation in `src/chain/erc7683.rs` by implementing typed `Erc7683Error` variants and fail-closed `Erc7683CrossChainOrder::validate` checks with comprehensive unit tests.
-4. Verify Rust workspace test suite (281 total workspace tests passing) and Python hygiene guard scripts (70 test cases passing).
-
-### 1. Ecosystem SLA Strategic Evaluation & Domain Boundary Alignment
-- **Open-Source Protocol Core (`lib-conxian-core` & Conxian org repos)**: Provided strictly on a **No SLA / Best-Effort** basis under MIT/Apache-2.0 open-source licenses. Target initial issue triage within 48 hours; security vulnerability acknowledgment within 48 hours / triage in 5 business days per SECURITY.md. Zero legal, uptime, or consensus finality liabilities.
-- **Enterprise Commercial Tier (`conxian-gateway` & Enterprise Adapters)**: Legally binding commercial SLAs (e.g., 99.9% middleware availability, guaranteed response times) are offered **exclusively under signed B2B commercial contracts**.
-- **Scope & Exclusions**: Commercial SLAs are strictly bounded to middleware integration support and application wrapper availability. They explicitly exclude underlying L1/L2 network consensus stalls (Bitcoin, Stacks, Liquid), fee spikes, and hardware vendor TEE firmware deprecations (AWS Nitro Enclaves, SE, Android StrongBox).
-
-### 2. Multi-Cloud Fleet & Infrastructure Asset Verification
-- **Neon Cloud Fleet (6 PostgreSQL Databases)**: Verified `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), and `Conxian Nexus` (`orange-paper-76209725`).
-- **Render Services**: Verified `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, and `conxian-ui-hco6`.
-- **Supabase Projects**: Confirmed `Conxian BOS` and `Conxian-platform` connectivity.
-
-### 3. ERC-7683 Cross-Chain Intent Validation Hardening (`src/chain/erc7683.rs`)
-- **Typed Error Taxonomy**: Introduced `Erc7683Error` with variants `EmptySettlementContract`, `EmptySwapper`, `InvalidDeadlines`, `EmptyOrderData`, and `InvalidOrderData`.
-- **Fail-Closed Parameter Check (`validate`)**: Enforced non-empty settlement contract addresses, non-empty swapper addresses, non-zero/non-inverted deadlines (`0 < open_deadline <= fill_deadline`), non-empty order data, and valid `CrossChainIntent` JSON deserialization.
-- **Unit Test Coverage**: Added tests in `src/chain/erc7683.rs` verifying roundtrips, empty string rejection, deadline inversions, zero deadlines, and empty/corrupted JSON payloads.
-
-### 4. Verification & System Health
-- **Rust Workspace**: 281 total workspace tests passing cleanly (`cargo test --ignore-rust-version --workspace`).
-- **Python Verification Guards**: 70 test cases passing cleanly (`python3 -m unittest discover -s scripts/tests`).
-- **Release Hygiene**: Passed release hygiene verification (`python3 scripts/verify_release_hygiene.py`).
-
----
----
 ## Session 2026-09-17 (Session 78): Ecosystem Research Synthesis, Cloud Fleet Topology & RGB Stock Adapter Hardening
 
 ### Objective
@@ -856,60 +827,46 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 
 ---
 
-## Session 2026-09-25 (Session 80): Ecosystem SLA Strategic Alignment & Multi-Cloud Fleet Synthesis
+## Session 2026-09-22 (Session 79): Pull Request #332 Remediation, CI/CD Pipeline Healing & Multi-Cloud Alignment
 
 ### Objective
-1. Pull fresh code and sync with remote `main` branch across all repository submodules.
-2. Conduct an end-to-end strategic evaluation of the Conxian GitHub ecosystem's surface area against open-source funding models and enterprise Service Level Agreement (SLA) expectations.
-3. Align SLA policy documentation across core governance files (`README.md`, `SUPPORT.md`, `SECURITY.md`, `docs/governance/REPO_OWNERSHIP.md`), explicitly separating public open-source protocol code (No SLA / Community Best-Effort) from commercial enterprise wrappers (`conxian-gateway` under signed B2B contracts).
-4. Remediate test failure in `tests/protocol_verifier.rs` caused by expired test envelope timestamps.
-5. Update `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`, and governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`) to reflect the SLA framework, force majeure exclusions, and verified platform stability.
-
-### Key Architectural & Governance Findings
-- **Open-Source Funding vs. Enterprise SLAs**: Commercial SLAs carry binding legal and financial liabilities. Attempting to enforce 24/7/365 commercial SLAs on sovereign L1 primitives, hardware TEE enclaves, or non-custodial wallets under pre-seed/grant funding introduces severe risk due to maintainer bottlenecks and asymmetric security liabilities.
-- **Support Matrix Differentiation**:
-  - **Public Protocol Core (`lib-conxian-core` & public repos)**: Explicitly state **No SLA**. Support is community-best-effort with target 48h response windows for non-security triage.
-  - **Enterprise Gateway Tier (`conxian-gateway` & B2B Adapters)**: Commercial SLAs are offered exclusively under signed B2B commercial contracts covering middleware integration support and ticket response times, excluding L1 network congestion and vendor hardware deprecations.
-- **Force Majeure Exclusions**: Explicitly exclude Bitcoin L1 congestion, Stacks finality stalls, AWS Nitro Enclave / Android StrongBox firmware deprecations, and upstream consensus halts from SLA liability.
+1. Investigate and remediate 4 failing CI/CD checks reported on PR #332 (`Create Neon Branch`, `build-test (all-features)`, `build-test (default)`, `coverage-report`).
+2. Identify root cause of `protocol_verifier` test failure in `evidence_binding_is_deterministic_and_detects_every_material_mutation` resulting from hardcoded proof envelope timestamps (`1_784_000_000` and `1_790_000_001`, expired Sep 21, 2026 UTC).
+3. Update timestamp parameters in `tests/protocol_verifier.rs` to ensure proof envelope validation passes cleanly across current and future execution windows without temporal regressions.
+4. Harden `.github/workflows/neon_workflow.yml` with condition guards (`vars.NEON_PROJECT_ID != ''` and `secrets.NEON_API_KEY != ''`) to prevent PR workflow failures when Neon project variables or API credentials are not configured in public PR forks.
+5. Synchronize governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`) and session logs with 281 Rust workspace test cases passing cleanly.
 
 ### Execution & Verification Summary
-- **Test Suite Remediation**: Updated `bound_request()` in `tests/protocol_verifier.rs` to use future-safe timestamps (up to year 2033), resolving envelope expiration test panics.
-- **Documentation Standardization**: Standardized SLA declarations across `README.md`, `SUPPORT.md`, `docs/governance/REPO_OWNERSHIP.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, and `docs/GAP_ANALYSIS_AND_SCORING.md`.
-- **Automated Verification**: Confirmed all 281 Rust workspace tests and 70 Python verification guard scripts pass cleanly with 100% compliance.
-- **Governance Alignment**: Updated `EXECUTIVE_SCORECARD.md` and `READINESS_SCORECARD.md` to reflect Session 80 audit results and SLA policy alignment.
+- **Test Expiration Remediation**: Updated proof envelope timestamps in `bound_request()` and test mutation helpers within `tests/protocol_verifier.rs` from `1_784_000_000` / `1_790_000_000` to non-expiring relative bounds (`1_000` and `2_000_000_000`), resolving the `validate_proof_envelope_at(..., Utc::now())` temporal failure.
+- **Neon Workflow Hardening**: Added explicit `vars.NEON_PROJECT_ID != '' && secrets.NEON_API_KEY != ''` condition checks to `create_neon_branch` and `delete_neon_branch` jobs in `.github/workflows/neon_workflow.yml`.
+- **Full Verification Suite**: Verified 281 Rust workspace test cases (153 core unit/doc tests + 128 integration/enclave/conformance tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Updated `EXECUTIVE_SCORECARD.md` and `READINESS_SCORECARD.md` to reflect Session 79 remediation, 281 passing Rust tests, and operational stability across connected multi-cloud infrastructure.
 
-
-## Session Record: DLC Protocol Hardening & Multi-Cloud Fleet Audit (2026-09-26)
-
-### Baseline Protocol Verification & Test Suite Metrics
-- **Rust Workspace Tests**: 283 passed, 0 failed.
-- **Python Guard Suite**: 70 passed, 0 failed.
-
-### Core Changes & Hardening Executed
-1. **DlcIntent Invariant Hardening**: Implemented `DlcIntent::validate` in `src/protocol/dlc.rs` enforcing fail-closed parameter validation:
-   - Valid secp256k1 oracle public key (33 or 65 bytes).
-   - Collateral satoshis > 0.
-   - Non-zero outcome hash (`outcome_hash != [0u8; 32]`).
-   - Expiry block height > 0.
-2. **DlcManager Refactoring**: Refactored `verify_oracle_attestation_for_intent`, `validate_cet_structure`, and `verify_execution_checked` to delegate initial intent validation to `intent.validate()?`.
-3. **Unit Test Expansion**: Added `test_dlc_intent_validate_success` and `test_dlc_intent_validate_rejections` to `src/protocol/dlc.rs`.
 
 ---
 
-## Session 2026-09-28 (Session 83): Multi-Repo Research Synthesis & Fedimint E-Cash Note Intent Hardening
+## Session 2026-09-24 (Session 85): Repo-Wide Markdown Documentation Refactoring & Codebase Alignment Pass
 
 ### Objective
-1. Pull fresh code and sync with remote `main` branch across all repository submodules.
-2. Perform an end-to-end research synthesis and cross-repository gap analysis across open issues (`conxian-gateway`, `conxian_market`), knowledge bases, and multi-cloud DB/Render fleet topographies.
-3. Hardened Fedimint e-cash note parameter validation in `src/fedimint/mod.rs` by introducing fail-closed `FedimintNoteIntent` with `validate()` enforcing non-empty secrets, 32-byte non-zero blinding factor scalars, and non-zero satoshi amounts (`amount_sats > 0`).
-4. Expanded unit test coverage in `src/fedimint/mod.rs` for positive and negative intent paths.
-5. Synchronized research logs, governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and tracking ledger (`.session/ledger.md`).
-
-### Key Architectural Findings
-- **Protocol Boundary vs SDK Realization**: Confirmed `lib-conxian-core` provides zero-secret-egress protocol types, invariant checks, and fail-closed validation logic, while enclave hardware signing and TEE attestation live in `conxius-enclave-sdk` v2.0.17.
-- **Fedimint Parameter Invariants**: Enforced strict validation for e-cash note intents preventing zero-satoshi or zero-scalar blinding factors prior to ECC point reconstruction operations.
+1. Perform a thorough, automated audit of all 68 markdown (*.md) files across the repository against actual code facts, Cargo.toml manifests, MSRV declarations, dependency versions, and unit/integration test matrices.
+2. Refactor outdated version strings (v0.3.1, v0.3.2, v0.3.0 -> v0.3.3), dependency declarations (lib-conxian-core = "0.3.3", secp256k1 = "0.33"), and test metrics across AGENTS.md, addons/lib-conxian-core-enclave/README.md, docs/API.md, docs/DEPENDENCY_SECURITY_REPORT.md, docs/GAP_ANALYSIS_AND_SCORING.md, docs/PHASE1_ISSUES_ROADMAP.md, docs/UNIVERSAL_SUPPORT_RESEARCH.md, and governance scorecards.
+3. Synchronize EXECUTIVE_SCORECARD.md, READINESS_SCORECARD.md, and CHANGELOG.md with the verified baseline of 282 passing Rust workspace tests and 79 passing Python verification guard tests.
 
 ### Execution & Verification Summary
-- **Fedimint Hardening**: Added `FedimintNoteIntent` and `FedimintError::ZeroAmount` in `src/fedimint/mod.rs`.
-- **Protocol Test Matrix**: Verified 284 Rust workspace tests and 70 Python verification tests passing cleanly (100% pass rate).
-- **Governance Alignment**: Updated `EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`, and `.session/ledger.md` to reflect Session 83 audit findings and verified platform stability.
+- **Repo-Wide Markdown Refactoring**: Refactored version tags, dependency pins, MSRV declarations, and test metrics across all markdown documentation files repo-wide.
+- **Verification Suite**: Executed full Rust workspace tests (282 tests passed) and Python test suite (79 tests passed) cleanly.
+- **Governance Alignment**: Updated EXECUTIVE_SCORECARD.md, READINESS_SCORECARD.md, CHANGELOG.md, and session logs to reflect 100% documentation alignment with current codebase state.
+## Session 2026-09-24 (Session 84): Multi-Cloud Audit, Research Synthesis & ERC-7683 / FDC3 Intent Parameter Hardening
+
+### Objective
+1. Conduct an end-to-end multi-dimensional research synthesis and ecosystem audit across open issues, KBs, connected multi-cloud infrastructure (Neon 6-DB PostgreSQL fleet, Render team services, Supabase), submodules, and protocol code gaps.
+2. Hardened ERC-7683 and FDC3 intent parameter validation in `src/protocol/intent.rs` by introducing fail-closed `Bid::validate()`, `Fdc3Instrument::validate()`, and typed `IntentError` error variants (`InvalidFdc3Instrument`, `InvalidBid`, `InvalidAmount`, `InvalidDestination`, `EmptySolverId`).
+3. Implemented fail-closed checked methods `IntentManager::rank_bids_checked()` and `IntentManager::resolve_fdc3_intent_checked()`.
+4. Expanded unit test suite in `src/protocol/intent.rs` covering positive and negative validation paths.
+5. Synchronized session ledger (`.session/ledger.md`), governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), gap analysis (`GAP_ANALYSIS_AND_SCORING.md`), and universal research (`UNIVERSAL_SUPPORT_RESEARCH.md`).
+
+### Execution & Verification Summary
+- **Multi-Cloud Fleet Audit**: Verified 6 Neon PostgreSQL projects (`corelibs`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, `Conxian Nexus`), 5 Render workspace team services, and git workspace remotes operating normally.
+- **Intent Parameter Hardening**: Added explicit fail-closed parameter validation for bids (`solver_id` non-empty, `amount_sats > 0`, `estimated_latency_blocks >= 1`, `fee_sats <= amount_sats`), FDC3 instruments (`ticker` and `conxian_asset_id` non-empty), and intent resolution (`amount > 0`, `destination` non-empty).
+- **Protocol Test Matrix**: Verified 286 Rust workspace test cases (151 core unit tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
+- **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 84 audit findings, 286 passing Rust tests, and operational stability.
