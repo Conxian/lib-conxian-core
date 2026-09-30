@@ -39,8 +39,10 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-# Pinned to Git tag v2.0.17; manifest version 2.0.17. version field required for crates.io publish.
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", tag = "v2.0.17", version = "2.0.17", default-features = false, optional = true }
+# Pinned to Git rev b3d79d9c5aca on the SDK `main` branch (supersedes tag v2.0.17, which
+# predates the Phase 2 `enclave::threshold` module). The `version` field is required for
+# crates.io publish and must match the SDK manifest version.
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", rev = "b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43", version = "2.0.17", default-features = false, optional = true }
 
 [features]
 default = []
@@ -80,6 +82,12 @@ sdk-groth16 = ["conxius-enclave-sdk/groth16"]
 sdk-cryptoki = ["conxius-enclave-sdk/cryptoki"]
 # WebAuthn/FIDO2 attestation
 sdk-webauthn = ["conxius-enclave-sdk/webauthn"]
+
+# -- Development/test simulator boundary (deliberately NOT part of `full-sdk`) --
+# Mirrors the SDK's `development-simulators` / `mock-cloud-enclave` opt-ins so the core
+# can exercise the SDK's simulator surface in tests without touching production.
+sdk-development-simulators = ["conxius-enclave-sdk/development-simulators"]
+sdk-mock-cloud-enclave = ["conxius-enclave-sdk/mock-cloud-enclave"]
 
 # Meta-feature: enable ALL SDK capabilities
 full-sdk = [

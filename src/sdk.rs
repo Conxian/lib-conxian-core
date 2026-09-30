@@ -12,11 +12,11 @@
 //! | Nexus | `sdk-nexus` | nexus::{fedimint, fedimint_crypto, roast} | 3 |
 //! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support, wasm_bindings | 6 |
 //! | Signing | `sdk-signing` | signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml} | 13 |
-//! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, trust, trust_contracts, verifiers | 11 |
+//! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, threshold, trust, trust_contracts, verifiers | 12 |
 //! | Rails | `sdk-rails` | (none — all `pub(crate)` in SDK) | 0 |
 //!
 //! **Feature-gated modules (enabled via the matching `sdk-*` crypto feature):**
-//! - `frost_crypto`: requires `sdk-frost-crypto` (→ SDK `frost-crypto`)
+//! - `frost_crypto` and `enclave::threshold`: require `sdk-frost-crypto` (→ SDK `frost-crypto`)
 //! - `fedimint_crypto`: requires `sdk-fedimint-crypto` (→ SDK `fedimint-crypto`)
 //! - `wasm_bindings`: `#[cfg(target_arch = "wasm32")]` in SDK
 //! - `replay_store_file`, `nitro`, `verifiers::{nitro_trust, nitro_verifier}`: `#[cfg(not(target_arch = "wasm32"))]` in SDK
@@ -137,10 +137,12 @@ pub mod signing {
 #[cfg(feature = "enclave")]
 pub mod enclave_sdk {
     pub use conxius_enclave_sdk::enclave::android_authorization;
-    // #[cfg(any(test, feature = "development-simulators"))] in SDK:
-    // pub use conxius_enclave_sdk::enclave::android_strongbox;
-    // pub use conxius_enclave_sdk::enclave::cloud;
+    // SDK dev/test boundary (mirrors `development-simulators`); NOT part of `full-sdk`.
+    #[cfg(feature = "sdk-development-simulators")]
+    pub use conxius_enclave_sdk::enclave::android_strongbox;
     pub use conxius_enclave_sdk::enclave::attestation;
+    #[cfg(feature = "sdk-development-simulators")]
+    pub use conxius_enclave_sdk::enclave::cloud;
     pub use conxius_enclave_sdk::enclave::durable_replay;
     // #[cfg(not(target_arch = "wasm32"))] in SDK:
     #[cfg(not(target_arch = "wasm32"))]
@@ -150,6 +152,10 @@ pub mod enclave_sdk {
     pub use conxius_enclave_sdk::enclave::replay_guard;
     #[cfg(not(target_arch = "wasm32"))]
     pub use conxius_enclave_sdk::enclave::replay_store_file;
+    // `enclave::threshold` (ThresholdEnclaveManager, Phase 2 value-bearing threshold
+    // signing) is gated behind `frost-crypto` in the SDK; mirror that gate here.
+    #[cfg(feature = "sdk-frost-crypto")]
+    pub use conxius_enclave_sdk::enclave::threshold;
     pub use conxius_enclave_sdk::enclave::trust;
     pub use conxius_enclave_sdk::enclave::trust_contracts;
     pub use conxius_enclave_sdk::enclave::verifiers;
