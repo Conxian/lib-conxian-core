@@ -126,7 +126,9 @@ impl BitVmxInstance {
     /// Validate BitVMX instance parameters fail-closed.
     pub fn validate(&self) -> Result<(), BitVmxError> {
         if self.instance_id.trim().is_empty() {
-            return Err(BitVmxError::InvalidParameters("instance_id must not be empty"));
+            return Err(BitVmxError::InvalidParameters(
+                "instance_id must not be empty",
+            ));
         }
         if self.prover_pubkey.len() != 32 && self.prover_pubkey.len() != 33 {
             return Err(BitVmxError::InvalidPubkey("prover_pubkey"));
@@ -138,10 +140,14 @@ impl BitVmxInstance {
             return Err(BitVmxError::EmptyTraceHash);
         }
         if self.total_trace_steps == 0 {
-            return Err(BitVmxError::InvalidParameters("total_trace_steps must be > 0"));
+            return Err(BitVmxError::InvalidParameters(
+                "total_trace_steps must be > 0",
+            ));
         }
         if self.challenge_timeout_blocks == 0 {
-            return Err(BitVmxError::InvalidParameters("challenge_timeout_blocks must be > 0"));
+            return Err(BitVmxError::InvalidParameters(
+                "challenge_timeout_blocks must be > 0",
+            ));
         }
         Ok(())
     }
@@ -240,7 +246,10 @@ impl BitVmxInstance {
     /// Check whether a challenge has timed out without response.
     pub fn check_timeout(&mut self, current_block: u64) -> Result<bool, BitVmxError> {
         self.validate()?;
-        if let ChallengeState::Challenged { challenge_block, .. } = self.state {
+        if let ChallengeState::Challenged {
+            challenge_block, ..
+        } = self.state
+        {
             if current_block >= challenge_block + self.challenge_timeout_blocks {
                 self.state = ChallengeState::TimedOut;
                 return Ok(true);

@@ -25,7 +25,11 @@ pub struct FedimintNoteIntent {
 
 impl FedimintNoteIntent {
     /// Constructs a new `FedimintNoteIntent` with parameter checks.
-    pub fn new(secret: Vec<u8>, blinding_factor: Vec<u8>, amount_sats: u64) -> Result<Self, FedimintError> {
+    pub fn new(
+        secret: Vec<u8>,
+        blinding_factor: Vec<u8>,
+        amount_sats: u64,
+    ) -> Result<Self, FedimintError> {
         let intent = Self {
             secret,
             blinding_factor,

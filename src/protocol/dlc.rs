@@ -14,8 +14,6 @@ pub struct DlcIntent {
     pub expiry_block: u32,
 }
 
-
-
 impl DlcIntent {
     /// Validates internal intent invariants in a fail-closed manner.
     ///
@@ -272,7 +270,6 @@ mod tests {
     use super::*;
     use secp256k1::SecretKey;
 
-
     #[test]
     fn test_dlc_intent_validate_success() {
         let valid_pk = vec![0x02; 33];
@@ -288,23 +285,38 @@ mod tests {
 
         // Empty pubkey
         let intent = DlcManager::create_intent(&[], 100_000, outcome, 100);
-        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
 
         // Invalid pubkey bytes
         let intent = DlcManager::create_intent(&[0xff; 10], 100_000, outcome, 100);
-        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
 
         // Zero collateral
         let intent = DlcManager::create_intent(&valid_pk, 0, outcome, 100);
-        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
 
         // All-zero outcome hash
         let intent = DlcManager::create_intent(&valid_pk, 100_000, [0u8; 32], 100);
-        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
 
         // Zero expiry block
         let intent = DlcManager::create_intent(&valid_pk, 100_000, outcome, 0);
-        assert_eq!(intent.validate(), Err(DlcVerificationError::MalformedIntent));
+        assert_eq!(
+            intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
     }
 
     #[test]
@@ -545,6 +557,18 @@ mod additional_tests {
         // verify_execution_checked malformed intent check
         assert_eq!(
             DlcManager::verify_execution_checked(&empty_pk_intent, &[0x01; 32]),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+
+        // DlcIntent::validate test
+        assert_eq!(valid_intent.validate(), Ok(()));
+        assert_eq!(
+            empty_pk_intent.validate(),
+            Err(DlcVerificationError::MalformedIntent)
+        );
+        let zero_outcome_intent = DlcManager::create_intent(&valid_pk, 100_000, [0u8; 32], 100);
+        assert_eq!(
+            zero_outcome_intent.validate(),
             Err(DlcVerificationError::MalformedIntent)
         );
 
