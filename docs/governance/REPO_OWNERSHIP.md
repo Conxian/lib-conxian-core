@@ -1,26 +1,42 @@
-# Repository Ownership & Governance Boundaries
+# Repo ownership
 
-This document defines the ownership boundaries, classification, and governance structure for `lib-conxian-core` within the Conxian ecosystem.
+## Purpose
 
-## Classification
+`lib-conxian-core` is the canonical home of shared capability interfaces and safety primitives for the Conxian builder platform.
 
-`lib-conxian-core` is classified as **Primary Strategic Platform Core (Tier 1)**.
+## This repo owns
 
-## Ownership Scope
+- canonical capability interfaces
+- shared transaction intent models
+- cross-layer safety and verification primitives
+- signer policy abstractions
+- shared data structures used by multiple layer adapters
+- the versioned BIP-110 preflight request/result/error contract, including fixed-width byte
+  measurements, phase/source provenance checks, deterministic findings, and the 257-byte
+  Taproot control-block size boundary
 
-`lib-conxian-core` owns:
-- Core cryptographic primitives (MuSig2, FROST, BIP-340 Taproot, BIP-352 Silent Payments, PVDE, Adaptor Signatures)
-- Protocol models and intent serialization (FDC3, DLC, OP_CAT covenants, BitVM2/3, Fedimint ECC blinding, Stacks Nakamoto/sBTC, Liquid sidechain adapters, CJCS job cards, RGB stock contracts)
-- Verification facades and fail-closed validation engines
-- Universal chain adapter DTOs and transport capabilities
+## This repo does not own
 
-Downstream entities (such as `conxian-gateway`, `conxius-enclave-sdk`, `conxius-wallet`) depend on `lib-conxian-core` as a core library.
+- network adapters
+- provider-specific integration logic
+- wallet UX
+- runtime orchestration
+- consumer workflow logic
+- transaction parsing, script classification, Taproot commitment/cryptographic validation, and
+  downstream signing/broadcast enforcement
 
-## Support & SLA Expectations
+## Boundary rule
 
-- **Public Repository (Open Source):** No runtime, uptime, consensus finality, or protocol execution SLAs are provided for public code. Support is community-best-effort with target 48-hour response windows for non-security issues and 48h/5-day triage SLAs for security disclosures per [SUPPORT.md](../../SUPPORT.md) and [SECURITY.md](../../SECURITY.md).
-- **Enterprise Commercial Tier:** Legally binding commercial SLAs apply strictly to signed B2B commercial contracts covering enterprise middleware (`conxian-gateway`) and integration wrappers.
+If code is specific to Bitcoin mainnet, Lightning, Stacks, Rootstock, Liquid, or a provider/runtime adapter, it should live outside this repo unless it is strictly required as a stable interface or shared primitive.
 
-## Maintainer Paths & CODEOWNERS
+For CORE-005, Core defines only the serializable measurement contract and fail-closed size
+findings. SDK and Wallet adapters own construction, serialization, parsing, and classification;
+Gateway owns orchestration, persistence, routing, and external side effects. Downstream integration
+is not implied by the presence of the Core API.
 
-Critical architectural paths and release documentation are protected under [.github/CODEOWNERS](../../.github/CODEOWNERS).
+## Strategic role & Classification
+
+- **Category:** Primary Strategic Platform Core (Tier 1).
+- **Target Audience:** Protocol engineers, security auditors, SDK integrators, and system integrators building on the Conxian ecosystem.
+- **Support SLA:** 48-hour response for non-security issues and 48h/5-day triage SLA for security disclosures. See [SUPPORT.md](../../SUPPORT.md) and [SECURITY.md](../../SECURITY.md).
+- **Release Guidance:** Governed by strict fail-closed release verification policies. See [docs/RELEASE_PROCESS.md](../RELEASE_PROCESS.md).

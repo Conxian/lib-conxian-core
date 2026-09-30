@@ -1780,6 +1780,55 @@ dependencies = [
  "bdk_wallet",
  "bitcoin",
  "blake2",
+ "bs58",
+ "ciborium",
+ "der 0.8.2",
+ "ed25519-dalek",
+ "getrandom 0.2.17",
+ "getrandom 0.3.4",
+ "getrandom 0.4.3",
+ "hex",
+ "hmac 0.13.0",
+ "js-sys",
+ "jsonwebtoken",
+ "k256 0.14.0",
+ "lightning-invoice",
+ "musig2",
+ "p384",
+ "pbkdf2",
+ "quick-xml",
+ "rand 0.10.3",
+ "rand_core 0.10.1",
+ "reqwest",
+ "secp256k1 0.33.1",
+ "secrecy",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "sha2 0.11.0",
+ "subtle",
+ "thiserror 2.0.20",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "x509-cert",
+ "zeroize",
+]
+
+[[package]]
+name = "conxius-enclave-sdk"
+version = "2.0.17"
+source = "git+https://github.com/Conxian/conxius-enclave-sdk?rev=b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43#b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "alloy",
+ "async-trait",
+ "base64 0.23.1",
+ "bdk_wallet",
+ "bitcoin",
+ "blake2",
  "bls12_381",
  "bs58",
  "ciborium",
@@ -3479,7 +3528,7 @@ dependencies = [
  "base64 0.23.1",
  "bitcoin",
  "chrono",
- "conxius-enclave-sdk",
+ "conxius-enclave-sdk 2.0.17 (git+https://github.com/Conxian/conxius-enclave-sdk?rev=b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43)",
  "der 0.8.2",
  "getrandom 0.2.17",
  "hex",
@@ -3499,7 +3548,7 @@ dependencies = [
 name = "lib-conxian-core-enclave"
 version = "0.1.0"
 dependencies = [
- "conxius-enclave-sdk",
+ "conxius-enclave-sdk 2.0.17 (git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.17)",
  "hex",
  "lib-conxian-core",
  "serde",
@@ -3532,7 +3581,7 @@ dependencies = [
 name = "lib-conxian-core-sdk-compat"
 version = "0.0.0"
 dependencies = [
- "conxius-enclave-sdk",
+ "conxius-enclave-sdk 2.0.17 (git+https://github.com/Conxian/conxius-enclave-sdk?tag=v2.0.17)",
  "lib-conxian-core",
  "serde",
  "serde_json",
