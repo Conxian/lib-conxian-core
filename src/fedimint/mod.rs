@@ -12,6 +12,55 @@ pub struct FedimintMint {
     pub total_liquidity_sats: u64,
 }
 
+/// A structured intent representation for Fedimint e-cash note creation and verification.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct FedimintNoteIntent {
+    /// E-cash secret seed/payload bytes.
+    pub secret: Vec<u8>,
+    /// 32-byte blinding factor scalar bytes.
+    pub blinding_factor: Vec<u8>,
+    /// Note value in satoshis.
+    pub amount_sats: u64,
+}
+
+impl FedimintNoteIntent {
+    /// Constructs a new `FedimintNoteIntent` with parameter checks.
+    pub fn new(
+        secret: Vec<u8>,
+        blinding_factor: Vec<u8>,
+        amount_sats: u64,
+    ) -> Result<Self, FedimintError> {
+        let intent = Self {
+            secret,
+            blinding_factor,
+            amount_sats,
+        };
+        intent.validate()?;
+        Ok(intent)
+    }
+
+    /// Validates note intent parameters fail-closed.
+    pub fn validate(&self) -> Result<(), FedimintError> {
+        if self.secret.is_empty() {
+            return Err(FedimintError::EmptyInput("secret"));
+        }
+        if self.blinding_factor.len() != 32 {
+            return Err(FedimintError::InvalidLength {
+                field: "blinding factor",
+                expected: 32,
+                actual: self.blinding_factor.len(),
+            });
+        }
+        if self.blinding_factor.iter().all(|b| *b == 0) {
+            return Err(FedimintError::InvalidScalar("blinding factor"));
+        }
+        if self.amount_sats == 0 {
+            return Err(FedimintError::ZeroAmount);
+        }
+        Ok(())
+    }
+}
+
 pub struct FedimintAdapter;
 
 /// Typed failures for Fedimint note construction and verification.
@@ -33,6 +82,8 @@ pub enum FedimintError {
     InvalidPoint,
     /// A required secret/evidence input is empty.
     EmptyInput(&'static str),
+    /// A note amount in satoshis must be greater than zero.
+    ZeroAmount,
 }
 
 impl std::fmt::Display for FedimintError {
@@ -56,6 +107,7 @@ impl std::fmt::Display for FedimintError {
             Self::InvalidScalar(field) => write!(f, "invalid scalar for {field}"),
             Self::InvalidPoint => write!(f, "invalid compressed secp256k1 point"),
             Self::EmptyInput(field) => write!(f, "{field} must not be empty"),
+            Self::ZeroAmount => write!(f, "note amount in satoshis must be greater than zero"),
         }
     }
 }
@@ -81,16 +133,12 @@ impl FedimintAdapter {
     /// note primitive (G-16). This is not provider-backed mint verification.
     /// Uses ECC point addition: blinded_note = H(secret)*G + r*G
     pub fn blind_note(secret: &[u8], blinding_factor: &[u8]) -> Result<Vec<u8>, FedimintError> {
-        if secret.is_empty() {
-            return Err(FedimintError::EmptyInput("secret"));
-        }
-        if blinding_factor.len() != 32 {
-            return Err(FedimintError::InvalidLength {
-                field: "blinding factor",
-                expected: 32,
-                actual: blinding_factor.len(),
-            });
-        }
+        let intent = FedimintNoteIntent {
+            secret: secret.to_vec(),
+            blinding_factor: blinding_factor.to_vec(),
+            amount_sats: 1, // Default 1 sat for primitive-level blinding when unspecified
+        };
+        intent.validate()?;
 
         let mut hasher = Sha256::new();
         hasher.update(b"FEDIMINT-SECRET");
@@ -110,9 +158,6 @@ impl FedimintAdapter {
                     expected: 32,
                     actual: blinding_factor.len(),
                 })?;
-        if bf_bytes.iter().all(|byte| *byte == 0) {
-            return Err(FedimintError::InvalidScalar("blinding factor"));
-        }
 
         let bf_scalar = match Scalar::from_be_bytes(bf_bytes) {
             Ok(s) => s,
@@ -157,6 +202,39 @@ impl FedimintAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_fedimint_note_intent_validation() {
+        let secret = b"my-ecash-secret-32-bytes-long-now".to_vec();
+        let mut bf = vec![0u8; 32];
+        bf[31] = 1;
+
+        // Valid intent
+        let intent = FedimintNoteIntent::new(secret.clone(), bf.clone(), 1000).unwrap();
+        assert_eq!(intent.amount_sats, 1000);
+
+        // Rejections
+        assert_eq!(
+            FedimintNoteIntent::new(vec![], bf.clone(), 1000).unwrap_err(),
+            FedimintError::EmptyInput("secret")
+        );
+        assert_eq!(
+            FedimintNoteIntent::new(secret.clone(), vec![1u8; 31], 1000).unwrap_err(),
+            FedimintError::InvalidLength {
+                field: "blinding factor",
+                expected: 32,
+                actual: 31
+            }
+        );
+        assert_eq!(
+            FedimintNoteIntent::new(secret.clone(), vec![0u8; 32], 1000).unwrap_err(),
+            FedimintError::InvalidScalar("blinding factor")
+        );
+        assert_eq!(
+            FedimintNoteIntent::new(secret.clone(), bf.clone(), 0).unwrap_err(),
+            FedimintError::ZeroAmount
+        );
+    }
 
     #[test]
     fn test_fedimint_blinding_determinism() {
