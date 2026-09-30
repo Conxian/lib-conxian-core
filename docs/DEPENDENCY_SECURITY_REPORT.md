@@ -1,4 +1,4 @@
-# Security and Dependency Review Report (v0.2.8)
+# Security and Dependency Review Report (v0.3.3)
 
 ## 1. Overview
 This report summarizes the research into Dependabot alerts and general security posture for the `lib-conxian-core` repository. Last updated 2026-09-11.
@@ -14,11 +14,11 @@ This report summarizes the research into Dependabot alerts and general security 
 - **Known Permission Gap (Org-Level):** Automated enablement of built-in security features (Secret Scanning, Dependabot Security Updates) returns `403 Forbidden`. This is **not** a repo-level issue — it is caused by insufficient permissions on the GitHub App installation at the organization level. The app requires `Administration: Read & write` and `Secret scanning alerts: Read` scopes. This can only be resolved by an organization owner updating the GitHub App permissions in the organization settings. Until resolved, the `dependency-review.yml` workflow and manual dependency audits serve as compensating controls.
 
 ## 3. Dependency Audit (Manual)
-- **Test Status:** Verified stable via `cargo test --workspace` (279 Rust workspace tests + 70 Python verification guard tests passing).
+- **Test Status:** Verified stable via `cargo test --workspace` (282 Rust workspace tests + 79 Python verification guard tests passing).
 A dry-run update identifies 20 packages with compatible updates. Key strategic SDKs are prioritized:
 - **Bitcoin:** v0.32.9 (Aligned)
 - **BDK:** v0.30.2 (Aligned)
-- **secp256k1:** v0.31.1 (Aligned)
+- **secp256k1:** v0.33 (Aligned)
 - **actix-web:** 4.13.0 (Aligned)
 - **tokio:** 1.52.3 (Aligned)
 

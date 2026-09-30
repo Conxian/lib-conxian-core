@@ -13,7 +13,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 ## 2. Key Metrics
 
-- **Core Tests**: 281 Total Rust Workspace Tests Passing (153 Core Unit/Doc Tests + 128 Integration/Enclave/Conformance Tests; 70 Python Guard Tests)
+- **Core Tests**: 282 Total Rust Workspace Tests Passing (155 Core Unit/Doc Tests + 127 Integration/Enclave/Conformance Tests; 79 Python Guard Tests)
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Nitro Enclave CI, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
@@ -27,4 +27,4 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 1. **Audit**: Execute external security audit for core cryptographic paths (CON-1333).
 2. **Alignment**: Repair broken submodule pins in `conxian-business` (CON-1308).
-3. **Research**: Progress BitVMX and BitVM3 research for v0.3.2 floor.
+3. **Research**: Progress BitVMX and BitVM3 research for v0.3.3 floor.

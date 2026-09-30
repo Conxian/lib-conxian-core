@@ -841,3 +841,18 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Neon Workflow Hardening**: Added explicit `vars.NEON_PROJECT_ID != '' && secrets.NEON_API_KEY != ''` condition checks to `create_neon_branch` and `delete_neon_branch` jobs in `.github/workflows/neon_workflow.yml`.
 - **Full Verification Suite**: Verified 281 Rust workspace test cases (153 core unit/doc tests + 128 integration/enclave/conformance tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
 - **Governance Alignment**: Updated `EXECUTIVE_SCORECARD.md` and `READINESS_SCORECARD.md` to reflect Session 79 remediation, 281 passing Rust tests, and operational stability across connected multi-cloud infrastructure.
+
+
+---
+
+## Session 2026-09-24 (Session 85): Repo-Wide Markdown Documentation Refactoring & Codebase Alignment Pass
+
+### Objective
+1. Perform a thorough, automated audit of all 68 markdown (*.md) files across the repository against actual code facts, Cargo.toml manifests, MSRV declarations, dependency versions, and unit/integration test matrices.
+2. Refactor outdated version strings (v0.3.1, v0.3.2, v0.3.0 -> v0.3.3), dependency declarations (lib-conxian-core = "0.3.3", secp256k1 = "0.33"), and test metrics across AGENTS.md, addons/lib-conxian-core-enclave/README.md, docs/API.md, docs/DEPENDENCY_SECURITY_REPORT.md, docs/GAP_ANALYSIS_AND_SCORING.md, docs/PHASE1_ISSUES_ROADMAP.md, docs/UNIVERSAL_SUPPORT_RESEARCH.md, and governance scorecards.
+3. Synchronize EXECUTIVE_SCORECARD.md, READINESS_SCORECARD.md, and CHANGELOG.md with the verified baseline of 282 passing Rust workspace tests and 79 passing Python verification guard tests.
+
+### Execution & Verification Summary
+- **Repo-Wide Markdown Refactoring**: Refactored version tags, dependency pins, MSRV declarations, and test metrics across all markdown documentation files repo-wide.
+- **Verification Suite**: Executed full Rust workspace tests (282 tests passed) and Python test suite (79 tests passed) cleanly.
+- **Governance Alignment**: Updated EXECUTIVE_SCORECARD.md, READINESS_SCORECARD.md, CHANGELOG.md, and session logs to reflect 100% documentation alignment with current codebase state.
