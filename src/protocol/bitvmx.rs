@@ -231,7 +231,7 @@ impl BitVmxInstance {
 
         let mut hasher = Sha256::new();
         hasher.update(b"BITVMX-SUBSEGMENT-PROOF");
-        hasher.update(&step_index.to_be_bytes());
+        hasher.update(step_index.to_be_bytes());
         hasher.update(subsegment_proof);
         let proof_hash: [u8; 32] = hasher.finalize().into();
 
@@ -280,8 +280,8 @@ impl BitVmxInstance {
         // Deterministic trace step verification: proof must bind to trace commitment hash and step index
         let mut hasher = Sha256::new();
         hasher.update(b"BITVMX-STEP-COMMITMENT");
-        hasher.update(&self.trace_commitment_hash);
-        hasher.update(&step_index.to_be_bytes());
+        hasher.update(self.trace_commitment_hash);
+        hasher.update(step_index.to_be_bytes());
         hasher.update(&subsegment_proof[..32]);
         let expected_hash = hasher.finalize();
 
@@ -386,10 +386,10 @@ mod tests {
         inst.challenge(10, 1000).unwrap();
 
         // At block 1050 (within 100 timeout), timeout is false
-        assert_eq!(inst.check_timeout(1050).unwrap(), false);
+        assert!(!inst.check_timeout(1050).unwrap());
 
         // At block 1100 (1000 + 100), timeout is reached
-        assert_eq!(inst.check_timeout(1100).unwrap(), true);
+        assert!(inst.check_timeout(1100).unwrap());
         assert_eq!(inst.state, ChallengeState::TimedOut);
     }
 }
