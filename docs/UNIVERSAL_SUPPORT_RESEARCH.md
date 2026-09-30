@@ -147,3 +147,11 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Documentation & Version Reconciliation**: No protocol code changes this session. Reconciled stale version/toolchain references across the repository to the authoritative `Cargo.toml` metadata (`version = "0.3.3"`, `rust-version = "1.98.1"`) and the current `conxius-enclave-sdk` v2.0.17 contract: `0.3.1` → `0.3.3`, `1.97.1` → `1.98.1`, `0.2.10` → `0.3.3`, and `2.0.14` → `2.0.17`.
 - **Artifact Synchronization**: Synced CHANGELOG, SESSION_RESEARCH_LOG, gap analysis, governance scorecards, audit reports, Phase 1 roadmap (5 implemented / 4 open), and coverage targets (added UCS target; aligned coverage floors) with the current 282 Rust workspace tests + 79 Python guard tests baseline.
 - **Verification Metrics**: Confirmed 282 Rust workspace tests and 79 Python verification guard tests remain the current passing baseline (no source behavior modified).
+- **Artifact Synchronization**: Synced CHANGELOG, SESSION_RESEARCH_LOG, gap analysis, governance scorecards, audit reports, Phase 1 roadmap (5 implemented / 4 open), and coverage targets (added UCS target; aligned coverage floors) with the current 279 Rust workspace tests + 70 Python guard tests baseline.
+- **Verification Metrics**: Confirmed 279 Rust workspace tests and 70 Python verification guard tests remain the current passing baseline (no source behavior modified).
+
+
+## 23. Research Update (2026-09-24 Session 84 Synthesis): ERC-7683 & FDC3 Intent Parameter Hardening
+- **ERC-7683 & FDC3 Intent Validation**: Enhanced `src/protocol/intent.rs` with typed `IntentError` error variants (`InvalidFdc3Instrument`, `InvalidBid`, `InvalidAmount`, `InvalidDestination`, `EmptySolverId`).
+- **Fail-Closed Intent Methods**: Implemented `Bid::validate()` enforcing solver ID, non-zero amount, non-zero latency blocks, and fee caps (`fee_sats <= amount_sats`). Implemented `Fdc3Instrument::validate()` and checked intent resolution methods `IntentManager::rank_bids_checked()` and `IntentManager::resolve_fdc3_intent_checked()`.
+- **Verification Metrics**: Verified 286 total Rust workspace tests (151 core unit tests + 135 integration/enclave/conformance tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
