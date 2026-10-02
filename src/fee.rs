@@ -291,4 +291,77 @@ mod tests {
         assert_eq!(d.operations_sat, r.effective_fee_sat * 50 / 100);
         assert_eq!(d.founders_sat, r.effective_fee_sat * 30 / 100);
     }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceFixture {
+        #[allow(dead_code)]
+        schema_version: u32,
+        #[allow(dead_code)]
+        description: String,
+        cases: Vec<ConformanceCase>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceCase {
+        id: String,
+        trust_tier: TrustTier,
+        rail: SettlementRail,
+        amount_sat: u64,
+        #[serde(default)]
+        volume_decay_tier: VolumeDecayTier,
+        #[serde(default = "default_system_load_factor")]
+        system_load_factor: f64,
+        #[serde(default)]
+        enterprise_subscription_cap: bool,
+        expected: ConformanceExpected,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceExpected {
+        percentage_fee_sat: u64,
+        flat_floor_sat: u64,
+        effective_fee_sat: u64,
+        effective_bps: u32,
+        distribution: FeeDistribution,
+    }
+
+    #[test]
+    fn fee_conformance_vectors() {
+        let fixture: ConformanceFixture =
+            serde_json::from_str(include_str!("../fixtures/fee_conformance.json"))
+                .expect("conformance fixture must parse");
+
+        for case in fixture.cases {
+            let result = calculate_dynamic_fee(FeeOptions {
+                trust_tier: case.trust_tier,
+                rail: case.rail,
+                amount_sat: case.amount_sat,
+                volume_decay_tier: case.volume_decay_tier,
+                system_load_factor: case.system_load_factor,
+                enterprise_subscription_cap: case.enterprise_subscription_cap,
+            })
+            .unwrap_or_else(|e| panic!("case {} rejected: {e}", case.id));
+
+            assert_eq!(
+                result.percentage_fee_sat, case.expected.percentage_fee_sat,
+                "case {} percentage_fee_sat", case.id
+            );
+            assert_eq!(
+                result.flat_floor_sat, case.expected.flat_floor_sat,
+                "case {} flat_floor_sat", case.id
+            );
+            assert_eq!(
+                result.effective_fee_sat, case.expected.effective_fee_sat,
+                "case {} effective_fee_sat", case.id
+            );
+            assert_eq!(
+                result.effective_bps, case.expected.effective_bps,
+                "case {} effective_bps", case.id
+            );
+            assert_eq!(
+                result.distribution, case.expected.distribution,
+                "case {} distribution", case.id
+            );
+        }
+    }
 }
