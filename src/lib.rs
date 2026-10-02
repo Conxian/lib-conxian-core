@@ -63,6 +63,7 @@ pub mod cjcs;
 pub mod contract_bridge;
 pub mod control_model;
 pub mod deployment;
+pub mod fee;
 pub mod fedimint;
 pub mod protocol;
 pub mod verifier;
@@ -80,6 +81,7 @@ pub mod core_types {
     pub use crate::crypto;
     pub use crate::deployment;
     pub use crate::enclave;
+    pub use crate::fee;
     pub use crate::fedimint;
     pub use crate::lightning;
     pub use crate::protocol;
