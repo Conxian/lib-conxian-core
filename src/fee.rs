@@ -235,6 +235,9 @@ pub struct FeeOptions {
     pub volume_decay_tier: VolumeDecayTier,
     #[serde(default = "default_system_load_factor")]
     pub system_load_factor: f64,
+    /// When true, the percentage component is replaced by the flat floor — the
+    /// subscription/committed-use pricing link to nexus
+    /// `SubscriptionTier::Enterprise` (G5). See `docs/FEE_MODEL_BENCHMARK.md`.
     #[serde(default)]
     pub enterprise_subscription_cap: bool,
 }
