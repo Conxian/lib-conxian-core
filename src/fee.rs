@@ -62,6 +62,11 @@ pub const SYSTEM_LOAD_FACTOR_MIN: f64 = 1.0;
 pub const SYSTEM_LOAD_FACTOR_MAX: f64 = 3.0;
 
 /// Rail-specific flat satoshi floors (ADR-004 §3.1).
+///
+/// Lightning `base_fee` analog: prices the fixed overhead of settling on a
+/// rail (interchange-plus = cost + margin), independent of the settled amount.
+/// Current values are placeholders pending measured per-rail cost (G8 rail
+/// calibration); see `docs/FEE_MODEL_BENCHMARK.md`.
 pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
     match rail {
         SettlementRail::Lightning => 10,
@@ -102,6 +107,9 @@ pub struct FeeOptions {
     pub volume_decay_tier: VolumeDecayTier,
     #[serde(default = "default_system_load_factor")]
     pub system_load_factor: f64,
+    /// When true, the percentage component is replaced by the flat floor — the
+    /// subscription/committed-use pricing link to nexus
+    /// `SubscriptionTier::Enterprise` (G5). See `docs/FEE_MODEL_BENCHMARK.md`.
     #[serde(default)]
     pub enterprise_subscription_cap: bool,
 }
