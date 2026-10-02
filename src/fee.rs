@@ -128,6 +128,23 @@ pub const MIN_PERCENTAGE_FLOOR_BPS: u32 = 10;
 pub const SYSTEM_LOAD_FACTOR_MIN: f64 = 1.0;
 pub const SYSTEM_LOAD_FACTOR_MAX: f64 = 3.0;
 
+/// Map a mempool fee percentile (0–100) to a system-load factor (1.0–3.0).
+///
+/// Below the 50th percentile there is no congestion surcharge; the factor rises
+/// linearly to 2.0 at the 90th percentile and 3.0 at the 100th percentile
+/// (ADR-004 §3.3). A caller wires a live mempool feed here; until then it
+/// falls back to [`StaticLoadOracle`].
+pub fn load_factor_from_mempool_percentile(percentile: f64) -> f64 {
+    let p = percentile.clamp(0.0, 100.0);
+    if p < 50.0 {
+        1.0
+    } else if p < 90.0 {
+        1.0 + (p - 50.0) / 40.0
+    } else {
+        2.0 + (p - 90.0) / 10.0
+    }
+}
+
 /// Monthly settlement-volume thresholds (sats) between decay tiers (ADR-004 §4.2).
 pub const TIER2_MIN_MONTHLY_SATS: u64 = 10_000_000; // ~0.1 BTC
 pub const TIER3_MIN_MONTHLY_SATS: u64 = 100_000_000; // ~1 BTC
@@ -136,18 +153,59 @@ pub const TIER4_MIN_MONTHLY_SATS: u64 = 1_000_000_000; // ~10 BTC
 /// Hysteresis band (bps) around tier boundaries to prevent rate thrashing.
 pub const TIER_HYSTERESIS_BPS: u64 = 500; // 5%
 
-/// Rail-specific flat satoshi floors (ADR-004 §3.1).
-pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
-    match rail {
-        SettlementRail::Lightning => 10,
-        SettlementRail::Statechain => 25,
-        SettlementRail::Fedimint => 25,
-        SettlementRail::Rgb => 20,
-        SettlementRail::Sbtc => 50,
-        SettlementRail::AlexStacks => 50,
-        SettlementRail::Babylon => 50,
-        SettlementRail::EvmErc8183 => 100,
+/// Source of the system-load factor (ADR-004 §3.3).
+///
+/// Wire a mempool/oracle feed behind this trait; fall back to
+/// [`StaticLoadOracle`] when a live source is unavailable.
+pub trait LoadOracle: Send + Sync {
+    fn load_factor(&self) -> f64;
+}
+
+/// A static (no-congestion) load oracle.
+#[derive(Debug, Clone, Copy)]
+pub struct StaticLoadOracle {
+    pub factor: f64,
+}
+
+impl LoadOracle for StaticLoadOracle {
+    fn load_factor(&self) -> f64 {
+        self.factor
     }
+}
+
+/// Margin over measured rail cost that sets the flat floor (interchange-plus).
+pub const RAIL_FLOOR_MARGIN_BPS: u64 = 2500; // +25%
+
+/// First-principles per-rail settlement cost estimate (sats) — v0 cost model.
+///
+/// Replace with measured cost when per-rail telemetry lands (G8 calibration).
+/// The values are chosen so that `cost × (1 + margin)` reproduces the v0 floors
+/// exactly; see `docs/FEE_MODEL_BENCHMARK.md`.
+pub fn rail_cost_estimate(rail: SettlementRail) -> u64 {
+    match rail {
+        SettlementRail::Lightning => 8,   // ~1 sat routing base + reserve overhead
+        SettlementRail::Statechain => 20, // server-side EC operations
+        SettlementRail::Fedimint => 20,   // federated mint e-cash
+        SettlementRail::Rgb => 16,        // client-side validation
+        SettlementRail::Sbtc => 40,       // bridge peg-out + TEE attestation
+        SettlementRail::AlexStacks => 40, // AMM/settlement contract
+        SettlementRail::Babylon => 40,    // EOTS + slashing checks
+        SettlementRail::EvmErc8183 => 80, // L1 gas + ERP overhead
+    }
+}
+
+/// Derive a flat floor from cost + margin: `cost × (1 + margin_bps / 10_000)`.
+pub fn rail_floor_from_cost(cost_sat: u64, margin_bps: u64) -> u64 {
+    cost_sat * (10_000 + margin_bps) / 10_000
+}
+
+/// Rail-specific flat satoshi floors (ADR-004 §3.1).
+///
+/// Lightning `base_fee` analog: prices the fixed overhead of settling on a
+/// rail (interchange-plus = cost + margin), independent of the settled amount.
+/// Derived from [`rail_cost_estimate`] and [`RAIL_FLOOR_MARGIN_BPS`].
+pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
+    rail_floor_from_cost(rail_cost_estimate(rail), RAIL_FLOOR_MARGIN_BPS)
 }
 
 /// Decayed basis-point rate for a volume tier, never below the percentage floor.
@@ -299,6 +357,34 @@ mod tests {
         assert_eq!(rail_default_flat_floor(SettlementRail::Statechain), 25);
         assert_eq!(rail_default_flat_floor(SettlementRail::Sbtc), 50);
         assert_eq!(rail_default_flat_floor(SettlementRail::EvmErc8183), 100);
+    }
+
+    #[test]
+    fn rail_floor_is_cost_plus_margin() {
+        // cost × (1 + 25%) reproduces the v0 floors exactly.
+        assert_eq!(rail_floor_from_cost(8, RAIL_FLOOR_MARGIN_BPS), 10);
+        assert_eq!(rail_floor_from_cost(80, RAIL_FLOOR_MARGIN_BPS), 100);
+        // A zero-margin floor equals cost.
+        assert_eq!(rail_floor_from_cost(8, 0), 8);
+        // The default floor is the cost model with the default margin.
+        assert_eq!(
+            rail_default_flat_floor(SettlementRail::Lightning),
+            rail_floor_from_cost(rail_cost_estimate(SettlementRail::Lightning), RAIL_FLOOR_MARGIN_BPS)
+        );
+    }
+
+    #[test]
+    fn load_factor_from_mempool_percentile_monotonic() {
+        assert_eq!(load_factor_from_mempool_percentile(0.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(49.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(50.0), 1.0);
+        assert!((load_factor_from_mempool_percentile(70.0) - 1.5).abs() < 1e-9);
+        assert!((load_factor_from_mempool_percentile(90.0) - 2.0).abs() < 1e-9);
+        assert!((load_factor_from_mempool_percentile(95.0) - 2.5).abs() < 1e-9);
+        assert_eq!(load_factor_from_mempool_percentile(100.0), 3.0);
+        // Clamped outside [0, 100].
+        assert_eq!(load_factor_from_mempool_percentile(-5.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(150.0), 3.0);
     }
 
     #[test]
