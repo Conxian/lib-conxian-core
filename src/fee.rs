@@ -28,7 +28,7 @@ pub enum SettlementRail {
 }
 
 /// Logarithmic 30-day volume decay tiers (ADR-004 §3.2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VolumeDecayTier {
     /// 2.00% — launch / low volume.
@@ -52,6 +52,73 @@ impl VolumeDecayTier {
             Self::Tier4 => 25,
         }
     }
+
+    /// Map a rolling 30-day settlement volume (sats) to a decay tier.
+    pub fn from_monthly_volume(volume_sat: u64) -> Self {
+        if volume_sat < TIER2_MIN_MONTHLY_SATS {
+            Self::Tier1
+        } else if volume_sat < TIER3_MIN_MONTHLY_SATS {
+            Self::Tier2
+        } else if volume_sat < TIER4_MIN_MONTHLY_SATS {
+            Self::Tier3
+        } else {
+            Self::Tier4
+        }
+    }
+
+    /// Suggest a tier with hysteresis (ADR-004 §4.2).
+    ///
+    /// Moves at most one tier per call and only once the volume has cleared a
+    /// boundary by [`TIER_HYSTERESIS_BPS`], so a client oscillating near a
+    /// threshold does not thrash between rates. Repeated calls converge to the
+    /// raw tier.
+    pub fn suggest_with_hysteresis(volume_sat: u64, current: Self) -> Self {
+        let raw = Self::from_monthly_volume(volume_sat);
+        if raw == current {
+            return current;
+        }
+        if raw > current {
+            let next = current.next();
+            let band = next.lower_bound() + next.lower_bound() * TIER_HYSTERESIS_BPS / 10_000;
+            if volume_sat >= band {
+                next
+            } else {
+                current
+            }
+        } else {
+            let band = current.lower_bound() - current.lower_bound() * TIER_HYSTERESIS_BPS / 10_000;
+            if volume_sat <= band {
+                current.prev()
+            } else {
+                current
+            }
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            Self::Tier1 => Self::Tier2,
+            Self::Tier2 => Self::Tier3,
+            Self::Tier3 | Self::Tier4 => Self::Tier4,
+        }
+    }
+
+    fn prev(self) -> Self {
+        match self {
+            Self::Tier1 | Self::Tier2 => Self::Tier1,
+            Self::Tier3 => Self::Tier2,
+            Self::Tier4 => Self::Tier3,
+        }
+    }
+
+    fn lower_bound(self) -> u64 {
+        match self {
+            Self::Tier1 => 0,
+            Self::Tier2 => TIER2_MIN_MONTHLY_SATS,
+            Self::Tier3 => TIER3_MIN_MONTHLY_SATS,
+            Self::Tier4 => TIER4_MIN_MONTHLY_SATS,
+        }
+    }
 }
 
 /// Minimum percentage floor (bps) the decayed rate can never fall below.
@@ -60,6 +127,14 @@ pub const MIN_PERCENTAGE_FLOOR_BPS: u32 = 10;
 /// System-load factor bounds (ADR-004 §3.3).
 pub const SYSTEM_LOAD_FACTOR_MIN: f64 = 1.0;
 pub const SYSTEM_LOAD_FACTOR_MAX: f64 = 3.0;
+
+/// Monthly settlement-volume thresholds (sats) between decay tiers (ADR-004 §4.2).
+pub const TIER2_MIN_MONTHLY_SATS: u64 = 10_000_000; // ~0.1 BTC
+pub const TIER3_MIN_MONTHLY_SATS: u64 = 100_000_000; // ~1 BTC
+pub const TIER4_MIN_MONTHLY_SATS: u64 = 1_000_000_000; // ~10 BTC
+
+/// Hysteresis band (bps) around tier boundaries to prevent rate thrashing.
+pub const TIER_HYSTERESIS_BPS: u64 = 500; // 5%
 
 /// Rail-specific flat satoshi floors (ADR-004 §3.1).
 pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
@@ -232,6 +307,50 @@ mod tests {
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier2), 150);
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier3), 75);
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier4), 25);
+    }
+
+    #[test]
+    fn volume_to_tier_mapping() {
+        assert_eq!(VolumeDecayTier::from_monthly_volume(0), VolumeDecayTier::Tier1);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(9_999_999), VolumeDecayTier::Tier1);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(10_000_000), VolumeDecayTier::Tier2);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(100_000_000), VolumeDecayTier::Tier3);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(1_000_000_000), VolumeDecayTier::Tier4);
+    }
+
+    #[test]
+    fn hysteresis_prevents_thrashing() {
+        // Above the Tier2 boundary (10M) but below the +5% band (10.5M): stay.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(10_200_000, VolumeDecayTier::Tier1),
+            VolumeDecayTier::Tier1
+        );
+        // Above the band: upgrade.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(10_600_000, VolumeDecayTier::Tier1),
+            VolumeDecayTier::Tier2
+        );
+        // Below the Tier2 boundary (10M) but above the -5% band (9.5M): stay.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(9_700_000, VolumeDecayTier::Tier2),
+            VolumeDecayTier::Tier2
+        );
+        // Below the band: downgrade.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(9_400_000, VolumeDecayTier::Tier2),
+            VolumeDecayTier::Tier1
+        );
+    }
+
+    #[test]
+    fn hysteresis_moves_one_tier_at_a_time() {
+        let v = 2_000_000_000;
+        let t1 = VolumeDecayTier::suggest_with_hysteresis(v, VolumeDecayTier::Tier1);
+        assert_eq!(t1, VolumeDecayTier::Tier2);
+        let t2 = VolumeDecayTier::suggest_with_hysteresis(v, t1);
+        assert_eq!(t2, VolumeDecayTier::Tier3);
+        let t3 = VolumeDecayTier::suggest_with_hysteresis(v, t2);
+        assert_eq!(t3, VolumeDecayTier::Tier4);
     }
 
     #[test]
