@@ -58,7 +58,7 @@ sdk-blockchain = ["conxius-enclave-sdk"]
 # Cross-cutting capabilities (15 modules)
 sdk-cross-cutting = ["conxius-enclave-sdk"]
 # Reserved compatibility feature; all six SDK rails are currently pub(crate).
-sdk-rails = ["conxius-enclave-sdk"]
+sdk-bridges = ["conxius-enclave-sdk"]
 # Nexus verification (3 modules)
 sdk-nexus = ["conxius-enclave-sdk"]
 # Infrastructure & tooling (6 modules)
@@ -94,7 +94,7 @@ full-sdk = [
     "enclave",
     "sdk-blockchain",
     "sdk-cross-cutting",
-    "sdk-rails",
+    "sdk-bridges",
     "sdk-nexus",
     "sdk-infrastructure",
     "sdk-signing",
