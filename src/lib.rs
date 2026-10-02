@@ -113,7 +113,7 @@ pub mod stacks;
     feature = "enclave",
     feature = "sdk-blockchain",
     feature = "sdk-cross-cutting",
-    feature = "sdk-rails",
+    feature = "sdk-bridges",
     feature = "sdk-nexus",
     feature = "sdk-infrastructure",
     feature = "sdk-signing",
