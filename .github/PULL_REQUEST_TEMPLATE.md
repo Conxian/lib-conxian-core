@@ -10,6 +10,9 @@
 - [ ] If sensitive files changed, I requested and obtained required CODEOWNERS review.
 - [ ] I linked the tracking issue (for example, `CON-176`).
 
+### Feature -> dev promotion checklist
+PROMOTION:FEATURE->DEV
+
 ## Sensitive Files (CODEOWNERS-enforced)
 
 - `CODEOWNERS`
