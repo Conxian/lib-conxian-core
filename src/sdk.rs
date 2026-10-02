@@ -13,7 +13,7 @@
 //! | Infrastructure | `sdk-infrastructure` | config, serde_big_array, state, telemetry, wasm_support, wasm_bindings | 6 |
 //! | Signing | `sdk-signing` | signing::{bip110, bip322, bitvm2, covenant, dlc, lightning, musig2, statechain, taproot, threshold, ucs, wasm_runtime, zkml} | 13 |
 //! | Enclave | `enclave` | android_authorization, attestation, durable_replay, nitro, proof, proofs, replay_guard, replay_store_file, threshold, trust, trust_contracts, verifiers | 12 |
-//! | Rails | `sdk-rails` | (none — all `pub(crate)` in SDK) | 0 |
+//! | Bridges | `sdk-bridges` | (none — all `pub(crate)` in SDK) | 0 |
 //!
 //! **Feature-gated modules (enabled via the matching `sdk-*` crypto feature):**
 //! - `frost_crypto` and `enclave::threshold`: require `sdk-frost-crypto` (→ SDK `frost-crypto`)
@@ -31,7 +31,7 @@
     feature = "enclave",
     feature = "sdk-blockchain",
     feature = "sdk-cross-cutting",
-    feature = "sdk-rails",
+    feature = "sdk-bridges",
     feature = "sdk-nexus",
     feature = "sdk-infrastructure",
     feature = "sdk-signing",
@@ -90,9 +90,9 @@ pub mod cross_cutting {
     pub use conxius_enclave_sdk::protocol::zkml;
 }
 
-// Rails modules are `pub(crate)` in SDK — cannot re-export.
-// #[cfg(feature = "sdk-rails")]
-// pub mod rails { ... }
+// Bridge modules are `pub(crate)` in SDK — cannot re-export.
+// #[cfg(feature = "sdk-bridges")]
+// pub mod bridges { ... }
 
 #[cfg(feature = "sdk-nexus")]
 pub mod nexus {
