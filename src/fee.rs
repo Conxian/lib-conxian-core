@@ -28,7 +28,7 @@ pub enum SettlementRail {
 }
 
 /// Logarithmic 30-day volume decay tiers (ADR-004 §3.2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VolumeDecayTier {
     /// 2.00% — launch / low volume.
@@ -52,6 +52,73 @@ impl VolumeDecayTier {
             Self::Tier4 => 25,
         }
     }
+
+    /// Map a rolling 30-day settlement volume (sats) to a decay tier.
+    pub fn from_monthly_volume(volume_sat: u64) -> Self {
+        if volume_sat < TIER2_MIN_MONTHLY_SATS {
+            Self::Tier1
+        } else if volume_sat < TIER3_MIN_MONTHLY_SATS {
+            Self::Tier2
+        } else if volume_sat < TIER4_MIN_MONTHLY_SATS {
+            Self::Tier3
+        } else {
+            Self::Tier4
+        }
+    }
+
+    /// Suggest a tier with hysteresis (ADR-004 §4.2).
+    ///
+    /// Moves at most one tier per call and only once the volume has cleared a
+    /// boundary by [`TIER_HYSTERESIS_BPS`], so a client oscillating near a
+    /// threshold does not thrash between rates. Repeated calls converge to the
+    /// raw tier.
+    pub fn suggest_with_hysteresis(volume_sat: u64, current: Self) -> Self {
+        let raw = Self::from_monthly_volume(volume_sat);
+        if raw == current {
+            return current;
+        }
+        if raw > current {
+            let next = current.next();
+            let band = next.lower_bound() + next.lower_bound() * TIER_HYSTERESIS_BPS / 10_000;
+            if volume_sat >= band {
+                next
+            } else {
+                current
+            }
+        } else {
+            let band = current.lower_bound() - current.lower_bound() * TIER_HYSTERESIS_BPS / 10_000;
+            if volume_sat <= band {
+                current.prev()
+            } else {
+                current
+            }
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            Self::Tier1 => Self::Tier2,
+            Self::Tier2 => Self::Tier3,
+            Self::Tier3 | Self::Tier4 => Self::Tier4,
+        }
+    }
+
+    fn prev(self) -> Self {
+        match self {
+            Self::Tier1 | Self::Tier2 => Self::Tier1,
+            Self::Tier3 => Self::Tier2,
+            Self::Tier4 => Self::Tier3,
+        }
+    }
+
+    fn lower_bound(self) -> u64 {
+        match self {
+            Self::Tier1 => 0,
+            Self::Tier2 => TIER2_MIN_MONTHLY_SATS,
+            Self::Tier3 => TIER3_MIN_MONTHLY_SATS,
+            Self::Tier4 => TIER4_MIN_MONTHLY_SATS,
+        }
+    }
 }
 
 /// Minimum percentage floor (bps) the decayed rate can never fall below.
@@ -61,18 +128,84 @@ pub const MIN_PERCENTAGE_FLOOR_BPS: u32 = 10;
 pub const SYSTEM_LOAD_FACTOR_MIN: f64 = 1.0;
 pub const SYSTEM_LOAD_FACTOR_MAX: f64 = 3.0;
 
-/// Rail-specific flat satoshi floors (ADR-004 §3.1).
-pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
-    match rail {
-        SettlementRail::Lightning => 10,
-        SettlementRail::Statechain => 25,
-        SettlementRail::Fedimint => 25,
-        SettlementRail::Rgb => 20,
-        SettlementRail::Sbtc => 50,
-        SettlementRail::AlexStacks => 50,
-        SettlementRail::Babylon => 50,
-        SettlementRail::EvmErc8183 => 100,
+/// Map a mempool fee percentile (0–100) to a system-load factor (1.0–3.0).
+///
+/// Below the 50th percentile there is no congestion surcharge; the factor rises
+/// linearly to 2.0 at the 90th percentile and 3.0 at the 100th percentile
+/// (ADR-004 §3.3). A caller wires a live mempool feed here; until then it
+/// falls back to [`StaticLoadOracle`].
+pub fn load_factor_from_mempool_percentile(percentile: f64) -> f64 {
+    let p = percentile.clamp(0.0, 100.0);
+    if p < 50.0 {
+        1.0
+    } else if p < 90.0 {
+        1.0 + (p - 50.0) / 40.0
+    } else {
+        2.0 + (p - 90.0) / 10.0
     }
+}
+
+/// Monthly settlement-volume thresholds (sats) between decay tiers (ADR-004 §4.2).
+pub const TIER2_MIN_MONTHLY_SATS: u64 = 10_000_000; // ~0.1 BTC
+pub const TIER3_MIN_MONTHLY_SATS: u64 = 100_000_000; // ~1 BTC
+pub const TIER4_MIN_MONTHLY_SATS: u64 = 1_000_000_000; // ~10 BTC
+
+/// Hysteresis band (bps) around tier boundaries to prevent rate thrashing.
+pub const TIER_HYSTERESIS_BPS: u64 = 500; // 5%
+
+/// Source of the system-load factor (ADR-004 §3.3).
+///
+/// Wire a mempool/oracle feed behind this trait; fall back to
+/// [`StaticLoadOracle`] when a live source is unavailable.
+pub trait LoadOracle: Send + Sync {
+    fn load_factor(&self) -> f64;
+}
+
+/// A static (no-congestion) load oracle.
+#[derive(Debug, Clone, Copy)]
+pub struct StaticLoadOracle {
+    pub factor: f64,
+}
+
+impl LoadOracle for StaticLoadOracle {
+    fn load_factor(&self) -> f64 {
+        self.factor
+    }
+}
+
+/// Margin over measured rail cost that sets the flat floor (interchange-plus).
+pub const RAIL_FLOOR_MARGIN_BPS: u64 = 2500; // +25%
+
+/// First-principles per-rail settlement cost estimate (sats) — v0 cost model.
+///
+/// Replace with measured cost when per-rail telemetry lands (G8 calibration).
+/// The values are chosen so that `cost × (1 + margin)` reproduces the v0 floors
+/// exactly; see `docs/FEE_MODEL_BENCHMARK.md`.
+pub fn rail_cost_estimate(rail: SettlementRail) -> u64 {
+    match rail {
+        SettlementRail::Lightning => 8,   // ~1 sat routing base + reserve overhead
+        SettlementRail::Statechain => 20, // server-side EC operations
+        SettlementRail::Fedimint => 20,   // federated mint e-cash
+        SettlementRail::Rgb => 16,        // client-side validation
+        SettlementRail::Sbtc => 40,       // bridge peg-out + TEE attestation
+        SettlementRail::AlexStacks => 40, // AMM/settlement contract
+        SettlementRail::Babylon => 40,    // EOTS + slashing checks
+        SettlementRail::EvmErc8183 => 80, // L1 gas + ERP overhead
+    }
+}
+
+/// Derive a flat floor from cost + margin: `cost × (1 + margin_bps / 10_000)`.
+pub fn rail_floor_from_cost(cost_sat: u64, margin_bps: u64) -> u64 {
+    cost_sat * (10_000 + margin_bps) / 10_000
+}
+
+/// Rail-specific flat satoshi floors (ADR-004 §3.1).
+///
+/// Lightning `base_fee` analog: prices the fixed overhead of settling on a
+/// rail (interchange-plus = cost + margin), independent of the settled amount.
+/// Derived from [`rail_cost_estimate`] and [`RAIL_FLOOR_MARGIN_BPS`].
+pub fn rail_default_flat_floor(rail: SettlementRail) -> u64 {
+    rail_floor_from_cost(rail_cost_estimate(rail), RAIL_FLOOR_MARGIN_BPS)
 }
 
 /// Decayed basis-point rate for a volume tier, never below the percentage floor.
@@ -102,6 +235,9 @@ pub struct FeeOptions {
     pub volume_decay_tier: VolumeDecayTier,
     #[serde(default = "default_system_load_factor")]
     pub system_load_factor: f64,
+    /// When true, the percentage component is replaced by the flat floor — the
+    /// subscription/committed-use pricing link to nexus
+    /// `SubscriptionTier::Enterprise` (G5). See `docs/FEE_MODEL_BENCHMARK.md`.
     #[serde(default)]
     pub enterprise_subscription_cap: bool,
 }
@@ -227,11 +363,83 @@ mod tests {
     }
 
     #[test]
+    fn rail_floor_is_cost_plus_margin() {
+        // cost × (1 + 25%) reproduces the v0 floors exactly.
+        assert_eq!(rail_floor_from_cost(8, RAIL_FLOOR_MARGIN_BPS), 10);
+        assert_eq!(rail_floor_from_cost(80, RAIL_FLOOR_MARGIN_BPS), 100);
+        // A zero-margin floor equals cost.
+        assert_eq!(rail_floor_from_cost(8, 0), 8);
+        // The default floor is the cost model with the default margin.
+        assert_eq!(
+            rail_default_flat_floor(SettlementRail::Lightning),
+            rail_floor_from_cost(rail_cost_estimate(SettlementRail::Lightning), RAIL_FLOOR_MARGIN_BPS)
+        );
+    }
+
+    #[test]
+    fn load_factor_from_mempool_percentile_monotonic() {
+        assert_eq!(load_factor_from_mempool_percentile(0.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(49.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(50.0), 1.0);
+        assert!((load_factor_from_mempool_percentile(70.0) - 1.5).abs() < 1e-9);
+        assert!((load_factor_from_mempool_percentile(90.0) - 2.0).abs() < 1e-9);
+        assert!((load_factor_from_mempool_percentile(95.0) - 2.5).abs() < 1e-9);
+        assert_eq!(load_factor_from_mempool_percentile(100.0), 3.0);
+        // Clamped outside [0, 100].
+        assert_eq!(load_factor_from_mempool_percentile(-5.0), 1.0);
+        assert_eq!(load_factor_from_mempool_percentile(150.0), 3.0);
+    }
+
+    #[test]
     fn volume_decay_tiers() {
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier1), 200);
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier2), 150);
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier3), 75);
         assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier4), 25);
+    }
+
+    #[test]
+    fn volume_to_tier_mapping() {
+        assert_eq!(VolumeDecayTier::from_monthly_volume(0), VolumeDecayTier::Tier1);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(9_999_999), VolumeDecayTier::Tier1);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(10_000_000), VolumeDecayTier::Tier2);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(100_000_000), VolumeDecayTier::Tier3);
+        assert_eq!(VolumeDecayTier::from_monthly_volume(1_000_000_000), VolumeDecayTier::Tier4);
+    }
+
+    #[test]
+    fn hysteresis_prevents_thrashing() {
+        // Above the Tier2 boundary (10M) but below the +5% band (10.5M): stay.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(10_200_000, VolumeDecayTier::Tier1),
+            VolumeDecayTier::Tier1
+        );
+        // Above the band: upgrade.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(10_600_000, VolumeDecayTier::Tier1),
+            VolumeDecayTier::Tier2
+        );
+        // Below the Tier2 boundary (10M) but above the -5% band (9.5M): stay.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(9_700_000, VolumeDecayTier::Tier2),
+            VolumeDecayTier::Tier2
+        );
+        // Below the band: downgrade.
+        assert_eq!(
+            VolumeDecayTier::suggest_with_hysteresis(9_400_000, VolumeDecayTier::Tier2),
+            VolumeDecayTier::Tier1
+        );
+    }
+
+    #[test]
+    fn hysteresis_moves_one_tier_at_a_time() {
+        let v = 2_000_000_000;
+        let t1 = VolumeDecayTier::suggest_with_hysteresis(v, VolumeDecayTier::Tier1);
+        assert_eq!(t1, VolumeDecayTier::Tier2);
+        let t2 = VolumeDecayTier::suggest_with_hysteresis(v, t1);
+        assert_eq!(t2, VolumeDecayTier::Tier3);
+        let t3 = VolumeDecayTier::suggest_with_hysteresis(v, t2);
+        assert_eq!(t3, VolumeDecayTier::Tier4);
     }
 
     #[test]
@@ -290,5 +498,78 @@ mod tests {
         // 50/30/20 of 6173 sat (200 bps on 123_456 = 2469 sat, floor 50 → 2469).
         assert_eq!(d.operations_sat, r.effective_fee_sat * 50 / 100);
         assert_eq!(d.founders_sat, r.effective_fee_sat * 30 / 100);
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceFixture {
+        #[allow(dead_code)]
+        schema_version: u32,
+        #[allow(dead_code)]
+        description: String,
+        cases: Vec<ConformanceCase>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceCase {
+        id: String,
+        trust_tier: TrustTier,
+        rail: SettlementRail,
+        amount_sat: u64,
+        #[serde(default)]
+        volume_decay_tier: VolumeDecayTier,
+        #[serde(default = "default_system_load_factor")]
+        system_load_factor: f64,
+        #[serde(default)]
+        enterprise_subscription_cap: bool,
+        expected: ConformanceExpected,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct ConformanceExpected {
+        percentage_fee_sat: u64,
+        flat_floor_sat: u64,
+        effective_fee_sat: u64,
+        effective_bps: u32,
+        distribution: FeeDistribution,
+    }
+
+    #[test]
+    fn fee_conformance_vectors() {
+        let fixture: ConformanceFixture =
+            serde_json::from_str(include_str!("../fixtures/fee_conformance.json"))
+                .expect("conformance fixture must parse");
+
+        for case in fixture.cases {
+            let result = calculate_dynamic_fee(FeeOptions {
+                trust_tier: case.trust_tier,
+                rail: case.rail,
+                amount_sat: case.amount_sat,
+                volume_decay_tier: case.volume_decay_tier,
+                system_load_factor: case.system_load_factor,
+                enterprise_subscription_cap: case.enterprise_subscription_cap,
+            })
+            .unwrap_or_else(|e| panic!("case {} rejected: {e}", case.id));
+
+            assert_eq!(
+                result.percentage_fee_sat, case.expected.percentage_fee_sat,
+                "case {} percentage_fee_sat", case.id
+            );
+            assert_eq!(
+                result.flat_floor_sat, case.expected.flat_floor_sat,
+                "case {} flat_floor_sat", case.id
+            );
+            assert_eq!(
+                result.effective_fee_sat, case.expected.effective_fee_sat,
+                "case {} effective_fee_sat", case.id
+            );
+            assert_eq!(
+                result.effective_bps, case.expected.effective_bps,
+                "case {} effective_bps", case.id
+            );
+            assert_eq!(
+                result.distribution, case.expected.distribution,
+                "case {} distribution", case.id
+            );
+        }
     }
 }
