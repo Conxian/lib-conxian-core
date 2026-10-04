@@ -4,13 +4,14 @@
 > `lib-conxian-core` implements a complete Bitcoin consensus validator, transaction parser, script
 > interpreter, Taproot verifier, or downstream enforcement layer.
 >
-> **Proposal status:** The canonical BIP-110 text is marked `Complete`. Under [BIP-3's status
+> **Proposal status:** The canonical BIP-110 text is marked **`Closed`** (2026-08-09, following a
+> chain split with stalled mining). It was previously `Complete` (2026-06-25 → 2026-08-09) and was
+> **never activated** on any network. Under [BIP-3's status
 > definitions](https://github.com/bitcoin/bips/blob/master/bip-0003.md#progression-through-bip-statuses),
-> `Complete` is distinct from `Deployed`: it records a mature proposal recommended for adoption,
-> implementation, or deployment, not proof that the proposed consensus rules are active on a
-> network. This repository does not infer activation, activation height, signaling, or expiry.
+> a `Closed` proposal has been withdrawn or abandoned and is no longer recommended for adoption.
+> This repository does not infer activation, activation height, signaling, or expiry.
 >
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-10-04
 
 ## Executive summary
 
