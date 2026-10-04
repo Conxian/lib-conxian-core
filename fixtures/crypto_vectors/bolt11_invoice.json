@@ -1,0 +1,6 @@
+{
+  "description": "Canonical BOLT-11 example invoice and its to-be-signed message hash (Bech32 decode -> SHA256).",
+  "source": "https://github.com/lightning/bolts/blob/master/11-payment-encoding.md",
+  "invoice": "lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap9us6v52vjjsrvywa6rt52cm9r9zqt8r2t7mlcwspyetp5h2tztugp9lfyql",
+  "messageHash": "6daf4d488be41ce7cbb487cab1ef2975e5efcea879b20d421f0ef86b07cbb987"
+}
