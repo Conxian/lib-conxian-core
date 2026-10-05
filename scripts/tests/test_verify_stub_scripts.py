@@ -128,5 +128,18 @@ class TestVerifyPrBosClassification(unittest.TestCase):
         self.assertFalse(commit_checker.verify_commit_message("bad commit message without conventional prefix"))
 
 
+class TestSecurityMdPolicy(unittest.TestCase):
+    def test_security_md_policy_completeness(self):
+        sec_path = ROOT / "SECURITY.md"
+        self.assertTrue(sec_path.exists(), "SECURITY.md must exist in repo root")
+        content = sec_path.read_text(encoding="utf-8")
+        self.assertIn("security@conxian.org", content)
+        self.assertIn("48 hours", content)
+        self.assertIn("5 business days", content)
+        self.assertIn("7 days", content)
+        self.assertIn("Zero Secret Egress", content)
+        self.assertIn("Fail-Closed", content)
+
+
 if __name__ == "__main__":
     unittest.main()
