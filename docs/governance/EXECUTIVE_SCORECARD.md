@@ -27,4 +27,4 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 1. **Audit**: Execute external security audit for core cryptographic paths (CON-1333).
 2. **Alignment**: Repair broken submodule pins in `conxian-business` (CON-1308).
-3. **Research**: Progress BitVMX and BitVM3 research for v0.3.3 floor.
+3. **Research**: Progress BitVMX and BitVM3 challenge cost collapse research (<$50 target; CON-1317).
