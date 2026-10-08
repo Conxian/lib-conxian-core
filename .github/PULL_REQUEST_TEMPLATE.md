@@ -23,3 +23,10 @@
 ## Linked issue
 
 Closes #
+
+<!-- PROMOTION:FEATURE->DEV -->
+### Feature -> dev promotion checklist
+
+- [x] I verified unit tests and integration tests pass cleanly (`cargo test --workspace`).
+- [x] I verified no secret exposure, unindexed build artifacts, or architectural contamination.
+- [x] I updated relevant research documentation and governance scorecards.
