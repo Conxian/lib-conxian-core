@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Canonical ADR-004 fee model conformance vectors. This file is the cross-repo behavioral contract and MUST stay byte-identical between lib-conxian-core (fixtures/fee_conformance.json) and @conxian/market-sdk (test/fixtures/fee_conformance.json).",
+  "description": "Canonical ADR-004/ADR-005 fee model conformance vectors. This file is the cross-repo behavioral contract and MUST stay byte-identical between lib-conxian-core (fixtures/fee_conformance.json) and @conxian/market-sdk (test/fixtures/fee_conformance.json).",
   "cases": [
     {
       "id": "micro_lightning_floor",
@@ -15,7 +15,11 @@
         "flat_floor_sat": 10,
         "effective_fee_sat": 10,
         "effective_bps": 20000,
-        "distribution": { "operations_sat": 5, "founders_sat": 3, "ecosystem_sat": 2 }
+        "distribution": {
+          "operations_sat": 5,
+          "founders_sat": 3,
+          "ecosystem_sat": 2
+        }
       }
     },
     {
@@ -27,11 +31,15 @@
       "system_load_factor": 1.0,
       "enterprise_subscription_cap": false,
       "expected": {
-        "percentage_fee_sat": 20000,
+        "percentage_fee_sat": 5000,
         "flat_floor_sat": 10,
-        "effective_fee_sat": 20000,
-        "effective_bps": 200,
-        "distribution": { "operations_sat": 10000, "founders_sat": 6000, "ecosystem_sat": 4000 }
+        "effective_fee_sat": 5000,
+        "effective_bps": 50,
+        "distribution": {
+          "operations_sat": 2500,
+          "founders_sat": 1500,
+          "ecosystem_sat": 1000
+        }
       }
     },
     {
@@ -43,11 +51,15 @@
       "system_load_factor": 1.0,
       "enterprise_subscription_cap": false,
       "expected": {
-        "percentage_fee_sat": 2500,
+        "percentage_fee_sat": 1000,
         "flat_floor_sat": 10,
-        "effective_fee_sat": 2500,
-        "effective_bps": 25,
-        "distribution": { "operations_sat": 1250, "founders_sat": 750, "ecosystem_sat": 500 }
+        "effective_fee_sat": 1000,
+        "effective_bps": 10,
+        "distribution": {
+          "operations_sat": 500,
+          "founders_sat": 300,
+          "ecosystem_sat": 200
+        }
       }
     },
     {
@@ -59,11 +71,15 @@
       "system_load_factor": 1.0,
       "enterprise_subscription_cap": true,
       "expected": {
-        "percentage_fee_sat": 20000,
-        "flat_floor_sat": 50,
-        "effective_fee_sat": 50,
-        "effective_bps": 0,
-        "distribution": { "operations_sat": 25, "founders_sat": 15, "ecosystem_sat": 10 }
+        "percentage_fee_sat": 5000,
+        "flat_floor_sat": 375,
+        "effective_fee_sat": 375,
+        "effective_bps": 3,
+        "distribution": {
+          "operations_sat": 187,
+          "founders_sat": 112,
+          "ecosystem_sat": 76
+        }
       }
     },
     {
@@ -79,7 +95,11 @@
         "flat_floor_sat": 10,
         "effective_fee_sat": 25,
         "effective_bps": 50000,
-        "distribution": { "operations_sat": 12, "founders_sat": 7, "ecosystem_sat": 6 }
+        "distribution": {
+          "operations_sat": 12,
+          "founders_sat": 7,
+          "ecosystem_sat": 6
+        }
       }
     },
     {
@@ -95,7 +115,11 @@
         "flat_floor_sat": 10,
         "effective_fee_sat": 30,
         "effective_bps": 60000,
-        "distribution": { "operations_sat": 15, "founders_sat": 9, "ecosystem_sat": 6 }
+        "distribution": {
+          "operations_sat": 15,
+          "founders_sat": 9,
+          "ecosystem_sat": 6
+        }
       }
     },
     {
@@ -108,10 +132,14 @@
       "enterprise_subscription_cap": false,
       "expected": {
         "percentage_fee_sat": 0,
-        "flat_floor_sat": 20,
-        "effective_fee_sat": 20,
-        "effective_bps": 40000,
-        "distribution": { "operations_sat": 10, "founders_sat": 6, "ecosystem_sat": 4 }
+        "flat_floor_sat": 312,
+        "effective_fee_sat": 312,
+        "effective_bps": 624000,
+        "distribution": {
+          "operations_sat": 156,
+          "founders_sat": 93,
+          "ecosystem_sat": 63
+        }
       }
     },
     {
@@ -123,11 +151,15 @@
       "system_load_factor": 1.0,
       "enterprise_subscription_cap": false,
       "expected": {
-        "percentage_fee_sat": 20,
-        "flat_floor_sat": 100,
-        "effective_fee_sat": 100,
-        "effective_bps": 1000,
-        "distribution": { "operations_sat": 50, "founders_sat": 30, "ecosystem_sat": 20 }
+        "percentage_fee_sat": 5,
+        "flat_floor_sat": 75,
+        "effective_fee_sat": 75,
+        "effective_bps": 750,
+        "distribution": {
+          "operations_sat": 37,
+          "founders_sat": 22,
+          "ecosystem_sat": 16
+        }
       }
     }
   ]
