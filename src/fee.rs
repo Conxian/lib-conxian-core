@@ -33,14 +33,14 @@ pub enum SettlementRail {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum VolumeDecayTier {
-    /// 2.00% — launch / low volume.
+    /// 0.50% — launch / low volume.
     #[default]
     Tier1,
-    /// 1.50%.
+    /// 0.25%.
     Tier2,
-    /// 0.75%.
+    /// 0.15%.
     Tier3,
-    /// 0.25% — high-velocity M2M.
+    /// 0.10% — high-velocity M2M.
     Tier4,
 }
 
@@ -48,10 +48,10 @@ impl VolumeDecayTier {
     /// Raw basis-point rate for this tier (1 bps = 0.01%).
     pub const fn raw_basis_points(self) -> u32 {
         match self {
-            Self::Tier1 => 200,
-            Self::Tier2 => 150,
-            Self::Tier3 => 75,
-            Self::Tier4 => 25,
+            Self::Tier1 => 50,
+            Self::Tier2 => 25,
+            Self::Tier3 => 15,
+            Self::Tier4 => 10,
         }
     }
 
@@ -178,21 +178,19 @@ impl LoadOracle for StaticLoadOracle {
 /// Margin over measured rail cost that sets the flat floor (interchange-plus).
 pub const RAIL_FLOOR_MARGIN_BPS: u64 = 2500; // +25%
 
-/// First-principles per-rail settlement cost estimate (sats) — v0 cost model.
-///
-/// Replace with measured cost when per-rail telemetry lands (G8 calibration).
-/// The values are chosen so that `cost × (1 + margin)` reproduces the v0 floors
-/// exactly; see `docs/FEE_MODEL_BENCHMARK.md`.
+/// Per-rail settlement cost estimate (sats) — recalibrated by ADR-005 from
+/// researched costs; replace with measured cost when per-rail telemetry lands
+/// (G8 calibration). See `docs/FEE_MODEL_BENCHMARK.md`.
 pub fn rail_cost_estimate(rail: SettlementRail) -> u64 {
     match rail {
-        SettlementRail::Lightning => 8, // ~1 sat routing base + reserve overhead
-        SettlementRail::Statechain => 20, // server-side EC operations
-        SettlementRail::Fedimint => 20, // federated mint e-cash
-        SettlementRail::Rgb => 16,      // client-side validation
-        SettlementRail::Sbtc => 40,     // bridge peg-out + TEE attestation
-        SettlementRail::AlexStacks => 40, // AMM/settlement contract
-        SettlementRail::Babylon => 40,  // EOTS + slashing checks
-        SettlementRail::EvmErc8183 => 80, // L1 gas + ERP overhead
+        SettlementRail::Lightning => 8,    // ~1–2 sat median routing
+        SettlementRail::Statechain => 100, // flat 100 sat VTXO transfer
+        SettlementRail::Fedimint => 20,    // e-cash, near-zero transfer
+        SettlementRail::Rgb => 250,        // Bitcoin OP_RETURN anchor
+        SettlementRail::Sbtc => 300,       // Bitcoin L1 peg + Stacks tx
+        SettlementRail::AlexStacks => 40,  // Stacks tx ~sub-cent
+        SettlementRail::Babylon => 40,     // Cosmos tx ~sub-cent
+        SettlementRail::EvmErc8183 => 60,  // L2 gas + L1 data (Base/Arb/Opt)
     }
 }
 
@@ -358,17 +356,20 @@ mod tests {
     #[test]
     fn rail_floors_are_ordered() {
         assert_eq!(rail_default_flat_floor(SettlementRail::Lightning), 10);
-        assert_eq!(rail_default_flat_floor(SettlementRail::Rgb), 20);
-        assert_eq!(rail_default_flat_floor(SettlementRail::Statechain), 25);
-        assert_eq!(rail_default_flat_floor(SettlementRail::Sbtc), 50);
-        assert_eq!(rail_default_flat_floor(SettlementRail::EvmErc8183), 100);
+        assert_eq!(rail_default_flat_floor(SettlementRail::Fedimint), 25);
+        assert_eq!(rail_default_flat_floor(SettlementRail::AlexStacks), 50);
+        assert_eq!(rail_default_flat_floor(SettlementRail::Babylon), 50);
+        assert_eq!(rail_default_flat_floor(SettlementRail::EvmErc8183), 75);
+        assert_eq!(rail_default_flat_floor(SettlementRail::Statechain), 125);
+        assert_eq!(rail_default_flat_floor(SettlementRail::Rgb), 312);
+        assert_eq!(rail_default_flat_floor(SettlementRail::Sbtc), 375);
     }
 
     #[test]
     fn rail_floor_is_cost_plus_margin() {
-        // cost × (1 + 25%) reproduces the v0 floors exactly.
+        // cost × (1 + 25%).
         assert_eq!(rail_floor_from_cost(8, RAIL_FLOOR_MARGIN_BPS), 10);
-        assert_eq!(rail_floor_from_cost(80, RAIL_FLOOR_MARGIN_BPS), 100);
+        assert_eq!(rail_floor_from_cost(60, RAIL_FLOOR_MARGIN_BPS), 75);
         // A zero-margin floor equals cost.
         assert_eq!(rail_floor_from_cost(8, 0), 8);
         // The default floor is the cost model with the default margin.
@@ -397,10 +398,10 @@ mod tests {
 
     #[test]
     fn volume_decay_tiers() {
-        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier1), 200);
-        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier2), 150);
-        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier3), 75);
-        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier4), 25);
+        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier1), 50);
+        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier2), 25);
+        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier3), 15);
+        assert_eq!(volume_decayed_bps(VolumeDecayTier::Tier4), 10);
     }
 
     #[test]
@@ -473,11 +474,11 @@ mod tests {
 
     #[test]
     fn percentage_dominates_large_settlement() {
-        // 1_000_000 sat Tier1 (200 bps) = 20_000 sat percentage.
+        // 1_000_000 sat Tier1 (50 bps) = 5_000 sat percentage.
         let r = calculate_dynamic_fee(opts(SettlementRail::Lightning, 1_000_000)).unwrap();
-        assert_eq!(r.percentage_fee_sat, 20_000);
-        assert_eq!(r.effective_fee_sat, 20_000);
-        assert_eq!(r.effective_bps, 200);
+        assert_eq!(r.percentage_fee_sat, 5_000);
+        assert_eq!(r.effective_fee_sat, 5_000);
+        assert_eq!(r.effective_bps, 50);
     }
 
     #[test]
@@ -485,7 +486,7 @@ mod tests {
         let mut o = opts(SettlementRail::Sbtc, 1_000_000);
         o.enterprise_subscription_cap = true;
         let r = calculate_dynamic_fee(o).unwrap();
-        assert_eq!(r.effective_fee_sat, 50);
+        assert_eq!(r.effective_fee_sat, 375);
     }
 
     #[test]
@@ -515,7 +516,7 @@ mod tests {
             d.operations_sat + d.founders_sat + d.ecosystem_sat,
             r.effective_fee_sat
         );
-        // 50/30/20 of 6173 sat (200 bps on 123_456 = 2469 sat, floor 50 → 2469).
+        // 50/30/20 of 617 sat (50 bps on 123_456 = 617 sat, Babylon floor 50 → 617).
         assert_eq!(d.operations_sat, r.effective_fee_sat * 50 / 100);
         assert_eq!(d.founders_sat, r.effective_fee_sat * 30 / 100);
     }
