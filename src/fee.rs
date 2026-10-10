@@ -28,7 +28,9 @@ pub enum SettlementRail {
 }
 
 /// Logarithmic 30-day volume decay tiers (ADR-004 §3.2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum VolumeDecayTier {
     /// 2.00% — launch / low volume.
@@ -183,13 +185,13 @@ pub const RAIL_FLOOR_MARGIN_BPS: u64 = 2500; // +25%
 /// exactly; see `docs/FEE_MODEL_BENCHMARK.md`.
 pub fn rail_cost_estimate(rail: SettlementRail) -> u64 {
     match rail {
-        SettlementRail::Lightning => 8,   // ~1 sat routing base + reserve overhead
+        SettlementRail::Lightning => 8, // ~1 sat routing base + reserve overhead
         SettlementRail::Statechain => 20, // server-side EC operations
-        SettlementRail::Fedimint => 20,   // federated mint e-cash
-        SettlementRail::Rgb => 16,        // client-side validation
-        SettlementRail::Sbtc => 40,       // bridge peg-out + TEE attestation
+        SettlementRail::Fedimint => 20, // federated mint e-cash
+        SettlementRail::Rgb => 16,      // client-side validation
+        SettlementRail::Sbtc => 40,     // bridge peg-out + TEE attestation
         SettlementRail::AlexStacks => 40, // AMM/settlement contract
-        SettlementRail::Babylon => 40,    // EOTS + slashing checks
+        SettlementRail::Babylon => 40,  // EOTS + slashing checks
         SettlementRail::EvmErc8183 => 80, // L1 gas + ERP overhead
     }
 }
@@ -372,7 +374,10 @@ mod tests {
         // The default floor is the cost model with the default margin.
         assert_eq!(
             rail_default_flat_floor(SettlementRail::Lightning),
-            rail_floor_from_cost(rail_cost_estimate(SettlementRail::Lightning), RAIL_FLOOR_MARGIN_BPS)
+            rail_floor_from_cost(
+                rail_cost_estimate(SettlementRail::Lightning),
+                RAIL_FLOOR_MARGIN_BPS
+            )
         );
     }
 
@@ -400,11 +405,26 @@ mod tests {
 
     #[test]
     fn volume_to_tier_mapping() {
-        assert_eq!(VolumeDecayTier::from_monthly_volume(0), VolumeDecayTier::Tier1);
-        assert_eq!(VolumeDecayTier::from_monthly_volume(9_999_999), VolumeDecayTier::Tier1);
-        assert_eq!(VolumeDecayTier::from_monthly_volume(10_000_000), VolumeDecayTier::Tier2);
-        assert_eq!(VolumeDecayTier::from_monthly_volume(100_000_000), VolumeDecayTier::Tier3);
-        assert_eq!(VolumeDecayTier::from_monthly_volume(1_000_000_000), VolumeDecayTier::Tier4);
+        assert_eq!(
+            VolumeDecayTier::from_monthly_volume(0),
+            VolumeDecayTier::Tier1
+        );
+        assert_eq!(
+            VolumeDecayTier::from_monthly_volume(9_999_999),
+            VolumeDecayTier::Tier1
+        );
+        assert_eq!(
+            VolumeDecayTier::from_monthly_volume(10_000_000),
+            VolumeDecayTier::Tier2
+        );
+        assert_eq!(
+            VolumeDecayTier::from_monthly_volume(100_000_000),
+            VolumeDecayTier::Tier3
+        );
+        assert_eq!(
+            VolumeDecayTier::from_monthly_volume(1_000_000_000),
+            VolumeDecayTier::Tier4
+        );
     }
 
     #[test]
@@ -484,17 +504,17 @@ mod tests {
     fn observer_only_rejected() {
         let mut o = opts(SettlementRail::Lightning, 100);
         o.trust_tier = TrustTier::ObserverOnly;
-        assert_eq!(
-            calculate_dynamic_fee(o),
-            Err(FeeError::ObserverOnlyTier)
-        );
+        assert_eq!(calculate_dynamic_fee(o), Err(FeeError::ObserverOnlyTier));
     }
 
     #[test]
     fn distribution_conserves_total() {
         let r = calculate_dynamic_fee(opts(SettlementRail::Babylon, 123_456)).unwrap();
         let d = r.distribution;
-        assert_eq!(d.operations_sat + d.founders_sat + d.ecosystem_sat, r.effective_fee_sat);
+        assert_eq!(
+            d.operations_sat + d.founders_sat + d.ecosystem_sat,
+            r.effective_fee_sat
+        );
         // 50/30/20 of 6173 sat (200 bps on 123_456 = 2469 sat, floor 50 → 2469).
         assert_eq!(d.operations_sat, r.effective_fee_sat * 50 / 100);
         assert_eq!(d.founders_sat, r.effective_fee_sat * 30 / 100);
@@ -552,23 +572,28 @@ mod tests {
 
             assert_eq!(
                 result.percentage_fee_sat, case.expected.percentage_fee_sat,
-                "case {} percentage_fee_sat", case.id
+                "case {} percentage_fee_sat",
+                case.id
             );
             assert_eq!(
                 result.flat_floor_sat, case.expected.flat_floor_sat,
-                "case {} flat_floor_sat", case.id
+                "case {} flat_floor_sat",
+                case.id
             );
             assert_eq!(
                 result.effective_fee_sat, case.expected.effective_fee_sat,
-                "case {} effective_fee_sat", case.id
+                "case {} effective_fee_sat",
+                case.id
             );
             assert_eq!(
                 result.effective_bps, case.expected.effective_bps,
-                "case {} effective_bps", case.id
+                "case {} effective_bps",
+                case.id
             );
             assert_eq!(
                 result.distribution, case.expected.distribution,
-                "case {} distribution", case.id
+                "case {} distribution",
+                case.id
             );
         }
     }
