@@ -1,3 +1,18 @@
+
+## Session 88 — Transport Capability Adapter Hardening & Candidate Matrix Alignment (2026-10-13)
+
+- **Audited Modules**: `src/chain/transport.rs`, `src/adapters/mod.rs`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`.
+- **Key Enhancements**:
+  - Hardened `src/chain/transport.rs` with fail-closed parameter validation:
+    - Added `TransportError::InvalidInput(String)` variant and `PartialEq, Eq` implementations.
+    - Implemented `TransportCapability::validate()` checking for empty/whitespace `chain_id` and non-empty `features` vector.
+    - Added input validation on `TransportAdapter::supports()`, `broadcast()`, and `query_utxos()`.
+    - Updated `MockTransport` to enforce fail-closed validation on empty chain IDs, empty transaction payloads, and whitespace addresses.
+    - Added comprehensive unit tests covering capability validation, invalid chain ID rejection, empty address/tx handling, and error display formatting.
+- **Verification Baseline**:
+  - 285 Rust workspace tests passing cleanly across `lib-conxian-core` and companion crates.
+  - 71 Python verification guard tests passing cleanly in `scripts/tests/`.
+
 # Session Research Log
 
 > This document tracks research findings and decisions made during development sessions.
