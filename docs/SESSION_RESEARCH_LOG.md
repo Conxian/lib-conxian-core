@@ -920,3 +920,24 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Intent Parameter Hardening**: Added explicit fail-closed parameter validation for bids (`solver_id` non-empty, `amount_sats > 0`, `estimated_latency_blocks >= 1`, `fee_sats <= amount_sats`), FDC3 instruments (`ticker` and `conxian_asset_id` non-empty), and intent resolution (`amount > 0`, `destination` non-empty).
 - **Protocol Test Matrix**: Verified 286 Rust workspace test cases (151 core unit tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
 - **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 84 audit findings, 286 passing Rust tests, and operational stability.
+
+---
+## Session 2026-10-13 (Session 87): FROST Threshold Signature Parameter Hardening & RFC 9591 Validation
+
+### Objective
+1. Perform org-wide ecosystem audit and repository synchronization.
+2. Review cross-repository GitHub issue statuses, research gaps, and candidate scoring matrix.
+3. Harden FROST threshold signature primitives in `src/protocol/frost.rs` with fail-closed IETF RFC 9591 parameter validation methods (`FrostKeyShare::validate`, `FrostShareCommitment::validate`, `EncryptedFrostShare::validate`).
+4. Update research documentation (`docs/UNIVERSAL_SUPPORT_RESEARCH.md`), gap scoring (`docs/GAP_ANALYSIS_AND_SCORING.md`), session logs, scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and session tracking ledger (`.session/ledger.md`).
+5. Verify Rust workspace test suite (282 total tests passing) and Python verification guard suite (71 test cases passing).
+
+### 1. Research Findings & Strategic Synthesis
+- **FROST Parameter Hardening (RFC 9591)**: Enforced fail-closed validation across FROST structs:
+  - `FrostKeyShare::validate`: 1-based participant index, 32-byte non-zero scalar secret share, 33-byte/32-byte secp256k1 public key.
+  - `FrostShareCommitment::validate`: 1-based participant index, non-empty commitment point vector of valid public key points.
+  - `EncryptedFrostShare::validate`: distinct non-zero `from_index` and `to_index`, non-empty payload, non-zero 32-byte MAC tag.
+- **Round 2 Distribution Safeguards**: `FrostManager::prepare_distribution_shares` executes `validate()` checks on source share and target participant lists, rejecting self-distribution and zero target indices.
+
+### 2. System Verification Status
+- **Rust Workspace**: 282 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version`).
+- **Python Verification Guards**: 71 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
