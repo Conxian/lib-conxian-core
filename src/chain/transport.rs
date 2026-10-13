@@ -182,11 +182,7 @@ impl TransportAdapter for MockTransport {
         Ok("mock_txid_0000000000000000000000000000000000000000000000000000000000000000".into())
     }
 
-    fn query_utxos(
-        &self,
-        chain_id: &str,
-        address: &str,
-    ) -> Result<Vec<UtxoEntry>, TransportError> {
+    fn query_utxos(&self, chain_id: &str, address: &str) -> Result<Vec<UtxoEntry>, TransportError> {
         if chain_id.trim().is_empty() {
             return Err(TransportError::InvalidInput(
                 "chain_id cannot be empty or whitespace".into(),
@@ -268,21 +264,29 @@ mod tests {
         // Broadcast parameter checks
         assert_eq!(
             transport.broadcast("", b"raw_tx"),
-            Err(TransportError::InvalidInput("chain_id cannot be empty or whitespace".into()))
+            Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into()
+            ))
         );
         assert_eq!(
             transport.broadcast("bitcoin:mainnet", b""),
-            Err(TransportError::InvalidInput("raw_tx payload cannot be empty".into()))
+            Err(TransportError::InvalidInput(
+                "raw_tx payload cannot be empty".into()
+            ))
         );
 
         // Query UTXOs parameter checks
         assert_eq!(
             transport.query_utxos("  ", "bc1qtest"),
-            Err(TransportError::InvalidInput("chain_id cannot be empty or whitespace".into()))
+            Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into()
+            ))
         );
         assert_eq!(
             transport.query_utxos("bitcoin:mainnet", ""),
-            Err(TransportError::InvalidInput("address cannot be empty or whitespace".into()))
+            Err(TransportError::InvalidInput(
+                "address cannot be empty or whitespace".into()
+            ))
         );
     }
 
@@ -291,5 +295,4 @@ mod tests {
         let err = TransportError::InvalidInput("test error".into());
         assert_eq!(format!("{err}"), "invalid transport input: test error");
     }
-
 }

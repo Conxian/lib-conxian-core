@@ -2,12 +2,16 @@
 
 > **Current release:** `lib-conxian-core` v0.3.3 is the intentional breaking
 > verifier/API release. The v0.2.11 Vault SDK removal described below is
-> historical; all Vault SDK functionality is available in the production
+> historical; Vault SDK APIs are available in
 > [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk).
+> API availability is not hardware/provider support. At the 2026-10-13
+> checkpoint, no complete provider-issued signer plus verifier path has been
+> accepted as production-supported; value-bearing callers must remain fail
+> closed until the selected provider passes its qualification evidence gate.
 
 ## Overview
 
-Starting with v0.2.11, `lib-conxian-core` no longer includes Vault SDK functionality (hardware-backed signing, attestation, policy enforcement, MuSig2, BitVM2). This functionality has moved to the production [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate.
+Starting with v0.2.11, `lib-conxian-core` no longer includes Vault SDK functionality (hardware-backed signing, attestation, policy enforcement, MuSig2, BitVM2). This functionality has moved to the [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate. Its software/simulator surfaces are not production hardware evidence.
 
 ## ProtocolVerifier hardening (v0.3.0)
 
@@ -167,7 +171,12 @@ let sdk = VaultSDK::new(wallet, policy);
 let signature = sdk.sign_with_policy("tx_id", 500_000, "bc1q...")?;
 ```
 
-#### New Code (conxius-enclave-sdk)
+#### Historical development example (not value-bearing production code)
+
+`CloudEnclave` is a development/simulator surface and must not be used to
+satisfy a hardware-backed trust requirement. Production code must use the
+SDK's typed value-bearing request and a qualified provider implementation; if
+none is configured, signing remains unavailable.
 
 ```rust
 use conxius_enclave_sdk::enclave::{
