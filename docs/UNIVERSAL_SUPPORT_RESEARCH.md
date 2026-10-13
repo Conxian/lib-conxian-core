@@ -188,3 +188,11 @@ To transition core repositories into turnkey enterprise solutions:
 | **Conxian Nexus** | One-click Cloud NaaS Terraform templates across AWS, Azure, GCP. | Unified Multi-Chain GraphQL Oracle API abstracting SPV cryptography & data commitments. | Event-driven webhooks and WebSockets for cryptographic finality triggers. |
 | **Conxian Market** | Agent-native SDKs for LangChain & AutoGPT with 3-line escrow calls. | Parametric escrow templates (Fixed-Bounty, Milestone, Time-and-Materials). | Algorithmic DLC arbitration for automated agent dispute resolution. |
 | **Enclave (Conclave)** | Cloud-hosted pre-attested compute wrapping WASM business logic in TEEs. | Automated BitVM watchtowers initiating <$50 challenge transactions on fraudulent state roots. | Key Management as a Service (KMaaS) enforcing policy-driven multi-sig/timelock rules via `conxius-wallet`. |
+
+## 25. Research Update (2026-10-13 Session 87 Synthesis): FROST Parameter & Key Share Validation Hardening (RFC 9591)
+An audit of `src/protocol/frost.rs` expanded the FROST (Flexible Round-Optimized Schnorr Threshold Signatures) IETF RFC 9591 parameter validation boundary:
+
+- **Key Share Structural Bounds**: `FrostKeyShare::validate` enforces non-zero 1-indexed participant identifiers (`index > 0`), 32-byte non-zero secret share scalars, and valid 33-byte secp256k1 compressed or 32-byte x-only public keys.
+- **Commitment Vector Integrity**: `FrostShareCommitment::validate` enforces non-zero 1-indexed participant identifiers and non-empty commitment point vectors where each point is 33-byte compressed or 32-byte x-only.
+- **Encrypted Share Distribution Rules**: `EncryptedFrostShare::validate` enforces distinct sender (`from_index`) and receiver (`to_index`) participant indices, non-empty encrypted payloads, and non-zero 32-byte MAC authenticating tags.
+- **Distribution Safeguards**: `FrostManager::prepare_distribution_shares` verifies participant parameter bounds, non-zero target participant lists, and prohibits self-distribution before returning typed `FrostError::Unsupported`.

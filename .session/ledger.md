@@ -8,35 +8,36 @@
 ## Phase Completion Record
 - [x] **A0: Session Initialization & State Recovery** - Ledger initialized at `.session/ledger.md`.
 - [x] **A1: Repository Synchronization** - Verified git status and remote branches (`origin/main`).
-- [x] **A2: Systematic Reconnaissance** - Verified codebase metrics (282 Rust workspace tests + 70 Python guard tests passing).
-- [x] **A3: Gap Identification & Prioritization** - Evaluated candidate matrix; selected 3D Turnkey Enterprise Framework & CXIP Research Expansion (conxian-business #1317 / CON-1317).
-- [x] **A4: Research Expansion & Candidate Scoring** - Scored CON-1317 at 95/100 weighted matrix score.
-- [x] **A5: Best Candidate Selection & Production Code Initiation** - Synthesized issue #1317 research, quantitative fee extraction (30 bps ALEX-style in-kind fees & reserve pools), BitVM3 challenge cost collapse ($15,000 -> <$50 target), DLC Bonds & SYI, and 3D Turnkey Framework into `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/SESSION_RESEARCH_LOG.md`, and `docs/GAP_ANALYSIS_AND_SCORING.md`.
+- [x] **A2: Systematic Reconnaissance** - Verified codebase metrics (282 Rust workspace tests + 71 Python guard tests passing).
+- [x] **A3: Gap Identification & Prioritization** - Evaluated candidate matrix; selected FROST threshold signature parameter validation hardening (CON-1335 / G-35).
+- [x] **A4: Research Expansion & Candidate Scoring** - Scored FROST RFC 9591 parameter validation at 90/100 weighted matrix score.
+- [x] **A5: Best Candidate Selection & Production Code Initiation** - Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds.
 - [x] **A6: Session Close & Continuity Handoff** - Verified pre-commit steps, code review, memory recording, and ledger continuity.
 
 ## A2: Reconnaissance Metrics & Baseline
 - **Rust Workspace Test Suite**: 282 tests passing across crates and doc-tests (100% pass rate).
-- **Python Guard Test Suite**: 70 tests passing (100% pass rate).
+- **Python Guard Test Suite**: 71 tests passing (100% pass rate).
 - **Crate Version**: `lib-conxian-core` v0.3.3.
 - **Vault SDK Relationship**: Production Vault SDK is `conxius-enclave-sdk` v2.0.17.
 
 ## A3: Candidate Gap Scoring Matrix
-- **Target Gap**: 3D Turnkey Enterprise Framework & CXIP Research Expansion (CON-1317)
-  - Strategic Alignment (40%): 40/40
-  - Technical Readiness (30%): 25/30
-  - Risk / Inverted (20%): 20/20
+- **Target Gap**: FROST Threshold Signature RFC 9591 Parameter Hardening (G-35)
+  - Strategic Alignment (40%): 35/40
+  - Technical Readiness (30%): 30/30
+  - Risk / Inverted (20%): 15/20
   - Testability (10%): 10/10
-  - **Weighted Total Score**: 95/100 -> Candidate Selected and Synthesized.
+  - **Weighted Total Score**: 90/100 -> Candidate Selected and Implemented.
 
-## A4 & A5: Candidate Selection & Research Synthesis
-- **Selected Gap ID**: CON-1317 (Org-Wide Research Expansion & 3D Turnkey Infrastructure)
+## A4 & A5: Candidate Selection & Production Implementation
+- **Selected Gap ID**: CON-1335 / G-35 (FROST Threshold Signature Hardening)
 - **Status**: `completed`
-- **Implementation & Research Verification**:
-  - Extracted and analyzed full research report from issue #1317 in `conxian-business`.
-  - Added Section 24 to `docs/UNIVERSAL_SUPPORT_RESEARCH.md` covering language taxonomy, ALEX-style 30 bps in-kind fee capture & reserve pools, BitVM3 challenge cost collapse ($15,000 -> <$50), DLC Bonds & sBTC Suction Pattern (SYI), and the 3D Turnkey Optimization Framework (Gateway, Nexus, Market, Enclave).
-  - Updated `docs/SESSION_RESEARCH_LOG.md` with comprehensive Session 86 entry.
-  - Updated `docs/GAP_ANALYSIS_AND_SCORING.md` with candidate matrix entry and Session 86 summary.
-  - Synchronized `docs/governance/EXECUTIVE_SCORECARD.md` and `.session/ledger.md`.
+- **Implementation & Verification**:
+  - Implemented fail-closed `.validate()` methods for `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` in `src/protocol/frost.rs`.
+  - Added unit tests covering valid and invalid key shares, commitments, and encrypted distribution shares.
+  - Updated `docs/UNIVERSAL_SUPPORT_RESEARCH.md` with Section 25.
+  - Updated `docs/GAP_ANALYSIS_AND_SCORING.md` with Session 87 summary.
+  - Updated `docs/SESSION_RESEARCH_LOG.md` with Session 87 entry.
+  - Synchronized `.session/ledger.md`.
 
 ## A6: Continuity Handoff
 - **Handoff State**: Ready for submission. Next session can resume from `.session/ledger.md` or initiate the next candidate gap from `docs/GAP_ANALYSIS_AND_SCORING.md`.
