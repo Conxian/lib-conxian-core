@@ -7,7 +7,7 @@ This document defines the canonical repository and runtime ownership for the Con
 | Layer | Primary Responsibility | Representative Repositories |
 | :--- | :--- | :--- |
 | **Protocol Core** | Canonical protocol primitives, control contracts, and invariant validation. | `lib-conxian-core` |
-| **Secure Enclave SDK** | Production hardware-backed signing, attestation, and policy flows. | `conxius-enclave-sdk` |
+| **Secure Enclave SDK** | Hardware-signing, attestation, and policy contracts; provider support is evidence-gated. | `conxius-enclave-sdk` |
 | **Core/SDK Adapter** | Narrow typed compatibility boundary; no provider or runtime ownership. | `lib-conxian-core-enclave` |
 | **Gateway & Routing** | Protocol monitoring, compliance, service ingress. | `conxian-gateway ` |
 | **Orchestration** | Automation, cross-service workflows, platform logic. | `conxius-platform` |
@@ -28,8 +28,8 @@ This document defines the canonical repository and runtime ownership for the Con
 - **Job Card Schema (CJCS)** and shared financial models remain protocol types.
 
 ### 2.2 Secure Enclave SDK (`conxius-enclave-sdk`)
-- **Production signing**: hardware-backed key custody, derivation, and concrete
-  signing implementations.
+- **Signing ownership**: hardware-backed key custody, derivation, and concrete
+  signing implementations, with production support qualified per provider.
 - **Security flows**: attestation and policy enforcement.
 - **Provider/runtime boundary**: concrete hardware providers and SDK runtime
   behavior remain in this repository or its downstream integrations.
