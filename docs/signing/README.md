@@ -45,9 +45,10 @@ or provider workflows.
 - [BIP-110 types](../../src/control_model/bip110.rs)
 - [Trust and chain-family mapping](../../src/control_model/trust.rs)
 
-The production hardware-backed signer and attestation layer is the
-[`conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) contract
+The hardware-backed signer and attestation contract is owned by
+[`conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk), as
 referenced by issue [#179](https://github.com/Conxian/conxius-enclave-sdk/issues/179).
+Production support remains gated by the selected provider's accepted evidence.
 Runtime orchestration and external effects belong to
 [`conxian-gateway`](https://github.com/Conxian/conxian-gateway), with the flow
 contract tracked in

@@ -20,7 +20,7 @@
     {
       "id": "enclave-sdk",
       "name": "conxius-enclave-sdk",
-      "role": "Production hardware-backed signing, attestation, and policy flows",
+      "role": "Hardware-signing, attestation, and policy contracts; provider support is evidence-gated",
       "visibility": "Public",
       "ownership": "Security Team",
       "trust_boundary": "L1 (Hardware Isolated)",

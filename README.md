@@ -8,8 +8,10 @@ Shared protocol primitives for the Conxian ecosystem.
 
 ## ⚠️ Vault SDK Migration
 
-For **hardware-backed signing, attestation, and policy primitives**, use the production
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.17) instead.
+For **hardware-backed signing, attestation, and policy primitives**, use
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17).
+The SDK owns those boundaries, but provider production support requires
+separate qualification; API presence and simulators are not hardware evidence.
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
@@ -56,7 +58,7 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 | Crate | Purpose |
 |-------|---------|
-| [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) | **Production Vault SDK** - Hardware-backed signing, attestation, FROST DKG, BitVM2 |
+| [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) | Vault/security SDK boundary - hardware provider support remains evidence-gated |
 | [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/) | Fail-closed Core/SDK adapter - exact algorithm, digest, derivation, trust-policy, response, and BIP-110 preflight boundary |
 | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
 | [`conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Runtime orchestration and middleware |

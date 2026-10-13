@@ -27,7 +27,7 @@ This document provides a comprehensive analysis of the Conxian ecosystem crate r
 
 | Crate | Version | Owner | Purpose | Downloads | Status |
 |-------|---------|-------|---------|-----------|--------|
-| `conxius-enclave-sdk` | 2.0.17 | botshelomokoka | **Production Vault SDK** | 10 | ✅ Production |
+| `conxius-enclave-sdk` | 2.0.17 | botshelomokoka | Vault/security SDK boundary | 10 | ⚠️ Provider qualification open |
 | `conxian-core` | 0.1.4 | botshelomokoka | Gateway core | 23 | ⚠️ WIP |
 | `conxian_api` | 0.1.4 | botshelomokoka | HTTP API | 10 | ⚠️ WIP |
 | `conxian_compliance` | 0.1.4 | botshelomokoka | ZK compliance | 13 | ⚠️ WIP |
@@ -43,7 +43,7 @@ Conxian GitHub Organization
 ├── lib-conxian-core (THIS REPO)
 │   └── Protocol primitives (shared)
 ├── conxius-enclave-sdk
-│   └── Production Vault SDK
+│   └── Vault/security SDK boundary
 ├── conxian-gateway
 │   └── Runtime orchestration
 ├── conxian-nexus
@@ -96,19 +96,20 @@ This repository provides **shared protocol primitives** that are consumed by all
 | `fedimint/` | Basic adapter | Full adapter | Keep local |
 | `lightning/` | Basic adapter | Full LND | Keep local |
 
-### conxius-enclave-sdk: Production Vault SDK
+### conxius-enclave-sdk: Vault/security SDK boundary
 
-This is the **production SDK** for hardware-backed signing and security primitives.
+This SDK owns hardware-backed signing and security primitives. Ownership and API
+coverage do not establish provider production support.
 
 #### Key Capabilities
 
 | Feature | Status | WASM |
 |---------|--------|------|
-| Hardware Attestation | ✅ Production | ✅ |
+| Hardware Attestation | ⚠️ Typed/structural foundations; provider qualification open | ✅ |
 | FROST DKG | ✅ v2.0.17 | ✅ |
 | Fedimint | ✅ v2.0.7 | ✅ |
 | Ark | ✅ v2.0.7 | ✅ |
-| BitVM2 | ✅ Production | ✅ |
+| BitVM2 | ⚠️ Evidence-gated | ✅ |
 | MuSig2 | ✅ BIP-327 | ✅ |
 | 30+ Chains | ✅ | ✅ |
 | Settlement Rails | ✅ | ⚠️ Partial |
@@ -207,8 +208,8 @@ conxian-nexus
 
 ### 1. Canonical SDK naming (complete)
 
-- Use `conxius-enclave-sdk` as the single current production SDK package and
-  repository name.
+- Use `conxius-enclave-sdk` as the canonical Vault/security SDK package and
+  repository name; qualify production support per provider.
 - Keep `lib-conxian-core-enclave` as the narrow Core/SDK compatibility adapter;
   it is not a second provider or runtime SDK.
 - Keep `lib-conxian-core` focused on protocol primitives, invariants, and
@@ -331,7 +332,7 @@ secp256k1 = "0.31"             # Align with SDK
 ### Short-term (Next Sprint)
 
 - [x] Publish migration guide ✅ DONE (v0.2.11)
-- [x] Use `conxius-enclave-sdk` as the canonical production SDK name
+- [x] Use `conxius-enclave-sdk` as the canonical Vault/security SDK name
 - [ ] Consider consolidating conxian-* crates
 
 ### Medium-term (Next Quarter)
