@@ -29,7 +29,7 @@ adapter—not in Core.
 | Durable multi-replica replay and audit evidence | Managed service/runtime |
 | Real-device/provider tests, SBOM, provenance and independent review | Release qualification |
 
-The authoritative provider matrix and HS-001…HS-012 backlog are maintained in
+The authoritative provider matrix and HS-001…HS-013 backlog are maintained in
 `conxius-enclave-sdk/docs/architecture/HARDWARE_SIGNING_PROVIDER_MATRIX_2026.md`.
 Until a provider row is promoted with exact evidence, Core integrations must
 treat it as unsupported.
