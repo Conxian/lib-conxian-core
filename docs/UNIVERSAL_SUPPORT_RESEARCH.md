@@ -188,3 +188,13 @@ To transition core repositories into turnkey enterprise solutions:
 | **Conxian Nexus** | One-click Cloud NaaS Terraform templates across AWS, Azure, GCP. | Unified Multi-Chain GraphQL Oracle API abstracting SPV cryptography & data commitments. | Event-driven webhooks and WebSockets for cryptographic finality triggers. |
 | **Conxian Market** | Agent-native SDKs for LangChain & AutoGPT with 3-line escrow calls. | Parametric escrow templates (Fixed-Bounty, Milestone, Time-and-Materials). | Algorithmic DLC arbitration for automated agent dispute resolution. |
 | **Enclave (Conclave)** | Cloud-hosted pre-attested compute wrapping WASM business logic in TEEs. | Automated BitVM watchtowers initiating <$50 challenge transactions on fraudulent state roots. | Key Management as a Service (KMaaS) enforcing policy-driven multi-sig/timelock rules via `conxius-wallet`. |
+
+
+## Section 26: Transport Capability Adapter Architecture (2026-10-13)
+
+Transport capability adapters in `src/chain/transport.rs` establish a deterministic, transport-neutral boundary separating protocol state invariants from network transport backends (Esplora, Electrum, RPC).
+
+### Key Hardening Invariants
+1. **Capability Provenance**: Backends prove supported capabilities via `TransportCapability`. The `validate()` method enforces non-empty, well-formed `chain_id` strings and non-empty feature vectors.
+2. **Fail-Closed Operations**: Invoking `broadcast()` or `query_utxos()` with empty or whitespace chain IDs, empty transaction bytes, or blank addresses returns `TransportError::InvalidInput` immediately without dispatching to network providers.
+3. **Feature Support Enquiries**: `supports()` checks perform fail-fast validation on input chain IDs before capability matching.
