@@ -2,13 +2,19 @@
 
 ## Overview
 
-This POC demonstrates the complete enclave signing pipeline for `lib-conxian-core` using AWS Nitro Enclaves. The project proves that:
+This is a **mock-only adapter demonstration**. It does not run inside an AWS
+Nitro Enclave, call the Nitro Secure Module, generate a genuine attestation
+document, release a KMS-bound signing key, or establish production support.
+The project demonstrates only that:
 
 1. **Core types flow correctly** through the enclave adapter (`lib-conxian-core-enclave`)
 2. **Trust policy gates work** — Strict/Managed/Expedient/ObserverOnly tiers enforced
-3. **Attestation evidence** is generated and validated
-4. **Fail-closed behavior** is maintained at every boundary
-5. **The signing pipeline is production-ready** when backed by a real Nitro Enclave
+3. synthetic evidence can exercise the adapter shape in a development test
+4. selected negative cases fail closed in the mock harness
+
+The complete hardware/provider signer and verifier remain owned by
+`conxius-enclave-sdk`. Core must consume only a provider-verified SDK response;
+it must never promote this POC's JSON, shell output, or mock manager into trust.
 
 ## Quick Start (POC)
 
@@ -18,10 +24,10 @@ cd enclave-poc
 cargo run
 
 # This demonstrates 4 scenarios:
-# 1. Strict-tier Bitcoin signing with Nitro TEE ✅
+# 1. Strict-tier Bitcoin signing shape with a mock manager
 # 2. ObserverOnly tier — signing REJECTED ✅
 # 3. Strict tier with software attestation — REJECTED ✅
-# 4. Full chain signing flow (Bitcoin, Ethereum, Solana, Stacks, Babylon)
+# 4. Multi-chain adapter shape with mock signatures
 ```
 
 ## Test Results Summary
@@ -34,7 +40,7 @@ cargo run
 | Doc tests | 5/7 | ✅ Pass (2 intentionally ignored) |
 | **Total** | **227+** | **0 failures** |
 
-## Architecture
+## Target architecture (not implemented by this POC)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -59,7 +65,15 @@ cargo run
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## AWS Nitro Enclave Production Deployment
+## AWS Nitro Enclave qualification blueprint
+
+The commands below are historical/illustrative operator notes, not a turnkey
+deployment. AMIs, instance families, package commands, prices, IAM policies,
+PCR policy, and KMS condition keys must be revalidated against current AWS
+documentation. Production enablement additionally requires the SDK's genuine
+NSM/COSE verifier, current Nitro root/certificate-path validation, measurement
+and TCB policy, KMS key-release binding, durable replay protection, real
+positive and negative tests, independent review, and exact release evidence.
 
 ### Prerequisites
 
@@ -181,16 +195,16 @@ cargo build --release
 7. Response is mapped to Core SignResponse types
 ```
 
-### Security Properties
+### Required security properties (not POC evidence)
 
 | Property | Mechanism |
 |----------|-----------|
 | **Code integrity** | PCR0 = SHA384 of EIF (immutable once built) |
 | **Runtime integrity** | PCR1-3 = kernel + app + IAM role (verified at boot) |
-| **Key isolation** | NSM-derived keys never leave the enclave |
+| **Key isolation** | A qualified provider must prove the signing key never leaves the approved boundary |
 | **Replay protection** | Nonce binding in attestation document |
 | **Trust policy** | Core adapter enforces Strict/Managed/Expedient gates |
-| **Fail-closed** | Any attestation mismatch → typed error, no signature |
+| **Fail-closed** | The production SDK/provider path must reject every attestation, policy, replay, or key-binding mismatch |
 
 ### Cost Estimate
 
@@ -201,9 +215,9 @@ cargo build --release
 | KMS key | 1 key | ~$1 |
 | **Total** | | **~$141/month** |
 
-### Production Readiness Checklist
+### Production qualification checklist
 
-- [ ] POC binary tests pass (227+ tests, 0 failures)
+- [ ] Re-run and record the current POC/unit tests (historical counts are not release evidence)
 - [ ] Docker image builds for enclave
 - [ ] EIF generation with deterministic PCR0
 - [ ] Nitro-enabled EC2 instance provisioned
@@ -213,3 +227,8 @@ cargo build --release
 - [ ] CI/CD pipeline for EIF builds
 - [ ] Monitoring and alerting for enclave health
 - [ ] Key rotation procedures documented
+- [ ] Genuine NSM attestation and current AWS certificate chain verified outside the enclave
+- [ ] KMS release policy binds approved PCRs, role, key, algorithm, request, and returned public key
+- [ ] Replay protection remains durable across replicas and restarts
+- [ ] Mock/simulated paths are rejected by production configuration and tests
+- [ ] Independent security review and exact EIF/SBOM/provenance evidence accepted

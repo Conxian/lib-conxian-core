@@ -159,7 +159,7 @@ fn make_request(chain: Chain, algorithm: SigningAlgorithm, msg: &[u8]) -> SignRe
 
 fn demo_strict_tier_signing() {
     println!("\nв•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—");
-    println!("в•‘  SCENARIO 1: Strict-tier Bitcoin signing with Nitro TEE в•‘");
+    println!("в•‘  SCENARIO 1: Bitcoin adapter with a mock manager          в•‘");
     println!("в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ\n");
 
     let manager = Arc::new(NitroMockManager::new("bitcoin-vault-key-001"));
@@ -185,7 +185,7 @@ fn demo_strict_tier_signing() {
 
             match adapter.sign_digest_with_bip110_preflight(&request, &preflight, &envelope, &policy) {
         Ok(response) => {
-            println!("  вњ… SIGNING SUCCESS");
+            println!("  вњ… MOCK ADAPTER SUCCESS (NOT HARDWARE EVIDENCE)");
             println!("     Signature: {}...", &hex::encode(&response.signature.bytes)[..32]);
             println!("     Verification key: {}...", &hex::encode(&response.verification_key.bytes)[..16]);
             println!("     Enclave sign calls: {}", manager.call_count());
@@ -217,7 +217,7 @@ fn demo_observer_only_rejected() {
 
 fn demo_full_chain_flow() {
     println!("\nв•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—");
-    println!("в•‘  SCENARIO 3: Full Nitro Enclave signing вЂ” all chains    в•‘");
+    println!("в•‘  SCENARIO 3: Mock adapter shapes вЂ” multiple chains      в•‘");
     println!("в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ\n");
 
     let test_cases: Vec<(&str, Chain, SigningAlgorithm, TrustTier, &str)> = vec![
@@ -254,7 +254,7 @@ fn demo_full_chain_flow() {
 
 fn print_aws_deployment_guide() {
     println!("\nв•”в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•—");
-    println!("в•‘  AWS Nitro Enclave Production Deployment Guide           в•‘");
+    println!("в•‘  AWS Nitro Enclave qualification blueprint               в•‘");
     println!("в•љв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ќ");
     println!(r#"
 Both repositories verified and cross-referenced:
@@ -262,7 +262,8 @@ Both repositories verified and cross-referenced:
   conxius-enclave-sdk     v2.0.17 вЂ” EnclaveManager trait, Nitro module
   lib-conxian-core-enclave v0.1.0 вЂ” fail-closed adapter bridge
 
-Production Nitro deployment requires:
+This executable uses NitroMockManager and emits synthetic evidence. It does
+not prove a Nitro deployment. A qualified deployment requires at least:
   1. EC2 instance: m5.xlarge+ with EnclaveOptions.Enabled=true
   2. Build EIF: nitro-cli build-enclave --docker-uri ... --output-file enclave.eif
   3. Run enclave: nitro-cli run-enclave --eif-path enclave.eif --memory 512 --cpu-count 2
