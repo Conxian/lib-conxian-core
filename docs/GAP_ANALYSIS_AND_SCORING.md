@@ -256,4 +256,26 @@ public evidence and a versioned artifact revision.
 - **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
 - **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
 - **Transport Adapter Hardening (CON-1510)**: Enhanced `src/chain/transport.rs` with typed `TransportError::InvalidInput` variants, fail-closed `TransportCapability::validate()` parameter checks, and strict parameter input validation for transaction broadcasts and UTXO queries.
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 282 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
 - **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.

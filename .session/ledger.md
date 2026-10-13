@@ -1,22 +1,22 @@
 # Session Ledger - ATS v2.0 Protocol Compliance
 
-- **Active Branch**: `jules-15649104257512232842-7d2f8b0c`
+- **Active Branch**: `jules-10967907145036533700-97954e7a`
 - **Submodule Policy**: `pin-to-parent` (reproducible build baseline)
 - **Submodule Status**: Submodules initialized and updated recursively (`git submodule update --init --recursive`)
 - **Working Tree State**: Clean / Verification Passed
 
 ## Phase Completion Record
 - [x] **A0: Session Initialization & State Recovery** - Ledger initialized at `.session/ledger.md`.
-- [x] **A1: Repository Synchronization** - Verified git status and remote branches (`origin/main`).
-- [x] **A2: Systematic Reconnaissance** - Verified codebase metrics (285 Rust workspace tests + 71 Python verification guard tests passing).
-- [x] **A3: Gap Identification & Prioritization** - Evaluated candidate matrix; selected 3D Turnkey Enterprise Framework & CXIP Research Expansion (conxian-business #1317 / CON-1317).
-- [x] **A4: Research Expansion & Candidate Scoring** - Scored CON-1317 at 95/100 weighted matrix score.
-- [x] **A5: Best Candidate Selection & Production Code Initiation** - Synthesized issue #1317 research, quantitative fee extraction (30 bps ALEX-style in-kind fees & reserve pools), BitVM3 challenge cost collapse ($15,000 -> <$50 target), DLC Bonds & SYI, and 3D Turnkey Framework into `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/SESSION_RESEARCH_LOG.md`, and `docs/GAP_ANALYSIS_AND_SCORING.md`.
+- [x] **A1: Repository Synchronization** - Verified git status and remote branches (`origin/dev`).
+- [x] **A2: Systematic Reconnaissance** - Verified codebase metrics (285 Rust workspace tests + 71 Python guard tests passing).
+- [x] **A3: Gap Identification & Prioritization** - Evaluated candidate matrix; selected FROST threshold signature parameter validation hardening (CON-1335 / G-35).
+- [x] **A4: Research Expansion & Candidate Scoring** - Scored FROST RFC 9591 parameter validation at 90/100 weighted matrix score.
+- [x] **A5: Best Candidate Selection & Production Code Initiation** - Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds.
 - [x] **A6: Session Close & Continuity Handoff** - Verified pre-commit steps, code review, memory recording, and ledger continuity.
 
 ## A2: Reconnaissance Metrics & Baseline
-- **Rust Workspace Test Suite**: 282 tests passing across crates and doc-tests (100% pass rate).
-- **Python Guard Test Suite**: 70 tests passing (100% pass rate).
+- **Rust Workspace Test Suite**: 285 tests passing across crates and doc-tests (100% pass rate).
+- **Python Guard Test Suite**: 71 tests passing (100% pass rate).
 - **Crate Version**: `lib-conxian-core` v0.3.3.
 - **Vault SDK Relationship**: Production Vault SDK is `conxius-enclave-sdk` v2.0.17.
 
