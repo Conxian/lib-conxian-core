@@ -35,10 +35,13 @@ or provider workflows.
 | Liquid | [`liquid.md`](liquid.md) | Peg ownership and structural Elements checks |
 | RGB | [`rgb.md`](rgb.md) | Transition/seal validation and Bitcoin anchoring |
 | DLC | [`dlc.md`](dlc.md) | Funding/refund/CET/oracle ownership |
+| Hardware Chipset Drivers | [`HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md`](HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md) | `HardwareChipset`, `AttestationType`, `HardwareAttestationEvidence`, and driver boundaries |
 
 ## Canonical contracts and ownership
 
 - [Signing architecture](../SIGNING_ARCHITECTURE.md)
+- [Hardware signing boundary](../HARDWARE_SIGNING_BOUNDARY_2026.md)
+- [Hardware chipset drivers & enclave research](HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md)
 - [Architecture boundaries](../ARCHITECTURE_BOUNDARIES.md)
 - [Protocol verifier source](../../src/verifier.rs)
 - [BIP-110 alignment](../BIP110_ALIGNMENT.md)
