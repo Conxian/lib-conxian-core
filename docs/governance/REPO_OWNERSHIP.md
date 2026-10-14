@@ -38,5 +38,5 @@ is not implied by the presence of the Core API.
 
 - **Category:** Primary Strategic Platform Core (Tier 1).
 - **Target Audience:** Protocol engineers, security auditors, SDK integrators, and system integrators building on the Conxian ecosystem.
-- **Support SLA:** 48-hour response for non-security issues and 48h/5-day triage SLA for security disclosures. See [SUPPORT.md](../../SUPPORT.md) and [SECURITY.md](../../SECURITY.md).
+- **Support SLA:** 48-hour response for non-security issues and 48-hour acknowledgment / 5 business day triage SLA for security disclosures. See [SUPPORT.md](../../SUPPORT.md) and [SECURITY.md](../../SECURITY.md).
 - **Release Guidance:** Governed by strict fail-closed release verification policies. See [docs/RELEASE_PROCESS.md](../RELEASE_PROCESS.md).

@@ -26,4 +26,4 @@ For a detailed breakdown of what `lib-conxian-core` owns vs. downstream crates (
 
 Do **not** report vulnerabilities in public issues.
 
-Follow the private reporting process in [SECURITY.md](SECURITY.md) (GitHub private advisories or `security@conxian-labs.com`).
+Follow the private reporting process in [SECURITY.md](SECURITY.md) (GitHub private advisories or `security@conxian.org` / `security@conxian-labs.com`).
