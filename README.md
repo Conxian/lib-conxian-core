@@ -6,6 +6,8 @@
 
 Shared protocol primitives for the Conxian ecosystem.
 
+Core is the shared public protocol/type boundary for `conxian.org`. Managed infrastructure and SLAs on `conxian-labs.com` consume it without adding custody or provider IO here. Bitcoin L1 is the canonical trust root for universal-chain service; Conxian issues no native token. See [architecture](ARCHITECTURE.md) and the [capability contract](docs/CAPABILITY_CONTRACT.md) before interpreting inventories as live support.
+
 ## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use
