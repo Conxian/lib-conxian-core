@@ -49,7 +49,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 - **Categorization:** Primary Strategic Platform Core (Tier 1).
 - **Target Audience:** Core protocol developers, security auditors, and system integrators building on the Conxian ecosystem.
-- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 24-hour response for security vulnerabilities. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 48-hour acknowledgment / 5 business day triage SLA for security disclosures. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
 - **Ownership & Release Guidance:** Governed by strict CODEOWNERS policies and fail-closed automated release pipelines. See [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md) and [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
 
 ## Scope
@@ -158,7 +158,7 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 - **Conxian Labs:** https://www.conxian-labs.com
 - **Support:** support@conxian-labs.com
-- **Security:** security@conxian-labs.com
+- **Security:** security@conxian.org (Primary), security@conxian-labs.com (Secondary)
 
 ## Governance & Security
 

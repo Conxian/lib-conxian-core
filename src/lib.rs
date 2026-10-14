@@ -52,7 +52,7 @@
 //! ## Contact
 //!
 //! - Support: support@conxian-labs.com
-//! - Security: security@conxian-labs.com
+//! - Security: security@conxian.org (Primary), security@conxian-labs.com (Secondary)
 //! - Labs: https://www.conxian-labs.com
 
 pub mod adapters;
