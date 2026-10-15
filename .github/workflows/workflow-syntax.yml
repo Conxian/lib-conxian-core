@@ -1,0 +1,33 @@
+name: Workflow syntax
+
+on:
+  pull_request:
+    branches: [dev, staged, main]
+    paths:
+      - .github/workflows/neon_workflow.yml
+      - .github/workflows/workflow-syntax.yml
+  push:
+    branches: [dev, staged, main]
+    paths:
+      - .github/workflows/neon_workflow.yml
+      - .github/workflows/workflow-syntax.yml
+
+permissions:
+  contents: read
+
+jobs:
+  preview-workflow-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Validate preview workflow and its lint gate
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl --fail --silent --show-error --location --retry 2 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            --output "$archive"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck= -pyflakes= \
+            .github/workflows/neon_workflow.yml .github/workflows/workflow-syntax.yml
