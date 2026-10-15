@@ -3,6 +3,10 @@
 Cross-referenced 2026-10-02 against three established fee systems to validate
 and adapt the ADR-004 dynamic fee model.
 
+> **ADR-005 (2026-10-10):** rates and floors recalibrated from live competitor
+> and per-rail cost research — volume decay 50/25/15/10 bps; on-chain floors
+> raised (Statechain 125, RGB 312, sBTC 375); EVM moved to L2 (floor 75).
+
 ## Sources
 - **Lightning Network** routing fees — `base_fee` (flat, msat) + `fee_rate`
   (proportional, ppm).
@@ -16,14 +20,14 @@ and adapt the ADR-004 dynamic fee model.
 | :--- | :--- | :--- |
 | `flat_floor` (rail default) | Lightning `base_fee` (fixed overhead) | ✅ aligned — should be *cost + margin* |
 | percentage `bps` (volume-decayed) | Lightning `fee_rate` (ppm) / card interchange % | ✅ aligned |
-| `VolumeDecayTier` (200 → 25 bps) | volume-based tiered discount | ✅ aligned + hysteresis (G8) |
+| `VolumeDecayTier` (50 → 10 bps) | volume-based tiered discount | ✅ aligned + hysteresis (G8) |
 | `system_load_factor` (1.0–3.0) | EIP-1559 `base fee` / surge pricing | ✅ aligned — needs an oracle |
 | `enterprise_subscription_cap` | subscription/committed-use pricing | ✅ aligned (G5 nexus link) |
 
 ## Key learnings
 
 1. **Settlement fee ≠ routing fee.** Lightning routing runs 1–5,000 ppm; our
-   settlement fee runs 25–200 bps (= 2,500–20,000 ppm) because it prices a
+   settlement fee runs 10–50 bps (= 1,000–5,000 ppm) because it prices a
    *settlement rail* (rail cost + margin), not just channel-capital opportunity
    cost. This distinction is deliberate and must not be miscategorized as
    "overpriced vs Lightning".
@@ -31,12 +35,12 @@ and adapt the ADR-004 dynamic fee model.
    current per-rail floors are **placeholders** pending measured per-rail cost
    (G8 rail calibration).
 3. **bps ↔ ppm**: `1 bps = 100 ppm`. Lightning's 200 ppm ≈ 2 bps; our Tier1
-   200 bps = 20,000 ppm (a settlement, not a route).
+   50 bps = 5,000 ppm (a settlement, not a route).
 4. **Cost-plus transparency** (interchange-plus displaced opaque tiered
    pricing). The result must keep exposing `percentage_fee_sat` +
    `flat_floor_sat` + `effective_fee_sat` + `distribution`.
 5. **Volume tiers reduce (never raise) rates** — our decay is monotonic
-   downward (200 → 150 → 75 → 25 bps), matching industry.
+   downward (50 → 25 → 15 → 10 bps), matching industry.
 
 ## Adaptations applied
 

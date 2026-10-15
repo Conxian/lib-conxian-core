@@ -248,3 +248,44 @@ public evidence and a versioned artifact revision.
 - **Python Verification Guard Suite**: 70 test cases passing in `scripts/tests/` (100% pass rate).
 - **CXIP Proposal Synthesis (conxian-business #1317)**: Integrated research findings from issue #1317 covering quantitative financial fee extraction (30 bps ALEX-style in-kind fees & reserve pools), BitVM3 challenge cost collapse ($15,000 -> <$50), DLC Bonds & sBTC Suction Pattern (SYI), and the 3-Dimensional Turnkey Optimization Framework (Gateway, Nexus, Market, Enclave).
 - **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+
+## Session 88 Research & Transport Capability Adapter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **Transport Adapter Hardening (CON-1510)**: Enhanced `src/chain/transport.rs` with typed `TransportError::InvalidInput` variants, fail-closed `TransportCapability::validate()` parameter checks, and strict parameter input validation for transaction broadcasts and UTXO queries.
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 282 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## Session 87 Research & FROST Parameter Hardening (2026-10-13)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **FROST Parameter Hardening (CON-1335 / G-35)**: Hardened `src/protocol/frost.rs` with fail-closed `validate()` methods on `FrostKeyShare`, `FrostShareCommitment`, and `EncryptedFrostShare` enforcing IETF RFC 9591 parameter bounds (1-indexed participant IDs, 32-byte non-zero scalar secret shares, secp256k1 public keys, distinct distribution endpoints, and 32-byte MAC tags).
+- **Zero Architectural Contamination**: Confirmed zero secret exposure, zero unindexed artifacts, and 100% compliance across all verification scripts.
+
+## Session 89 Research & Hardware Chipset Driver Boundary Expansion (2026-10-14)
+
+### Current Protocol Baseline (v0.3.3)
+- **Rust Workspace Verification Suite**: 285 total Rust workspace tests passing across all crates, feature combinations, and doc-tests (100% pass rate).
+- **Python Verification Guard Suite**: 71 test cases passing in `scripts/tests/` (100% pass rate).
+- **Hardware Chipset Driver & Enclave Boundary Expansion (CON-1336 / G-36)**:
+  - Expanded `src/enclave/mod.rs` with strongly typed `HardwareChipset` (covering AWS Nitro, Android StrongBox, Intel SGX/TDX, AMD SEV-SNP, Apple SEP, PKCS#11 HSMs, RISC-V Keystone, TPM 2.0, ARM TrustZone, and Hardware Wallets), `AttestationType`, `ChipsetDriverInfo`, and `HardwareAttestationEvidence` structs with fail-closed `validate()` methods.
+  - Authored comprehensive specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md` detailing kernel device nodes (`/dev/*`), HAL interfaces, user-space libraries, hardware attestation formats, challenge nonces, and physical attack mitigations.
+  - Verified `src/sdk.rs` and `Cargo.toml` capability re-exports and feature flags (`enclave`, `sdk-cryptoki`, `sdk-webauthn`, `full-sdk`) against `conxius-enclave-sdk` (v2.0.17 / `b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43`).

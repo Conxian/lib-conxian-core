@@ -27,6 +27,23 @@ pub struct TransportCapability {
     pub features: Vec<TransportFeature>,
 }
 
+impl TransportCapability {
+    /// Validates capability bounds, ensuring a non-empty chain ID and non-empty features vector.
+    pub fn validate(&self) -> Result<(), TransportError> {
+        if self.chain_id.trim().is_empty() {
+            return Err(TransportError::InvalidInput(
+                "capability chain_id cannot be empty or whitespace".into(),
+            ));
+        }
+        if self.features.is_empty() {
+            return Err(TransportError::InvalidInput(
+                "capability features vector cannot be empty".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Features a transport backend may support.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TransportFeature {
@@ -54,6 +71,9 @@ pub trait TransportAdapter: Send + Sync {
 
     /// Check whether a specific feature is available for a chain.
     fn supports(&self, chain_id: &str, feature: TransportFeature) -> bool {
+        if chain_id.trim().is_empty() {
+            return false;
+        }
         self.capabilities()
             .iter()
             .any(|c| c.chain_id == chain_id && c.features.contains(&feature))
@@ -70,7 +90,7 @@ pub trait TransportAdapter: Send + Sync {
 }
 
 /// A UTXO entry returned by a transport backend.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UtxoEntry {
     pub txid: String,
     pub vout: u32,
@@ -80,8 +100,10 @@ pub struct UtxoEntry {
 }
 
 /// Errors that transport backends may return.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TransportError {
+    /// Invalid input parameter or boundary constraint failure.
+    InvalidInput(String),
     /// Requested feature is not supported by this backend for this chain.
     UnsupportedFeature(TransportFeature, String),
     /// Backend is not reachable.
@@ -95,6 +117,7 @@ pub enum TransportError {
 impl std::fmt::Display for TransportError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidInput(msg) => write!(f, "invalid transport input: {msg}"),
             Self::UnsupportedFeature(feature, chain) => {
                 write!(f, "unsupported feature '{feature:?}' for chain '{chain}'")
             }
@@ -139,7 +162,17 @@ impl TransportAdapter for MockTransport {
         &self.capabilities
     }
 
-    fn broadcast(&self, chain_id: &str, _raw_tx: &[u8]) -> Result<String, TransportError> {
+    fn broadcast(&self, chain_id: &str, raw_tx: &[u8]) -> Result<String, TransportError> {
+        if chain_id.trim().is_empty() {
+            return Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into(),
+            ));
+        }
+        if raw_tx.is_empty() {
+            return Err(TransportError::InvalidInput(
+                "raw_tx payload cannot be empty".into(),
+            ));
+        }
         if !self.supports(chain_id, TransportFeature::Broadcast) {
             return Err(TransportError::UnsupportedFeature(
                 TransportFeature::Broadcast,
@@ -149,11 +182,17 @@ impl TransportAdapter for MockTransport {
         Ok("mock_txid_0000000000000000000000000000000000000000000000000000000000000000".into())
     }
 
-    fn query_utxos(
-        &self,
-        chain_id: &str,
-        _address: &str,
-    ) -> Result<Vec<UtxoEntry>, TransportError> {
+    fn query_utxos(&self, chain_id: &str, address: &str) -> Result<Vec<UtxoEntry>, TransportError> {
+        if chain_id.trim().is_empty() {
+            return Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into(),
+            ));
+        }
+        if address.trim().is_empty() {
+            return Err(TransportError::InvalidInput(
+                "address cannot be empty or whitespace".into(),
+            ));
+        }
         if !self.supports(chain_id, TransportFeature::UtxoLookup) {
             return Err(TransportError::UnsupportedFeature(
                 TransportFeature::UtxoLookup,
@@ -178,7 +217,7 @@ mod tests {
     #[test]
     fn unsupported_feature_returns_error() {
         let transport = MockTransport::new();
-        let result = transport.broadcast("stacks:mainnet", b"");
+        let result = transport.broadcast("stacks:mainnet", b"raw_tx");
         assert!(matches!(
             result,
             Err(TransportError::UnsupportedFeature(_, _))
@@ -190,5 +229,70 @@ mod tests {
         let transport = MockTransport::new();
         let txid = transport.broadcast("bitcoin:mainnet", b"raw_tx").unwrap();
         assert!(txid.starts_with("mock_txid_"));
+    }
+    #[test]
+    fn capability_validation_fails_closed_on_invalid_inputs() {
+        let empty_chain = TransportCapability {
+            chain_id: "  ".into(),
+            features: vec![TransportFeature::Broadcast],
+        };
+        assert!(matches!(
+            empty_chain.validate(),
+            Err(TransportError::InvalidInput(_))
+        ));
+
+        let empty_features = TransportCapability {
+            chain_id: "bitcoin:mainnet".into(),
+            features: vec![],
+        };
+        assert!(matches!(
+            empty_features.validate(),
+            Err(TransportError::InvalidInput(_))
+        ));
+
+        let valid_capability = TransportCapability {
+            chain_id: "bitcoin:mainnet".into(),
+            features: vec![TransportFeature::Broadcast],
+        };
+        assert!(valid_capability.validate().is_ok());
+    }
+
+    #[test]
+    fn transport_adapter_rejects_empty_or_invalid_inputs() {
+        let transport = MockTransport::new();
+
+        // Broadcast parameter checks
+        assert_eq!(
+            transport.broadcast("", b"raw_tx"),
+            Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into()
+            ))
+        );
+        assert_eq!(
+            transport.broadcast("bitcoin:mainnet", b""),
+            Err(TransportError::InvalidInput(
+                "raw_tx payload cannot be empty".into()
+            ))
+        );
+
+        // Query UTXOs parameter checks
+        assert_eq!(
+            transport.query_utxos("  ", "bc1qtest"),
+            Err(TransportError::InvalidInput(
+                "chain_id cannot be empty or whitespace".into()
+            ))
+        );
+        assert_eq!(
+            transport.query_utxos("bitcoin:mainnet", ""),
+            Err(TransportError::InvalidInput(
+                "address cannot be empty or whitespace".into()
+            ))
+        );
+    }
+
+    #[test]
+    fn transport_error_display_formatting() {
+        let err = TransportError::InvalidInput("test error".into());
+        assert_eq!(format!("{err}"), "invalid transport input: test error");
     }
 }

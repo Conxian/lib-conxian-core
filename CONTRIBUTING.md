@@ -13,7 +13,7 @@ This document provides guidelines and standards for contributing to the core pro
 - **Transport-Neutral:** Core owns deterministic state machines, contracts, and types. Network I/O and runtime side effects live in consumer services (e.g., `conxian-gateway`, `conxian-nexus`).
 - **Zero Secret Egress (ZSE):** No environment variable readers, secret leaks, or insecure default private key initializers exist in core production code.
 
-### Module Map (19 modules)
+### Module Map (21 modules)
 
 | Module | Purpose | Consumer(s) |
 |--------|---------|-------------|
@@ -25,10 +25,12 @@ This document provides guidelines and standards for contributing to the core pro
 | `protocol` | DLC, FROST, Covenant (OP_CAT), Intent | Nexus |
 | `lightning` | LightningAdapter, BOLT-12, BIP-353 | Nexus |
 | `adapters` | StateProofError | Nexus |
+| `capability` | CapabilityAdvertisement, VerifierCapability, capability contract assertions | Nexus, Gateway |
 | `enclave` | AttestationCertificate, EnclaveVerificationError | Nexus |
 | `contract_bridge` | Typed ContractCall, DeploymentPlan | Gateway, Orbit |
 | `babylon` | StakingIntent | Gateway |
 | `fedimint` | FedimintMint | Gateway |
+| `fee` | FeeEstimate, FeeRate, fee calculation abstractions | Gateway, Nexus |
 | `cjcs` | CjcsError, WorkIntent, JobCard (JSON-LD, fail-closed validation) | Platform |
 | `stacks` | SBTCBridge, Emily API | Gateway |
 | `rgb` | GatewayRgbAdapter | Gateway |

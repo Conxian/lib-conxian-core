@@ -35,19 +35,23 @@ or provider workflows.
 | Liquid | [`liquid.md`](liquid.md) | Peg ownership and structural Elements checks |
 | RGB | [`rgb.md`](rgb.md) | Transition/seal validation and Bitcoin anchoring |
 | DLC | [`dlc.md`](dlc.md) | Funding/refund/CET/oracle ownership |
+| Hardware Chipset Drivers | [`HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md`](HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md) | `HardwareChipset`, `AttestationType`, `HardwareAttestationEvidence`, and driver boundaries |
 
 ## Canonical contracts and ownership
 
 - [Signing architecture](../SIGNING_ARCHITECTURE.md)
+- [Hardware signing boundary](../HARDWARE_SIGNING_BOUNDARY_2026.md)
+- [Hardware chipset drivers & enclave research](HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md)
 - [Architecture boundaries](../ARCHITECTURE_BOUNDARIES.md)
 - [Protocol verifier source](../../src/verifier.rs)
 - [BIP-110 alignment](../BIP110_ALIGNMENT.md)
 - [BIP-110 types](../../src/control_model/bip110.rs)
 - [Trust and chain-family mapping](../../src/control_model/trust.rs)
 
-The production hardware-backed signer and attestation layer is the
-[`conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk) contract
+The hardware-backed signer and attestation contract is owned by
+[`conxius-enclave-sdk`](https://github.com/Conxian/conxius-enclave-sdk), as
 referenced by issue [#179](https://github.com/Conxian/conxius-enclave-sdk/issues/179).
+Production support remains gated by the selected provider's accepted evidence.
 Runtime orchestration and external effects belong to
 [`conxian-gateway`](https://github.com/Conxian/conxian-gateway), with the flow
 contract tracked in

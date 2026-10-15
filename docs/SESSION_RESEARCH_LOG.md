@@ -1,3 +1,18 @@
+
+## Session 88 — Transport Capability Adapter Hardening & Candidate Matrix Alignment (2026-10-13)
+
+- **Audited Modules**: `src/chain/transport.rs`, `src/adapters/mod.rs`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`.
+- **Key Enhancements**:
+  - Hardened `src/chain/transport.rs` with fail-closed parameter validation:
+    - Added `TransportError::InvalidInput(String)` variant and `PartialEq, Eq` implementations.
+    - Implemented `TransportCapability::validate()` checking for empty/whitespace `chain_id` and non-empty `features` vector.
+    - Added input validation on `TransportAdapter::supports()`, `broadcast()`, and `query_utxos()`.
+    - Updated `MockTransport` to enforce fail-closed validation on empty chain IDs, empty transaction payloads, and whitespace addresses.
+    - Added comprehensive unit tests covering capability validation, invalid chain ID rejection, empty address/tx handling, and error display formatting.
+- **Verification Baseline**:
+  - 285 Rust workspace tests passing cleanly across `lib-conxian-core` and companion crates.
+  - 71 Python verification guard tests passing cleanly in `scripts/tests/`.
+
 # Session Research Log
 
 > This document tracks research findings and decisions made during development sessions.
@@ -905,3 +920,53 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Intent Parameter Hardening**: Added explicit fail-closed parameter validation for bids (`solver_id` non-empty, `amount_sats > 0`, `estimated_latency_blocks >= 1`, `fee_sats <= amount_sats`), FDC3 instruments (`ticker` and `conxian_asset_id` non-empty), and intent resolution (`amount > 0`, `destination` non-empty).
 - **Protocol Test Matrix**: Verified 286 Rust workspace test cases (151 core unit tests) and 70 Python verification guard tests passing cleanly (100% pass rate).
 - **Governance Alignment**: Synchronized executive and readiness scorecards to reflect Session 84 audit findings, 286 passing Rust tests, and operational stability.
+
+---
+## Session 2026-10-13 (Session 87): FROST Threshold Signature Parameter Hardening & RFC 9591 Validation
+
+### Objective
+1. Perform org-wide ecosystem audit and repository synchronization.
+2. Review cross-repository GitHub issue statuses, research gaps, and candidate scoring matrix.
+3. Harden FROST threshold signature primitives in `src/protocol/frost.rs` with fail-closed IETF RFC 9591 parameter validation methods (`FrostKeyShare::validate`, `FrostShareCommitment::validate`, `EncryptedFrostShare::validate`).
+4. Update research documentation (`docs/UNIVERSAL_SUPPORT_RESEARCH.md`), gap scoring (`docs/GAP_ANALYSIS_AND_SCORING.md`), session logs, scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), and session tracking ledger (`.session/ledger.md`).
+5. Verify Rust workspace test suite (282 total tests passing) and Python verification guard suite (71 test cases passing).
+
+### 1. Research Findings & Strategic Synthesis
+- **FROST Parameter Hardening (RFC 9591)**: Enforced fail-closed validation across FROST structs:
+  - `FrostKeyShare::validate`: 1-based participant index, 32-byte non-zero scalar secret share, 33-byte/32-byte secp256k1 public key.
+  - `FrostShareCommitment::validate`: 1-based participant index, non-empty commitment point vector of valid public key points.
+  - `EncryptedFrostShare::validate`: distinct non-zero `from_index` and `to_index`, non-empty payload, non-zero 32-byte MAC tag.
+- **Round 2 Distribution Safeguards**: `FrostManager::prepare_distribution_shares` executes `validate()` checks on source share and target participant lists, rejecting self-distribution and zero target indices.
+
+### 2. System Verification Status
+- **Rust Workspace**: 282 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version`).
+- **Python Verification Guards**: 71 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+## Session 2026-10-14 (Session 89): Hardware Chipset Drivers, Enclave Boundary Expansion & SDK Alignment (CON-1336 / G-36)
+
+### Objective
+1. Perform org-wide research expansion across all 11 target hardware chipsets, HSMs, TEEs, Secure Elements, and driver boundaries.
+2. Expand `src/enclave/mod.rs` with strongly typed `HardwareChipset`, `AttestationType`, `ChipsetDriverInfo`, and `HardwareAttestationEvidence` structs with fail-closed `validate()` methods.
+3. Author comprehensive specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md` detailing kernel device nodes (`/dev/*`), HAL interfaces, user-space libraries, hardware attestation formats, challenge nonces, and physical attack mitigations.
+4. Verify `src/sdk.rs` and `Cargo.toml` capability re-exports and feature flags (`enclave`, `sdk-cryptoki`, `sdk-webauthn`, `full-sdk`) against `conxius-enclave-sdk` (v2.0.17 / `b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43`).
+5. Update governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), research documentation (`UNIVERSAL_SUPPORT_RESEARCH.md`), gap analysis (`GAP_ANALYSIS_AND_SCORING.md`), and session tracking ledger (`.session/ledger.md`).
+
+### 1. Research Findings & Hardware Boundary Synthesis
+- **Hardware Chipset Coverage**: Expanded Core type system and research documentation covering 11 hardware chipset platforms:
+  - **AWS Nitro Enclaves (`AwsNitro`)**: Annapurna Labs PCIe ASIC, `/dev/nitro_enclave`, NSM IOCTLs, COSE Sign1 (CBOR), AWS KMS cert chain with PCR0-PCR15 measurements.
+  - **Android KeyMint / StrongBox (`AndroidStrongBox`)**: Titan M2 / Knox SE / TrustZone, KeyMint v3 HAL, X.509 cert chain with OID `1.3.6.1.4.1.11129.2.1.17`.
+  - **Intel SGX (`IntelSgx`)**: `/dev/sgx_enclave`, DCAP Quote (ECDSA P-256), Intel PCS PCK certificates.
+  - **Intel TDX (`IntelTdx`)**: `/dev/tdx_guest`, TDX Quote, Intel PCS PCK certificates / MRTD.
+  - **AMD SEV-SNP (`AmdSevSnp`)**: `/dev/sev-guest`, SNP Attestation Report, AMD ASK/ARK / VCEK cert chain.
+  - **Apple Secure Enclave (`AppleSecureEnclave`)**: SEP hardware, LocalAuthentication, AppAttest, Apple App Attest Root CA.
+  - **PKCS#11 HSMs (`Pkcs11Hsm`)**: YubiHSM 2, Thales Luna, CloudHSM, `/usr/lib/libpkcs11.so`, Cryptoki C-API, CKA_ALWAYS_SENSITIVE flags.
+  - **RISC-V Keystone (`RiscVKeystone`)**: `/dev/keystone_enclave`, Physical Memory Protection (PMP), Security Monitor attestation report.
+  - **TPM 2.0 (`Tpm20`)**: `/dev/tpmrm0`, TSS2 (ESYS/FAPI), TPM2_Quote over PCRs, Endorsement Key (EK) certificates.
+  - **ARM TrustZone (`ArmTrustZone`)**: `/dev/tee0`, OP-TEE OS, GlobalPlatform TEE Client API, SMC calls.
+  - **Hardware Wallets (`HardwareWallet`)**: Keystone Pro/3, Ledger ST33, Trezor, USB HID (`/dev/hidraw`), SLIP-0010 / BIP-32 derivation proof.
+- **Fail-Closed Enclave Verification**: `HardwareAttestationEvidence::validate(&self)` enforces exact chipset-attestation compatibility, 32-byte non-zero challenge nonces, minimum 32-byte measurement digests, and valid driver info device paths. `HeadlessEnclave::verify_hardware_attestation_evidence` performs structural validation and returns `Err(EnclaveVerificationError::UnsupportedProvider)`, guaranteeing zero mock/unverified hardware signing in Core.
+
+### 2. System Verification Status
+- **Rust Workspace**: 285 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version` and `cargo test --features enclave,full-sdk --ignore-rust-version`).
+- **Python Verification Guards**: 71 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).

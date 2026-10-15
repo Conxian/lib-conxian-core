@@ -6,19 +6,67 @@ use serde::{Deserialize, Serialize};
 /// Represents a secret key share in the FROST threshold scheme.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FrostKeyShare {
-    /// Participant index (1-indexed).
+    /// Participant index (1-indexed per RFC 9591 Section 4.1).
     pub index: u32,
-    /// Secret share of the group key.
+    /// Secret share of the group key (32 bytes scalar).
     pub share: Vec<u8>,
-    /// Public key corresponding to this share.
+    /// Public key corresponding to this share (33-byte compressed or 32-byte x-only).
     pub public_key: Vec<u8>,
+}
+
+impl FrostKeyShare {
+    /// Validates the structure and parameter constraints of a FROST key share per RFC 9591.
+    pub fn validate(&self) -> Result<(), FrostError> {
+        if self.index == 0 {
+            return Err(FrostError::MalformedInput(
+                "participant index must be 1-indexed (non-zero)".to_string(),
+            ));
+        }
+        if self.share.len() != 32 || self.share.iter().all(|&b| b == 0) {
+            return Err(FrostError::MalformedInput(
+                "secret share scalar must be exactly 32 non-zero bytes".to_string(),
+            ));
+        }
+        if self.public_key.len() != 33 && self.public_key.len() != 32 {
+            return Err(FrostError::MalformedInput(
+                "public key must be 33-byte secp256k1 compressed or 32-byte x-only".to_string(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// A commitment to a polynomial used in VSS (Verifiable Secret Sharing).
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FrostShareCommitment {
+    /// Participant index (1-indexed).
     pub index: u32,
+    /// Vector of public commitment points corresponding to polynomial coefficients.
     pub commitment_points: Vec<Vec<u8>>,
+}
+
+impl FrostShareCommitment {
+    /// Validates the structure and commitment points per RFC 9591 Section 4.1.
+    pub fn validate(&self) -> Result<(), FrostError> {
+        if self.index == 0 {
+            return Err(FrostError::MalformedInput(
+                "participant index must be 1-indexed (non-zero)".to_string(),
+            ));
+        }
+        if self.commitment_points.is_empty() {
+            return Err(FrostError::MalformedInput(
+                "commitment points vector must not be empty".to_string(),
+            ));
+        }
+        for (i, point) in self.commitment_points.iter().enumerate() {
+            if point.len() != 33 && point.len() != 32 {
+                return Err(FrostError::MalformedInput(format!(
+                    "commitment point {i} must be 33-byte compressed or 32-byte x-only"
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// An encrypted share for distribution during Round 2.
@@ -28,6 +76,33 @@ pub struct EncryptedFrostShare {
     pub to_index: u32,
     pub encrypted_payload: Vec<u8>,
     pub mac: [u8; 32],
+}
+
+impl EncryptedFrostShare {
+    /// Validates the encrypted distribution share fields per RFC 9591 Section 4.2.
+    pub fn validate(&self) -> Result<(), FrostError> {
+        if self.from_index == 0 || self.to_index == 0 {
+            return Err(FrostError::MalformedInput(
+                "from_index and to_index must be non-zero participant indices".to_string(),
+            ));
+        }
+        if self.from_index == self.to_index {
+            return Err(FrostError::MalformedInput(
+                "from_index and to_index must be distinct participants".to_string(),
+            ));
+        }
+        if self.encrypted_payload.is_empty() {
+            return Err(FrostError::MalformedInput(
+                "encrypted payload must not be empty".to_string(),
+            ));
+        }
+        if self.mac.iter().all(|&b| b == 0) {
+            return Err(FrostError::MalformedInput(
+                "MAC tag must be a non-zero 32-byte authenticating tag".to_string(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Status of a FROST signing session.
@@ -86,24 +161,30 @@ impl FrostManager {
 
     /// Prepares encrypted shares for distribution (Round 2) per RFC 9591 Section 4.2.
     ///
-    /// Core does not implement the audited FROST DKG/distribution protocol, so
-    /// it does not emit XOR/MAC placeholders as encrypted shares.
+    /// Core performs structural parameter validation on inputs prior to returning `Unsupported`.
     pub fn prepare_distribution_shares(
         from_share: &FrostKeyShare,
         target_indices: &[u32],
         shared_secrets: &[(u32, [u8; 32])],
     ) -> Result<Vec<EncryptedFrostShare>, FrostError> {
-        if from_share.index == 0 || from_share.share.is_empty() {
-            return Err(FrostError::MalformedInput(
-                "source share must have a non-zero index and bytes".to_string(),
-            ));
-        }
+        from_share.validate()?;
+
         if target_indices.is_empty() {
             return Err(FrostError::MalformedInput(
                 "target participant list must not be empty".to_string(),
             ));
         }
         for target in target_indices {
+            if *target == 0 {
+                return Err(FrostError::MalformedInput(
+                    "target participant index must be non-zero".to_string(),
+                ));
+            }
+            if *target == from_share.index {
+                return Err(FrostError::MalformedInput(
+                    "source participant cannot distribute shares to self".to_string(),
+                ));
+            }
             if !shared_secrets.iter().any(|(index, _)| index == target) {
                 return Err(FrostError::MalformedInput(format!(
                     "missing shared secret for participant {target}"
@@ -141,6 +222,106 @@ impl FrostManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_frost_key_share_validation() {
+        let valid_share = FrostKeyShare {
+            index: 1,
+            share: vec![0x11; 32],
+            public_key: vec![0x02; 33],
+        };
+        assert!(valid_share.validate().is_ok());
+
+        let zero_index_share = FrostKeyShare {
+            index: 0,
+            share: vec![0x11; 32],
+            public_key: vec![0x02; 33],
+        };
+        assert!(matches!(
+            zero_index_share.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+
+        let invalid_share_len = FrostKeyShare {
+            index: 1,
+            share: vec![0x11; 31],
+            public_key: vec![0x02; 33],
+        };
+        assert!(matches!(
+            invalid_share_len.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+
+        let invalid_pubkey_len = FrostKeyShare {
+            index: 1,
+            share: vec![0x11; 32],
+            public_key: vec![0x02; 20],
+        };
+        assert!(matches!(
+            invalid_pubkey_len.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+    }
+
+    #[test]
+    fn test_frost_commitment_validation() {
+        let valid_commitment = FrostShareCommitment {
+            index: 1,
+            commitment_points: vec![vec![0x02; 33], vec![0x03; 33]],
+        };
+        assert!(valid_commitment.validate().is_ok());
+
+        let zero_index = FrostShareCommitment {
+            index: 0,
+            commitment_points: vec![vec![0x02; 33]],
+        };
+        assert!(matches!(
+            zero_index.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+
+        let empty_points = FrostShareCommitment {
+            index: 1,
+            commitment_points: vec![],
+        };
+        assert!(matches!(
+            empty_points.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+    }
+
+    #[test]
+    fn test_encrypted_frost_share_validation() {
+        let valid_encrypted = EncryptedFrostShare {
+            from_index: 1,
+            to_index: 2,
+            encrypted_payload: vec![0xaa; 48],
+            mac: [0xbb; 32],
+        };
+        assert!(valid_encrypted.validate().is_ok());
+
+        let same_index = EncryptedFrostShare {
+            from_index: 1,
+            to_index: 1,
+            encrypted_payload: vec![0xaa; 48],
+            mac: [0xbb; 32],
+        };
+        assert!(matches!(
+            same_index.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+
+        let zero_mac = EncryptedFrostShare {
+            from_index: 1,
+            to_index: 2,
+            encrypted_payload: vec![0xaa; 48],
+            mac: [0x00; 32],
+        };
+        assert!(matches!(
+            zero_mac.validate(),
+            Err(FrostError::MalformedInput(_))
+        ));
+    }
 
     #[test]
     fn test_frost_round_1_integrity() {

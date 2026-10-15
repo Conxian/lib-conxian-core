@@ -6,10 +6,14 @@
 
 Shared protocol primitives for the Conxian ecosystem.
 
+Core is the shared public protocol/type boundary for `conxian.org`. Managed infrastructure and SLAs on `conxian-labs.com` consume it without adding custody or provider IO here. Bitcoin L1 is the canonical trust root for universal-chain service; Conxian issues no native token. See [architecture](ARCHITECTURE.md) and the [capability contract](docs/CAPABILITY_CONTRACT.md) before interpreting inventories as live support.
+
 ## ⚠️ Vault SDK Migration
 
-For **hardware-backed signing, attestation, and policy primitives**, use the production
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) crate (v2.0.17) instead.
+For **hardware-backed signing, attestation, and policy primitives**, use
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17).
+The SDK owns those boundaries, but provider production support requires
+separate qualification; API presence and simulators are not hardware evidence.
 
 For the fail-closed Core-to-SDK contract boundary, use the workspace companion
 crate [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/). It targets
@@ -45,7 +49,7 @@ Provide reusable protocol-support primitives for Bitcoin-native and Conxian-alig
 
 - **Categorization:** Primary Strategic Platform Core (Tier 1).
 - **Target Audience:** Core protocol developers, security auditors, and system integrators building on the Conxian ecosystem.
-- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 24-hour response for security vulnerabilities. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+- **Support Expectations:** Actively maintained with guaranteed 48-hour SLA for non-security issue triage and 48-hour acknowledgment / 5 business day triage SLA for security disclosures. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
 - **Ownership & Release Guidance:** Governed by strict CODEOWNERS policies and fail-closed automated release pipelines. See [docs/governance/REPO_OWNERSHIP.md](docs/governance/REPO_OWNERSHIP.md) and [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
 
 ## Scope
@@ -56,7 +60,7 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 
 | Crate | Purpose |
 |-------|---------|
-| [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) | **Production Vault SDK** - Hardware-backed signing, attestation, FROST DKG, BitVM2 |
+| [`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) | Vault/security SDK boundary - hardware provider support remains evidence-gated |
 | [`lib-conxian-core-enclave`](addons/lib-conxian-core-enclave/) | Fail-closed Core/SDK adapter - exact algorithm, digest, derivation, trust-policy, response, and BIP-110 preflight boundary |
 | `lib-conxian-core` | Shared protocol primitives - control models, anchoring, chain types |
 | [`conxian-gateway`](https://github.com/Conxian/conxian-gateway) | Runtime orchestration and middleware |
@@ -154,7 +158,7 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 - **Conxian Labs:** https://www.conxian-labs.com
 - **Support:** support@conxian-labs.com
-- **Security:** security@conxian-labs.com
+- **Security:** security@conxian.org (Primary), security@conxian-labs.com (Secondary)
 
 ## Governance & Security
 

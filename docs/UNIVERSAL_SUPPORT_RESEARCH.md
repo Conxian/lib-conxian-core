@@ -188,3 +188,43 @@ To transition core repositories into turnkey enterprise solutions:
 | **Conxian Nexus** | One-click Cloud NaaS Terraform templates across AWS, Azure, GCP. | Unified Multi-Chain GraphQL Oracle API abstracting SPV cryptography & data commitments. | Event-driven webhooks and WebSockets for cryptographic finality triggers. |
 | **Conxian Market** | Agent-native SDKs for LangChain & AutoGPT with 3-line escrow calls. | Parametric escrow templates (Fixed-Bounty, Milestone, Time-and-Materials). | Algorithmic DLC arbitration for automated agent dispute resolution. |
 | **Enclave (Conclave)** | Cloud-hosted pre-attested compute wrapping WASM business logic in TEEs. | Automated BitVM watchtowers initiating <$50 challenge transactions on fraudulent state roots. | Key Management as a Service (KMaaS) enforcing policy-driven multi-sig/timelock rules via `conxius-wallet`. |
+
+## Section 26: Transport Capability Adapter Architecture (2026-10-13)
+
+Transport capability adapters in `src/chain/transport.rs` establish a deterministic, transport-neutral boundary separating protocol state invariants from network transport backends (Esplora, Electrum, RPC).
+
+### Key Hardening Invariants
+1. **Capability Provenance**: Backends prove supported capabilities via `TransportCapability`. The `validate()` method enforces non-empty, well-formed `chain_id` strings and non-empty feature vectors.
+2. **Fail-Closed Operations**: Invoking `broadcast()` or `query_utxos()` with empty or whitespace chain IDs, empty transaction bytes, or blank addresses returns `TransportError::InvalidInput` immediately without dispatching to network providers.
+3. **Feature Support Enquiries**: `supports()` checks perform fail-fast validation on input chain IDs before capability matching.
+## 25. Research Update (2026-10-13 Session 87 Synthesis): FROST Parameter & Key Share Validation Hardening (RFC 9591)
+An audit of `src/protocol/frost.rs` expanded the FROST (Flexible Round-Optimized Schnorr Threshold Signatures) IETF RFC 9591 parameter validation boundary:
+
+- **Key Share Structural Bounds**: `FrostKeyShare::validate` enforces non-zero 1-indexed participant identifiers (`index > 0`), 32-byte non-zero secret share scalars, and valid 33-byte secp256k1 compressed or 32-byte x-only public keys.
+- **Commitment Vector Integrity**: `FrostShareCommitment::validate` enforces non-zero 1-indexed participant identifiers and non-empty commitment point vectors where each point is 33-byte compressed or 32-byte x-only.
+- **Encrypted Share Distribution Rules**: `EncryptedFrostShare::validate` enforces distinct sender (`from_index`) and receiver (`to_index`) participant indices, non-empty encrypted payloads, and non-zero 32-byte MAC authenticating tags.
+- **Distribution Safeguards**: `FrostManager::prepare_distribution_shares` verifies participant parameter bounds, non-zero target participant lists, and prohibits self-distribution before returning typed `FrostError::Unsupported`.
+
+## 27. Research Update (2026-10-13 Session 87 Synthesis): FROST Parameter & Key Share Validation Hardening (RFC 9591)
+An audit of `src/protocol/frost.rs` expanded the FROST (Flexible Round-Optimized Schnorr Threshold Signatures) IETF RFC 9591 parameter validation boundary:
+
+- **Key Share Structural Bounds**: `FrostKeyShare::validate` enforces non-zero 1-indexed participant identifiers (`index > 0`), 32-byte non-zero secret share scalars, and valid 33-byte secp256k1 compressed or 32-byte x-only public keys.
+- **Commitment Vector Integrity**: `FrostShareCommitment::validate` enforces non-zero 1-indexed participant identifiers and non-empty commitment point vectors where each point is 33-byte compressed or 32-byte x-only.
+- **Encrypted Share Distribution Rules**: `EncryptedFrostShare::validate` enforces distinct sender (`from_index`) and receiver (`to_index`) participant indices, non-empty encrypted payloads, and non-zero 32-byte MAC authenticating tags.
+- **Distribution Safeguards**: `FrostManager::prepare_distribution_shares` verifies participant parameter bounds, non-zero target participant lists, and prohibits self-distribution before returning typed `FrostError::Unsupported`.
+
+## 27. Research Update (2026-10-13 Session 87 Synthesis): FROST Parameter & Key Share Validation Hardening (RFC 9591)
+An audit of `src/protocol/frost.rs` expanded the FROST (Flexible Round-Optimized Schnorr Threshold Signatures) IETF RFC 9591 parameter validation boundary:
+
+- **Key Share Structural Bounds**: `FrostKeyShare::validate` enforces non-zero 1-indexed participant identifiers (`index > 0`), 32-byte non-zero secret share scalars, and valid 33-byte secp256k1 compressed or 32-byte x-only public keys.
+- **Commitment Vector Integrity**: `FrostShareCommitment::validate` enforces non-zero 1-indexed participant identifiers and non-empty commitment point vectors where each point is 33-byte compressed or 32-byte x-only.
+- **Encrypted Share Distribution Rules**: `EncryptedFrostShare::validate` enforces distinct sender (`from_index`) and receiver (`to_index`) participant indices, non-empty encrypted payloads, and non-zero 32-byte MAC authenticating tags.
+- **Distribution Safeguards**: `FrostManager::prepare_distribution_shares` verifies participant parameter bounds, non-zero target participant lists, and prohibits self-distribution before returning typed `FrostError::Unsupported`.
+
+
+## 28. Research Update (2026-10-14 Session 89 Synthesis): Hardware Chipset Drivers & Enclave Boundary Expansion (CON-1336 / G-36)
+An extensive research review of hardware signing chipsets, HSMs, TEEs, Secure Elements, and kernel driver interfaces established Core's strongly-typed hardware attestation boundary in `src/enclave/mod.rs` and specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md`:
+
+- **Hardware Chipset Specification**: Strongly-typed `HardwareChipset` enum covering AWS Nitro (`/dev/nitro_enclave`), Android StrongBox (`KeyMint v3 HAL`), Intel SGX (`/dev/sgx_enclave`), Intel TDX (`/dev/tdx_guest`), AMD SEV-SNP (`/dev/sev-guest`), Apple Secure Enclave (`LocalAuthentication`/`AppAttest`), PKCS#11 HSMs (`/usr/lib/libpkcs11.so`), RISC-V Keystone (`/dev/keystone_enclave`), TPM 2.0 (`/dev/tpmrm0`), ARM TrustZone (`/dev/tee0`), and Hardware Wallets (`/dev/hidraw`).
+- **Attestation Evidence Structural Validation**: `HardwareAttestationEvidence::validate` enforces exact 1:1 chipset-attestation compatibility, 32-byte non-zero challenge nonces, minimum 32-byte measurement digests, non-empty raw payloads, and canonical system path prefixes for `ChipsetDriverInfo`.
+- **Zero Secret Egress & Fail-Closed Boundary**: `HeadlessEnclave::verify_hardware_attestation_evidence` performs structural verification and returns `Err(EnclaveVerificationError::UnsupportedProvider)`, ensuring that hardware certificate chain verification remains strictly owned by `conxius-enclave-sdk` with zero software fallback in Core.

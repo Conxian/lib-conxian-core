@@ -7,7 +7,7 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 | Layer | Repository | Role | Evaluation Standard |
 | :--- | :--- | :--- | :--- |
 | **Protocol Core** | `lib-conxian-core` | Canonical protocol primitives, control contracts, and invariants | **P0 - Hardened**: BIP-aligned, fail-closed, no mocks, full test coverage. |
-| **Secure Enclave SDK** | `conxius-enclave-sdk` | Production hardware-backed signing, attestation, and policy flows | **P0 - Hardened**: provider-backed, fail-closed, security-reviewed. |
+| **Secure Enclave SDK** | `conxius-enclave-sdk` | Hardware-signing, attestation, and policy boundary | **P0 target**: fail-closed foundations; provider qualification and review evidence open. |
 | **Core/SDK Adapter** | `lib-conxian-core-enclave` | Narrow compatibility adapter between Core contracts and the SDK | **P0 - Hardened**: typed boundary, no provider/runtime ownership. |
 | **Supporting Infra** | `conxian-gateway`  | Unified API & Protocol Routing | **P0 - Hardened**: TEE-anchored execution, ZSE compliant, audit-ready. |
 | **User & Application** | `conxius-wallet` | Reference Asset Management Client | **P1 - Standard**: StrongBox/TEE signing, Passkey auth, zero-PII persistence. |
@@ -37,7 +37,8 @@ This document classifies every repository in the Conxian-Labs stack by layer, ro
 ## 3. Dependency Relationships
 - **lib-conxian-core** is the shared protocol foundation for all integrators; it
   does not provide production Vault SDK, hardware, provider, or runtime behavior.
-- **conxius-enclave-sdk** owns production signing, attestation, and policy flows.
+- **conxius-enclave-sdk** owns signing, attestation, and policy contracts;
+  production support is granted per qualified provider, not repo-wide.
 - **lib-conxian-core-enclave** provides the narrow Core/SDK compatibility boundary
   used by downstream applications.
 - **conxian-gateway** owns runtime orchestration and protocol routing.
