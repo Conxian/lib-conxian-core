@@ -47,3 +47,15 @@
 - **Status**: `completed`
 - **Changes**: Hardened `src/chain/transport.rs` with `TransportError::InvalidInput`, `TransportCapability::validate()`, fail-closed input parameter checks on `supports()`, `broadcast()`, and `query_utxos()`, expanded unit tests, and synchronized documentation (`docs/SESSION_RESEARCH_LOG.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/governance/EXECUTIVE_SCORECARD.md`, `docs/governance/READINESS_SCORECARD.md`).
 - **Metrics**: 285 Rust workspace tests passing, 71 Python verification guard tests passing.
+
+## Session 89 — Hardware Chipset Drivers, Enclave Boundary Expansion & SDK Alignment (CON-1336 / G-36)
+- **Active Branch**: `jules-6812800539526578202-78f04a0e`
+- **Selected Gap**: CON-1336 / G-36 (Hardware Chipset Drivers & Enclave Boundary Expansion)
+- **Status**: `completed`
+- **Changes**:
+  - Expanded `src/enclave/mod.rs` with strongly typed `HardwareChipset` (covering AWS Nitro, Android StrongBox, Intel SGX/TDX, AMD SEV-SNP, Apple SEP, PKCS#11 HSMs, RISC-V Keystone, TPM 2.0, ARM TrustZone, and Hardware Wallets), `AttestationType`, `ChipsetDriverInfo`, and `HardwareAttestationEvidence` structs with fail-closed `validate()` methods.
+  - Authored comprehensive specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md` detailing kernel device nodes (`/dev/*`), HAL interfaces, user-space libraries, hardware attestation formats, challenge nonces, and physical attack mitigations.
+  - Updated `docs/HARDWARE_SIGNING_BOUNDARY_2026.md` and `docs/signing/README.md`.
+  - Verified `src/sdk.rs` and `Cargo.toml` capability re-exports and feature flags (`enclave`, `sdk-cryptoki`, `sdk-webauthn`, `full-sdk`) against `conxius-enclave-sdk` (v2.0.17 / `b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43`).
+  - Synchronized documentation (`docs/SESSION_RESEARCH_LOG.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/governance/EXECUTIVE_SCORECARD.md`, `docs/governance/READINESS_SCORECARD.md`, `.session/ledger.md`).
+- **Metrics**: 285 Rust workspace tests passing, 71 Python verification guard tests passing.

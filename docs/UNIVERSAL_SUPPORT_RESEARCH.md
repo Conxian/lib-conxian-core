@@ -221,3 +221,10 @@ An audit of `src/protocol/frost.rs` expanded the FROST (Flexible Round-Optimized
 - **Encrypted Share Distribution Rules**: `EncryptedFrostShare::validate` enforces distinct sender (`from_index`) and receiver (`to_index`) participant indices, non-empty encrypted payloads, and non-zero 32-byte MAC authenticating tags.
 - **Distribution Safeguards**: `FrostManager::prepare_distribution_shares` verifies participant parameter bounds, non-zero target participant lists, and prohibits self-distribution before returning typed `FrostError::Unsupported`.
 
+
+## 28. Research Update (2026-10-14 Session 89 Synthesis): Hardware Chipset Drivers & Enclave Boundary Expansion (CON-1336 / G-36)
+An extensive research review of hardware signing chipsets, HSMs, TEEs, Secure Elements, and kernel driver interfaces established Core's strongly-typed hardware attestation boundary in `src/enclave/mod.rs` and specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md`:
+
+- **Hardware Chipset Specification**: Strongly-typed `HardwareChipset` enum covering AWS Nitro (`/dev/nitro_enclave`), Android StrongBox (`KeyMint v3 HAL`), Intel SGX (`/dev/sgx_enclave`), Intel TDX (`/dev/tdx_guest`), AMD SEV-SNP (`/dev/sev-guest`), Apple Secure Enclave (`LocalAuthentication`/`AppAttest`), PKCS#11 HSMs (`/usr/lib/libpkcs11.so`), RISC-V Keystone (`/dev/keystone_enclave`), TPM 2.0 (`/dev/tpmrm0`), ARM TrustZone (`/dev/tee0`), and Hardware Wallets (`/dev/hidraw`).
+- **Attestation Evidence Structural Validation**: `HardwareAttestationEvidence::validate` enforces exact 1:1 chipset-attestation compatibility, 32-byte non-zero challenge nonces, minimum 32-byte measurement digests, non-empty raw payloads, and canonical system path prefixes for `ChipsetDriverInfo`.
+- **Zero Secret Egress & Fail-Closed Boundary**: `HeadlessEnclave::verify_hardware_attestation_evidence` performs structural verification and returns `Err(EnclaveVerificationError::UnsupportedProvider)`, ensuring that hardware certificate chain verification remains strictly owned by `conxius-enclave-sdk` with zero software fallback in Core.

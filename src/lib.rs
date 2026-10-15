@@ -52,12 +52,13 @@
 //! ## Contact
 //!
 //! - Support: support@conxian-labs.com
-//! - Security: security@conxian-labs.com
+//! - Security: security@conxian.org (Primary), security@conxian-labs.com (Secondary)
 //! - Labs: https://www.conxian-labs.com
 
 pub mod adapters;
 pub mod anchoring;
 pub mod babylon;
+pub mod capability;
 pub mod chain;
 pub mod cjcs;
 pub mod contract_bridge;
@@ -74,6 +75,7 @@ pub mod core_types {
     pub use crate::anchoring;
     pub use crate::babylon;
     pub use crate::bitcoin;
+    pub use crate::capability;
     pub use crate::chain;
     pub use crate::cjcs;
     pub use crate::contract_bridge;
