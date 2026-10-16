@@ -74,6 +74,7 @@ pub mod core_types {
     pub use crate::adapters;
     pub use crate::anchoring;
     pub use crate::babylon;
+    pub use crate::billing;
     pub use crate::bitcoin;
     pub use crate::capability;
     pub use crate::chain;
