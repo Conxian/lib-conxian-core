@@ -13,7 +13,7 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 ## 2. Key Metrics
 
-- **Core Tests**: 285 Total Rust Workspace Tests Passing (158 Core Unit/Doc Tests + 127 Integration/Enclave/Conformance Tests; 71 Python Guard Tests)
+- **Core Tests**: 289 Total Rust Workspace Tests Passing (162 Core Unit/Doc Tests + 127 Integration/Enclave/Conformance Tests; 86 Python Guard Tests)
 - **Open Security Issues**: Named verifier placeholders are fail-closed under CON-1509; downstream verifier completion and external audit remain tracked follow-ups.
 - **CI/CD Health**: 🟢 (Gitleaks, Dependency Review, Nitro Enclave CI, and scheduled/manual fuzz regression active)
 - **Fuzz Regression Suite**: 4 bounded targets — `parse_intent`, `anchoring_receipt`,
@@ -27,4 +27,4 @@ Compact weekly review roll-up for the Conxian Labs leadership.
 
 1. **Audit**: Execute external security audit for core cryptographic paths (CON-1333).
 2. **Alignment**: Repair broken submodule pins in `conxian-business` (CON-1308).
-3. **Research**: Progress BitVMX and BitVM3 challenge cost collapse research (<$50 target; CON-1317).
+3. **Research & Primitive**: BitVM3 garbled-circuit fraud proofs & sub-$50 challenge cost collapse implemented (`src/protocol/bitvm3.rs`; CXIP-1317).

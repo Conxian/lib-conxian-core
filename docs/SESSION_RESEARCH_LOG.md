@@ -970,3 +970,22 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 ### 2. System Verification Status
 - **Rust Workspace**: 285 total workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version` and `cargo test --features enclave,full-sdk --ignore-rust-version`).
 - **Python Verification Guards**: 71 unit and governance guard tests passing cleanly (`python3 -m unittest discover -s scripts/tests`).
+
+---
+## Session 2026-10-16 (Session 90): BitVM3 Garbled-Circuit Fraud Proofs & CXIP-1317 Expansion
+
+### Objective
+1. Evaluate ecosystem research proposals and options for CXIP-1317 BitVM3 garbled-circuit fraud proofs.
+2. Implement BitVM3 garbled-circuit primitives in `src/protocol/bitvm3.rs` with typed `BitVm3Error` variants, `GarbledGate` logic gate commitments, `GarbledCircuit` 100KB script chunk limits, `BitVm3FraudProof` sub-$50 challenge cost bounds, and `BitVm3Instance` challenge-response state machine.
+3. Re-export `bitvm3` in `src/protocol/mod.rs` and `src/lib.rs`.
+4. Update governance scorecards (`EXECUTIVE_SCORECARD.md`, `READINESS_SCORECARD.md`), research documentation (`UNIVERSAL_SUPPORT_RESEARCH.md`), gap analysis (`GAP_ANALYSIS_AND_SCORING.md`), and session tracking ledger (`.session/ledger.md`).
+
+### 1. Research Findings & BitVM3 Implementation
+- **BitVM3 Garbled Circuits**: Implemented `GarbledGate` supporting NAND, AND, XOR, and OR logic gates with 32-byte wire label commitments, garbled truth table entries, and deterministic entry verification (`verify_garbled_entry`).
+- **Script Chunking & Bitcoin Block Size Limits**: `GarbledCircuit::validate` enforces Bitcoin 100KB (102,400 bytes) script chunk limits, gate count matching, and circuit root commitment calculation.
+- **Sub-$50 Challenge Fee Bound**: `BitVm3FraudProof::validate` enforces a default fee ceiling of 100,000 satoshis (max $50 USD bound) for challenge execution transactions on Bitcoin L1.
+- **State Machine Lifecycle**: `BitVm3Instance` implements `Initialized`, `Challenged`, `FraudProofSubmitted`, `Resolved`, and `TimedOut` states with fail-closed transition checks and block height timeout checks.
+
+### 2. System Verification Status
+- **Rust Workspace**: 289 total workspace tests passing cleanly (`cargo test --ignore-rust-version`).
+- **Python Verification Guards**: 86 unit and governance guard tests passing cleanly (`PYTHONPATH=. pytest scripts/tests/`).

@@ -114,7 +114,7 @@ public evidence and a versioned artifact revision.
 | **Fuzz Testing (CON-1332 / GitHub #147)** | 30 | 30 | 20 | **80** | **Implemented** (4 bounded targets; weekly/manual CI) |
 | **ERC-7683 / FDC3 Intent (CON-1406 / G-18)** | 40 | 25 | 30 | **95** | **Implemented** (Fail-closed bid/instrument parameter validation) |
 | **BitVMX (G-44)** | 40 | 15 | 30 | **85** | Researching |
-| **BitVM3 (G-20)** | 40 | 10 | 30 | **80** | Directional |
+| **BitVM3 (G-20 / CXIP-1317)** | 40 | 30 | 30 | **100** | **Implemented** (Garbled-circuit fraud proofs & sub-$50 challenge bounds) |
 | **3D Turnkey Enterprise Framework (CON-1317)** | 40 | 25 | 30 | **95** | **Architecture Specified (Gateway/Nexus/Market/Enclave)** |
 | **ZKCP (G-50)** | 35 | 15 | 20 | **70** | Researching |
 
@@ -289,3 +289,5 @@ public evidence and a versioned artifact revision.
   - Expanded `src/enclave/mod.rs` with strongly typed `HardwareChipset` (covering AWS Nitro, Android StrongBox, Intel SGX/TDX, AMD SEV-SNP, Apple SEP, PKCS#11 HSMs, RISC-V Keystone, TPM 2.0, ARM TrustZone, and Hardware Wallets), `AttestationType`, `ChipsetDriverInfo`, and `HardwareAttestationEvidence` structs with fail-closed `validate()` methods.
   - Authored comprehensive specification `docs/signing/HARDWARE_CHIPSET_DRIVERS_AND_ENCLAVE_RESEARCH.md` detailing kernel device nodes (`/dev/*`), HAL interfaces, user-space libraries, hardware attestation formats, challenge nonces, and physical attack mitigations.
   - Verified `src/sdk.rs` and `Cargo.toml` capability re-exports and feature flags (`enclave`, `sdk-cryptoki`, `sdk-webauthn`, `full-sdk`) against `conxius-enclave-sdk` (v2.0.17 / `b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43`).
+
+- **BitVM3 Garbled-Circuit Fraud Proofs (CXIP-1317 / G-20)**: Implemented in `src/protocol/bitvm3.rs` with typed `BitVm3Error` variants, `GarbledGate` logic gate commitments, `GarbledCircuit` 100KB script chunk validation, `BitVm3FraudProof` sub-$50 fee ceiling enforcement, and `BitVm3Instance` challenge-response state machine.

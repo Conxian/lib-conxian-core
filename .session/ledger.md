@@ -59,3 +59,13 @@
   - Verified `src/sdk.rs` and `Cargo.toml` capability re-exports and feature flags (`enclave`, `sdk-cryptoki`, `sdk-webauthn`, `full-sdk`) against `conxius-enclave-sdk` (v2.0.17 / `b3d79d9c5aca0b9adee53bce0d0c0c11ff81ff43`).
   - Synchronized documentation (`docs/SESSION_RESEARCH_LOG.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/governance/EXECUTIVE_SCORECARD.md`, `docs/governance/READINESS_SCORECARD.md`, `.session/ledger.md`).
 - **Metrics**: 285 Rust workspace tests passing, 71 Python verification guard tests passing.
+
+## Session 90 — BitVM3 Garbled-Circuit Fraud Proofs & CXIP-1317 Expansion
+- **Selected Gap**: CXIP-1317 / G-20 (BitVM3 Garbled-Circuit Fraud Proofs & Sub-$50 Challenge Bounds)
+- **Status**: `completed`
+- **Changes**:
+  - Implemented `src/protocol/bitvm3.rs` with typed `BitVm3Error` variants, `GarbledGate` logic gate commitments, `GarbledCircuit` 100KB script chunk limits, `BitVm3FraudProof` sub-$50 fee ceiling enforcement, and `BitVm3Instance` challenge-response state machine.
+  - Re-exported `bitvm3` in `src/protocol/mod.rs` and `src/lib.rs`.
+  - Added unit test suite in `src/protocol/bitvm3.rs` testing circuit creation, garbled gate verification, chunk size checks, fee ceiling bounds, and state machine transitions.
+  - Synchronized documentation (`docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`, `docs/SESSION_RESEARCH_LOG.md`, `docs/governance/EXECUTIVE_SCORECARD.md`, `docs/governance/READINESS_SCORECARD.md`, `.session/ledger.md`).
+- **Metrics**: 289 Rust workspace tests passing, 86 Python verification guard tests passing.
