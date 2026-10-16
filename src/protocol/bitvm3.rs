@@ -140,7 +140,7 @@ impl GarbledGate {
             return Err(BitVm3Error::InvalidWireLabel("wire label is empty"));
         }
         let mut hasher = Sha256::new();
-        hasher.update(&self.gate_id.to_be_bytes());
+        hasher.update(self.gate_id.to_be_bytes());
         hasher.update(label_a);
         hasher.update(label_b);
         let digest: [u8; 32] = hasher.finalize().into();
@@ -205,7 +205,7 @@ impl GarbledCircuit {
             hasher.update(output);
         }
         for gate in &self.gates {
-            hasher.update(&gate.gate_id.to_be_bytes());
+            hasher.update(gate.gate_id.to_be_bytes());
             hasher.update(gate.output_wire_hash);
         }
         Ok(hasher.finalize().into())
@@ -380,7 +380,7 @@ impl BitVm3Instance {
 
         let mut hasher = Sha256::new();
         hasher.update(proof.circuit_id.as_bytes());
-        hasher.update(&proof.contested_gate_id.to_be_bytes());
+        hasher.update(proof.contested_gate_id.to_be_bytes());
         hasher.update(&proof.wire_label_a);
         hasher.update(&proof.wire_label_b);
         for chunk in &proof.proof_chunks {
