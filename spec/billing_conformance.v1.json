@@ -1,0 +1,30 @@
+{
+  "schema": "conxian.billing.catalog",
+  "schema_version": 1,
+  "policy_id": "legacy-billing-v1",
+  "status": "configuration_only",
+  "confers_entitlement": false,
+  "cross_product_entitlement": "unavailable",
+  "settlement_policy": "ADR-004; separate from service charges and signature quotas",
+  "gateway": {
+    "unit": "usd_cents",
+    "period_seconds": 2592000,
+    "managed_base": 20000,
+    "relay": 1,
+    "rwa_verification": 5,
+    "settlement_operation": 10,
+    "volume_relay_threshold": 100000,
+    "volume_discount_bps": 2000,
+    "volume_discount_scope": "base_and_usage_total",
+    "self_hosted_service_charge": 0
+  },
+  "nexus": {
+    "upgrade_unit": "satoshis",
+    "invoice_expiry_seconds": 3600,
+    "tiers": [
+      {"tier": "free", "signature_limit": 50000, "upgrade_amount": 0, "enterprise_settlement_cap_eligible": false},
+      {"tier": "pro", "signature_limit": 500000, "upgrade_amount": 100000, "enterprise_settlement_cap_eligible": false},
+      {"tier": "enterprise", "signature_limit": 5000000, "upgrade_amount": 1000000, "enterprise_settlement_cap_eligible": true}
+    ]
+  }
+}
