@@ -58,6 +58,7 @@
 pub mod adapters;
 pub mod anchoring;
 pub mod babylon;
+pub mod billing;
 pub mod capability;
 pub mod chain;
 pub mod cjcs;
