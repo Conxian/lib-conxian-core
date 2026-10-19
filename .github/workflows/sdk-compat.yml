@@ -4,7 +4,7 @@ name: SDK v2.0.17 Compatibility Evidence
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev, staged ]
   workflow_dispatch:
 
 permissions:
