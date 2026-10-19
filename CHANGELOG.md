@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Run native default/all-feature tests, coverage, dependency audit and SDK compatibility on staged promotion PRs, closing the verification gap exposed by the billing export regression (Business #1343/#1415).
+
 ### Added
+- Versioned offline billing catalog and shared legacy Gateway rates/Nexus tier definitions, with strict conformance checks. Configuration does not grant payment, entitlement, execution or production authority (Business #1343/#1390).
+- Development SDK consumption pins the exact 2.1.0 source revision containing provider-policy/key-parameter hardening; the published =2.0.17 companion compatibility contract remains separate. This does not establish hardware or production qualification.
 - Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).
 - Hardened Canonical Job Card System (`src/cjcs.rs`) with typed `CjcsError` variants, fail-closed `WorkIntent::validate()` and `JobCard::validate()` methods, JSON-LD schema context enforcement, constructors, serialization methods, and full unit test coverage.
 - Refactored `src/crypto/mod.rs` to replace the placeholder `CryptoStubError` with a production-grade `CryptoError` enum, adding fail-closed PVDE and PTLC adaptor-signature parameter validation (Session 71).
