@@ -1,4 +1,15 @@
 
+## Session 90 — Python Verification Suite Path Bootstrapping Standardization (2026-10-20)
+
+- **Audited Modules**: `scripts/tests/test_verify_core_dependency_boundary.py`, `scripts/tests/test_verify_release_hygiene.py`, `scripts/tests/test_verify_release_version.py`.
+- **Key Enhancements**:
+  - Standardized `sys.path` bootstrapping across all Python test modules in `scripts/tests/` by explicitly inserting `REPO_ROOT` (`Path(__file__).resolve().parents[2]`).
+  - Resolved `ModuleNotFoundError: No module named 'scripts'` errors when running `pytest scripts/tests/` directly without setting `PYTHONPATH=.`.
+- **Verification Baseline**:
+  - 86 Python verification guard tests passing cleanly (`pytest scripts/tests/`).
+  - 86 Python unittest tests passing cleanly (`python3 -m unittest discover scripts/tests`).
+  - 285 Rust workspace tests passing cleanly (`cargo test --workspace --ignore-rust-version`).
+
 ## Session 88 — Transport Capability Adapter Hardening & Candidate Matrix Alignment (2026-10-13)
 
 - **Audited Modules**: `src/chain/transport.rs`, `src/adapters/mod.rs`, `docs/UNIVERSAL_SUPPORT_RESEARCH.md`, `docs/GAP_ANALYSIS_AND_SCORING.md`.
