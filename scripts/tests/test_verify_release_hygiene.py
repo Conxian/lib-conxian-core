@@ -10,9 +10,9 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from urllib.error import URLError
 
-SCRIPT_ROOT = Path(__file__).resolve().parents[1]
-if str(SCRIPT_ROOT) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from scripts import verify_release_hygiene as hygiene
 
