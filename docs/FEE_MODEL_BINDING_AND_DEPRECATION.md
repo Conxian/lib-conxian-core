@@ -1,3 +1,6 @@
+# Pricing architecture: see Conxian/conxian-business ADR-009 — the fee model is
+# the gateway's metering engine (single monetization surface).
+
 # Fee Model Binding & Deprecation Plan (ADR-004)
 
 ## 1. Canonical Source of Truth
