@@ -302,20 +302,24 @@ jobs:
             exit 1
           fi
 
-          # Autopull: re-check the latest source/target before merging. If the
-          # source advanced, this candidate is stale and a newer promotion
-          # supersedes it; if the target advanced, pull it into the candidate.
-          git fetch --no-tags origin "$SOURCE" "$TARGET"
+          # Immutable candidate guards: never mutate the published ref. If the
+          # candidate head, source, or target has drifted, fail loudly and
+          # retain the candidate for manual reconciliation.
+          git fetch --no-tags origin "$SOURCE" "$TARGET" "$PROMO_BRANCH"
           LATEST_SOURCE=$(git rev-parse "origin/${SOURCE}")
           LATEST_TARGET=$(git rev-parse "origin/${TARGET}")
+          LATEST_CANDIDATE=$(git rev-parse "origin/${PROMO_BRANCH}")
+          if [ "${LATEST_CANDIDATE}" != "${SOURCE_SHA}" ]; then
+            echo "::error::Candidate head changed; preserve the ref and prepare a fresh reviewed candidate."
+            exit 1
+          fi
           if [ "${LATEST_SOURCE}" != "${SOURCE_SHA}" ]; then
-            echo "::notice::Source ${SOURCE} advanced past ${SOURCE_SHA}; closing stale candidate (newer promotion supersedes it)."
-            gh pr close "$PR_NUMBER" --repo "${{ github.repository }}" --delete-branch
-            exit 0
+            echo "::error::Source advanced; retain this candidate and prepare fresh source-bound evidence."
+            exit 1
           fi
           if [ "${LATEST_TARGET}" != "${TARGET_SHA}" ]; then
-            echo "::notice::Target ${TARGET} advanced past ${TARGET_SHA}; updating candidate branch before merge."
-            gh pr update-branch "$PR_NUMBER" --repo "${{ github.repository }}" || echo "::notice::Could not auto-update branch; proceeding."
+            echo "::error::Target advanced; retain this candidate unchanged and reconcile acceptance evidence."
+            exit 1
           fi
 
           gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body "Promotion candidate left as DRAFT. Manual review required before merge: fill the evidence pack and confirm all required CI checks are green."
