@@ -1,0 +1,66 @@
+name: crypto-bigint upstream unblock check
+
+on:
+  schedule:
+    # Weekly (Monday 08:30 UTC). Watches for a k256 >=0.14 lineage in alloy /
+    # frost-secp256k1-tr so the tracked RUSTSEC-2026-0387 exception can be removed.
+    - cron: "30 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check upstream k256 lineage
+        id: check
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.request
+
+          def latest_k256_req(crate):
+              req = urllib.request.Request(
+                  f"https://crates.io/api/v1/crates/{crate}/dependencies",
+                  headers={"User-Agent": "conxian-upstream-check (contact: botshelo@conxian-labs.com)"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  data = json.load(r)
+              ver = data["version"]["num"]
+              kreq = next((d["req"] for d in data["dependencies"] if d["crate_id"] == "k256"), None)
+              return ver, kreq
+
+          blocked = []
+          for crate in ("alloy-signer", "frost-secp256k1-tr"):
+              ver, kreq = latest_k256_req(crate)
+              ok = kreq is not None and "0.14" in kreq
+              print(f"{crate} {ver}: k256 req={kreq} -> {'UNBLOCKED' if ok else 'blocked'}")
+              if not ok:
+                  blocked.append(f"{crate} {ver} (k256 {kreq})")
+
+          if blocked:
+              print("STILL_BLOCKED: " + ", ".join(blocked))
+          else:
+              print("UNBLOCKED")
+              with open("unblocked.md", "w") as f:
+                  f.write(
+                      "## Upstream unblocked — crypto-bigint migration actionable\n\n"
+                      "`alloy-signer` and `frost-secp256k1-tr` now ship a k256 >=0.14 lineage "
+                      "(crypto-bigint >=0.7.6). The tracked `--ignore RUSTSEC-2026-0387` in "
+                      "`.github/workflows/cargo-audit.yml` can now be removed and the option-1 "
+                      "migration under #1514 executed.\n\n"
+                      "*(auto-generated weekly upstream check)*\n"
+                  )
+          PY
+          echo "check done"
+
+      - name: Alert on unblock
+        if: hashFiles('unblocked.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 1514 --repo Conxian/conxian-business --body-file unblocked.md
+          echo "alert posted to conxian-business#1514"
