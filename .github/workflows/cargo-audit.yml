@@ -28,12 +28,4 @@ jobs:
         run: cargo install cargo-audit --locked --version 0.22.2
 
       - name: Cargo audit
-        # RUSTSEC-2026-0387 (crypto-bigint <0.7.6 timing side-channel) is a
-        # documented, accepted exception pending an upstream k256 0.14 release.
-        # The vulnerable path is transitive only: crypto-bigint 0.5.5 <- elliptic-curve
-        # 0.13.8 <- k256 0.13.4/ecdsa 0.16.9 <- frost-secp256k1-tr 3.0.0 + alloy 2.x,
-        # pulled via conxius-enclave-sdk. alloy 2.5.0 and frost-secp256k1-tr 3.0.0
-        # (both latest) still pin k256 ^0.13, so no patched release exists yet.
-        # Remove this ignore once either crate ships crypto-bigint >=0.7.6.
-        # Tracked in Conxian/conxian-business#1514.
-        run: cargo audit --file Cargo.lock --ignore RUSTSEC-2026-0387
+        run: cargo audit --file Cargo.lock
