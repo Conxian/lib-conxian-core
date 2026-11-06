@@ -143,10 +143,24 @@ impl WitnessEncryption {
 }
 
 /// Adaptor signature protocol primitives (PTLC).
+///
+/// # Naming warning
+///
+/// Despite the name, this type does **not** implement an adaptor signature.
+/// `create_adaptor_signature` returns a plain SHA-256 commitment
+/// (`H("ADAPTOR-SIG-V1" ‖ pubkey ‖ msg)`): there is no BIP340 nonce point `R`,
+/// no partial signature `s' = k + e·d`, and no `decrypt_adaptor_sig(s', s)`
+/// path. It is a commitment, not a PTLC/DLC primitive.
+///
+/// Do not build DLC or PTLC settlement on top of it. A real adaptor signature
+/// is tracked separately; see the repository issue for `AdaptorSignature`.
 pub struct AdaptorSignature;
 
 impl AdaptorSignature {
-    /// Creates a Schnorr-based adaptor signature commitment (PTLC).
+    /// Creates a SHA-256 commitment over the signer's public key and the message.
+    ///
+    /// This is **not** an adaptor signature. The name is retained only for
+    /// compatibility with the existing unit test.
     pub fn create_adaptor_signature(
         secret_hex: &str,
         message_hex: &str,
