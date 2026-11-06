@@ -39,10 +39,12 @@ chrono = { version = "0.4.45", features = ["serde"] }
 # Production Vault SDK (Conxian-Labs Enclave SDK)
 # This crate provides hardware-backed signing, attestation, and policy primitives.
 # For full enclave SDK capabilities, see: https://crates.io/crates/conxius-enclave-sdk
-# Pin the reviewed development API including provider-policy/key-parameter
-# hardening. A development pin does not authorize production signing/release.
-# The published-version companion adapter retains its separate =2.0.17 contract.
-conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", rev = "cb6b9c69752b7082d71b0ea7431a40a498ae8a6e", version = "2.1.0", default-features = false, optional = true }
+# Pin the reviewed v2.1.0 tag commit. It carries the provider-policy/key-parameter
+# hardening and drops the `alloy` meta-crate (alloy-primitives only), which removes
+# crypto-bigint 0.5.5 (RUSTSEC-2026-0387) from the default/feature graph. A
+# development pin does not authorize production signing/release. The published-version
+# companion adapter retains its separate =2.0.17 contract.
+conxius-enclave-sdk = { git = "https://github.com/Conxian/conxius-enclave-sdk", rev = "5b07d5d0687b2888fca3325143e4ff762f360369", version = "2.1.0", default-features = false, optional = true }
 
 [features]
 default = []

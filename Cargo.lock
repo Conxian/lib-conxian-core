@@ -359,9 +359,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-primitives"
-version = "1.7.1"
+version = "1.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c902f0ca3f8353c41e3e1ec3cf26be49412525bc48ab9d3c4710d7be4f01832"
+checksum = "d5e9dbd49258ac3ab893a481d46be29b58be7f734dcac46cd80b6b13ee36566c"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -1819,11 +1819,11 @@ dependencies = [
 [[package]]
 name = "conxius-enclave-sdk"
 version = "2.1.0"
-source = "git+https://github.com/Conxian/conxius-enclave-sdk?rev=cb6b9c69752b7082d71b0ea7431a40a498ae8a6e#cb6b9c69752b7082d71b0ea7431a40a498ae8a6e"
+source = "git+https://github.com/Conxian/conxius-enclave-sdk?rev=5b07d5d0687b2888fca3325143e4ff762f360369#5b07d5d0687b2888fca3325143e4ff762f360369"
 dependencies = [
  "aes",
  "aes-gcm",
- "alloy",
+ "alloy-primitives",
  "async-trait",
  "base64 0.23.1",
  "bdk_wallet",
