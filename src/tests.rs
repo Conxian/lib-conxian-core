@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod cxip20_architecture_tests {
     use crate::crypto::{
-        HashCommitment, CryptoStubError, WitnessEncryption, WitnessEncryptionError, PVDE,
+        CryptoStubError, HashCommitment, WitnessEncryption, WitnessEncryptionError, PVDE,
     };
     use crate::enclave::ZKCompliance;
     use crate::lightning::{LightningError, LightningNode};

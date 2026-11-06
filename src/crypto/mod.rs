@@ -245,8 +245,7 @@ mod tests {
         let valid_sk_hex = "0101010101010101010101010101010101010101010101010101010101010101";
         let valid_msg_hex = "0202020202020202020202020202020202020202020202020202020202020202";
 
-        let commitment =
-            HashCommitment::create_commitment(valid_sk_hex, valid_msg_hex).unwrap();
+        let commitment = HashCommitment::create_commitment(valid_sk_hex, valid_msg_hex).unwrap();
         assert_eq!(commitment.len(), 64);
 
         assert!(HashCommitment::verify_commitment_checked(
