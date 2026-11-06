@@ -36,10 +36,12 @@ values are preserved; changing a schedule requires a new reviewed policy
 revision and matching artifact. The catalog's schema version describes its
 shape, while `policy_id` and the pinned Core revision identify its configuration.
 
-The development Core SDK feature surface pins SDK 2.1.0 commit
-`cb6b9c69752b7082d71b0ea7431a40a498ae8a6e`, which carries the reviewed
+The development Core SDK feature surface pins SDK 2.1.0 tag commit
+`5b07d5d0687b2888fca3325143e4ff762f360369`, which carries the reviewed
 provider-policy/key-parameter corrections absent from the former development
-pin. Features remain opt-in; no simulator or signing feature is enabled by the
+pin and drops the `alloy` meta-crate so crypto-bigint 0.5.5
+(RUSTSEC-2026-0387) leaves the default/feature graph. Features remain opt-in; no
+simulator or signing feature is enabled by the
 billing contract. The separately published SDK =2.0.17 companion adapter keeps
 its explicit compatibility boundary and tests. Updating that published-version
 adapter and qualifying any release remain separate work.
