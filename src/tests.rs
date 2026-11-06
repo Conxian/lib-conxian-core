@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod cxip20_architecture_tests {
     use crate::crypto::{
-        AdaptorSignature, CryptoStubError, WitnessEncryption, WitnessEncryptionError, PVDE,
+        CryptoStubError, HashCommitment, WitnessEncryption, WitnessEncryptionError, PVDE,
     };
     use crate::enclave::ZKCompliance;
     use crate::lightning::{LightningError, LightningNode};
@@ -33,8 +33,8 @@ mod cxip20_architecture_tests {
         assert!(!witness_msg.contains("data"));
         assert!(!witness_msg.contains("64617461"));
 
-        let adaptor_err = AdaptorSignature::create_adaptor_signature("sec", "msg")
-            .expect_err("Adaptor signature should reject invalid key material");
+        let adaptor_err = HashCommitment::create_commitment("sec", "msg")
+            .expect_err("Hash commitment should reject invalid key material");
         assert_eq!(adaptor_err, CryptoStubError::InvalidKey);
         let adaptor_msg = adaptor_err.to_string();
         assert!(!adaptor_msg.contains("sec"));
