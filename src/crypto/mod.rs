@@ -142,29 +142,25 @@ impl WitnessEncryption {
     }
 }
 
-/// Adaptor signature protocol primitives (PTLC).
+/// Hash-commitment protocol primitive (PTLC placeholder).
 ///
-/// # Naming warning
+/// This type computes a SHA-256 commitment
+/// (`H("ADAPTOR-SIG-V1" ‖ pubkey ‖ msg)`) over a signer's public key and a
+/// message. It is **not** an adaptor signature: there is no BIP340 nonce point
+/// `R`, no partial signature `s' = k + e·d`, and no `decrypt_adaptor_sig(s', s)`
+/// path. Do not build DLC or PTLC settlement on top of it.
 ///
-/// Despite the name, this type does **not** implement an adaptor signature.
-/// `create_adaptor_signature` returns a plain SHA-256 commitment
-/// (`H("ADAPTOR-SIG-V1" ‖ pubkey ‖ msg)`): there is no BIP340 nonce point `R`,
-/// no partial signature `s' = k + e·d`, and no `decrypt_adaptor_sig(s', s)`
-/// path. It is a commitment, not a PTLC/DLC primitive.
-///
-/// Do not build DLC or PTLC settlement on top of it. A real adaptor signature
-/// is tracked separately; see the repository issue for `AdaptorSignature`.
-pub struct AdaptorSignature;
+/// A real Schnorr adaptor signature is a distinct primitive and is tracked
+/// separately (see the DLC CET workstream). This type is named for what it
+/// actually computes.
+pub struct HashCommitment;
 
-impl AdaptorSignature {
+impl HashCommitment {
     /// Creates a SHA-256 commitment over the signer's public key and the message.
     ///
-    /// This is **not** an adaptor signature. The name is retained only for
-    /// compatibility with the existing unit test.
-    pub fn create_adaptor_signature(
-        secret_hex: &str,
-        message_hex: &str,
-    ) -> Result<String, CryptoError> {
+    /// The commitment binds the signer identity and message but is **not** an
+    /// adaptor signature and carries no decryptable secret.
+    pub fn create_commitment(secret_hex: &str, message_hex: &str) -> Result<String, CryptoError> {
         let secret_bytes = hex::decode(secret_hex).map_err(|_| CryptoError::InvalidKey)?;
         let msg_bytes = hex::decode(message_hex).map_err(|_| CryptoError::InvalidMessage)?;
 
@@ -191,8 +187,8 @@ impl AdaptorSignature {
         Ok(hex::encode(hash))
     }
 
-    /// Verifies an adaptor signature commitment against secret key material and message.
-    pub fn verify_adaptor_signature_checked(
+    /// Verifies a commitment against secret key material and message.
+    pub fn verify_commitment_checked(
         commitment_hex: &str,
         secret_hex: &str,
         message_hex: &str,
@@ -200,7 +196,7 @@ impl AdaptorSignature {
         if commitment_hex.len() != 64 {
             return Err(CryptoError::VerificationFailed);
         }
-        let generated = Self::create_adaptor_signature(secret_hex, message_hex)?;
+        let generated = Self::create_commitment(secret_hex, message_hex)?;
         Ok(generated == commitment_hex)
     }
 }
@@ -245,15 +241,14 @@ mod tests {
     }
 
     #[test]
-    fn test_adaptor_signature_commitment_and_verification() {
+    fn test_hash_commitment_and_verification() {
         let valid_sk_hex = "0101010101010101010101010101010101010101010101010101010101010101";
         let valid_msg_hex = "0202020202020202020202020202020202020202020202020202020202020202";
 
-        let commitment =
-            AdaptorSignature::create_adaptor_signature(valid_sk_hex, valid_msg_hex).unwrap();
+        let commitment = HashCommitment::create_commitment(valid_sk_hex, valid_msg_hex).unwrap();
         assert_eq!(commitment.len(), 64);
 
-        assert!(AdaptorSignature::verify_adaptor_signature_checked(
+        assert!(HashCommitment::verify_commitment_checked(
             &commitment,
             valid_sk_hex,
             valid_msg_hex
@@ -261,11 +256,11 @@ mod tests {
         .unwrap());
 
         assert_eq!(
-            AdaptorSignature::create_adaptor_signature("short", valid_msg_hex),
+            HashCommitment::create_commitment("short", valid_msg_hex),
             Err(CryptoError::InvalidKey)
         );
         assert_eq!(
-            AdaptorSignature::create_adaptor_signature(valid_sk_hex, "short"),
+            HashCommitment::create_commitment(valid_sk_hex, "short"),
             Err(CryptoError::InvalidMessage)
         );
     }
