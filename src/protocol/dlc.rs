@@ -234,6 +234,37 @@ impl DlcManager {
         })
     }
 
+    /// Byte-oriented variant of [`Self::create_adaptor_signature`] for callers
+    /// that cannot share this crate's `secp256k1` types (for example a consumer
+    /// pinned to a different `secp256k1` major version). `signer_secret` and
+    /// `signer_nonce` are 32-byte big-endian scalars; `oracle_nonce` and
+    /// `oracle_pubkey` are serialized secp256k1 points.
+    pub fn create_adaptor_signature_bytes(
+        signer_secret: &[u8],
+        signer_nonce: &[u8],
+        oracle_nonce: &[u8],
+        oracle_pubkey: &[u8],
+        message: &[u8],
+    ) -> Result<AdaptorSignature, DlcVerificationError> {
+        let secret: [u8; 32] = signer_secret
+            .try_into()
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let nonce: [u8; 32] = signer_nonce
+            .try_into()
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let signer_secret = SecretKey::from_secret_bytes(secret)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let signer_nonce = SecretKey::from_secret_bytes(nonce)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        Self::create_adaptor_signature(
+            &signer_secret,
+            &signer_nonce,
+            oracle_nonce,
+            oracle_pubkey,
+            message,
+        )
+    }
+
     /// Verifies an adaptor (pre-)signature against the signer key and the oracle
     /// announcement, **without** the oracle's attestation.
     ///
@@ -675,6 +706,56 @@ mod tests {
         assert_eq!(
             DlcManager::validate_cet_structure(&intent, &excessive_payouts),
             Err(DlcVerificationError::InvalidCetStructure)
+        );
+    }
+
+    #[test]
+    fn test_adaptor_signature_bytes_api_matches_typed_api() {
+        let oracle_sk = SecretKey::from_secret_bytes([0x11; 32]).unwrap();
+        let oracle_pk = PublicKey::from_secret_key(&oracle_sk);
+        let oracle_nonce_pk =
+            PublicKey::from_secret_key(&SecretKey::from_secret_bytes([0x22; 32]).unwrap());
+        let signer_sk = SecretKey::from_secret_bytes([0x33; 32]).unwrap();
+        let signer_pk = PublicKey::from_secret_key(&signer_sk);
+        let signer_nonce = SecretKey::from_secret_bytes([0x44; 32]).unwrap();
+        let msg = b"cet:outcome=flat,payout=50000";
+
+        let typed = DlcManager::create_adaptor_signature(
+            &signer_sk,
+            &signer_nonce,
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap();
+        let bytes = DlcManager::create_adaptor_signature_bytes(
+            &signer_sk.to_secret_bytes(),
+            &signer_nonce.to_secret_bytes(),
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap();
+        assert_eq!(typed, bytes);
+        assert!(DlcManager::verify_adaptor_signature(
+            &bytes,
+            &signer_pk.serialize(),
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap());
+
+        // Wrong-length scalar inputs fail closed.
+        assert_eq!(
+            DlcManager::create_adaptor_signature_bytes(
+                &[0x01; 31],
+                &signer_nonce.to_secret_bytes(),
+                &oracle_nonce_pk.serialize(),
+                &oracle_pk.serialize(),
+                msg,
+            ),
+            Err(DlcVerificationError::InvalidAdaptorSignature)
         );
     }
 
