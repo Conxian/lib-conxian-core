@@ -150,9 +150,10 @@ impl WitnessEncryption {
 /// `R`, no partial signature `s' = k + e·d`, and no `decrypt_adaptor_sig(s', s)`
 /// path. Do not build DLC or PTLC settlement on top of it.
 ///
-/// A real Schnorr adaptor signature is a distinct primitive and is tracked
-/// separately (see the DLC CET workstream). This type is named for what it
-/// actually computes.
+/// A real Schnorr adaptor signature is a distinct primitive and is now
+/// implemented for DLC CETs in [`crate::protocol::dlc`] (`AdaptorSignature`,
+/// `create_adaptor_signature`, `complete_adaptor_signature`). This type is
+/// named for what it actually computes and must not be used as a substitute.
 pub struct HashCommitment;
 
 impl HashCommitment {
