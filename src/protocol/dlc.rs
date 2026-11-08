@@ -1,7 +1,7 @@
 //! DLC: Discreet Log Contracts
 //! Native Bitcoin finance primitives aligned with G-06.
 
-use secp256k1::{PublicKey, Scalar};
+use secp256k1::{PublicKey, Scalar, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -70,6 +70,10 @@ pub enum DlcVerificationError {
     UnsupportedExecutionContext,
     /// The Contract Execution Transaction (CET) structure or payout distribution is invalid.
     InvalidCetStructure,
+    /// The adaptor (pre-)signature is structurally invalid or fails its check.
+    InvalidAdaptorSignature,
+    /// The completed CET signature is not a valid Schnorr signature for the signer.
+    InvalidCetSignature,
 }
 
 impl std::fmt::Display for DlcVerificationError {
@@ -89,11 +93,234 @@ impl std::fmt::Display for DlcVerificationError {
             Self::InvalidCetStructure => {
                 write!(f, "invalid DLC CET structure or payout distribution")
             }
+            Self::InvalidAdaptorSignature => {
+                write!(f, "invalid DLC adaptor (pre-)signature")
+            }
+            Self::InvalidCetSignature => {
+                write!(f, "completed DLC CET signature failed verification")
+            }
         }
     }
 }
 
 impl std::error::Error for DlcVerificationError {}
+
+/// secp256k1 group order `n`, big-endian, for hash→scalar reduction.
+const SECP256K1_N: [u8; 32] = [
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
+    0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b, 0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
+];
+
+/// Reduces a 32-byte big-endian value modulo the secp256k1 order.
+///
+/// A 256-bit input is strictly less than `2n`, so a single conditional
+/// subtraction of `n` is exact.
+fn scalar_from_hash_reduced(bytes: [u8; 32]) -> Scalar {
+    let mut value = bytes;
+    if value >= SECP256K1_N {
+        let mut borrow = 0u16;
+        for i in (0..32).rev() {
+            let diff = value[i] as u16 + 256 - SECP256K1_N[i] as u16 - borrow;
+            value[i] = (diff & 0xff) as u8;
+            borrow = if diff & 0x100 == 0 { 1 } else { 0 };
+        }
+    }
+    Scalar::from_be_bytes(value).expect("reduced value is below the curve order")
+}
+
+/// Computes the DLC challenge scalar `e` bound to the nonce point and signer key.
+///
+/// Uses a domain-separated SHA-256 over the compressed nonce point, the
+/// compressed public key, and the message, then reduces modulo the curve order.
+fn dlc_challenge(nonce_point: &PublicKey, pubkey: &PublicKey, message: &[u8]) -> Scalar {
+    let mut hasher = Sha256::new();
+    hasher.update(b"DLC-ADAPTOR-V1/challenge");
+    hasher.update(nonce_point.serialize());
+    hasher.update(pubkey.serialize());
+    hasher.update(message);
+    let digest: [u8; 32] = hasher.finalize().into();
+    scalar_from_hash_reduced(digest)
+}
+
+/// A real BIP340-style Schnorr adaptor (pre-)signature for a DLC Contract
+/// Execution Transaction.
+///
+/// Construction (dlcspecs / DLC-Link point-locking): the oracle announces a
+/// per-outcome nonce point `R_oracle` and key `P_oracle`. The signer derives the
+/// oracle's *signature point*
+/// `T = R_oracle + e_o·P_oracle`, where `e_o = H(R_oracle ‖ P_oracle ‖ m)` is the
+/// challenge the oracle will sign with. The signer then picks a nonce `k`,
+/// forms the adapted nonce `R_adapted = k·G + T`, and produces the adaptor
+/// scalar `s' = k + e·d` with `e = H(R_adapted ‖ P ‖ m)`.
+///
+/// `s'` alone is **not** a valid signature. Only when the oracle reveals its
+/// attestation scalar `s_oracle = k_oracle + e_o·d_oracle` can the CET signature
+/// be completed as `s = s' + s_oracle`, which verifies as
+/// `s·G = R_adapted + e·P` under the signer key `P`. This is the cryptographic
+/// lock that makes a DLC CET un-broadcastable until the oracle attests to the
+/// outcome.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AdaptorSignature {
+    /// Adapted nonce point `R_adapted = k·G + T` (33-byte compressed point).
+    pub adapted_nonce: Vec<u8>,
+    /// The adaptor scalar `s' = k + e·d` (32 bytes, big-endian).
+    pub adaptor_scalar: [u8; 32],
+}
+
+/// A completed DLC CET signature: the adapted nonce point plus the completed
+/// scalar `s = s' + s_oracle`, over the message it commits to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompletedCetSignature {
+    /// Adapted nonce point `R_adapted` (33-byte compressed point).
+    pub adapted_nonce: Vec<u8>,
+    /// The completed signature scalar `s = s' + s_oracle` (32 bytes, big-endian).
+    pub signature_scalar: [u8; 32],
+    /// The CET message that was signed.
+    pub message: Vec<u8>,
+}
+
+impl DlcManager {
+    /// Computes the oracle signature point `T = R_oracle + e_o·P_oracle`.
+    fn oracle_signature_point(
+        oracle_nonce: &[u8],
+        oracle_pubkey: &[u8],
+        message: &[u8],
+    ) -> Result<PublicKey, DlcVerificationError> {
+        let r = PublicKey::from_slice(oracle_nonce)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let p = PublicKey::from_slice(oracle_pubkey)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let e_o = dlc_challenge(&r, &p, message);
+        let ep = p
+            .mul_tweak(&e_o)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        r.combine(&ep)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)
+    }
+
+    /// Creates an adaptor (pre-)signature over `message` for the CET.
+    ///
+    /// `signer_secret`/`signer_nonce` are the signer's key and signing nonce;
+    /// `oracle_nonce`/`oracle_pubkey` are the oracle's announcement. The returned
+    /// signature cannot be completed without the oracle's attestation scalar.
+    pub fn create_adaptor_signature(
+        signer_secret: &SecretKey,
+        signer_nonce: &SecretKey,
+        oracle_nonce: &[u8],
+        oracle_pubkey: &[u8],
+        message: &[u8],
+    ) -> Result<AdaptorSignature, DlcVerificationError> {
+        let signer_pubkey = PublicKey::from_secret_key(signer_secret);
+        let t = Self::oracle_signature_point(oracle_nonce, oracle_pubkey, message)?;
+        let k_g = PublicKey::from_secret_key(signer_nonce);
+        let adapted_nonce = k_g
+            .combine(&t)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let e = dlc_challenge(&adapted_nonce, &signer_pubkey, message);
+
+        // s' = k + e·d
+        let ed = signer_secret
+            .mul_tweak(&e)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let ed_scalar = Scalar::from_be_bytes(ed.to_secret_bytes())
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let adaptor = signer_nonce
+            .add_tweak(&ed_scalar)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+
+        Ok(AdaptorSignature {
+            adapted_nonce: adapted_nonce.serialize().to_vec(),
+            adaptor_scalar: adaptor.to_secret_bytes(),
+        })
+    }
+
+    /// Verifies an adaptor (pre-)signature against the signer key and the oracle
+    /// announcement, **without** the oracle's attestation.
+    ///
+    /// Checks `s'·G + T = R_adapted + e·P`, i.e. the adaptor is exactly one oracle
+    /// scalar away from a valid signature.
+    pub fn verify_adaptor_signature(
+        signature: &AdaptorSignature,
+        signer_pubkey: &[u8],
+        oracle_nonce: &[u8],
+        oracle_pubkey: &[u8],
+        message: &[u8],
+    ) -> Result<bool, DlcVerificationError> {
+        let p = PublicKey::from_slice(signer_pubkey)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let adapted_nonce = PublicKey::from_slice(&signature.adapted_nonce)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let t = Self::oracle_signature_point(oracle_nonce, oracle_pubkey, message)?;
+        let e = dlc_challenge(&adapted_nonce, &p, message);
+
+        // lhs = s'·G + T
+        let s_prime = SecretKey::from_secret_bytes(signature.adaptor_scalar)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let s_g = PublicKey::from_secret_key(&s_prime);
+        let lhs = s_g
+            .combine(&t)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+
+        // rhs = R_adapted + e·P
+        let ep = p
+            .mul_tweak(&e)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let rhs = adapted_nonce
+            .combine(&ep)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+
+        Ok(lhs == rhs)
+    }
+
+    /// Completes an adaptor signature with the oracle's revealed attestation
+    /// scalar: `s = s' + s_oracle`.
+    pub fn complete_adaptor_signature(
+        signature: &AdaptorSignature,
+        oracle_attestation_scalar: &[u8],
+        message: &[u8],
+    ) -> Result<CompletedCetSignature, DlcVerificationError> {
+        let s_oracle_bytes: [u8; 32] = oracle_attestation_scalar
+            .try_into()
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let s_prime = SecretKey::from_secret_bytes(signature.adaptor_scalar)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let s_oracle = Scalar::from_be_bytes(s_oracle_bytes)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+        let s = s_prime
+            .add_tweak(&s_oracle)
+            .map_err(|_| DlcVerificationError::InvalidAdaptorSignature)?;
+
+        Ok(CompletedCetSignature {
+            adapted_nonce: signature.adapted_nonce.clone(),
+            signature_scalar: s.to_secret_bytes(),
+            message: message.to_vec(),
+        })
+    }
+
+    /// Verifies a completed CET signature: `s·G = R_adapted + e·P`.
+    pub fn verify_completed_cet_signature(
+        completed: &CompletedCetSignature,
+        signer_pubkey: &[u8],
+    ) -> Result<bool, DlcVerificationError> {
+        let p = PublicKey::from_slice(signer_pubkey)
+            .map_err(|_| DlcVerificationError::InvalidCetSignature)?;
+        let adapted_nonce = PublicKey::from_slice(&completed.adapted_nonce)
+            .map_err(|_| DlcVerificationError::InvalidCetSignature)?;
+        let s = SecretKey::from_secret_bytes(completed.signature_scalar)
+            .map_err(|_| DlcVerificationError::InvalidCetSignature)?;
+        let e = dlc_challenge(&adapted_nonce, &p, &completed.message);
+
+        let lhs = PublicKey::from_secret_key(&s);
+        let ep = p
+            .mul_tweak(&e)
+            .map_err(|_| DlcVerificationError::InvalidCetSignature)?;
+        let rhs = adapted_nonce
+            .combine(&ep)
+            .map_err(|_| DlcVerificationError::InvalidCetSignature)?;
+
+        Ok(lhs == rhs)
+    }
+}
 
 impl DlcManager {
     /// Creates a new DLC Intent.
@@ -462,6 +689,129 @@ mod tests {
         assert_eq!(
             DlcManager::verify_execution_checked(&intent, &[0x01; 31]),
             Err(DlcVerificationError::MalformedAttestation)
+        );
+    }
+
+    #[test]
+    fn test_adaptor_signature_roundtrip_completes_to_valid_cet_signature() {
+        // Oracle announcement.
+        let oracle_sk = SecretKey::from_secret_bytes([0x11; 32]).unwrap();
+        let oracle_pk = PublicKey::from_secret_key(&oracle_sk);
+        let oracle_nonce_sk = SecretKey::from_secret_bytes([0x22; 32]).unwrap();
+        let oracle_nonce_pk = PublicKey::from_secret_key(&oracle_nonce_sk);
+
+        // Signer.
+        let signer_sk = SecretKey::from_secret_bytes([0x33; 32]).unwrap();
+        let signer_pk = PublicKey::from_secret_key(&signer_sk);
+        let signer_nonce = SecretKey::from_secret_bytes([0x44; 32]).unwrap();
+
+        let msg = b"cet:outcome=up,payout=60000";
+
+        let adaptor = DlcManager::create_adaptor_signature(
+            &signer_sk,
+            &signer_nonce,
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .expect("adaptor signature creation succeeds");
+
+        // The pre-signature verifies without the oracle scalar...
+        assert!(DlcManager::verify_adaptor_signature(
+            &adaptor,
+            &signer_pk.serialize(),
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap());
+
+        // ...but is not yet a valid CET signature (it lacks the oracle scalar).
+        let premature = CompletedCetSignature {
+            adapted_nonce: adaptor.adapted_nonce.clone(),
+            signature_scalar: adaptor.adaptor_scalar,
+            message: msg.to_vec(),
+        };
+        assert!(
+            !DlcManager::verify_completed_cet_signature(&premature, &signer_pk.serialize())
+                .unwrap()
+        );
+
+        // Oracle reveals its attestation scalar s_oracle = k_o + e_o*d_o.
+        let e_o = dlc_challenge(&oracle_nonce_pk, &oracle_pk, msg);
+        let d_o_e = oracle_sk.mul_tweak(&e_o).unwrap();
+        let e_o_scalar = Scalar::from_be_bytes(d_o_e.to_secret_bytes()).unwrap();
+        let s_oracle = oracle_nonce_sk.add_tweak(&e_o_scalar).unwrap();
+
+        let completed =
+            DlcManager::complete_adaptor_signature(&adaptor, &s_oracle.to_secret_bytes(), msg)
+                .expect("completion succeeds with the oracle scalar");
+
+        assert!(
+            DlcManager::verify_completed_cet_signature(&completed, &signer_pk.serialize()).unwrap()
+        );
+
+        // A wrong oracle scalar (different outcome) does not produce a valid CET signature.
+        let wrong_oracle = SecretKey::from_secret_bytes([0x55; 32]).unwrap();
+        let wrong =
+            DlcManager::complete_adaptor_signature(&adaptor, &wrong_oracle.to_secret_bytes(), msg)
+                .unwrap();
+        assert!(
+            !DlcManager::verify_completed_cet_signature(&wrong, &signer_pk.serialize()).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_adaptor_signature_rejects_tampered_scalar_and_bad_inputs() {
+        let oracle_sk = SecretKey::from_secret_bytes([0x11; 32]).unwrap();
+        let oracle_pk = PublicKey::from_secret_key(&oracle_sk);
+        let oracle_nonce_pk =
+            PublicKey::from_secret_key(&SecretKey::from_secret_bytes([0x22; 32]).unwrap());
+        let signer_sk = SecretKey::from_secret_bytes([0x33; 32]).unwrap();
+        let signer_pk = PublicKey::from_secret_key(&signer_sk);
+        let signer_nonce = SecretKey::from_secret_bytes([0x44; 32]).unwrap();
+        let msg = b"cet:outcome=down,payout=40000";
+
+        let mut adaptor = DlcManager::create_adaptor_signature(
+            &signer_sk,
+            &signer_nonce,
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap();
+
+        // Tampering the scalar breaks the adaptor check.
+        adaptor.adaptor_scalar[31] ^= 1;
+        assert!(!DlcManager::verify_adaptor_signature(
+            &adaptor,
+            &signer_pk.serialize(),
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            msg,
+        )
+        .unwrap());
+
+        // A different message breaks it too.
+        assert!(!DlcManager::verify_adaptor_signature(
+            &adaptor,
+            &signer_pk.serialize(),
+            &oracle_nonce_pk.serialize(),
+            &oracle_pk.serialize(),
+            b"other",
+        )
+        .unwrap());
+
+        // Malformed oracle nonce is rejected.
+        assert_eq!(
+            DlcManager::create_adaptor_signature(
+                &signer_sk,
+                &signer_nonce,
+                &[0xff; 3],
+                &oracle_pk.serialize(),
+                msg,
+            ),
+            Err(DlcVerificationError::InvalidAdaptorSignature)
         );
     }
 }
