@@ -170,13 +170,13 @@ public evidence and a versioned artifact revision.
 
 ## Infrastructure & Persistence Gap Mapping (2026-08-19 Update)
 
-### Cloud DB Alignment (`org-silent-sun-00457600`)
-- **`corelibs` (`sparkling-sunset-69236559`, us-east-2)**: Core protocol state roots & invariant verification schemas.
-- **`Software dev kit` (`weathered-night-98492579`, us-east-2)**: Vault SDK hardware attestation logs & FROST DKG session tracking.
-- **`Business Operating System` (`noisy-flower-17484435`, us-east-2)**: BOS policy rules, risk profiles, and audit event logs.
-- **`market` (`small-math-44741750`, eu-central-1)**: Intent matching, liquidity routing, and ERC-7683 solver registry.
-- **`Gateway` (`noisy-cloud-41146057`, ap-southeast-1)**: Gateway API session tracking and rate-limit counters.
-- **`Conxian Nexus` (`orange-paper-76209725`, eu-central-1)**: zkVM proof verification state & state root commitments.
+### Cloud DB Alignment (`org-neon-project-<redacted>`)
+- **`corelibs` (`neon-project-<redacted>`, us-east-2)**: Core protocol state roots & invariant verification schemas.
+- **`Software dev kit` (`neon-project-<redacted>`, us-east-2)**: Vault SDK hardware attestation logs & FROST DKG session tracking.
+- **`Business Operating System` (`neon-project-<redacted>`, us-east-2)**: BOS policy rules, risk profiles, and audit event logs.
+- **`market` (`neon-project-<redacted>`, eu-central-1)**: Intent matching, liquidity routing, and ERC-7683 solver registry.
+- **`Gateway` (`neon-project-<redacted>`, ap-southeast-1)**: Gateway API session tracking and rate-limit counters.
+- **`Conxian Nexus` (`neon-project-<redacted>`, eu-central-1)**: zkVM proof verification state & state root commitments.
 
 ### Resolution & Next Step Priorities
 1. **DLC Verification Edge Cases**: Expand `src/protocol/dlc.rs` unit test coverage for invalid collateral, zero expiry block, invalid nonces, and corrupted signatures.
@@ -192,19 +192,19 @@ public evidence and a versioned artifact revision.
 - **Zero Architectural Contamination**: `scripts/verify_contamination_guard.py` and `scripts/verify_tracked_artifacts.py` confirm zero forbidden I/O leaks or unindexed tracking risks.
 
 ### Cloud DB & Render Service Fleet Topology
-- **Neon Cloud Fleet (`org-silent-sun-00457600`)**:
-  - `corelibs` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots & invariant verification schemas.
-  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
-  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
-  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
-- **Render Team Workspace (`tea-d6u0edngi27c73dvhsg0`)**:
-  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
-  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
-  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
-  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
-  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+- **Neon Cloud Fleet (`org-neon-project-<redacted>`)**:
+  - `corelibs` (`neon-project-<redacted>`, us-east-2, PG18): Protocol state roots & invariant verification schemas.
+  - `Software dev kit` (`neon-project-<redacted>`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`neon-project-<redacted>`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`neon-project-<redacted>`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace (`tea-<redacted>`)**:
+  - `conxian-business-static-docs` (`srv-<redacted>`): Static documentation gateway.
+  - `conxian-business` (`srv-<redacted>`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-<redacted>`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-<redacted>`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-<redacted>`): Staging interface deployment.
 
 ## Session 66 Research & Protocol Invariant Hardening (2026-09-04)
 
