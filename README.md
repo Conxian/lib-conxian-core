@@ -11,7 +11,7 @@ Core is the shared public protocol/type boundary for `conxian.org`. Managed infr
 ## ⚠️ Vault SDK Migration
 
 For **hardware-backed signing, attestation, and policy primitives**, use
-[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.0.17).
+[`conxius-enclave-sdk`](https://crates.io/crates/conxius-enclave-sdk) (v2.1.0).
 The SDK owns those boundaries, but provider production support requires
 separate qualification; API presence and simulators are not hardware evidence.
 
@@ -68,8 +68,8 @@ This repository owns shared primitives and reusable foundations. It adheres to s
 ## Rust and feature compatibility
 
 This crate supports Rust `1.98.1+` for both the default feature set and the
-optional SDK features. The root optional dependency selects Git tag `v2.0.17`
-(also published to crates.io with matching `version = "2.0.17"`). See the
+optional SDK features. The root optional dependency selects Git tag `v2.1.0`
+(also published to crates.io with matching `version = "2.1.0"`). See the
 [compatibility matrix](docs/COMPATIBILITY.md) for the default graph, CI
 coverage, and SDK release-coordination requirements.
 

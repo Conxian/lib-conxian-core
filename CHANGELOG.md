@@ -106,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boundary checks, and a CI entry point that runs automatically on pull requests
   targeting `main` and pushes to `main`, while remaining manually dispatchable.
 - **Note:** SDK references in this section reflect the v2.0.11 baseline at
-  release time; the current SDK is v2.0.17.
+  release time; the current SDK is v2.1.0.
 
 ### Added
 - Refactored all repo-wide markdown documentation files against actual code, dependencies, and test matrices (Session 85).

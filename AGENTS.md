@@ -26,7 +26,7 @@ Ensure all cross-domain bridge or messaging metadata aligns with the approved tr
 
 ## Protocol Coverage — SDK → Core Alignment
 
-The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42-chain `AssetRegistry` and 43 protocol modules (25 blockchain + 18 infrastructure). lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
+The Conxius Enclave SDK (`conxius-enclave-sdk` v2.1.0) defines the canonical 42-chain `AssetRegistry` and 43 protocol modules (25 blockchain + 18 infrastructure). lib-conxian-core is the **shared type system** consumed by both nexus and gateway — it must provide canonical types for every chain and protocol the ecosystem touches.
 
 ### Core Type Coverage Requirements
 
@@ -91,7 +91,7 @@ The Conxius Enclave SDK (`conxius-enclave-sdk` v2.0.17) defines the canonical 42
 - `ClarityCall`, `ContractBridge`, `SignedContractCall` (from `contract_bridge`)
 - 30+ verifier types (from `verifier`): ProtocolVerifier, ProtocolVerifierBackend, ProtocolVerifierError, ProofVerificationRequest, ProofVerificationResult, ChainId, ProofFormat, ProofData, ChainStateReference, BlockHeader, BlockReference, VerifiedBlockReference, LatestVerifiedBlock, TransactionFinalityStatus, TransactionFinalityResult, TransactionFinalityRequest, VerifierCapabilities, VerifierCapability, CapabilityAdvertisement, VerificationProvenance, DynProtocolVerifier, compute_evidence_binding_hash, validate_evidence_binding, validate_finality_result, validate_finality_result_at, validate_finality_transition, validate_proof_envelope, validate_proof_envelope_at, validate_proof_verification_result, validate_proof_verification_result_at, PROTOCOL_VERIFIER_EVIDENCE_BINDING_DOMAIN, PROTOCOL_VERIFIER_EVIDENCE_BINDING_VERSION
 
-### SDK Re-exports (Session 75 — Full Alignment with conxius-enclave-sdk v2.0.17)
+### SDK Re-exports (Session 75 — Full Alignment with conxius-enclave-sdk v2.1.0)
 
 The `sdk` module (`src/sdk.rs`) re-exports ALL 74 accessible conxius-enclave-sdk modules organized by category.
 Enable via Cargo features:
