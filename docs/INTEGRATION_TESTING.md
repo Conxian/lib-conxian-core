@@ -100,16 +100,16 @@ The exact pins represented by this checkpoint are:
 | UCS | API version `1` |
 | BIP-110 preflight | API version `1` |
 | ProtocolVerifier evidence binding | version `1`, domain `lib-conxian-core/protocol-verifier/evidence-binding` |
-| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` Git tag `v2.0.17` (manifest package version `2.0.17`) |
+| Optional SDK dependency in Core manifest | `conxius-enclave-sdk` Git tag `v2.1.0` (manifest package version `2.1.0`) |
 | Companion adapter workspace member | `lib-conxian-core-enclave` against exact SDK `2.0.17`; default features remain minimal |
-| Companion SDK release | The adapter and evidence harness target the same Git-tagged SDK `2.0.17` as Core's optional dependency |
-| Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `3b091d2700d840514427e4190c40d631b6d8132c`; this checkpoint does not change that downstream pin |
+| Companion SDK release | The adapter and evidence harness target Git-tagged SDK `2.0.17`; Core's root optional dependency pins `2.1.0` |
+| Nexus | default-branch `main` [`Cargo.toml`](https://github.com/Conxian/conxian-nexus/blob/main/Cargo.toml) currently pins `lib-conxian-core` to git revision `9dd3676bb64a5ba327cc2717d9e9d32bd09a2c95`; this checkpoint does not change that downstream pin |
 | Gateway | local Core crate integration; no cross-repository dependency is added here |
 | Wallet | TypeScript boundary; no Rust runtime dependency is added here |
 
 The current `Conxian/conxian-nexus` default branch is `main`, and its root `Cargo.toml` currently
 contains the exact `lib-conxian-core` revision pin
-`3b091d2700d840514427e4190c40d631b6d8132c`. This is a verified downstream manifest status, not
+`9dd3676bb64a5ba327cc2717d9e9d32bd09a2c95`. This is a verified downstream manifest status, not
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
