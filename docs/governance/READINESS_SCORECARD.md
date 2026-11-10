@@ -22,5 +22,5 @@ This scorecard tracks the readiness of the Conxian ecosystem across active devel
 
 - **Protocol Core**: 🟢 Ready (v0.3.3)
 - **Gateway Runtime**: 🟡 Hardening
-- **Enclave SDK**: 🟡 Boundary Audit (v2.0.17)
+- **Enclave SDK**: 🟡 Boundary Audit (v2.1.0)
 - **Wallet UI**: 🟡 Integration Testing
