@@ -74,16 +74,16 @@ ZKCP allows for the atomic exchange of a secret (e.g., a digital good) for a pay
 - **SDK Boundary**: Confirmed `conxius-enclave-sdk` v2.0.17 as the canonical signing and attestation layer, maintaining `lib-conxian-core` as a Zero Secret Egress protocol primitives provider.
 
 ## 12. Research Update (2026-08-19 Session Synthesis): Multi-Cloud & Neon DB Infrastructure Mapping
-An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-silent-sun-00457600`) confirms six dedicated Neon PostgreSQL project environments supporting the microservice architecture:
+An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-neon-project-<redacted>`) confirms six dedicated Neon PostgreSQL project environments supporting the microservice architecture:
 
 | Project Name | Neon Project ID | Region | PG Version | Purpose / Architectural Layer |
 | :--- | :--- | :--- | :--- | :--- |
-| `corelibs` | `sparkling-sunset-69236559` | `aws-us-east-2` | 18 | `lib-conxian-core` persistent state models & protocol verification schemas |
-| `Software dev kit` | `weathered-night-98492579` | `aws-us-east-2` | 18 | `conxius-enclave-sdk` Vault SDK state, DKG sessions, and attestation logs |
-| `Business Operating System` | `noisy-flower-17484435` | `aws-us-east-2` | 18 | BOS enterprise risk control plane, policy enforcement & billing |
-| `market` | `small-math-44741750` | `aws-eu-central-1` | 18 | Cross-chain intent orderbooks, solver liquidity & market routing |
-| `Gateway` | `noisy-cloud-41146057` | `aws-ap-southeast-1` | 18 | `conxian-gateway` runtime state, rate limiting, and client sessions |
-| `Conxian Nexus` | `orange-paper-76209725` | `aws-eu-central-1` | 17 | Nexus zkVM proof aggregation, state roots, and logical replication |
+| `corelibs` | `neon-project-<redacted>` | `aws-us-east-2` | 18 | `lib-conxian-core` persistent state models & protocol verification schemas |
+| `Software dev kit` | `neon-project-<redacted>` | `aws-us-east-2` | 18 | `conxius-enclave-sdk` Vault SDK state, DKG sessions, and attestation logs |
+| `Business Operating System` | `neon-project-<redacted>` | `aws-us-east-2` | 18 | BOS enterprise risk control plane, policy enforcement & billing |
+| `market` | `neon-project-<redacted>` | `aws-eu-central-1` | 18 | Cross-chain intent orderbooks, solver liquidity & market routing |
+| `Gateway` | `neon-project-<redacted>` | `aws-ap-southeast-1` | 18 | `conxian-gateway` runtime state, rate limiting, and client sessions |
+| `Conxian Nexus` | `neon-project-<redacted>` | `aws-eu-central-1` | 17 | Nexus zkVM proof aggregation, state roots, and logical replication |
 
 ### Core Infrastructure & Security Directives
 1. **Zero Secret Egress (ZSE)**: Database persistence records only state commitments, proof roots, and public keys. Private keys and ephemeral signing material are restricted strictly to enclave RAM and `conxius-enclave-sdk`.
@@ -93,12 +93,12 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 ## 13. Research Update (2026-08-26): DLC CET Structure Validation Hardening
 - **CET Construction Verification**: Hardened `DlcManager::validate_cet_structure` in `src/protocol/dlc.rs` to validate payout distributions against intent collateral satoshis.
 - **Invariant Enforcement**: Enforces non-empty recipient scripts, non-zero payout amounts, checked addition overflow guards, and total payout bounds (`total_payout <= collateral_sats`).
-- **Cloud Infrastructure Alignment**: Verified fail-closed relational integrity across Neon PostgreSQL database `corelibs` (`sparkling-sunset-69236559`) and Supabase BOS project `yauldfcpswnufgwfvnlr`.
+- **Cloud Infrastructure Alignment**: Verified fail-closed relational integrity across Neon PostgreSQL database `corelibs` (`neon-project-<redacted>`) and Supabase BOS project `supabase-ref-<redacted>`.
 
 ## 14. Research Update (2026-08-26 Session 58 Synthesis): ERC-7683 Intent Mapping & Transport Neutrality
 - **ERC-7683 Bidirectional Serialization**: Confirmed `Erc7683CrossChainOrder` in `src/chain/erc7683.rs` enables seamless conversion between Conxian `CrossChainIntent` structs and standard ERC-7683 EVM solver payloads while strictly validating open/fill deadlines.
 - **Transport Capability Isolation**: Re-verified `TransportAdapter` and `TransportCapability` in `src/chain/transport.rs` enforce transport neutrality by abstracting UTXO queries, transaction broadcasts, and fee estimation away from core protocol types, ensuring strict compliance with CON-700 architectural boundary rules.
-- **Ecosystem Topology Synchronization**: Confirmed state root schema compatibility across all 6 Neon database projects (`sparkling-sunset-69236559`, `weathered-night-98492579`, `noisy-flower-17484435`, `small-math-44741750`, `noisy-cloud-41146057`, `orange-paper-76209725`) and Supabase projects (`yauldfcpswnufgwfvnlr`, `iczqutrbbfudfzfplymc`).
+- **Ecosystem Topology Synchronization**: Confirmed state root schema compatibility across all 6 Neon database projects (`neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`) and Supabase projects (`supabase-ref-<redacted>`, `supabase-ref-<redacted>`).
 
 
 ## 15. Research Update (2026-09-03 Session 62 Synthesis): Protocol Baseline & Cloud Topology Synchronization
@@ -112,7 +112,7 @@ An exhaustive audit of the Conxian Labs organization cloud infrastructure (`org-
 - **Ecosystem Scorecard Alignment**: Synchronized `EXECUTIVE_SCORECARD.md` and `READINESS_SCORECARD.md` to reflect 183 total test binary cases (128 core unit/doc tests + 55 integration/conformance test cases) and verified status across connected cloud infrastructure.
 
 ## 17. Research Update (2026-09-03 Session 65 Synthesis): End-to-End Audit & Ecosystem Synchronization
-- **Org-Wide Multi-Cloud Fleet Verified**: Neon PostgreSQL 6-project fleet (`sparkling-sunset-69236559`, `weathered-night-98492579`, `noisy-flower-17484435`, `small-math-44741750`, `noisy-cloud-41146057`, `orange-paper-76209725`) and Render workspace services (`srv-d9h2nu2b6mfs738i6gb0`, `srv-d9gam3m1a83c73bmrfc0`, `srv-d96fl2mq1p3s73c2e8k0`, `srv-d8fmr7v40ujc73b7ba8g`, `srv-d7b0el3uibrs73b2qjg0`) verified active and structurally aligned.
+- **Org-Wide Multi-Cloud Fleet Verified**: Neon PostgreSQL 6-project fleet (`neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`, `neon-project-<redacted>`) and Render workspace services (`srv-<redacted>`, `srv-<redacted>`, `srv-<redacted>`, `srv-<redacted>`, `srv-<redacted>`) verified active and structurally aligned.
 - **Protocol Test Coverage**: 183 Rust workspace tests (128 core unit/doc tests + 55 integration/conformance tests) and 69 Python verification guard tests in `scripts/tests/` operating at 100% pass rate.
 - **Code Gaps & Research Mapping**: DLC CET structure validation and oracle attestation verification in `src/protocol/dlc.rs` hardened with fail-closed bounds.
 

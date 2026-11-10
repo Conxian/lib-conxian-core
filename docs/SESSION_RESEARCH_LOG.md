@@ -80,12 +80,12 @@
 
 ### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
 - **Neon Cloud Fleet (6 Active PostgreSQL Databases)**:
-  - `conxian-core` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
-  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
-  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
-  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+  - `conxian-core` (`neon-project-<redacted>`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`neon-project-<redacted>`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`neon-project-<redacted>`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`neon-project-<redacted>`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
 - **Render Team Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
 - **Supabase Projects**: Active API connections verified (`Conxian BOS`, `Conxian-platform`).
 
@@ -109,12 +109,12 @@
 
 ### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
 - **Neon Cloud Fleet (6 Active PostgreSQL Databases)**:
-  - `conxian-core` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
-  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
-  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
-  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+  - `conxian-core` (`neon-project-<redacted>`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`neon-project-<redacted>`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`neon-project-<redacted>`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`neon-project-<redacted>`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
 - **Render Team Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
 - **Supabase Projects**: Active API connections verified (`Conxian BOS`, `Conxian-platform`).
 
@@ -154,7 +154,7 @@
 - **Client Configuration & Required `.env` Inputs**:
   - `BITCOIN_RPC_URL`, `STACKS_RPC_URL`, `LND_GRPC_URL`, `BABYLON_COSMOS_RPC`
   - `AWS_NITRO_ENCLAVE_KMS_ARN` or TEE hardware key parameter
-  - `PGCONNECT_URL` (`noisy-cloud-41146057` or private PostgreSQL DB)
+  - `PGCONNECT_URL` (`neon-project-<redacted>` or private PostgreSQL DB)
 - **Settlement Flow**: Legacy ISO 20022 messages (pain.001 / pacs.008) -> converted to Canonical Job Cards (`src/cjcs.rs`) -> serialized to Taproot / Miniscript contracts -> settled on Bitcoin L1 with zero secret egress.
 - **Unified Installer Specification (`conxian-cli`)**:
   - `conxian init`: Pre-flight environment template generator.
@@ -225,7 +225,7 @@
 4. Verify workspace test coverage (279 Rust workspace tests) and repository governance guard scripts (70 Python verification tests).
 
 ### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
-- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`neon-project-<redacted>`), `Software dev kit` (`neon-project-<redacted>`), `Business Operating System` (`neon-project-<redacted>`), `market` (`neon-project-<redacted>`), `Gateway` (`neon-project-<redacted>`), `Conxian Nexus` (`neon-project-<redacted>`).
 - **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
 - **Supabase Projects**: Active API connections verified.
 
@@ -251,7 +251,7 @@
 4. Verify workspace test coverage (274 Rust workspace tests) and repository governance guard scripts (70 Python verification tests).
 
 ### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
-- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`neon-project-<redacted>`), `Software dev kit` (`neon-project-<redacted>`), `Business Operating System` (`neon-project-<redacted>`), `market` (`neon-project-<redacted>`), `Gateway` (`neon-project-<redacted>`), `Conxian Nexus` (`neon-project-<redacted>`).
 - **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
 - **Supabase Projects**: Active API connections verified.
 
@@ -276,7 +276,7 @@
 4. Verify workspace test suite (268 Rust workspace tests) and repository governance scripts (79 Python verification tests).
 
 ### 1. Multi-Cloud Infrastructure & Ecosystem State Verification
-- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`sparkling-sunset-69236559`), `Software dev kit` (`weathered-night-98492579`), `Business Operating System` (`noisy-flower-17484435`), `market` (`small-math-44741750`), `Gateway` (`noisy-cloud-41146057`), `Conxian Nexus` (`orange-paper-76209725`).
+- **Neon Cloud Fleet (6 Active Databases)**: `conxian-core` (`neon-project-<redacted>`), `Software dev kit` (`neon-project-<redacted>`), `Business Operating System` (`neon-project-<redacted>`), `market` (`neon-project-<redacted>`), `Gateway` (`neon-project-<redacted>`), `Conxian Nexus` (`neon-project-<redacted>`).
 - **Render Workspace Services**: `conxian-business-static-docs`, `conxian-business`, `conxian-ui-prod`, `conxian-labs-static-v1`, `conxian-ui-hco6`.
 - **Supabase Projects**: API connectivity verified and active.
 
@@ -319,7 +319,7 @@ When an enterprise or institutional client purchases Conxian infrastructure, the
 #### Step A: Organization Onboarding & Asset Delivery
 1. Client signs enterprise agreement and receives organization credentials and API keys.
 2. Access granted to private GitHub organization repositories (`conxian-gateway`, `conxian-nexus`, `conxian-ui`).
-3. Client registers their primary database instance (or connects to Conxian Neon Cloud fleet: `Gateway` DB `noisy-cloud-41146057`).
+3. Client registers their primary database instance (or connects to Conxian Neon Cloud fleet: `Gateway` DB `neon-project-<redacted>`).
 
 #### Step B: Client Infrastructure Requirements & Required Inputs
 Clients must provide the following environment configurations from their side:
@@ -550,7 +550,7 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 ## Session 2026-08-19 (Extended): Infrastructure Synthesis & DLC Edge Case Hardening
 
 ### Objective
-1. Perform multi-cloud & Neon DB infrastructure audit across all 6 organization projects (`org-silent-sun-00457600`).
+1. Perform multi-cloud & Neon DB infrastructure audit across all 6 organization projects (`org-neon-project-<redacted>`).
 2. Update knowledge bases (`UNIVERSAL_SUPPORT_RESEARCH.md`, `GAP_ANALYSIS_AND_SCORING.md`, `SESSION_RESEARCH_LOG.md`) to maintain complete end-to-end traceability.
 3. Harden DLC oracle attestation verification tests in `src/protocol/dlc.rs` for fail-closed edge case validation.
 
@@ -568,25 +568,25 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 3. Validate fail-closed Zero Secret Egress (ZSE) boundaries across core protocol verification primitives.
 
 ### Expanded Research Findings & Cloud Topology
-- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
-  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
-  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
-  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
-  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Neon PostgreSQL Fleet (`org-neon-project-<redacted>`)**:
+  - `corelibs` (`neon-project-<redacted>`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`neon-project-<redacted>`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`neon-project-<redacted>`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`neon-project-<redacted>`): zkVM proof aggregation, state roots, and logical replication.
 - **Supabase Environments (`dmhmarjqzgodyovlhamv`)**:
-  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
-  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
-- **Render Web Services (`tea-d4ufhh8gjchc73c80mu0`)**:
-  - `conxian-labs-site` (`srv-d9ndhr2jnfac73as7te0`): Production web portal and API landing page.
+  - `Conxian BOS` (`supabase-ref-<redacted>`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
+  - `Conxian-platform` (`supabase-ref-<redacted>`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Web Services (`tea-<redacted>`)**:
+  - `conxian-labs-site` (`srv-<redacted>`): Production web portal and API landing page.
 
 #---
 
 ## Session 2026-08-26 (Extended): Knowledge Base Audit, DLC CET Hardening & Multi-Cloud DB Alignment
 
 ### Objective
-1. Perform comprehensive audit of all repository Knowledge Bases (KBs), AGENTS.md, GitHub issues, and cloud project topology (`org-silent-sun-00457600`).
+1. Perform comprehensive audit of all repository Knowledge Bases (KBs), AGENTS.md, GitHub issues, and cloud project topology (`org-neon-project-<redacted>`).
 2. Harden DLC (Discreet Log Contracts) CET structure and payout validation in `src/protocol/dlc.rs`.
 3. Synchronize all KBs (`GAP_ANALYSIS_AND_SCORING.md`, `UNIVERSAL_SUPPORT_RESEARCH.md`, `SESSION_RESEARCH_LOG.md`).
 
@@ -614,7 +614,7 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 - **Git Remote Alignment**: Pruned stale remote tracking branches across `origin` (`https://github.com/Conxian/lib-conxian-core`), ensuring clean workspace state on working branch.
 - **Cross-Chain Intent Mapping (ERC-7683)**: Verified bidirectional conversion between Conxian's `CrossChainIntent` and wire-level `Erc7683CrossChainOrder` in `src/chain/erc7683.rs`, ensuring deadline validation (`is_open`, `is_fillable`) and fail-closed JSON payload parsing.
 - **Transport Neutrality**: Confirmed `TransportAdapter` trait in `src/chain/transport.rs` abstracts network I/O, UTXO queries, and transaction broadcasts behind explicit `TransportCapability` tokens without leaking network I/O into core domain types (CON-700).
-- **Multi-Cloud DB & Infrastructure**: Re-verified Neon PostgreSQL database fleet (`corelibs` `sparkling-sunset-69236559`, `Software dev kit` `weathered-night-98492579`, `Business Operating System` `noisy-flower-17484435`, `market` `small-math-44741750`, `Gateway` `noisy-cloud-41146057`, `Conxian Nexus` `orange-paper-76209725`), Supabase environments (`yauldfcpswnufgwfvnlr`, `iczqutrbbfudfzfplymc`), and Render web service (`conxian-labs-site` `srv-d9ndhr2jnfac73as7te0`).
+- **Multi-Cloud DB & Infrastructure**: Re-verified Neon PostgreSQL database fleet (`corelibs` `neon-project-<redacted>`, `Software dev kit` `neon-project-<redacted>`, `Business Operating System` `neon-project-<redacted>`, `market` `neon-project-<redacted>`, `Gateway` `neon-project-<redacted>`, `Conxian Nexus` `neon-project-<redacted>`), Supabase environments (`supabase-ref-<redacted>`, `supabase-ref-<redacted>`), and Render web service (`conxian-labs-site` `srv-<redacted>`).
 
 ### System Verification Status
 - Core Rust tests: 126 passed (100% success).
@@ -630,22 +630,22 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 3. Synchronize Knowledge Bases, research logs, executive scorecards, and cross-lane readiness metrics.
 
 ### Expanded Research Findings & Infrastructure Audit
-- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
-  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
-  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
-  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
-  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Neon PostgreSQL Fleet (`org-neon-project-<redacted>`)**:
+  - `corelibs` (`neon-project-<redacted>`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`neon-project-<redacted>`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`neon-project-<redacted>`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`neon-project-<redacted>`): zkVM proof aggregation, state roots, and logical replication.
 - **Supabase Connected Projects (`dmhmarjqzgodyovlhamv`)**:
-  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
-  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
-- **Render Service Topology (`tea-d6u0edngi27c73dvhsg0`)**:
-  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
-  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
-  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
-  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
-  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+  - `Conxian BOS` (`supabase-ref-<redacted>`): Enterprise operational metrics, M&A milestones, runway metrics, and IP audit logs.
+  - `Conxian-platform` (`supabase-ref-<redacted>`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Service Topology (`tea-<redacted>`)**:
+  - `conxian-business-static-docs` (`srv-<redacted>`): Static documentation gateway.
+  - `conxian-business` (`srv-<redacted>`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-<redacted>`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-<redacted>`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-<redacted>`): Staging interface deployment.
 
 ### System Verification Status
 - **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
@@ -661,22 +661,22 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 3. Synchronize Knowledge Bases, research logs, and governance scorecards.
 
 ### Expanded Research Audit & Topology Mapping
-- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
-  - `corelibs` (`sparkling-sunset-69236559`): Core protocol invariant schemas and verification state roots.
-  - `Software dev kit` (`weathered-night-98492579`): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`): Enterprise BOS policy rules, risk profiles, and audit events.
-  - `market` (`small-math-44741750`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`): Gateway API sessions and rate limiting.
-  - `Conxian Nexus` (`orange-paper-76209725`): zkVM proof aggregation, state roots, and logical replication.
+- **Neon PostgreSQL Fleet (`org-neon-project-<redacted>`)**:
+  - `corelibs` (`neon-project-<redacted>`): Core protocol invariant schemas and verification state roots.
+  - `Software dev kit` (`neon-project-<redacted>`): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`): Enterprise BOS policy rules, risk profiles, and audit events.
+  - `market` (`neon-project-<redacted>`): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`): Gateway API sessions and rate limiting.
+  - `Conxian Nexus` (`neon-project-<redacted>`): zkVM proof aggregation, state roots, and logical replication.
 - **Supabase Connected Projects (`dmhmarjqzgodyovlhamv`)**:
-  - `Conxian BOS` (`yauldfcpswnufgwfvnlr`): Operational metrics, M&A milestones, and IP audit logs.
-  - `Conxian-platform` (`iczqutrbbfudfzfplymc`): Platform telemetry, exit velocity tracking, and deployment efficiency.
-- **Render Service Topology (`tea-d6u0edngi27c73dvhsg0`)**:
-  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
-  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
-  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
-  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
-  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+  - `Conxian BOS` (`supabase-ref-<redacted>`): Operational metrics, M&A milestones, and IP audit logs.
+  - `Conxian-platform` (`supabase-ref-<redacted>`): Platform telemetry, exit velocity tracking, and deployment efficiency.
+- **Render Service Topology (`tea-<redacted>`)**:
+  - `conxian-business-static-docs` (`srv-<redacted>`): Static documentation gateway.
+  - `conxian-business` (`srv-<redacted>`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-<redacted>`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-<redacted>`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-<redacted>`): Staging interface deployment.
 
 ### System Verification Status
 - **Core Unit Tests**: 127 passed (100% success rate across core protocol suite).
@@ -734,19 +734,19 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 4. Execute complete test suite and boundary verification scripts (128 Rust core unit tests, 69 Python tests, zero architectural contamination).
 
 ### Research Audit & Infrastructure Mapping Summary
-- **Neon PostgreSQL Fleet (`org-silent-sun-00457600`)**:
-  - `conxian-core` / `corelibs` (`sparkling-sunset-69236559`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
-  - `Software dev kit` (`weathered-night-98492579`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
-  - `Business Operating System` (`noisy-flower-17484435`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
-  - `market` (`small-math-44741750`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
-  - `Gateway` (`noisy-cloud-41146057`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
-  - `Conxian Nexus` (`orange-paper-76209725`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
-- **Render Team Workspace Services (`tea-d6u0edngi27c73dvhsg0`)**:
-  - `conxian-business-static-docs` (`srv-d9h2nu2b6mfs738i6gb0`): Static documentation gateway.
-  - `conxian-business` (`srv-d9gam3m1a83c73bmrfc0`): Enterprise backend service.
-  - `conxian-ui-prod` (`srv-d96fl2mq1p3s73c2e8k0`): Production user dashboard.
-  - `conxian-labs-static-v1` (`srv-d8fmr7v40ujc73b7ba8g`): Corporate site landing.
-  - `conxian-ui-hco6` (`srv-d7b0el3uibrs73b2qjg0`): Staging interface deployment.
+- **Neon PostgreSQL Fleet (`org-neon-project-<redacted>`)**:
+  - `conxian-core` / `corelibs` (`neon-project-<redacted>`, us-east-2, PG18): Protocol state roots, invariant schemas, and verifier state.
+  - `Software dev kit` (`neon-project-<redacted>`, us-east-2, PG18): Vault SDK session state, DKG logs, and attestation proofs.
+  - `Business Operating System` (`neon-project-<redacted>`, us-east-2, PG18): Enterprise risk control plane, policy enforcement & billing.
+  - `market` (`neon-project-<redacted>`, eu-central-1, PG18): Cross-chain orderbooks, ERC-7683 solver registry, and liquidity routing.
+  - `Gateway` (`neon-project-<redacted>`, ap-southeast-1, PG18): Gateway API runtime state, rate limiting, and client sessions.
+  - `Conxian Nexus` (`neon-project-<redacted>`, eu-central-1, PG17): zkVM proof aggregation, state roots, and logical replication.
+- **Render Team Workspace Services (`tea-<redacted>`)**:
+  - `conxian-business-static-docs` (`srv-<redacted>`): Static documentation gateway.
+  - `conxian-business` (`srv-<redacted>`): Enterprise backend service.
+  - `conxian-ui-prod` (`srv-<redacted>`): Production user dashboard.
+  - `conxian-labs-static-v1` (`srv-<redacted>`): Corporate site landing.
+  - `conxian-ui-hco6` (`srv-<redacted>`): Staging interface deployment.
 
 ### System Verification Status
 - **Core Unit & Doc Tests**: 128 passed (100% success rate across core protocol suite).
@@ -764,7 +764,7 @@ cf8133f refactor: clarify Vault SDK location and integrate conxius-enclave-sdk
 
 ### Research & Navigation Summary
 - **Cloud Database Fleet & Infrastructure**:
-  - Live query to Neon API confirmed 6 active PostgreSQL projects in org `org-silent-sun-00457600`: `conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, and `Conxian Nexus`.
+  - Live query to Neon API confirmed 6 active PostgreSQL projects in org `org-neon-project-<redacted>`: `conxian-core`, `Software dev kit`, `Business Operating System`, `market`, `Gateway`, and `Conxian Nexus`.
   - All projects operating normally on PG18/PG17 with automated maintenance windows and zero active connection or replication locks.
 - **Repository Health & Boundary Guards**:
   - All 11 verification scripts in `scripts/` executed and passed cleanly (`verify_bos_production_boundary.py`, `verify_contamination_guard.py`, `verify_core_dependency_boundary.py`, `verify_knowledge_retention.py`, `verify_pr_bos_classification.py`, `verify_release_hygiene.py`, `verify_signing_docs.py`, `verify_submodule_secret_filenames.py`, `verify_tracked_artifacts.py`, and `verify_release_version.py`).
