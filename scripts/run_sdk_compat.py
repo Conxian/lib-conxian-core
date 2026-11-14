@@ -69,8 +69,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--toolchain",
-        default="1.98.1",
-        help="Rust toolchain passed to Cargo (default: 1.98.1)",
+        default="1.99.1",
+        help="Rust toolchain passed to Cargo (default: 1.99.1)",
     )
     parser.add_argument(
         "--offline",
