@@ -113,7 +113,7 @@ contains the exact `lib-conxian-core` revision pin
 evidence that Nexus runtime behavior, downstream CI, or every fixture has adopted this checkpoint.
 The optional direct `enclave` feature remains available for compatibility, but
 the companion adapter is the tested Core/SDK boundary. The effective workspace
-floor is Rust `1.98.1+`; the SDK `2.0.17` companion dependency's lower
+floor is Rust `1.100.0+`; the SDK `2.0.17` companion dependency's lower
 declaration does not lower the current Core workspace floor. The tests
 run with default features for Core and do not enable simulator/mock/dev bypasses.
 

@@ -114,7 +114,7 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 ## Pull Request Checklist
 
 When submitting a PR, ensure that:
-- [ ] Code builds without warnings on Rust `1.98.1+`.
+- [ ] Code builds without warnings on Rust `1.100.0+`.
 - [ ] All Rust unit, doc, and integration tests pass cleanly (`cargo test --workspace --all-features`).
 - [ ] All Python verification guard scripts and unit tests pass.
 - [ ] Documentation (`README.md`, `CHANGELOG.md`, module rustdocs) is updated to reflect changes.

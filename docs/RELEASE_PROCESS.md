@@ -47,10 +47,10 @@ when the published artifact itself is wrong.
 
 - Keep the package `rust-version`, the explicit CI toolchain, and
   [docs/COMPATIBILITY.md](COMPATIBILITY.md) synchronized.
-- The supported floor for `lib-conxian-core` is Rust `1.98.1+` for both default
+- The supported floor for `lib-conxian-core` is Rust `1.100.0+` for both default
   and optional SDK builds.
 - The root optional SDK dependency selects Git tag `v2.0.17`, whose manifest
-  reports package version `2.0.17` and declares Rust `1.98.1`. Review its
+  reports package version `2.0.17` and declares Rust `1.100.0`. Review its
   declared MSRV and resolved Alloy / `ruint` graph before changing the tag.
 - The companion adapter and compatibility harness target the same Git-tagged
   SDK `v2.0.17` as the root optional dependency.
